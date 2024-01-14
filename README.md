@@ -1,6 +1,6 @@
-# ProjectSlide
+# ProjectSlice
 
-----Proto Slider Game---
+----Proto Slicer Game---
 
 #GDD:
 Resumé:
