@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "ProjectSliceCharacter.generated.h"
+#include "PS_Character.generated.h"
 
 class UInputComponent;
 class USkeletalMeshComponent;

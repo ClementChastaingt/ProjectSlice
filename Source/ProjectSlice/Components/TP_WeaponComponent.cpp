@@ -2,8 +2,8 @@
 
 
 #include "TP_WeaponComponent.h"
-#include "ProjectSliceCharacter.h"
-#include "ProjectSliceProjectile.h"
+#include "..\PC\PS_Character.h"
+#include "..\GPE\PS_Projectile.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"

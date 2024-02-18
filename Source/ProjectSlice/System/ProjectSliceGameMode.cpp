@@ -1,7 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ProjectSliceGameMode.h"
-#include "ProjectSliceCharacter.h"
+
+#include "../PC/PS_Character.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()

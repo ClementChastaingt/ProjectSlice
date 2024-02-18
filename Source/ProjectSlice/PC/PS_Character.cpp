@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "ProjectSliceCharacter.h"
-#include "ProjectSliceProjectile.h"
+#include "PS_Character.h"
+#include "..\GPE\PS_Projectile.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"

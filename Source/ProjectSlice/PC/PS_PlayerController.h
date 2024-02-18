@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "ProjectSlicePlayerController.generated.h"
+#include "PS_PlayerController.generated.h"
 
 class UInputMappingContext;
 

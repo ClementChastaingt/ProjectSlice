@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "ProjectSliceProjectile.generated.h"
+#include "PS_Projectile.generated.h"
 
 class USphereComponent;
 class UProjectileMovementComponent;
 
 UCLASS(config=Game)
-class AProjectSliceProjectile : public AActor
+class AProjectSliceProjectile: public AActor
 {
 	GENERATED_BODY()
 
