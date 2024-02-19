@@ -8,7 +8,8 @@
 #include "PS_SliceComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+
+UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_SliceComponent : public UMeshComponent
 {
 	GENERATED_BODY()
@@ -32,8 +33,9 @@ public:
 public:
 	//------------------
 protected:
-	// UPROPERTY(VisibleAnywhere)
-	// UProceduralMesh;
+	
+	UPROPERTY(VisibleAnywhere)
+	UProceduralMeshComponent* ProcMeshComp;
 	
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* RootMesh;

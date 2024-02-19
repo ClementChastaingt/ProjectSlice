@@ -3,6 +3,8 @@
 #include "ProjectSliceGameMode.h"
 
 #include "../PC/PS_Character.h"
+#include "Kismet/GameplayStatics.h"
+#include "ProjectSlice/Components/PS_SliceComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()
@@ -11,5 +13,28 @@ AProjectSliceGameMode::AProjectSliceGameMode()
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
 	DefaultPawnClass = PlayerPawnClassFinder.Class;
+
+}
+
+void AProjectSliceGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
+	// const FTransform relativeTransform = FTransform();
+	// int i = 0;
+	// UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
+	// for (const auto outActor : SliceableActors)
+	// {
+	// 	// UPS_SliceComponent* sliceComp = CreateDefaultSubobject<UPS_SliceComponent>(TEXT("SliceComponent"));
+	// 	// sliceComp->SetupAttachment(outActor->GetRootComponent());
+	// 	//outActor->CreateDefaultSubobject<SliceComponent>(TEXT("SliceComponent"), false);
+	// 	UPS_SliceComponent* newComp;
+	// 	outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false);
+	// 	outActor->RegisterAllComponents();
+	// 	outActor->AddInstanceComponent(newComp);
+	// 	UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s"), i++, *outActor->GetParentActor()->GetName());
+	// }
+	
 
 }
