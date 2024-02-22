@@ -26,18 +26,33 @@ protected:
 
 public:
 	//------------------
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebugMode = false;
+	
+private:
+	//------------------
+
+#pragma endregion General
+
+
+#pragma region Slice
+	//------------------
+
+public:
+	//------------------
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
 	TArray<AActor*> SliceableActors;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
 	TSubclassOf<UPS_SliceComponent> SliceComponent;
+	
 private:
 	//------------------
 
-#pragma endregion General
-
-	
+#pragma endregion Slice
 };
 
 

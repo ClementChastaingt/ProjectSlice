@@ -16,7 +16,7 @@ class PROJECTSLICE_API UPS_SliceComponent : public UMeshComponent
 
 public:
 	// Sets default values for this component's properties
-	UPS_SliceComponent();
+	UPS_SliceComponent(const FObjectInitializer& objectInitializer);
 
 protected:
 	// Called when the game starts
@@ -31,7 +31,9 @@ public:
 //------------------
 
 public:
-	//------------------
+	UFUNCTION()
+	void InitSliceObject();
+	
 protected:
 	
 	UPROPERTY(VisibleAnywhere)

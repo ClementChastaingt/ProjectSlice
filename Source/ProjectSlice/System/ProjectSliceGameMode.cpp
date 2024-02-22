@@ -20,21 +20,19 @@ void AProjectSliceGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
-	// const FTransform relativeTransform = FTransform();
-	// int i = 0;
-	// UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
-	// for (const auto outActor : SliceableActors)
-	// {
-	// 	// UPS_SliceComponent* sliceComp = CreateDefaultSubobject<UPS_SliceComponent>(TEXT("SliceComponent"));
-	// 	// sliceComp->SetupAttachment(outActor->GetRootComponent());
-	// 	//outActor->CreateDefaultSubobject<SliceComponent>(TEXT("SliceComponent"), false);
-	// 	UPS_SliceComponent* newComp;
-	// 	outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false);
-	// 	outActor->RegisterAllComponents();
-	// 	outActor->AddInstanceComponent(newComp);
-	// 	UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s"), i++, *outActor->GetParentActor()->GetName());
-	// }
+	//Add SLiceComponent to sliceable actors
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
+	const FTransform relativeTransform = FTransform();
+	int i = 0;
+	if(bDebugMode) UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
+	for (const auto outActor : SliceableActors)
+	{
+		UPS_SliceComponent* newComp = Cast<UPS_SliceComponent>(outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false));
+		outActor->RegisterAllComponents();
+		outActor->AddInstanceComponent(newComp);
+		newComp->InitSliceObject();
+		if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s"), i++, *newComp->GetName());
+	}
 	
 
 }
