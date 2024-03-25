@@ -12,6 +12,9 @@ UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnab
 class PROJECTSLICE_API UTP_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UStaticMeshComponent* SightComponent = nullptr;
 
 public:
 	/** Projectile class to spawn */
@@ -50,11 +53,34 @@ public:
 	void Fire();
 
 protected:
+	UFUNCTION()
+	virtual void BeginPlay() override;
+	
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	/** The Character holding this weapon*/
-	AProjectSliceCharacter* Character;
+	AProjectSliceCharacter* _PlayerCharacter;
+
+	APlayerController* _PlayerController;
+
+
+#pragma region Sight
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(EditDefaultsOnly, Category="Parameters|Sight")
+	TSubclassOf<class UStaticMesh> SightMeshClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	FVector SightMeshScale = FVector(0.1,0.1,1);
+	
+private:
+	//------------------
+
+#pragma endregion Sight
 };

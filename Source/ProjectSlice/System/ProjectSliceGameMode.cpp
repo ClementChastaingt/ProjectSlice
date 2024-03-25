@@ -4,7 +4,7 @@
 
 #include "../PC/PS_Character.h"
 #include "Kismet/GameplayStatics.h"
-#include "ProjectSlice/Components/PS_SliceComponent.h"
+#include "ProjectSlice/Components/PS_SlicedComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()
@@ -27,7 +27,7 @@ void AProjectSliceGameMode::BeginPlay()
 	if(bDebugMode) UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
 	for (const auto outActor : SliceableActors)
 	{
-		UPS_SliceComponent* newComp = Cast<UPS_SliceComponent>(outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false));
+		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false));
 		outActor->RegisterAllComponents();
 		outActor->AddInstanceComponent(newComp);
 		newComp->InitSliceObject();

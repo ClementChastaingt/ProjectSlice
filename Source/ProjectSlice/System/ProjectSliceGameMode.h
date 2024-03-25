@@ -6,7 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "ProjectSliceGameMode.generated.h"
 
-class UPS_SliceComponent;
+class UPS_SlicedComponent;
 
 UCLASS(minimalapi)
 class AProjectSliceGameMode : public AGameModeBase
@@ -47,7 +47,7 @@ protected:
 	TArray<AActor*> SliceableActors;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
-	TSubclassOf<UPS_SliceComponent> SliceComponent;
+	TSubclassOf<UPS_SlicedComponent> SliceComponent;
 	
 private:
 	//------------------

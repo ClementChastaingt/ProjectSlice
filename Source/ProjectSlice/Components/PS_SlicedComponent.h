@@ -5,18 +5,18 @@
 #include "CoreMinimal.h"
 #include "Components/MeshComponent.h"
 #include "ProceduralMeshComponent.h"
-#include "PS_SliceComponent.generated.h"
+#include "PS_SlicedComponent.generated.h"
 
 
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_SliceComponent : public UMeshComponent
+class PROJECTSLICE_API UPS_SlicedComponent : public UMeshComponent
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this component's properties
-	UPS_SliceComponent(const FObjectInitializer& objectInitializer);
+	UPS_SlicedComponent(const FObjectInitializer& objectInitializer);
 
 protected:
 	// Called when the game starts
