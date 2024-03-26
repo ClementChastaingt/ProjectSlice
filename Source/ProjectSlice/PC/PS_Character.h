@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "ProjectSlice/Components/TP_WeaponComponent.h"
 #include "PS_Character.generated.h"
 
 class UInputComponent;
@@ -24,6 +25,10 @@ class AProjectSliceCharacter : public ACharacter
 	/** Pawn mesh: 1st person view (arms; seen only by self) */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	USkeletalMeshComponent* Mesh1P;
+
+	/** WeaponComponent */
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UTP_WeaponComponent* WeaponComponent;
 
 	/** First person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

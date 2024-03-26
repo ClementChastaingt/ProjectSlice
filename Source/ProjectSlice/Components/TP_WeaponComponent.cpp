@@ -24,13 +24,7 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 
 void UTP_WeaponComponent::BeginPlay()
 {
-	//Attach WeaponComponent on Begin Play
-	if(!IsValid(GetWorld())) return;
-	AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	if(IsValid(player))
-	{
-		AttachWeapon(player);
-	}
+	//....
 } 
 
 
@@ -101,7 +95,7 @@ void UTP_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	
 
 	//Setup Sight Mesh
-	//TODO :: CreateDefaultSubObject StaticMesh and Set Rot and Loc on Attach
+	//Place Sight Component to Projectile spawn place
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 

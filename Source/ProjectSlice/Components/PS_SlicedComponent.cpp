@@ -50,15 +50,19 @@ void UPS_SlicedComponent::InitSliceObject()
 	if(!IsValid(RootMesh) || !IsValid(ProcMeshComp)) return;
 
 	//Init StaticMeshCompo
-	RootMesh->SetGenerateOverlapEvents(true);
-	//RootMesh->SetCollisionProfileName(TEXT("NoCollision"), true);
-	//RootMesh->SetVisibility(false);
+	//TODO:: Destroy base mesh
+	RootMesh->SetGenerateOverlapEvents(false);
+	RootMesh->SetCollisionProfileName(TEXT("NoCollision"), true);
+	RootMesh->SetVisibility(false);
 
 	//Init ProcMeshCompo
 	ProcMeshComp->bUseComplexAsSimpleCollision = false;
-	ProcMeshComp->SetGenerateOverlapEvents(true);
-	ProcMeshComp->SetCollisionProfileName(TEXT("BlockAll"), true);
+	//ProcMeshComp->SetGenerateOverlapEvents(true);
 	ProcMeshComp->SetSimulatePhysics(true);
+	ProcMeshComp->SetCollisionProfileName(TEXT("BlockAll"), true);
+	ProcMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	
+
 
 	//Copy StaticMesh to ProceduralMesh
 	//TODO :: See LOD index for complex mesh

@@ -29,9 +29,14 @@ void AProjectSliceGameMode::BeginPlay()
 	{
 		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, false, relativeTransform, false));
 		outActor->RegisterAllComponents();
-		outActor->AddInstanceComponent(newComp);
-		newComp->InitSliceObject();
-		if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s"), i++, *newComp->GetName());
+		if(IsValid(newComp))
+		{
+			outActor->AddInstanceComponent(newComp);
+			newComp->InitSliceObject();
+			if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s add %s"), i++, *outActor->GetName(), *newComp->GetName());
+		}
+		else
+			UE_LOG(LogTemp, Error, TEXT("PS_GameMode :: Sliceable Actor[%i] invalid UPS_SlicedComponent for %s"), i++, *outActor->GetName());
 	}
 	
 
