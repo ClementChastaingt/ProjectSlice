@@ -17,10 +17,7 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 // AProjectSliceCharacter
 
 AProjectSliceCharacter::AProjectSliceCharacter()
-{
-	// Character have a rifle at start
-	bHasRifle = true;
-	
+{	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 		
@@ -38,10 +35,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	Mesh1P->CastShadow = false;
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
-
+	
 	//Create WeaponComponent
 	WeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("WeaponComponent"));
-	WeaponComponent->AttachWeapon(this);
 
 }
 
@@ -58,6 +54,9 @@ void AProjectSliceCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	//Attach Weapon Componenet on begin play
+	WeaponComponent->AttachWeapon(this);
 
 }
 

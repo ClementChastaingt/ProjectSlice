@@ -44,16 +44,16 @@ void UTP_WeaponComponent::Fire()
 			const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 
 			//TODO:: Old Fire logic
-			// FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+			 FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-			//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);			
+			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);			
 			
-			//Set Spawn Collision Handling Override
-			// FActorSpawnParameters ActorSpawnParams;
-			// ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-			//
-			// // Spawn the projectile at the muzzle
-			//World->SpawnActor<AProjectSliceProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			// Set Spawn Collision Handling Override
+			 FActorSpawnParameters ActorSpawnParams;
+			 ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			
+			// Spawn the projectile at the muzzle
+			World->SpawnActor<AProjectSliceProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}
 	}
 	
@@ -81,7 +81,7 @@ void UTP_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())
 	{
 		return;
 	}
