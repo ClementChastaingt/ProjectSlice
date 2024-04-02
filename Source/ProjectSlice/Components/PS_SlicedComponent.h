@@ -10,7 +10,7 @@
 
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_SlicedComponent : public UMeshComponent
+class PROJECTSLICE_API UPS_SlicedComponent : public UProceduralMeshComponent
 {
 	GENERATED_BODY()
 
@@ -35,13 +35,8 @@ public:
 	void InitSliceObject();
 	
 protected:
-	
-	UPROPERTY(VisibleAnywhere)
-	UProceduralMeshComponent* ProcMeshComp;
-	
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* RootMesh;
-	
+	//------------------
+
 private:
 	//------------------
 	

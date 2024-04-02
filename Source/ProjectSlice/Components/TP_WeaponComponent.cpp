@@ -42,11 +42,14 @@ void UTP_WeaponComponent::Fire()
 		if (World != nullptr)
 		{
 			const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
-
-			//TODO:: Old Fire logic
+			
 			 FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);			
+			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+			
+			UKismetSystemLibrary::LineTraceSingle(GetWorld(),SpawnLocation , ,UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel11), true,ActorsToIgnore, EDrawDebugTrace::None, hitResult, true);
+			
+
 			
 			// Set Spawn Collision Handling Override
 			 FActorSpawnParameters ActorSpawnParams;
