@@ -35,10 +35,11 @@ public:
 	void InitSliceObject();
 	
 protected:
-	//------------------
+
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	UStaticMeshComponent* _RootMesh = nullptr;
 	
 #pragma endregion General
 

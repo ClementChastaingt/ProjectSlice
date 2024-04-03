@@ -47,7 +47,7 @@ void UTP_WeaponComponent::Fire()
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
 			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 			
-			UKismetSystemLibrary::LineTraceSingle(GetWorld(),SpawnLocation , ,UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel11), true,ActorsToIgnore, EDrawDebugTrace::None, hitResult, true);
+			//UKismetSystemLibrary::LineTraceSingle(GetWorld(),SpawnLocation , ,UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel11), true,ActorsToIgnore, EDrawDebugTrace::None, hitResult, true);
 			
 
 			

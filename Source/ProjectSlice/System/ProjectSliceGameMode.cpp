@@ -39,12 +39,13 @@ void AProjectSliceGameMode::BeginPlay()
 
 		//Create and Add SlicedComponent to actors
 		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, true, relativeTransform, false));
-		newComp->AttachToComponent(outActor->GetRootComponent(),FAttachmentTransformRules::KeepRelativeTransform);
+		//newComp->AttachToComponent(outActor->GetRootComponent(),FAttachmentTransformRules::KeepRelativeTransform);
 		outActor->RegisterAllComponents();
 		if(IsValid(newComp))
 		{
 			outActor->AddInstanceComponent(newComp);
 			newComp->InitSliceObject();
+			newComp->SetupAttachment(outActor->GetRootComponent());
 			if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s add %s"), i++, *outActor->GetName(), *newComp->GetName());
 		}
 		else
