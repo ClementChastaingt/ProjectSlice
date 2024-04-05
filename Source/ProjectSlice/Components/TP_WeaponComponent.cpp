@@ -9,6 +9,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "KismetProceduralMeshLibrary.h"
+#include "PS_SlicedComponent.h"
 
 // Sets default values for this component's properties
 UTP_WeaponComponent::UTP_WeaponComponent()
@@ -36,29 +38,46 @@ void UTP_WeaponComponent::Fire()
 	}
 
 	// Try and fire a projectile
-	if (ProjectileClass != nullptr)
+	UWorld* const World = GetWorld();
+	if (World != nullptr)
 	{
-		UWorld* const World = GetWorld();
-		if (World != nullptr)
-		{
-			const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
-			
-			 FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-			
-			//UKismetSystemLibrary::LineTraceSingle(GetWorld(),SpawnLocation , ,UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel11), true,ActorsToIgnore, EDrawDebugTrace::None, hitResult, true);
-			
+		const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 
+		//Trace Loc && Rot
+		const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+		// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
+		const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+
+		//Trace config
+		const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
+		
+		//TODO :: Config Collision channel
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), SpawnLocation,
+		                                      SpawnLocation + SpawnRotation.GetComponentForAxis(EAxis::X) * 1000,
+		                                      UEngineTypes::ConvertToTraceType(ECC_Visibility), true, ActorsToIgnore,
+		                                      EDrawDebugTrace::ForDuration, CurrentFireHitResult, true);
+
+		//Cut ProceduralMesh
+		if (CurrentFireHitResult.bBlockingHit)
+		{
+			CurrentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetComponent());
+
+			if (!IsValid(CurrentSlicedComponent)) return;
+
+			//TODO :: Have to stock it on the parent SlicedComponent ?
+			UProceduralMeshComponent* outHalfComponent;
+			UMaterialInterface* HalfSectionMaterial = CurrentSlicedComponent->GetParentMesh()->GetMaterial(0);
 			
-			// Set Spawn Collision Handling Override
-			 FActorSpawnParameters ActorSpawnParams;
-			 ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-			
-			// Spawn the projectile at the muzzle
-			World->SpawnActor<AProjectSliceProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			UKismetProceduralMeshLibrary::SliceProceduralMesh(CurrentSlicedComponent, CurrentFireHitResult.Location,
+			                                                  SightComponent->GetUpVector(), true,
+			                                                  outHalfComponent,
+			                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
+			                                                  HalfSectionMaterial);
 		}
+
+		//Add Physic and Impulse
 	}
+	
 	
 	// Try and play the sound if specified
 	if (FireSound != nullptr)
@@ -135,7 +154,7 @@ void UTP_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		return;
 	}
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController()))
+	if (const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{

@@ -17,10 +17,6 @@ class PROJECTSLICE_API UTP_WeaponComponent : public USkeletalMeshComponent
 	UStaticMeshComponent* SightComponent = nullptr;
 
 public:
-	/** Projectile class to spawn */
-	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	TSubclassOf<class AProjectSliceProjectile> ProjectileClass;
-
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	USoundBase* FireSound;
@@ -67,12 +63,31 @@ private:
 	APlayerController* _PlayerController;
 
 
+#pragma region Slice
+	//__________________________________________________
+
+public:
+	//__________________________________________________
+
+protected:
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FHitResult CurrentFireHitResult;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPS_SlicedComponent* CurrentSlicedComponent = nullptr;
+
+private:
+	//__________________________________________________
+
+#pragma endregion Slice
+	
 #pragma region Sight
 	//------------------
 
 public:
 	//------------------
 protected:
+
 	UPROPERTY(EditDefaultsOnly, Category="Parameters|Sight")
 	TSubclassOf<class UStaticMesh> SightMeshClass;
 
