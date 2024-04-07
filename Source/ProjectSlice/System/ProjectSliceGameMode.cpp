@@ -20,7 +20,8 @@ void AProjectSliceGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitSliceableContent();
+	if(bEnableInitSliceableContent)
+		InitSliceableContent();
 	
 }
 

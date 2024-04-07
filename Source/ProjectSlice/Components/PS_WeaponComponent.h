@@ -6,7 +6,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "PS_WeaponComponent.generated.h"
 
-class UPS_SlicedComponent;
+class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -14,40 +14,12 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightComponent = nullptr;
 
 public:
-	/** Sound to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	USoundBase* FireSound;
-	
-	/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	UAnimMontage* FireAnimation;
-
-	/** Gun muzzle's offset from the characters location */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	FVector MuzzleOffset;
-
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FireMappingContext;
-
-	/** Fire Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* FireAction;
-
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
-
-	/** Attaches the actor to a FirstPersonCharacter */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
-
-	/** Make the weapon Fire a Projectile */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Fire();
 
 protected:
 	UFUNCTION()
@@ -64,6 +36,53 @@ private:
 	APlayerController* _PlayerController;
 
 
+#pragma region Input
+	//------------------
+
+public:
+	//------------------
+	
+protected:	
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
+	class UInputMappingContext* FireMappingContext;
+
+	/** Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
+	class UInputAction* FireAction;
+	
+private:
+	//------------------
+	
+
+#pragma endregion Input
+
+#pragma region Fire
+	//------------------
+
+public:
+	/** Attaches the actor to a FirstPersonCharacter */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
+
+	/** Make the weapon Fire a Projectile */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void Fire();
+	
+protected:
+	/** Sound to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
+	USoundBase* FireSound;
+	
+	/** AnimMontage to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	UAnimMontage* FireAnimation;
+	
+private:
+	//------------------
+
+#pragma endregion Fire
+
 #pragma region Slice
 	//__________________________________________________
 
@@ -75,7 +94,10 @@ protected:
 	FHitResult CurrentFireHitResult;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	UPS_SlicedComponent* CurrentSlicedComponent = nullptr;
+	UProceduralMeshComponent* CurrentSlicedComponent = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
+	UMaterialInterface* HalfSectionMaterial = nullptr;
 
 private:
 	//__________________________________________________
@@ -88,12 +110,15 @@ private:
 public:
 	//------------------
 protected:
-
-	UPROPERTY(EditDefaultsOnly, Category="Parameters|Sight")
-	TSubclassOf<class UStaticMesh> SightMeshClass;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FVector SightMeshScale = FVector(0.1,0.1,1);
+	FVector SightMeshLocation = FVector(5.00,0.400,-2.0);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	FVector SightMeshScale = FVector(0.050000,0.400000,0.050000);
+	
+	/** Gun muzzle's offset from the characters location */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	FVector MuzzleOffset;
 	
 private:
 	//------------------

@@ -2,6 +2,8 @@
 
 
 #include "PS_WeaponComponent.h"
+
+#include "CollisionDebugDrawingPublic.h"
 #include "..\PC\PS_Character.h"
 #include "..\GPE\PS_Projectile.h"
 #include "GameFramework/PlayerController.h"
@@ -20,15 +22,32 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 	//Create Component
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	SightComponent->SetupAttachment(this);
-	
+	SightComponent->SetupAttachment(this, FName("Muzzle"));
+	SightComponent->SetRelativeLocation(SightMeshLocation);
+	SightComponent->SetRelativeScale3D(SightMeshScale);
+
 }
 
 void UPS_WeaponComponent::BeginPlay()
 {
 	//....
-} 
+}
 
+void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (_PlayerCharacter == nullptr)
+	{
+		return;
+	}
+
+	if (const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(FireMappingContext);
+		}
+	}
+}
 
 void UPS_WeaponComponent::Fire()
 {
@@ -46,36 +65,41 @@ void UPS_WeaponComponent::Fire()
 		//Trace Loc && Rot
 		const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 		// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-		const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-
+		//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+	
 		//Trace config
 		const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 		
 		//TODO :: Config Collision channel
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), SpawnLocation,
-		                                      SpawnLocation + SpawnRotation.GetComponentForAxis(EAxis::X) * 1000,
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(),SightComponent->GetComponentLocation(),
+											SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
 		                                      UEngineTypes::ConvertToTraceType(ECC_Visibility), true, ActorsToIgnore,
 		                                      EDrawDebugTrace::ForDuration, CurrentFireHitResult, true);
 
-		//Cut ProceduralMesh
-		if (CurrentFireHitResult.bBlockingHit)
-		{
-			CurrentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetComponent());
-
-			if (!IsValid(CurrentSlicedComponent)) return;
-
-			//TODO :: Have to stock it on the parent SlicedComponent ?
-			UProceduralMeshComponent* outHalfComponent;
-			UMaterialInterface* HalfSectionMaterial = CurrentSlicedComponent->GetParentMesh()->GetMaterial(0);
+		if (!CurrentFireHitResult.bBlockingHit) return;
 			
-			UKismetProceduralMeshLibrary::SliceProceduralMesh(CurrentSlicedComponent, CurrentFireHitResult.Location,
-			                                                  SightComponent->GetUpVector(), true,
-			                                                  outHalfComponent,
-			                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
-			                                                  HalfSectionMaterial);
-		}
+		//Cut ProceduralMesh
+		CurrentSlicedComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
 
-		//Add Physic and Impulse
+		if (!IsValid(CurrentSlicedComponent)) return;
+
+		//TODO :: Have to stock it on the parent SlicedComponent ?
+		UProceduralMeshComponent* outHalfComponent;
+		UKismetProceduralMeshLibrary::SliceProceduralMesh(CurrentSlicedComponent, CurrentFireHitResult.Location,
+		                                                  SightComponent->GetUpVector(), true,
+		                                                  outHalfComponent,
+		                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
+		                                                  HalfSectionMaterial);
+		
+		//Init Physic Config 
+		outHalfComponent->bUseComplexAsSimpleCollision = false;
+		outHalfComponent->SetCollisionProfileName(TEXT("PhysicsActor"), false);
+		outHalfComponent->SetGenerateOverlapEvents(false);
+		outHalfComponent->SetNotifyRigidBodyCollision(true);
+		outHalfComponent->SetSimulatePhysics(true);
+
+		//Impulse
+		outHalfComponent->AddImpulse(FVector(200,200,200));
 	}
 	
 	
@@ -115,19 +139,15 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	_PlayerCharacter->SetHasRifle(true);
 	
-
 	//Setup Sight Mesh
 	//Place Sight Component to Projectile spawn place
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
-	const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-
-	if(IsValid(SightComponent) && IsValid(SightMeshClass.GetDefaultObject()))
+	if(IsValid(SightComponent))
 	{
-		SightComponent->SetStaticMesh(SightMeshClass.GetDefaultObject());
-		SightComponent->SetWorldTransform(FTransform(SpawnRotation,SpawnLocation,SightMeshScale), false);
+		SightComponent->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform,FName("Muzzle"));
+		SightComponent->SetRelativeRotation(SpawnRotation);
 	}
-
-
+	
 	// Set up action bindings
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
 		_PlayerController->GetLocalPlayer()))
@@ -143,22 +163,6 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
 	}
 	
-
 		
 }
 
-void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	if (_PlayerCharacter == nullptr)
-	{
-		return;
-	}
-
-	if (const APlayerController* PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->RemoveMappingContext(FireMappingContext);
-		}
-	}
-}

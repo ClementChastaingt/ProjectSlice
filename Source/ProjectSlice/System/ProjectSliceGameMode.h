@@ -28,6 +28,9 @@ public:
 	//------------------
 	
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sliceable")
+	bool bEnableInitSliceableContent = false;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDebugMode = false;
 	
