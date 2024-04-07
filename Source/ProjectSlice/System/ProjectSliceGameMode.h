@@ -41,7 +41,9 @@ private:
 	//------------------
 
 public:
-	//------------------
+	UFUNCTION()
+	void InitSliceableContent();
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status")
 	TArray<AActor*> SliceableActors;

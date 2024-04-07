@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "ProjectSlice/Components/TP_WeaponComponent.h"
+#include "..\Components\PS_WeaponComponent.h"
 #include "PS_Character.generated.h"
 
 class UInputComponent;
@@ -28,7 +28,7 @@ class AProjectSliceCharacter : public ACharacter
 
 	/** WeaponComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
-	UTP_WeaponComponent* WeaponComponent;
+	UPS_WeaponComponent* WeaponComponent;
 
 	/** First person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

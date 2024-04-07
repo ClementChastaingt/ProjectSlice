@@ -20,6 +20,12 @@ void AProjectSliceGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitSliceableContent();
+	
+}
+
+void AProjectSliceGameMode::InitSliceableContent()
+{
 	//Add SliceComponent to sliceable actors
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
 	const FTransform relativeTransform = FTransform();
@@ -51,6 +57,5 @@ void AProjectSliceGameMode::BeginPlay()
 		else
 			UE_LOG(LogTemp, Error, TEXT("PS_GameMode :: Sliceable Actor[%i] invalid UPS_SlicedComponent for %s"), i++, *outActor->GetName());
 	}
-	
-
 }
+
