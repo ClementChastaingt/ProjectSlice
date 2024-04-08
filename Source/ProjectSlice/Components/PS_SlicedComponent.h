@@ -37,8 +37,12 @@ public:
 	//Getters && Setters
 	UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
 
-protected:
+	TArray<UProceduralMeshComponent*> GetChildProcMesh() const{return ChildProcMesh;}
 
+protected:
+	//Getters && Setters
+	UPROPERTY(VisibleInstanceOnly)
+	TArray<UProceduralMeshComponent*> ChildProcMesh;
 
 private:
 	UPROPERTY(Transient)

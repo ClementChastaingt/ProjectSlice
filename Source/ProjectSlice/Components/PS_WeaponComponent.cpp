@@ -21,6 +21,7 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
 	//Create Component
+	//TODO :: Improve Sight construction for better work issue in BP
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this, FName("Muzzle"));
 	SightComponent->SetRelativeLocation(SightMeshLocation);
@@ -77,19 +78,26 @@ void UPS_WeaponComponent::Fire()
 		                                      EDrawDebugTrace::ForDuration, CurrentFireHitResult, true);
 
 		if (!CurrentFireHitResult.bBlockingHit) return;
-			
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("TEST1:")));
+		
 		//Cut ProceduralMesh
-		CurrentSlicedComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
+		CurrentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetComponent());
 
 		if (!IsValid(CurrentSlicedComponent)) return;
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("TEST2:")));
 
 		//TODO :: Have to stock it on the parent SlicedComponent ?
 		UProceduralMeshComponent* outHalfComponent;
 		UKismetProceduralMeshLibrary::SliceProceduralMesh(CurrentSlicedComponent, CurrentFireHitResult.Location,
 		                                                  SightComponent->GetUpVector(), true,
 		                                                  outHalfComponent,
-		                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
+		                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 		                                                  HalfSectionMaterial);
+
+		CurrentSlicedComponent->GetChildProcMesh().Add(outHalfComponent);
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("TEST3: %s"), *outHalfComponent->GetName()));
 		
 		//Init Physic Config 
 		outHalfComponent->bUseComplexAsSimpleCollision = false;

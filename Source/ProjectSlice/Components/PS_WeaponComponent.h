@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PS_SlicedComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "PS_WeaponComponent.generated.h"
 
@@ -94,7 +95,7 @@ protected:
 	FHitResult CurrentFireHitResult;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	UProceduralMeshComponent* CurrentSlicedComponent = nullptr;
+	UPS_SlicedComponent* CurrentSlicedComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* HalfSectionMaterial = nullptr;
