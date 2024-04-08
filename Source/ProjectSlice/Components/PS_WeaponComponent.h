@@ -22,6 +22,10 @@ public:
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
 
+	AProjectSliceCharacter* GetPlayerCharacter() const{return _PlayerCharacter;}
+
+	APlayerController* GetPlayerController() const{return _PlayerController;}
+
 protected:
 	UFUNCTION()
 	virtual void BeginPlay() override;
