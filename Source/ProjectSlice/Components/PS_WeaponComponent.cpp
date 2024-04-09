@@ -22,8 +22,8 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	//TODO :: Improve Sight construction for better work issue in BP
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this, FName("Muzzle"));
-	SightComponent->SetRelativeLocation(SightMeshLocation);
-	SightComponent->SetRelativeScale3D(SightMeshScale);
+	SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
+	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 
 }
 
@@ -102,6 +102,20 @@ void UPS_WeaponComponent::Fire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);	}
 }
 
+
+void UPS_WeaponComponent::TurnRack()
+{
+	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(SightComponent)) return;
+	UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	bRackInHorizontal = !bRackInHorizontal;
+	
+	FRotator newSightRot = SightDefaultTransform.Rotator();
+	newSightRot.Pitch = SightDefaultTransform.Rotator().Yaw + (bRackInHorizontal ? 1 : -1 * 45);
+	SightComponent->SetRelativeRotation(newSightRot);
+	
+	
+}
+
 void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
 {
 	_PlayerCharacter = Target_PlayerCharacter;
@@ -122,11 +136,12 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	
 	//Setup Sight Mesh
 	//Place Sight Component to Projectile spawn place
-	const FRotator SpawnRotation = GetPlayerController()->PlayerCameraManager->GetCameraRotation();
+	//const FRotator SpawnRotation = GetPlayerController()->PlayerCameraManager->GetCameraRotation();
 	if(IsValid(SightComponent))
 	{
+		//TODO :: Maybe set relative rotation to be perpendicular to character forward
 		SightComponent->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform,FName("Muzzle"));
-		SightComponent->SetRelativeRotation(SpawnRotation);
+		//SightComponent->SetRelativeRotation(SpawnRotation);
 	}
 	
 	// Set up action bindings
@@ -142,6 +157,9 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	{
 		// Fire
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
+
+		// Rotate Rack
+		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
 	}
 	
 		

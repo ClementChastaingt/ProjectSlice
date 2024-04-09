@@ -55,6 +55,10 @@ protected:
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
 	class UInputAction* FireAction;
+
+	/** Sight Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
+	class UInputAction* TurnRackAction;
 	
 private:
 	//------------------
@@ -70,9 +74,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
 
-	/** Make the weapon Fire a Projectile */
+	/** Make the weapon Fire a Slice */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
+
+	/** Make the weapon Turn his Rack */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void TurnRack();
 	
 protected:
 	/** Sound to play each time we fire */
@@ -109,24 +117,34 @@ private:
 
 #pragma endregion Slice
 	
-#pragma region Sight
+#pragma region SightRack
 	//------------------
 
 public:
 	//------------------
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FVector SightMeshLocation = FVector(5.00,0.400,-2.0);
+	/** Rack is placed in horizontal */
+	UPROPERTY(VisibleAnywhere, Category="Status")
+	bool bRackInHorizontal = true;
 	
+	/** Sight Rack Mesh default Transform*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FVector SightMeshScale = FVector(0.050000,0.400000,0.050000);
+	FTransform SightDefaultTransform = FTransform(FRotator::ZeroRotator ,FVector(5.00,0.400,-2.0), FVector(0.050000,0.400000,0.050000));
 	
-	/** Gun muzzle's offset from the characters location */
+	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
 	FVector MuzzleOffset;
+	
+	/** Rack Rotation interpolation params */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
+	float RackRotDuration = 0.5f;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
+	UCurveFloat* RackRotCurve;
+	
 	
 private:
 	//------------------
 
-#pragma endregion Sight
+#pragma endregion SightRack
 };
