@@ -29,6 +29,9 @@ public:
 protected:
 	UFUNCTION()
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	/** Ends gameplay for this component. */
 	UFUNCTION()
@@ -77,10 +80,6 @@ public:
 	/** Make the weapon Fire a Slice */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
-
-	/** Make the weapon Turn his Rack */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void TurnRack();
 	
 protected:
 	/** Sound to play each time we fire */
@@ -123,9 +122,22 @@ private:
 public:
 	//------------------
 protected:
+	/** Make the weapon Turn his Rack */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void TurnRack();
+	
 	/** Rack is placed in horizontal */
-	UPROPERTY(VisibleAnywhere, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	bool bRackInHorizontal = true;
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	bool bInterpRackRotation = false;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	float InterpRackRotStartTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FRotator TargetRackRotation = FRotator::ZeroRotator;
 	
 	/** Sight Rack Mesh default Transform*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")

@@ -32,6 +32,23 @@ void UPS_WeaponComponent::BeginPlay()
 	//....
 }
 
+void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	//Smoothly rotate Sight Mesh
+	if(bInterpRackRotation)
+	{
+		const float alpha = (GetWorld()->GetTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
+		const FRotator newRotation =  FMath::RInterpTo(SightDefaultTransform.Rotator(),TargetRackRotation, DeltaTime,RackRotCurve->GetFloatValue(alpha));
+		SightComponent->SetRelativeRotation(newRotation);		
+	}
+		
+}
+
+
+
 void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController())) return;
@@ -39,6 +56,56 @@ void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetPlayerController()->GetLocalPlayer()))
 		Subsystem->RemoveMappingContext(FireMappingContext);
 }
+
+void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
+{
+	_PlayerCharacter = Target_PlayerCharacter;
+	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+
+	// Check that the _PlayerCharacter is valid, and has no rifle yet
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())
+	{
+		return;
+	}
+
+	// Attach the weapon to the First Person _PlayerCharacter
+	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
+	
+	// switch bHasRifle so the animation blueprint can switch to another animation set
+	GetPlayerCharacter()->SetHasRifle(true);
+	
+	//Setup Sight Mesh
+	//Place Sight Component to Projectile spawn place
+	//const FRotator SpawnRotation = GetPlayerController()->PlayerCameraManager->GetCameraRotation();
+	if(IsValid(SightComponent))
+	{
+		//TODO :: Maybe set relative rotation to be perpendicular to character forward
+		SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
+		//SightComponent->SetRelativeRotation(SpawnRotation);
+	}
+	
+	// Set up action bindings
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
+		GetPlayerController()->GetLocalPlayer()))
+	{
+		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
+		Subsystem->AddMappingContext(FireMappingContext, 1);
+	}
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(
+		GetPlayerController()->InputComponent))
+	{
+		// Fire
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
+
+		// Rotate Rack
+		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
+	}
+}
+
+#pragma region Input
+//__________________________________________________
 
 void UPS_WeaponComponent::Fire()
 {
@@ -99,69 +166,25 @@ void UPS_WeaponComponent::Fire()
 		// Get the animation object for the arms mesh
 		UAnimInstance* AnimInstance = GetPlayerCharacter()->GetMesh1P()->GetAnimInstance();
 		if (IsValid(AnimInstance))
-			AnimInstance->Montage_Play(FireAnimation, 1.f);	}
+			AnimInstance->Montage_Play(FireAnimation, 1.f);
+	}
 }
 
 
 void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(SightComponent)) return;
-	UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	
 	bRackInHorizontal = !bRackInHorizontal;
+	bInterpRackRotation = true;
 	
-	FRotator newSightRot = SightDefaultTransform.Rotator();
-	newSightRot.Pitch = SightDefaultTransform.Rotator().Yaw + (bRackInHorizontal ? 1 : -1 * 45);
-	SightComponent->SetRelativeRotation(newSightRot);
-	
-	
+	TargetRackRotation = SightDefaultTransform.Rotator();
+	TargetRackRotation.Roll = SightDefaultTransform.Rotator().Roll + (bRackInHorizontal ? 1 : -1 * 45);
+
+	InterpRackRotStartTimestamp = GetWorld()->GetTimeSeconds();
 }
 
-void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
-{
-	_PlayerCharacter = Target_PlayerCharacter;
-	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+//__________________________________________________
+#pragma endregion Input
 
-	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())
-	{
-		return;
-	}
-
-	// Attach the weapon to the First Person _PlayerCharacter
-	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
-	
-	// switch bHasRifle so the animation blueprint can switch to another animation set
-	GetPlayerCharacter()->SetHasRifle(true);
-	
-	//Setup Sight Mesh
-	//Place Sight Component to Projectile spawn place
-	//const FRotator SpawnRotation = GetPlayerController()->PlayerCameraManager->GetCameraRotation();
-	if(IsValid(SightComponent))
-	{
-		//TODO :: Maybe set relative rotation to be perpendicular to character forward
-		SightComponent->AttachToComponent(this, FAttachmentTransformRules::KeepRelativeTransform,FName("Muzzle"));
-		//SightComponent->SetRelativeRotation(SpawnRotation);
-	}
-	
-	// Set up action bindings
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
-		GetPlayerController()->GetLocalPlayer()))
-	{
-		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-		Subsystem->AddMappingContext(FireMappingContext, 1);
-	}
-
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(
-		GetPlayerController()->InputComponent))
-	{
-		// Fire
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
-
-		// Rotate Rack
-		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
-	}
-	
-		
-}
 
