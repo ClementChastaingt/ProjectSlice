@@ -27,10 +27,8 @@ public:
 	APlayerController* GetPlayerController() const{return _PlayerController;}
 
 protected:
-	UFUNCTION()
 	virtual void BeginPlay() override;
-
-	UFUNCTION()
+	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	/** Ends gameplay for this component. */
@@ -135,6 +133,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	float InterpRackRotStartTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FRotator StartRackRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FRotator TargetRackRotation = FRotator::ZeroRotator;

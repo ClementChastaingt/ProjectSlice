@@ -11,10 +11,14 @@
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "PS_SlicedComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
 {
+
+	PrimaryComponentTick.bCanEverTick = true;
+	
 	// Default offset from the _PlayerCharacter location for projectiles to spawn
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
@@ -22,7 +26,6 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	//TODO :: Improve Sight construction for better work issue in BP
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this, FName("Muzzle"));
-	SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 
 }
@@ -41,8 +44,17 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(bInterpRackRotation)
 	{
 		const float alpha = (GetWorld()->GetTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
-		const FRotator newRotation =  FMath::RInterpTo(SightDefaultTransform.Rotator(),TargetRackRotation, DeltaTime,RackRotCurve->GetFloatValue(alpha));
-		SightComponent->SetRelativeRotation(newRotation);		
+		float curveAlpha = alpha;
+		if(IsValid(RackRotCurve))
+			curveAlpha = RackRotCurve->GetFloatValue(alpha);
+
+		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation,curveAlpha);
+		SightComponent->SetRelativeRotation(newRotation);
+
+		//Stop Rot
+		if(alpha > 1)
+			bInterpRackRotation = false;
+		
 	}
 		
 }
@@ -82,6 +94,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	{
 		//TODO :: Maybe set relative rotation to be perpendicular to character forward
 		SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
+		SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
 		//SightComponent->SetRelativeRotation(SpawnRotation);
 	}
 	
@@ -176,12 +189,14 @@ void UPS_WeaponComponent::TurnRack()
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(SightComponent)) return;
 	
 	bRackInHorizontal = !bRackInHorizontal;
-	bInterpRackRotation = true;
-	
+
+	StartRackRotation = SightComponent->GetRelativeRotation();
 	TargetRackRotation = SightDefaultTransform.Rotator();
 	TargetRackRotation.Roll = SightDefaultTransform.Rotator().Roll + (bRackInHorizontal ? 1 : -1 * 45);
 
 	InterpRackRotStartTimestamp = GetWorld()->GetTimeSeconds();
+	bInterpRackRotation = true;
+	
 }
 
 //__________________________________________________
