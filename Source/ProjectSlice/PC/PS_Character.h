@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "..\Components\PS_WeaponComponent.h"
+#include "..\Components\PC\PS_WeaponComponent.h"
 #include "PS_Character.generated.h"
 
 class UInputComponent;

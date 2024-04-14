@@ -3,14 +3,15 @@
 
 #include "PS_WeaponComponent.h"
 
-#include "..\PC\PS_Character.h"
+#include "..\..\PC\PS_Character.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
-#include "PS_SlicedComponent.h"
+#include "PS_HookComponent.h"
+#include "..\GPE\PS_SlicedComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values for this component's properties
@@ -27,6 +28,10 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this, FName("Muzzle"));
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
+
+	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
+	HookComponent->SetupAttachment(this, FName("Muzzle"));
+	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 
 }
 
@@ -114,6 +119,9 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 		// Rotate Rack
 		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
+
+		// Hook Launch
+		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Grapple);
 	}
 }
 
@@ -138,7 +146,7 @@ void UPS_WeaponComponent::Fire()
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
 	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
-	                                      EDrawDebugTrace::ForDuration, CurrentFireHitResult, true);
+	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 
@@ -183,7 +191,6 @@ void UPS_WeaponComponent::Fire()
 	}
 }
 
-
 void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(SightComponent)) return;
@@ -198,6 +205,35 @@ void UPS_WeaponComponent::TurnRack()
 	bInterpRackRotation = true;
 	
 }
+
+void UPS_WeaponComponent::Grapple()
+{
+	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(HookComponent)) return;
+
+	//Trace Loc && Rot
+	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
+	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
+	//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+
+	//Trace config
+	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter()};
+
+	//TODO :: Config Collision channel
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
+										  SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
+										  UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
+										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true);
+
+	
+	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent())) return;
+	
+	//Cut ProceduralMesh
+	if(HookComponent->IsConstrainted())
+		HookComponent->BreakConstraint();
+	else
+		HookComponent->SetConstrainedComponents(this, FName("Muzzle"), CurrentFireHitResult.GetComponent(), FName("None"));
+}
+
 
 //__________________________________________________
 #pragma endregion Input

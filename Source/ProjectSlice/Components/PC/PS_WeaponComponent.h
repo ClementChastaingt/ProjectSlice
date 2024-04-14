@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PS_SlicedComponent.h"
+#include "PS_HookComponent.h"
+#include "..\GPE\PS_SlicedComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "PS_WeaponComponent.generated.h"
 
@@ -18,6 +19,9 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightComponent = nullptr;
 
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPS_HookComponent* HookComponent = nullptr;
+
 public:
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
@@ -25,6 +29,11 @@ public:
 	AProjectSliceCharacter* GetPlayerCharacter() const{return _PlayerCharacter;}
 
 	APlayerController* GetPlayerController() const{return _PlayerController;}
+
+	/** Attaches the actor to a FirstPersonCharacter */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -34,6 +43,9 @@ protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bDebug = false;
 
 private:
 	/** The Character holding this weapon*/
@@ -60,6 +72,10 @@ protected:
 	/** Sight Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
 	class UInputAction* TurnRackAction;
+
+	/** Hook Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
+	class UInputAction* HookAction;
 	
 private:
 	//------------------
@@ -71,15 +87,15 @@ private:
 	//------------------
 
 public:
-	/** Attaches the actor to a FirstPersonCharacter */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
-
 	/** Make the weapon Fire a Slice */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
+	UFUNCTION()
 	void Fire();
 	
 protected:
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FHitResult CurrentFireHitResult;
+	
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
 	USoundBase* FireSound;
@@ -100,9 +116,7 @@ public:
 	//__________________________________________________
 
 protected:
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	FHitResult CurrentFireHitResult;
-
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	UPS_SlicedComponent* CurrentSlicedComponent = nullptr;
 
@@ -113,7 +127,26 @@ private:
 	//__________________________________________________
 
 #pragma endregion Slice
+
+#pragma region Hook
+	//------------------
+
+public:
 	
+	/** Make the weapon Fire a Hook */
+	UFUNCTION()
+	void Grapple();
+	
+protected:
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FHitResult CurrentHookHitResult;
+	
+private:
+	//------------------
+
+#pragma endregion Hook
+
 #pragma region SightRack
 	//------------------
 
@@ -121,7 +154,7 @@ public:
 	//------------------
 protected:
 	/** Make the weapon Turn his Rack */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
+	UFUNCTION()
 	void TurnRack();
 	
 	/** Rack is placed in horizontal */

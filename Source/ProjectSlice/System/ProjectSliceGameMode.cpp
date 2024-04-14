@@ -4,7 +4,7 @@
 
 #include "../PC/PS_Character.h"
 #include "Kismet/GameplayStatics.h"
-#include "ProjectSlice/Components/PS_SlicedComponent.h"
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()
