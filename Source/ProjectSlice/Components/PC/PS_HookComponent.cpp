@@ -40,7 +40,7 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(!IsValid(outComponent1) || !IsValid(outComponent2) || !IsValid(GetWorld()))
 		return;
 
-	DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Red);
+	DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Orange);
 	
 }
 

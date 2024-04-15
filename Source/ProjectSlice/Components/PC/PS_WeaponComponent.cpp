@@ -93,14 +93,12 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	GetPlayerCharacter()->SetHasRifle(true);
 	
 	//Setup Sight Mesh
-	//Place Sight Component to Projectile spawn place
-	//const FRotator SpawnRotation = GetPlayerController()->PlayerCameraManager->GetCameraRotation();
 	if(IsValid(SightComponent))
 	{
 		//TODO :: Maybe set relative rotation to be perpendicular to character forward
 		SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
 		SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
-		//SightComponent->SetRelativeRotation(SpawnRotation);
+		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
 	}
 	
 	// Set up action bindings
@@ -199,7 +197,7 @@ void UPS_WeaponComponent::TurnRack()
 
 	StartRackRotation = SightComponent->GetRelativeRotation();
 	TargetRackRotation = SightDefaultTransform.Rotator();
-	TargetRackRotation.Roll = SightDefaultTransform.Rotator().Roll + (bRackInHorizontal ? 1 : -1 * 45);
+	TargetRackRotation.Roll = SightDefaultTransform.Rotator().Roll + (bRackInHorizontal ? 1 : -1 * 90);
 
 	InterpRackRotStartTimestamp = GetWorld()->GetTimeSeconds();
 	bInterpRackRotation = true;
@@ -231,7 +229,11 @@ void UPS_WeaponComponent::Grapple()
 	if(HookComponent->IsConstrainted())
 		HookComponent->BreakConstraint();
 	else
+	{
+		//HookComponent->Setconst
 		HookComponent->SetConstrainedComponents(this, FName("Muzzle"), CurrentFireHitResult.GetComponent(), FName("None"));
+	}
+
 }
 
 
