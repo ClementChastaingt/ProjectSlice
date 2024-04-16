@@ -23,22 +23,22 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	// Default offset from the _PlayerCharacter location for projectiles to spawn
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
-	//Create Component
-	//TODO :: Improve Sight construction for better work issue in BP
+	//Create Component and Attach
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	SightComponent->SetupAttachment(this, FName("Muzzle"));
+	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
-
+	
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->SetupAttachment(this, FName("Muzzle"));
+	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
 	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 
 }
 
 void UPS_WeaponComponent::BeginPlay()
 {
-	//....
+	
 }
+
 
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -80,27 +80,26 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())
-	{
-		return;
-	}
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())return;
 
 	// Attach the weapon to the First Person _PlayerCharacter
 	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
+	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
+	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
+	
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	GetPlayerCharacter()->SetHasRifle(true);
 	
-	//Setup Sight Mesh
+	//Setup Sight Mesh Loc && Rot
 	if(IsValid(SightComponent))
 	{
-		//TODO :: Maybe set relative rotation to be perpendicular to character forward
-		SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
 		SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
 		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
 	}
-	
+
+	//----Input----
 	// Set up action bindings
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
 		GetPlayerController()->GetLocalPlayer()))
@@ -109,8 +108,8 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		Subsystem->AddMappingContext(FireMappingContext, 1);
 	}
 
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(
-		GetPlayerController()->InputComponent))
+	//BindAction
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(GetPlayerController()->InputComponent))
 	{
 		// Fire
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
@@ -151,9 +150,9 @@ void UPS_WeaponComponent::Fire()
 
 	//Cut ProceduralMesh
 	UProceduralMeshComponent* currentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
-	CurrentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
 
-	if (!IsValid(currentProcMeshComponent) || !IsValid(CurrentSlicedComponent)) return;
+	if (!IsValid(currentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 
 	UProceduralMeshComponent* outHalfComponent;
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
@@ -162,7 +161,7 @@ void UPS_WeaponComponent::Fire()
 	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  HalfSectionMaterial);
 	
-	CurrentSlicedComponent->ChildsProcMesh.Add(outHalfComponent);
+	currentSlicedComponent->ChildsProcMesh.Add(outHalfComponent);
 	
 	//Init Physic Config+
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
@@ -208,31 +207,32 @@ void UPS_WeaponComponent::Grapple()
 {
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(HookComponent)) return;
 
-	//Trace Loc && Rot
-	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
-	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-	//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+	//Break Hook constraint if already exist
+	if(HookComponent->IsConstrainted())
+	{
+		HookComponent->BreakConstraint();
+		return;
+	}
 
+	//Create Hook constraint
+	
 	//Trace config
-	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter()};
+	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
+	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter(), GetOwner()};
 
 	//TODO :: Config Collision channel
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
 										  SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
-										  UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
+										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
 										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true);
 
 	
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent())) return;
+
+	HookComponent->SetConstrainedComponents(CurrentFireHitResult.GetComponent(), FName("None"));
 	
-	//Cut ProceduralMesh
-	if(HookComponent->IsConstrainted())
-		HookComponent->BreakConstraint();
-	else
-	{
-		//HookComponent->Setconst
-		HookComponent->SetConstrainedComponents(this, FName("Muzzle"), CurrentFireHitResult.GetComponent(), FName("None"));
-	}
+		
+	
 
 }
 

@@ -117,9 +117,6 @@ public:
 
 protected:
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	UPS_SlicedComponent* CurrentSlicedComponent = nullptr;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* HalfSectionMaterial = nullptr;
 

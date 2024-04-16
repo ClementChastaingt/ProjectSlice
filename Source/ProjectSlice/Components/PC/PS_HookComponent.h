@@ -16,6 +16,9 @@ public:
 	// Sets default values for this component's properties
 	UPS_HookComponent();
 
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UStaticMeshComponent* HookMesh = nullptr;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -25,7 +28,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
-	virtual void SetConstrainedComponents(UPrimitiveComponent* Component1, FName BoneName1, UPrimitiveComponent* Component2, FName BoneName2);
+	void SetConstrainedComponents(UPrimitiveComponent* Component2, FName BoneName2);
 
 	virtual void BreakConstraint();
 

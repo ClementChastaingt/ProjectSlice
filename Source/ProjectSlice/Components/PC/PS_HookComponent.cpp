@@ -11,7 +11,9 @@ UPS_HookComponent::UPS_HookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
+	HookMesh->SetupAttachment(this);
+	HookMesh->SetEnableGravity(false);
 }
 
 
@@ -19,8 +21,8 @@ UPS_HookComponent::UPS_HookComponent()
 void UPS_HookComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
+	
+	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 }
 
@@ -31,30 +33,47 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	UPrimitiveComponent* outComponent1;
-	UPrimitiveComponent* outComponent2;
-	FName outBoneName1, outBoneName2;
+	if(bIsConstrainted)
+	{
+		//Set Position to HookAttach position
+		HookMesh->SetWorldLocation(GetComponentLocation());
+		
+		//Cable
+		UPrimitiveComponent* outComponent1;
+		UPrimitiveComponent* outComponent2;
+		FName outBoneName1, outBoneName2;
 
-	GetConstrainedComponents(outComponent1,outBoneName1, outComponent2, outBoneName2);
+		GetConstrainedComponents(outComponent1,outBoneName1, outComponent2, outBoneName2);
 
-	if(!IsValid(outComponent1) || !IsValid(outComponent2) || !IsValid(GetWorld()))
-		return;
+		if(!IsValid(outComponent1) || !IsValid(outComponent2) || !IsValid(GetWorld()))
+			return;
 
-	DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Orange);
+		DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Orange);
+	
+	}
 	
 }
 
-void UPS_HookComponent::SetConstrainedComponents(UPrimitiveComponent* Component1, FName BoneName1, UPrimitiveComponent* Component2, FName BoneName2)
+void UPS_HookComponent::SetConstrainedComponents(UPrimitiveComponent* ComponentToAttach, FName  ComponentBoneName)
 {
-	Super::SetConstrainedComponents(Component1,BoneName1,Component2,BoneName2);
+	HookMesh->SetSimulatePhysics(true);
+	
+	Super::SetConstrainedComponents(HookMesh,FName("None"),ComponentToAttach,ComponentBoneName);
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
 
 	bIsConstrainted = true;
 }
 
 void UPS_HookComponent::BreakConstraint()
-{
+{	
 	Super::BreakConstraint();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("BreakConstraint")));
 
+	//Reset Hook Mesh
+	HookMesh->SetSimulatePhysics(false);
+	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	
 	bIsConstrainted = false;
 }
 
