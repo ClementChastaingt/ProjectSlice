@@ -11,9 +11,23 @@ UPS_HookComponent::UPS_HookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
+	HookThrower->SetupAttachment(this);
+	HookThrower->SetSimulatePhysics(false);
+	
+	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
+	CableMesh->SetupAttachment(this);
+
+	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
+	CableOriginAttach->SetupAttachment(CableMesh,FName("Bone_001"));
+
+	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
+	CableTargetAttach->SetupAttachment(CableMesh,FName("Bone"));
+
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	HookMesh->SetupAttachment(this);
-	HookMesh->SetEnableGravity(false);
+	HookMesh->SetSimulatePhysics(false);
+
 }
 
 
@@ -21,11 +35,19 @@ UPS_HookComponent::UPS_HookComponent()
 void UPS_HookComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	
-}
 
+	CableMesh->SetVisibility(false);
+	CableMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	//Setup attachment
+	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CableOriginAttach->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone_001"));
+	CableTargetAttach->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone"));
+
+	//Setup cable constraint to HookThrower
+	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
+}
 
 // Called every frame
 void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -35,44 +57,53 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if(bIsConstrainted)
 	{
-		//Set Position to HookAttach position
-		HookMesh->SetWorldLocation(GetComponentLocation());
-		
-		//Cable
-		UPrimitiveComponent* outComponent1;
-		UPrimitiveComponent* outComponent2;
-		FName outBoneName1, outBoneName2;
-
-		GetConstrainedComponents(outComponent1,outBoneName1, outComponent2, outBoneName2);
-
-		if(!IsValid(outComponent1) || !IsValid(outComponent2) || !IsValid(GetWorld()))
-			return;
-
-		DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Orange);
-	
+		// //Set Position to HookAttach position
+		// HookMesh->SetWorldLocation(GetComponentLocation());
+		//
+		// //Cable
+		// UPrimitiveComponent* outComponent1;
+		// UPrimitiveComponent* outComponent2;
+		// FName outBoneName1, outBoneName2;
+		//
+		// GetConstrainedComponents(outComponent1,outBoneName1, outComponent2, outBoneName2);
+		//
+		// if(!IsValid(outComponent1) || !IsValid(outComponent2) || !IsValid(GetWorld()))
+		// 	return;
+		//
+		// DrawDebugLine(GetWorld(),outComponent1->GetComponentLocation(), outComponent2->GetComponentLocation(), FColor::Orange);
+		//
 	}
 	
 }
 
-void UPS_HookComponent::SetConstrainedComponents(UPrimitiveComponent* ComponentToAttach, FName  ComponentBoneName)
+void UPS_HookComponent::ThrowGrapplin()
 {
-	HookMesh->SetSimulatePhysics(true);
 	
-	Super::SetConstrainedComponents(HookMesh,FName("None"),ComponentToAttach,ComponentBoneName);
+}
 
+
+void UPS_HookComponent::GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName)
+{
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
+
+	CableMesh->SetVisibility(true);
+	CableMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	
+	CableMesh->SetSimulatePhysics(true);
+	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone"),cableTargetConstrainter, cableTargetBoneName);
 
 	bIsConstrainted = true;
 }
 
-void UPS_HookComponent::BreakConstraint()
+void UPS_HookComponent::DettachGrapple()
 {	
-	Super::BreakConstraint();
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("BreakConstraint")));
 
+	CableMesh->SetSimulatePhysics(false);
+	CableTargetAttach->BreakConstraint();
+	
 	//Reset Hook Mesh
-	HookMesh->SetSimulatePhysics(false);
-	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 	bIsConstrainted = false;
 }

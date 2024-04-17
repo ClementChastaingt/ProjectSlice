@@ -210,17 +210,14 @@ void UPS_WeaponComponent::Grapple()
 	//Break Hook constraint if already exist
 	if(HookComponent->IsConstrainted())
 	{
-		HookComponent->BreakConstraint();
+		HookComponent->DettachGrapple();
 		return;
 	}
-
-	//Create Hook constraint
-	
+		
 	//Trace config
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter(), GetOwner()};
-
-	//TODO :: Config Collision channel
+	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
 										  SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
 										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
@@ -229,10 +226,7 @@ void UPS_WeaponComponent::Grapple()
 	
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent())) return;
 
-	HookComponent->SetConstrainedComponents(CurrentFireHitResult.GetComponent(), FName("None"));
-	
-		
-	
+	HookComponent->GrappleObject(CurrentFireHitResult.GetComponent(), FName("None"));
 
 }
 
