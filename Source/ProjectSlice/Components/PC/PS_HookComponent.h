@@ -3,11 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/SceneComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "PS_HookComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()
@@ -16,19 +17,19 @@ public:
 	// Sets default values for this component's properties
 	UPS_HookComponent();
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookThrower = nullptr;
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* CableMesh = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* CableOriginAttach = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* CableTargetAttach = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookMesh = nullptr;
 
 protected:
@@ -38,6 +39,11 @@ protected:
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bDebug = false;
+
+private:
 	
 
 #pragma region General
@@ -51,11 +57,13 @@ public:
 
 	UFUNCTION()
 	void DettachGrapple();
-
+	
 protected:
 	
-	UFUNCTION()
-	void ThrowGrapplin();
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FHitResult CurrentHookHitResult;
+
+protected:
 	
 	UPROPERTY()
 	bool bIsConstrainted = false;
