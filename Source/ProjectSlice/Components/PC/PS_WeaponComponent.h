@@ -6,7 +6,6 @@
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "ProjectSlice/GPE/PS_Hook.h"
 #include "PS_WeaponComponent.generated.h"
 
 class UProceduralMeshComponent;
@@ -17,8 +16,11 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightComponent = nullptr;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPS_HookComponent* HookComponent = nullptr;
 
 public:
 	/** Sets default values for this component's properties */
@@ -133,12 +135,6 @@ public:
 	void Grapple();
 	
 protected:
-
-	UPROPERTY()
-	UPS_HookComponent* HookComponent = nullptr;
-
-	UPROPERTY()
-	APS_Hook* HookActor = nullptr;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult CurrentHookHitResult;

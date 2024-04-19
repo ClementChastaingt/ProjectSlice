@@ -13,7 +13,6 @@
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "ProjectSlice/GPE/PS_Hook.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -26,14 +25,18 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 	//Create Component and Attach
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	SightComponent->SetupAttachment(GetAttachmentRoot());
+	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 	
+	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
+	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
+	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
+
 }
 
 void UPS_WeaponComponent::BeginPlay()
 {
-;
+	
 }
 
 
@@ -83,15 +86,8 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
 	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
-
-	//Setup and Attach HookComponent
-	HookComponent = Cast<UPS_HookComponent>(_PlayerCharacter->GetComponentByClass(UPS_HookComponent::StaticClass()));
-	HookActor = Cast<APS_Hook>(HookComponent->GetOwner());
-	if(IsValid(HookActor))
-	{
-		HookActor->SetActorRelativeScale3D(SightDefaultTransform.GetScale3D());
-		HookActor->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
-	}
+	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
+	
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	GetPlayerCharacter()->SetHasRifle(true);
