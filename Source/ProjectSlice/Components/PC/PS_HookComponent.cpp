@@ -16,13 +16,11 @@ UPS_HookComponent::UPS_HookComponent()
 	HookThrower->SetSimulatePhysics(false);
 	
 	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
-	CableMesh->SetupAttachment(this);
-
+	
 	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
-	CableOriginAttach->SetupAttachment(CableMesh,FName("Bone_001"));
-
+	CableOriginAttach->SetDisableCollision(true);
 	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
-	CableTargetAttach->SetupAttachment(CableMesh,FName("Bone"));
+	CableTargetAttach->SetDisableCollision(true);
 
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	HookMesh->SetupAttachment(this);
@@ -36,14 +34,9 @@ void UPS_HookComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CableMesh->SetVisibility(false);
-	CableMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 	//Setup attachment
-	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CableOriginAttach->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone_001"));
-	CableTargetAttach->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone"));
+	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation());
+	CableOriginAttach->SetWorldLocation(CableMesh->GetSocketLocation("Bone_001"));
 
 	//Setup cable constraint to HookThrower
 	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
@@ -85,11 +78,7 @@ void UPS_HookComponent::ThrowGrapplin()
 void UPS_HookComponent::GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName)
 {
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
-
-	CableMesh->SetVisibility(true);
-	CableMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	
-	CableMesh->SetSimulatePhysics(true);
 	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone"),cableTargetConstrainter, cableTargetBoneName);
 
 	bIsConstrainted = true;
@@ -99,7 +88,6 @@ void UPS_HookComponent::DettachGrapple()
 {	
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("BreakConstraint")));
 
-	CableMesh->SetSimulatePhysics(false);
 	CableTargetAttach->BreakConstraint();
 	
 	//Reset Hook Mesh

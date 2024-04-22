@@ -16,10 +16,10 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightComponent = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UPS_HookComponent* HookComponent = nullptr;
 
 public:

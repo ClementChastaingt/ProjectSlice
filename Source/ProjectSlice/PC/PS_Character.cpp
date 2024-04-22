@@ -36,8 +36,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 	
-	//Create WeaponComponent
-	WeaponComponent = CreateDefaultSubobject<UPS_WeaponComponent>(TEXT("WeaponComponent"));
+
 
 }
 
@@ -55,8 +54,22 @@ void AProjectSliceCharacter::BeginPlay()
 		}
 	}
 
-	//Attach Weapon Componenet on begin play
-	WeaponComponent->AttachWeapon(this);
+	//Attach Weapon Component on begin play
+	TArray<AActor*> childActors;
+	GetAllChildActors(childActors, false);
+
+	for (auto ChildActor : childActors)
+	{
+		WeaponComponent = Cast<UPS_WeaponComponent>(ChildActor->GetComponentByClass(UPS_WeaponComponent::StaticClass()));
+		if(IsValid(WeaponComponent))
+		{
+			WeaponComponent->AttachWeapon(this);
+			break;
+		}
+
+		UE_LOG(LogTemp, Error, TEXT("WeaponComponent :: Invalid"));
+	}
+	
 
 }
 

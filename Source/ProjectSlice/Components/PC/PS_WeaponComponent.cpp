@@ -25,18 +25,17 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 	//Create Component and Attach
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 	
-	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
-	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
-
 }
 
 void UPS_WeaponComponent::BeginPlay()
 {
-	
+	HookComponent = Cast<UPS_HookComponent>(GetOwner()->GetComponentByClass(UPS_HookComponent::StaticClass()));
+	if(IsValid(HookComponent))
+		HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
+	else
+		UE_LOG(LogTemp, Error, TEXT("HookComponent :: Invalid %s "), *GetOwner()->GetName());
 }
 
 

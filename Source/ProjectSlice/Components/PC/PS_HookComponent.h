@@ -7,7 +7,7 @@
 #include "PS_HookComponent.generated.h"
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()
@@ -16,19 +16,19 @@ public:
 	// Sets default values for this component's properties
 	UPS_HookComponent();
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookThrower = nullptr;
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* CableMesh = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,  Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* CableOriginAttach = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* CableTargetAttach = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookMesh = nullptr;
 
 protected:
