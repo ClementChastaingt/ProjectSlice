@@ -47,21 +47,21 @@ public:
 	bool IsConstrainted() const{return bIsConstrainted;}
 
 	UFUNCTION()
+	void OnAttachWeaponEventRecieved();
+
+	UFUNCTION()
 	void GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName);
 
 	UFUNCTION()
 	void DettachGrapple();
 
 protected:
-	
-	UFUNCTION()
-	void ThrowGrapplin();
-	
+		
 	UPROPERTY()
 	bool bIsConstrainted = false;
 
 private:
-	//------------------
+
 
 #pragma endregion General
 	

@@ -3,6 +3,8 @@
 
 #include "PS_HookComponent.h"
 
+#include "MovieSceneTracksComponentTypes.h"
+
 
 // Sets default values for this component's properties
 UPS_HookComponent::UPS_HookComponent()
@@ -11,20 +13,18 @@ UPS_HookComponent::UPS_HookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+	//Create components
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
-	HookThrower->SetupAttachment(this);
-	HookThrower->SetSimulatePhysics(false);
-	
-	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
-	
-	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
-	CableOriginAttach->SetDisableCollision(true);
-	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
-	CableTargetAttach->SetDisableCollision(true);
-
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
-	HookMesh->SetupAttachment(this);
+	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
+	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
+	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
+
+	//Preset physic
+	CableOriginAttach->SetDisableCollision(true);
+	CableTargetAttach->SetDisableCollision(true);
 	HookMesh->SetSimulatePhysics(false);
+	HookThrower->SetSimulatePhysics(false);
 
 }
 
@@ -34,12 +34,6 @@ void UPS_HookComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//Setup attachment
-	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation());
-	CableOriginAttach->SetWorldLocation(CableMesh->GetSocketLocation("Bone_001"));
-
-	//Setup cable constraint to HookThrower
-	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
 }
 
 // Called every frame
@@ -69,11 +63,21 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	
 }
 
-void UPS_HookComponent::ThrowGrapplin()
+
+void UPS_HookComponent::OnAttachWeaponEventRecieved()
 {
 	
-}
+	//Setup attachment
+	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation());
+	CableMesh->SetSimulatePhysics(true);
+	CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
 
+
+	//Setup cable constraint to HookThrower
+	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
+}
 
 void UPS_HookComponent::GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName)
 {

@@ -31,6 +31,9 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 void UPS_WeaponComponent::BeginPlay()
 {
+
+	Super::BeginPlay();
+	
 	HookComponent = Cast<UPS_HookComponent>(GetOwner()->GetComponentByClass(UPS_HookComponent::StaticClass()));
 	if(IsValid(HookComponent))
 		HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
@@ -119,6 +122,9 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		// Hook Launch
 		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Grapple);
 	}
+
+	HookComponent->OnAttachWeaponEventRecieved();
+	OnAttachWeapon.Broadcast();
 }
 
 #pragma region Input

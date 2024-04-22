@@ -6,6 +6,7 @@
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_WeaponComponent.generated.h"
 
 class UProceduralMeshComponent;
@@ -34,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
 
+	UPROPERTY(BlueprintAssignable, Category="Movement")
+	FOnPSDelegate OnAttachWeapon;
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -49,8 +53,10 @@ protected:
 
 private:
 	/** The Character holding this weapon*/
+	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
 
+	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
 
 

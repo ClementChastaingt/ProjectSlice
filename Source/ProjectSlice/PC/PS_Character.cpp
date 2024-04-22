@@ -66,8 +66,10 @@ void AProjectSliceCharacter::BeginPlay()
 			WeaponComponent->AttachWeapon(this);
 			break;
 		}
-
-		UE_LOG(LogTemp, Error, TEXT("WeaponComponent :: Invalid"));
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("WeaponComponent :: Invalid"));
+		}		
 	}
 	
 
@@ -101,6 +103,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("MovementVector: %s"), *MovementVector.ToString()));
 
 	if (Controller != nullptr)
 	{
