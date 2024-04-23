@@ -52,10 +52,10 @@ public:
 	UFUNCTION()
 	void DettachGrapple();
 
-protected:
-	
 	UFUNCTION()
-	void ThrowGrapplin();
+	void OnAttachWeaponEventReceived();
+
+protected:
 	
 	UPROPERTY()
 	bool bIsConstrainted = false;

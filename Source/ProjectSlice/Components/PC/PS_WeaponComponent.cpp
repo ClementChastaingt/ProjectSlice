@@ -25,11 +25,11 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 	//Create Component and Attach
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
+	SightComponent->SetupAttachment(this);
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 	
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
+	HookComponent->SetupAttachment(this);
 	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 
 }
@@ -97,6 +97,12 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	{
 		SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
 		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
+	}
+
+	//Setup Hook
+	if(IsValid(HookComponent))
+	{
+		HookComponent->OnAttachWeaponEventReceived();
 	}
 
 	//----Input----
