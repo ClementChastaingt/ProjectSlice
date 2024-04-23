@@ -72,25 +72,29 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
 	
 	//Setup attachment
-	HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//CableMesh->SetWorldLocation(HookThrower->GetComponentLocation());
-	//CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
-	CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
+	//HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
+	
+	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
+	//CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + FVector(0,0,90));
+	CableTargetAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+	HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
+	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone"));
+
 
 	//Setup cable constraint to HookThrower
 	CableMesh->SetSimulatePhysics(true);
-	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
+	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
 }
 
 
 void UPS_HookComponent::GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName)
 {
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
-		
 
+	CableTargetAttach->AttachToComponent(cableTargetConstrainter, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone"),cableTargetConstrainter, cableTargetBoneName);
 
 	bIsConstrainted = true;
