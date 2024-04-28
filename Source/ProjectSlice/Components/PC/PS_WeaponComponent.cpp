@@ -99,6 +99,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
 	}
 
+	//TODO :: Need to be to be asynchrone
 	//Setup Hook
 	if(IsValid(HookComponent))
 	{
@@ -213,6 +214,7 @@ void UPS_WeaponComponent::Grapple()
 {
 	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(HookComponent)) return;
 
+	//TODO :: Move all logic to HookComponent
 	//Break Hook constraint if already exist
 	if(HookComponent->IsConstrainted())
 	{

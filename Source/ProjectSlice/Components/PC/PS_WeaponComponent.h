@@ -49,8 +49,10 @@ protected:
 
 private:
 	/** The Character holding this weapon*/
+	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
 
+	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
 
 
@@ -148,7 +150,8 @@ private:
 	//------------------
 
 public:
-	//------------------
+	UStaticMeshComponent* GetSightComponent() const{return SightComponent;}
+
 protected:
 	/** Make the weapon Turn his Rack */
 	UFUNCTION()

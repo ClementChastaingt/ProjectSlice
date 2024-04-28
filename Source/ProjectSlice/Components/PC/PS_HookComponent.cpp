@@ -3,6 +3,9 @@
 
 #include "PS_HookComponent.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "ProjectSlice/PC/PS_Character.h"
+
 
 // Sets default values for this component's properties
 UPS_HookComponent::UPS_HookComponent()
@@ -70,19 +73,23 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
+
+	//TODO :: Add this to Begin play
+	AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	
-	//Setup attachment
+	//Setup HookThrower
 	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	//HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
-	
-	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
-	//CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + FVector(0,0,90));
-	CableTargetAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
+	//Setup Cable
+	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	DrawDebugPoint(GetWorld(),player->GetWeaponComponent()->GetSightComponent()->GetComponentLocation(), 10.0f, FColor::Cyan, true);
+	CableMesh->SetWorldLocation(player->GetWeaponComponent()->GetSightComponent()->GetComponentLocation());
+	CableTargetAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	
+	//Setup HookMesh
 	HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
 	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone"));
-
 
 	//Setup cable constraint to HookThrower
 	CableMesh->SetSimulatePhysics(true);
@@ -93,8 +100,10 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 void UPS_HookComponent::GrappleObject(UPrimitiveComponent* cableTargetConstrainter, FName cableTargetBoneName)
 {
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
-
+	
 	CableTargetAttach->AttachToComponent(cableTargetConstrainter, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CableMesh->SetWorldLocation(cableTargetConstrainter->GetComponentLocation());
+	
 	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone"),cableTargetConstrainter, cableTargetBoneName);
 
 	bIsConstrainted = true;
