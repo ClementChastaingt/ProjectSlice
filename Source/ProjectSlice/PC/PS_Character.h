@@ -30,6 +30,10 @@ class AProjectSliceCharacter : public ACharacter
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	UPS_WeaponComponent* WeaponComponent;
 
+	/** HookComponent */
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPS_HookComponent* HookComponent = nullptr;
+
 	/** First person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCameraComponent;
@@ -91,5 +95,8 @@ public:
 
 	/** Returns WeaponComponent **/
 	UPS_WeaponComponent* GetWeaponComponent() const{return WeaponComponent;}
+
+	/** Returns HookComponent **/
+	UPS_HookComponent* GetHookComponent() const{return HookComponent;}
 };
 

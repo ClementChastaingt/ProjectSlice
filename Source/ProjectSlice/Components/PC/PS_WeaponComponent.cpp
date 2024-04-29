@@ -17,7 +17,6 @@
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
 {
-
 	PrimaryComponentTick.bCanEverTick = true;
 	
 	// Default offset from the _PlayerCharacter location for projectiles to spawn
@@ -27,11 +26,6 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this);
 	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
-	
-	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->SetupAttachment(this);
-	HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
-
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -68,9 +62,9 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController())) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController)) return;
 	
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetPlayerController()->GetLocalPlayer()))
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(_PlayerController->GetLocalPlayer()))
 		Subsystem->RemoveMappingContext(FireMappingContext);
 }
 
@@ -80,17 +74,23 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle())return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle()
+		|| !IsValid(_PlayerCharacter->GetHookComponent())
+		|| !IsValid(_PlayerCharacter->GetMesh1P()))return;
 
 	// Attach the weapon to the First Person _PlayerCharacter
 	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
 	SightComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("Muzzle"));
-	HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
-	
+
+	// Attach Hook to Weapon
+	_HookComponent = _PlayerCharacter->GetHookComponent();
+	_HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
+	_HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
+
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
-	GetPlayerCharacter()->SetHasRifle(true);
+	_PlayerCharacter->SetHasRifle(true);
 	
 	//Setup Sight Mesh Loc && Rot
 	if(IsValid(SightComponent))
@@ -101,22 +101,22 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 	//TODO :: Need to be to be asynchrone
 	//Setup Hook
-	if(IsValid(HookComponent))
+	if(IsValid(_HookComponent))
 	{
-		HookComponent->OnAttachWeaponEventReceived();
+		_HookComponent->OnAttachWeaponEventReceived();
 	}
 
 	//----Input----
 	// Set up action bindings
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
-		GetPlayerController()->GetLocalPlayer()))
+		_PlayerController->GetLocalPlayer()))
 	{
 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
 		Subsystem->AddMappingContext(FireMappingContext, 1);
 	}
 
 	//BindAction
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(GetPlayerController()->InputComponent))
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(_PlayerController->InputComponent))
 	{
 		// Fire
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
@@ -134,7 +134,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 void UPS_WeaponComponent::Fire()
 {
-	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(GetWorld())) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 
 	//Try Slice a Mesh
 	
@@ -144,7 +144,7 @@ void UPS_WeaponComponent::Fire()
 	//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
 	//Trace config
-	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter()};
+	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 
 	//TODO :: Config Collision channel
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
@@ -183,13 +183,13 @@ void UPS_WeaponComponent::Fire()
 	
 	// Try and play the sound if specified
 	if (IsValid(FireSound))
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetPlayerCharacter()->GetActorLocation());
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, _PlayerCharacter->GetActorLocation());
 	
 	// Try and play a firing animation if specified
 	if (IsValid(FireAnimation))
 	{
 		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = GetPlayerCharacter()->GetMesh1P()->GetAnimInstance();
+		UAnimInstance* AnimInstance = _PlayerCharacter->GetMesh1P()->GetAnimInstance();
 		if (IsValid(AnimInstance))
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 	}
@@ -197,7 +197,7 @@ void UPS_WeaponComponent::Fire()
 
 void UPS_WeaponComponent::TurnRack()
 {
-	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(SightComponent)) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightComponent)) return;
 	
 	bRackInHorizontal = !bRackInHorizontal;
 
@@ -212,29 +212,9 @@ void UPS_WeaponComponent::TurnRack()
 
 void UPS_WeaponComponent::Grapple()
 {
-	if (!IsValid(GetPlayerCharacter()) || !IsValid(GetPlayerController()) || !IsValid(HookComponent)) return;
-
-	//TODO :: Move all logic to HookComponent
-	//Break Hook constraint if already exist
-	if(HookComponent->IsConstrainted())
-	{
-		HookComponent->DettachGrapple();
-		return;
-	}
-		
-	//Trace config
-	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
-	const TArray<AActor*> ActorsToIgnore{GetPlayerCharacter(), GetOwner()};
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-										  SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
-										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
-										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true);
-
-	
-	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent())) return;
-
-	HookComponent->GrappleObject(CurrentFireHitResult.GetComponent(), FName("None"));
+	_HookComponent->Grapple(SightComponent->GetComponentLocation());
 
 }
 

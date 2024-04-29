@@ -4,14 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "PS_HookComponent.h"
-#include "..\GPE\PS_SlicedComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "PS_WeaponComponent.generated.h"
 
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
-UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
@@ -19,17 +18,10 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightComponent = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UPS_HookComponent* HookComponent = nullptr;
-
 public:
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
-
-	AProjectSliceCharacter* GetPlayerCharacter() const{return _PlayerCharacter;}
-
-	APlayerController* GetPlayerController() const{return _PlayerController;}
-
+	
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
@@ -135,14 +127,11 @@ public:
 	/** Make the weapon Fire a Hook */
 	UFUNCTION()
 	void Grapple();
-	
-protected:
-	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	FHitResult CurrentHookHitResult;
+
 	
 private:
-	//------------------
+	UPROPERTY(Transient)
+	UPS_HookComponent* _HookComponent = nullptr;
 
 #pragma endregion Hook
 

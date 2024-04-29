@@ -33,12 +33,17 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
 	Mesh1P->bCastDynamicShadow = false;
 	Mesh1P->CastShadow = false;
-	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 	
 	//Create WeaponComponent
 	WeaponComponent = CreateDefaultSubobject<UPS_WeaponComponent>(TEXT("WeaponComponent"));
+	WeaponComponent->SetupAttachment(Mesh1P);
+	WeaponComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 
+	//Create HookComponent
+	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
+	HookComponent->SetupAttachment(Mesh1P);
+	HookComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 }
 
 void AProjectSliceCharacter::BeginPlay()
