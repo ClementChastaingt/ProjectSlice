@@ -19,7 +19,7 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UStaticMeshComponent* HookThrower = nullptr;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UCableComponent* CableMesh = nullptr;
+	USkeletalMeshComponent* CableMesh = nullptr;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* CableOriginAttach = nullptr;
