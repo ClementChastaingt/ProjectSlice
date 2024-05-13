@@ -85,7 +85,6 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 	// Attach Hook to Weapon
 	_HookComponent = _PlayerCharacter->GetHookComponent();
-	_HookComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
 	_HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
 
 	

@@ -3,7 +3,7 @@
 
 #include "PS_HookComponent.h"
 
-#include "../../../../../../../../../../../Program Files/Epic Games/UE_5.3/Engine/Plugins/Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
@@ -16,18 +16,15 @@ UPS_HookComponent::UPS_HookComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
-	HookThrower->SetupAttachment(this);
+	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
 	HookThrower->SetSimulatePhysics(false);
 	
 	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
-	CableMesh->SetupAttachment(this);
 	
 	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
-	CableOriginAttach->SetupAttachment(this);
 	CableOriginAttach->SetDisableCollision(true);
 
 	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
-	CableTargetAttach->SetupAttachment(this);
 	CableTargetAttach->SetDisableCollision(true);
 	
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
@@ -44,6 +41,9 @@ void UPS_HookComponent::BeginPlay()
 
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+
+	//Setup HookThrower
+	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 }
 
@@ -57,28 +57,34 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
+	DrawDebugPoint(GetWorld(),_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), 10.0f, FColor::Cyan, true);
 	
-	//Setup HookThrower
-	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
-
 	//Setup Cable
-	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	DrawDebugPoint(GetWorld(),_PlayerCharacter->GetWeaponComponent()->GetSightComponent()->GetComponentLocation(), 10.0f, FColor::Cyan, true);
-	CableMesh->SetWorldLocation(_PlayerCharacter->GetWeaponComponent()->GetSightComponent()->GetComponentLocation());
-	//CableMesh->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
+	CableMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
+	CableMesh->SetSimulatePhysics(true);
+	CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	//CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	
 	
 	//Setup HookMesh
 	HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
-	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("Bone"));
+	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RopeEnd"));
 	// HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("CableEnd"));
 	
-	//Setup cable constraint to HookThrower
-	//TODO :: Problem Socket but not BONE
-	CableMesh->SetSimulatePhysics(true);
-	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone_001"));
+	//Setup cable constraint
+
+	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
+	//CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	
+	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
+
+	
+	CableOriginAttach->SetDisableCollision(true);
+	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone"));
 	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
+
+	CableTargetAttach->SetDisableCollision(true);
 }
 
 
@@ -108,7 +114,7 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	//CableMesh->SetAttachEndToComponent(CurrentHookHitResult.GetComponent());
 	CableTargetAttach->AttachToComponent(CurrentHookHitResult.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	//TODO :: Problem Socket but not BONE
-	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone"),CurrentHookHitResult.GetComponent(), FName("None"));
+	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone_001"),CurrentHookHitResult.GetComponent(), FName("None"));
 	//CableTargetAttach->SetConstrainedComponents(CableMesh, FName("CableEnd"),CurrentHookHitResult.GetComponent(), FName("None"));
 
 	bIsConstrainted = true;
