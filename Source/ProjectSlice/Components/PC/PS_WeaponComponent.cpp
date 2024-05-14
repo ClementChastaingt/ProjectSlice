@@ -102,7 +102,10 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	//Setup Hook
 	if(IsValid(_HookComponent))
 	{
-		_HookComponent->OnAttachWeaponEventReceived();
+		FTimerDelegate hookAttachTimerDelegate;
+		FTimerHandle hookAttachTimerHandle;
+		hookAttachTimerDelegate.BindUObject(_HookComponent,&UPS_HookComponent::OnAttachWeaponEventReceived);
+		GetWorld()->GetTimerManager().SetTimer(hookAttachTimerHandle, hookAttachTimerDelegate,0.1, false);
 	}
 
 	//----Input----

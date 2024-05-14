@@ -45,6 +45,9 @@ void UPS_HookComponent::BeginPlay()
 
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+
+	//Setup HookThrower
+	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 		
 }
 
@@ -54,20 +57,32 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	CableOriginAttach->SetWorldLocation(CableMesh->GetComponentLocation());
 }
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
-	DrawDebugPoint(GetWorld(),_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), 10.0f, FColor::Cyan, true);
+	DrawDebugPoint(GetWorld(),HookThrower->GetComponentLocation(), 10.0f, FColor::Cyan, true);
 
-	//Setup HookThrower
-	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//Setup cable constraint attach
+	//CableOriginAttach->AttachToComponent(CableMesh->GetSocketLocation(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
+	//CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	
+	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
+
+	//Setup cable constraint
+	CableOriginAttach->SetDisableCollision(true);
+	CableOriginAttach->SetConstrainedComponents(CableMesh, FName("Bone"), HookThrower, FName("None"));
+	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
+
+	CableTargetAttach->SetDisableCollision(true);
 	
 	//Setup Cable
-	CableMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
-	CableMesh->SetSimulatePhysics(true);
+	//TODO :: Need to config PhysicsActor profile for block to colide with floor // object
+	//CableMesh->SetSimulatePhysics(true);
 	//CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
-	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
+	//CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
 	//CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 	
@@ -76,19 +91,7 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RopeEnd"));
 	// HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("CableEnd"));
 	
-	//Setup cable constraint
-	//CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
-	CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
 	
-	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
-
-	
-	CableOriginAttach->SetDisableCollision(true);
-	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("Bone"));
-	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
-
-	CableTargetAttach->SetDisableCollision(true);
 }
 
 
@@ -118,7 +121,7 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	//CableMesh->SetAttachEndToComponent(CurrentHookHitResult.GetComponent());
 	CableTargetAttach->AttachToComponent(CurrentHookHitResult.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	//TODO :: Problem Socket but not BONE
-	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone_001"),CurrentHookHitResult.GetComponent(), FName("None"));
+	CableTargetAttach->SetConstrainedComponents(CurrentHookHitResult.GetComponent(), FName("None"), CableMesh, FName("Bone_001"));
 	//CableTargetAttach->SetConstrainedComponents(CableMesh, FName("CableEnd"),CurrentHookHitResult.GetComponent(), FName("None"));
 
 	bIsConstrainted = true;
