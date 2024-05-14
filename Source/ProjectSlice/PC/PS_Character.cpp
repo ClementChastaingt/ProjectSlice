@@ -52,9 +52,9 @@ void AProjectSliceCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	if (Cast<APlayerController>(GetController()))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(Cast<APlayerController>(GetController())->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
@@ -94,7 +94,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	if (IsValid(GetController()))
 	{
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
@@ -107,7 +107,7 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	if (IsValid(GetController()))
 	{
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);

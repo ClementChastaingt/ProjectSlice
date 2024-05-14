@@ -17,15 +17,19 @@ UPS_HookComponent::UPS_HookComponent()
 
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
 	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
+	HookThrower->SetupAttachment(this);
 	HookThrower->SetSimulatePhysics(false);
 	
 	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
+	CableMesh->SetupAttachment(this);
 	
 	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
 	CableOriginAttach->SetDisableCollision(true);
+	CableOriginAttach->SetupAttachment(this);
 
 	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
 	CableTargetAttach->SetDisableCollision(true);
+	CableTargetAttach->SetupAttachment(this);
 	
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	HookMesh->SetupAttachment(this);
@@ -41,10 +45,7 @@ void UPS_HookComponent::BeginPlay()
 
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
-
-	//Setup HookThrower
-	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	
+		
 }
 
 // Called every frame
@@ -58,11 +59,15 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
 	DrawDebugPoint(GetWorld(),_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), 10.0f, FColor::Cyan, true);
+
+	//Setup HookThrower
+	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 	//Setup Cable
 	CableMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
 	CableMesh->SetSimulatePhysics(true);
-	CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	//CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
 	//CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	
 	
@@ -72,10 +77,9 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 	// HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("CableEnd"));
 	
 	//Setup cable constraint
-
-	CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	//CableOriginAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	//CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
-	//CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
 	
 	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
 
