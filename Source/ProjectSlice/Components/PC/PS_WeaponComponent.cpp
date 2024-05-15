@@ -71,13 +71,12 @@ void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
 {
 	_PlayerCharacter = Target_PlayerCharacter;
-	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
-
+	
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || _PlayerCharacter->GetHasRifle()
+	if (!IsValid(_PlayerCharacter) || _PlayerCharacter->GetHasRifle()
 		|| !IsValid(_PlayerCharacter->GetHookComponent())
 		|| !IsValid(_PlayerCharacter->GetMesh1P()))return;
-
+	
 	// Attach the weapon to the First Person _PlayerCharacter
 	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	AttachToComponent(_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
@@ -86,19 +85,28 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	// Attach Hook to Weapon
 	_HookComponent = _PlayerCharacter->GetHookComponent();
 	_HookComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale,FName("HookAttach"));
-
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	_PlayerCharacter->SetHasRifle(true);
 	
 	//Setup Sight Mesh Loc && Rot
-	if(IsValid(SightComponent))
+	if(IsValid(SightComponent) && IsValid(_HookComponent))
 	{
-		SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
+		//SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
 		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
-	}
 
-	//TODO :: Need to be to be asynchrone
+		//_HookComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
+		_HookComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
+	}
+	
+}
+
+void UPS_WeaponComponent::InitWeapon()
+{
+	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+
+	if(!IsValid(_PlayerController)) return; 
+	
 	//Setup Hook
 	if(IsValid(_HookComponent))
 	{
@@ -130,6 +138,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Grapple);
 	}
 }
+
 
 #pragma region Input
 //__________________________________________________

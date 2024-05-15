@@ -10,7 +10,7 @@
 class UCableComponent;
 class AProjectSliceCharacter;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()
@@ -37,6 +37,8 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	virtual void PostInitProperties() override;
 
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)

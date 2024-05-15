@@ -26,6 +26,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
 
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void InitWeapon();
+
 
 protected:
 	virtual void BeginPlay() override;

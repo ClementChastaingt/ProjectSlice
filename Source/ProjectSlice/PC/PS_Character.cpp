@@ -44,6 +44,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
 	HookComponent->SetupAttachment(Mesh1P);
 	HookComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
+
+	//Attach Weapon Componenet on begin play
+	WeaponComponent->AttachWeapon(this);
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -61,7 +64,7 @@ void AProjectSliceCharacter::BeginPlay()
 	}
 
 	//Attach Weapon Componenet on begin play
-	WeaponComponent->AttachWeapon(this);
+	WeaponComponent->InitWeapon();
 
 }
 

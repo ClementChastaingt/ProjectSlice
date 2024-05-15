@@ -17,24 +17,30 @@ UPS_HookComponent::UPS_HookComponent()
 
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
 	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
-	HookThrower->SetupAttachment(this);
-	HookThrower->SetSimulatePhysics(false);
 	
 	CableMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CableMesh"));
-	CableMesh->SetupAttachment(this);
 	
 	CableOriginAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableOriginConstraint"));
 	CableOriginAttach->SetDisableCollision(true);
-	CableOriginAttach->SetupAttachment(this);
 
 	CableTargetAttach = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CableTargetConstraint"));
 	CableTargetAttach->SetDisableCollision(true);
-	CableTargetAttach->SetupAttachment(this);
 	
 	HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
-	HookMesh->SetupAttachment(this);
 	HookMesh->SetSimulatePhysics(false);
 
+}
+
+// Called after CDO and init porperties config
+void UPS_HookComponent::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	HookThrower->SetupAttachment(this);
+	CableMesh->SetupAttachment(this);
+	CableOriginAttach->SetupAttachment(this);
+	CableTargetAttach->SetupAttachment(this);
+	HookMesh->SetupAttachment(this);
 }
 
 
@@ -51,13 +57,15 @@ void UPS_HookComponent::BeginPlay()
 		
 }
 
+
+
 // Called every frame
 void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	CableOriginAttach->SetWorldLocation(CableMesh->GetComponentLocation());
+	CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation(), false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
@@ -72,11 +80,9 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
 
 	//Setup cable constraint
-	CableOriginAttach->SetDisableCollision(true);
 	CableOriginAttach->SetConstrainedComponents(CableMesh, FName("Bone"), HookThrower, FName("None"));
 	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
-
-	CableTargetAttach->SetDisableCollision(true);
+	
 	
 	//Setup Cable
 	//TODO :: Need to config PhysicsActor profile for block to colide with floor // object
