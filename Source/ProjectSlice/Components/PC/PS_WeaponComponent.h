@@ -160,15 +160,15 @@ protected:
 	float InterpRackRotStartTimestamp = TNumericLimits<float>().Lowest();
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FRotator RackDefaultRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FRotator StartRackRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FRotator TargetRackRotation = FRotator::ZeroRotator;
 	
-	/** Sight Rack Mesh default Transform*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FTransform SightDefaultTransform = FTransform(FRotator::ZeroRotator ,FVector(5.00,0.400,-2.0), FVector(0.050000,0.400000,0.050000));
-	
+
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
 	FVector MuzzleOffset;

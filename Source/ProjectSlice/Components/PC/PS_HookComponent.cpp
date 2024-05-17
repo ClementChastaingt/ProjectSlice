@@ -31,7 +31,7 @@ UPS_HookComponent::UPS_HookComponent()
 
 }
 
-// Called after CDO and init porperties config
+// Called after CDO and init properties config
 void UPS_HookComponent::PostInitProperties()
 {
 	Super::PostInitProperties();

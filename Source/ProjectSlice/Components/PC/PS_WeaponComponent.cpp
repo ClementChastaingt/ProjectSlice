@@ -25,7 +25,7 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	//Create Component and Attach
 	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightComponent->SetupAttachment(this);
-	SightComponent->SetRelativeScale3D(SightDefaultTransform.GetScale3D());
+	RackDefaultRotation = SightComponent->GetRelativeRotation();
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -88,16 +88,6 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	_PlayerCharacter->SetHasRifle(true);
-	
-	//Setup Sight Mesh Loc && Rot
-	if(IsValid(SightComponent) && IsValid(_HookComponent))
-	{
-		//SightComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
-		SightComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
-
-		//_HookComponent->SetRelativeLocation(SightDefaultTransform.GetLocation());
-		_HookComponent->SetRelativeRotation(SightDefaultTransform.Rotator());
-	}
 	
 }
 
@@ -213,8 +203,8 @@ void UPS_WeaponComponent::TurnRack()
 	bRackInHorizontal = !bRackInHorizontal;
 
 	StartRackRotation = SightComponent->GetRelativeRotation();
-	TargetRackRotation = SightDefaultTransform.Rotator();
-	TargetRackRotation.Roll = SightDefaultTransform.Rotator().Roll + (bRackInHorizontal ? 1 : -1 * 90);
+	TargetRackRotation = RackDefaultRotation;
+	TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
 
 	InterpRackRotStartTimestamp = GetWorld()->GetTimeSeconds();
 	bInterpRackRotation = true;
@@ -226,7 +216,6 @@ void UPS_WeaponComponent::Grapple()
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
 	_HookComponent->Grapple(SightComponent->GetComponentLocation());
-
 }
 
 
