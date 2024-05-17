@@ -63,8 +63,9 @@ void AProjectSliceCharacter::BeginPlay()
 		}
 	}
 
-	//Attach Weapon Componenet on begin play
-	WeaponComponent->InitWeapon();
+	//Init Weapon Componenet on begin play if attach
+	if(GetHasRifle())
+		WeaponComponent->InitWeapon(this);
 
 }
 

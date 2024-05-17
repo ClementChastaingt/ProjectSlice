@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "PS_HookComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_WeaponComponent.generated.h"
 
 class UProceduralMeshComponent;
@@ -27,7 +28,11 @@ public:
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void InitWeapon();
+	void InitWeapon(AProjectSliceCharacter* Target_PlayerCharacter);
+
+	FOnPSDelegate OnWeaponAttach;
+
+	FOnPSDelegate OnWeaponInit;
 
 
 protected:
@@ -49,7 +54,6 @@ private:
 
 	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
-
 
 #pragma region Input
 	//------------------

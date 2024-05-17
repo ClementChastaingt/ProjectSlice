@@ -50,14 +50,14 @@ void UPS_HookComponent::BeginPlay()
 	Super::BeginPlay();
 
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	if(!IsValid(_PlayerCharacter)) return;
+	
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+	if(!IsValid(_PlayerController)) return;
 
-	//Setup HookThrower
-	HookThrower->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-		
+	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnAttachWeaponEventReceived);
+
 }
-
-
 
 // Called every frame
 void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -70,7 +70,24 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
+	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+
+	//Setup HookThrower
+	HookThrower->AttachToComponent(this, AttachmentRules);
+	DrawDebugPoint(GetWorld(),HookThrower->GetComponentLocation(), 15.0f, FColor::Cyan, true);
+
+	//Setup Cable
+	FTimerDelegate cableAttachTimerDelegate;
+	FTimerHandle cableAttachTimerHandle;
+	cableAttachTimerDelegate.BindUObject(this,&UPS_HookComponent::SetCableLocation);
+	GetWorld()->GetTimerManager().SetTimer(cableAttachTimerHandle, cableAttachTimerDelegate,0.2, false);
+	
+	//TODO :: Need to config PhysicsActor profile for block to collide with floor // object
+	//CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+
+
 	DrawDebugPoint(GetWorld(),HookThrower->GetComponentLocation(), 10.0f, FColor::Cyan, true);
+	
 
 	//Setup cable constraint attach
 	//CableOriginAttach->AttachToComponent(CableMesh->GetSocketLocation(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -80,26 +97,24 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
 
 	//Setup cable constraint
-	CableOriginAttach->SetConstrainedComponents(CableMesh, FName("Bone"), HookThrower, FName("None"));
+	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"), CableMesh, FName("Bone"));
 	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
 	
-	
-	//Setup Cable
-	//TODO :: Need to config PhysicsActor profile for block to colide with floor // object
-	//CableMesh->SetSimulatePhysics(true);
-	//CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
-	//CableMesh->SetWorldLocation(HookThrower->GetComponentLocation() + CableMesh->GetPlacementExtent().BoxExtent);
-	//CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	
-	
+		
 	//Setup HookMesh
 	HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
-	HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("RopeEnd"));
+	HookMesh->AttachToComponent(CableMesh, AttachmentRules, FName("RopeEnd"));
 	// HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("CableEnd"));
 	
 	
 }
 
+void UPS_HookComponent::SetCableLocation()
+{
+	DrawDebugPoint(GetWorld(),this->GetComponentLocation(), 10.0f, FColor::Blue, true);
+	CableMesh->SetSimulatePhysics(true);
+	//CableMesh->SetWorldLocation(this->GetComponentLocation(), false, nullptr,ETeleportType::TeleportPhysics);
+}
 
 void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 {
@@ -123,7 +138,7 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid(CurrentHookHitResult.GetComponent())) return;
 	
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
-	CableMesh->SetWorldLocation(sourceLocation);
+	//CableMesh->SetWorldLocation(sourceLocation);
 	//CableMesh->SetAttachEndToComponent(CurrentHookHitResult.GetComponent());
 	CableTargetAttach->AttachToComponent(CurrentHookHitResult.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	//TODO :: Problem Socket but not BONE

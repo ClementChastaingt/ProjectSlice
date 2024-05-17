@@ -71,6 +71,9 @@ public:
 	UFUNCTION()
 	void OnAttachWeaponEventReceived();
 
+	UFUNCTION()
+	void SetCableLocation();
+
 protected:
 	
 	UPROPERTY()
