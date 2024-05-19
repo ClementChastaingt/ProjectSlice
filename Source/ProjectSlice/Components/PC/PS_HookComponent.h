@@ -72,14 +72,16 @@ public:
 	void OnAttachWeaponEventReceived();
 
 	UFUNCTION()
-	void SetCableLocation();
+	void OnInitWeaponEventReceived();
 
 protected:
 	
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
 	bool bIsConstrainted = false;
-
-		
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	float MaxHookDistance = 500.0f;
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult CurrentHookHitResult;
 

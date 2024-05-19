@@ -55,7 +55,8 @@ void UPS_HookComponent::BeginPlay()
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
 
-	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnAttachWeaponEventReceived);
+	_PlayerCharacter->GetWeaponComponent()->OnWeaponAttach.AddUniqueDynamic(this, &UPS_HookComponent::OnAttachWeaponEventReceived);
+	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
 
 }
 
@@ -64,40 +65,30 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation(), false, nullptr, ETeleportType::TeleportPhysics);
+	
 }
 
 void UPS_HookComponent::OnAttachWeaponEventReceived()
 {
-	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-
 	//Setup HookThrower
+	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	HookThrower->AttachToComponent(this, AttachmentRules);
-	DrawDebugPoint(GetWorld(),HookThrower->GetComponentLocation(), 15.0f, FColor::Cyan, true);
+}
 
-	//Setup Cable
-	FTimerDelegate cableAttachTimerDelegate;
-	FTimerHandle cableAttachTimerHandle;
-	cableAttachTimerDelegate.BindUObject(this,&UPS_HookComponent::SetCableLocation);
-	GetWorld()->GetTimerManager().SetTimer(cableAttachTimerHandle, cableAttachTimerDelegate,0.2, false);
+
+void UPS_HookComponent::OnInitWeaponEventReceived()
+{
 	
-	//TODO :: Need to config PhysicsActor profile for block to collide with floor // object
-	//CableMesh->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
-
-
 	DrawDebugPoint(GetWorld(),HookThrower->GetComponentLocation(), 10.0f, FColor::Cyan, true);
 	
 
 	//Setup cable constraint attach
-	//CableOriginAttach->AttachToComponent(CableMesh->GetSocketLocation(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//CableOriginAttach->SetWorldLocation(HookThrower->GetComponentLocation());
-	//CableOriginAttach->SetWorldLocation(_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
-	
-	//CableTargetAttach->SetWorldLocation(CableMesh->GetSocketLocation(FName("Bone")));
+	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+	CableOriginAttach->AttachToComponent(CableMesh, AttachmentRules, FName("RopeStart"));
+	CableTargetAttach->AttachToComponent(CableMesh, AttachmentRules, FName("RopeEnd"));	
 
 	//Setup cable constraint
-	CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"), CableMesh, FName("Bone"));
+	//CableOriginAttach->SetConstrainedComponents(CableMesh, FName("Bone"), HookThrower, FName("None"));
 	//CableOriginAttach->SetConstrainedComponents(HookThrower, FName("None"),CableMesh, FName("CableStart"));
 	
 		
@@ -107,13 +98,6 @@ void UPS_HookComponent::OnAttachWeaponEventReceived()
 	// HookMesh->AttachToComponent(CableMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("CableEnd"));
 	
 	
-}
-
-void UPS_HookComponent::SetCableLocation()
-{
-	DrawDebugPoint(GetWorld(),this->GetComponentLocation(), 10.0f, FColor::Blue, true);
-	CableMesh->SetSimulatePhysics(true);
-	//CableMesh->SetWorldLocation(this->GetComponentLocation(), false, nullptr,ETeleportType::TeleportPhysics);
 }
 
 void UPS_HookComponent::Grapple(const FVector& sourceLocation)
@@ -136,27 +120,27 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid(CurrentHookHitResult.GetComponent())) return;
+
+	if(CurrentHookHitResult.Distance > MaxHookDistance)
+	{
+		UE_LOG(LogTemp, Log, TEXT("UPS_HookComponent:: Can't Attach, Cable too short"));
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Cable too short")));
+		return;
+	}
 	
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("SetConstraint")));
-	//CableMesh->SetWorldLocation(sourceLocation);
-	//CableMesh->SetAttachEndToComponent(CurrentHookHitResult.GetComponent());
-	CableTargetAttach->AttachToComponent(CurrentHookHitResult.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	//TODO :: Problem Socket but not BONE
-	CableTargetAttach->SetConstrainedComponents(CurrentHookHitResult.GetComponent(), FName("None"), CableMesh, FName("Bone_001"));
-	//CableTargetAttach->SetConstrainedComponents(CableMesh, FName("CableEnd"),CurrentHookHitResult.GetComponent(), FName("None"));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
+	CurrentHookHitResult.GetComponent()->SetWorldLocation(CableTargetAttach->GetComponentLocation());
+	CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone_001"),CurrentHookHitResult.GetComponent(), FName("None"));
 
 	bIsConstrainted = true;
 }
 
 void UPS_HookComponent::DettachGrapple()
 {	
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("BreakConstraint")));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
 	
 	CableTargetAttach->BreakConstraint();
-	
-	//Reset Hook Mesh
-	//HookMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	
+		
 	bIsConstrainted = false;
 }
 
