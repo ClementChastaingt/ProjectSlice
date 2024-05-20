@@ -76,21 +76,19 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 		|| !IsValid(Target_PlayerCharacter->GetMesh1P()))return;
 	
 	// Attach the weapon to the First Person _PlayerCharacter
-	const FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	this->AttachToComponent(Target_PlayerCharacter->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
+	this->SetupAttachment(Target_PlayerCharacter->GetMesh1P(), (TEXT("GripPoint")));
 
 	// Attach Sight to Weapon
-	SightComponent->AttachToComponent(this, AttachmentRules,FName("Muzzle"));
+	SightComponent->SetupAttachment(this,FName("Muzzle"));
 
 	// Attach Hook to Weapon
 	_HookComponent = Target_PlayerCharacter->GetHookComponent();
-	_HookComponent->AttachToComponent(this, AttachmentRules,FName("HookAttach"));
-
+	_HookComponent->SetupAttachment(this,FName("HookAttach"));
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Target_PlayerCharacter->SetHasRifle(true);
 	
-	OnWeaponAttach.Broadcast();
+	_HookComponent->OnAttachWeapon();
 	
 }
 

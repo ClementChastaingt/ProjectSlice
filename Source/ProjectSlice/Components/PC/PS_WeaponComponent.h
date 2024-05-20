@@ -29,9 +29,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void InitWeapon(AProjectSliceCharacter* Target_PlayerCharacter);
-
-	FOnPSDelegate OnWeaponAttach;
-
+	
 	FOnPSDelegate OnWeaponInit;
 
 

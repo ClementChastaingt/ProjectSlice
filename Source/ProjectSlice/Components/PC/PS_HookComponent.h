@@ -37,9 +37,6 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-
-	virtual void PostInitProperties() override;
-
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bDebug = false;
@@ -69,7 +66,7 @@ public:
 	void DettachGrapple();
 
 	UFUNCTION()
-	void OnAttachWeaponEventReceived();
+	void OnAttachWeapon();
 
 	UFUNCTION()
 	void OnInitWeaponEventReceived();
