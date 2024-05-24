@@ -19,16 +19,10 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UStaticMeshComponent* HookThrower = nullptr;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	USkeletalMeshComponent* CableMesh = nullptr;
-
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UPhysicsConstraintComponent* CableOriginAttach = nullptr;
-
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UPhysicsConstraintComponent* CableTargetAttach = nullptr;
-
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UStaticMeshComponent* HookMesh = nullptr;
+	UCableComponent* FirstCable= nullptr;
+	
+	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	// UStaticMeshComponent* HookMesh = nullptr;
 
 public:
 	/** Sets default values for this component's properties */
@@ -57,6 +51,12 @@ private:
 	//------------------
 
 public:
+	UFUNCTION()
+	void OnAttachWeapon();
+
+	UFUNCTION()
+	void OnInitWeaponEventReceived();
+
 	bool IsConstrainted() const{return bIsConstrainted;}
 
 	UFUNCTION()
@@ -65,11 +65,6 @@ public:
 	UFUNCTION()
 	void DettachGrapple();
 
-	UFUNCTION()
-	void OnAttachWeapon();
-
-	UFUNCTION()
-	void OnInitWeaponEventReceived();
 
 protected:
 	
@@ -86,5 +81,41 @@ private:
 	//------------------
 
 #pragma endregion General
+
+#pragma region Rope
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(VisibleAnywhere, Category="Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
+	TArray<UCableComponent*> CableListArray;
+
+	UPROPERTY(VisibleAnywhere, Category="Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
+	TArray<UCableComponent*> CableAttachedArray;
+
+	UPROPERTY(VisibleAnywhere, Category="Cable|Point", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
+	TArray<UStaticMeshComponent*> CableCapArray;
+
+	UPROPERTY(VisibleAnywhere, Category="Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
+	TArray<FVector> CablePointLocations;
+
+	UPROPERTY(VisibleAnywhere, Category="Cable", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
+	TArray<float> CablePointUnwrapAlphaArray;
+
+	UFUNCTION()
+	void WrapCableAddbyLast();
+
+	UFUNCTION()
+	void UnwrapCableAddbyLast();
+
+	UFUNCTION()
+	void TraceCableWrap(USceneComponent* cable, const bool bReverseLoc);
+
+
 	
+private:
+	//------------------
+
+#pragma endregion Rope
 };
