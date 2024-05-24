@@ -33,11 +33,19 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
 	Mesh1P->bCastDynamicShadow = false;
 	Mesh1P->CastShadow = false;
-	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 	
+	//Create WeaponComponent
+	WeaponComponent = CreateDefaultSubobject<UPS_WeaponComponent>(TEXT("WeaponComponent"));
+	WeaponComponent->SetupAttachment(Mesh1P);
+	WeaponComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 
+	//Create HookComponent
+	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
+	HookComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 
+	//Attach Weapon Componenet on begin play
+	WeaponComponent->AttachWeapon(this);
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -46,32 +54,17 @@ void AProjectSliceCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	if (Cast<APlayerController>(GetController()))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(Cast<APlayerController>(GetController())->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
 
-	//Attach Weapon Component on begin play
-	TArray<AActor*> childActors;
-	GetAllChildActors(childActors, false);
-
-	for (auto ChildActor : childActors)
-	{
-		WeaponComponent = Cast<UPS_WeaponComponent>(ChildActor->GetComponentByClass(UPS_WeaponComponent::StaticClass()));
-		if(IsValid(WeaponComponent))
-		{
-			WeaponComponent->AttachWeapon(this);
-			break;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("WeaponComponent :: Invalid"));
-		}		
-	}
-	
+	//Init Weapon Componenet on begin play if attach
+	if(GetHasRifle())
+		WeaponComponent->InitWeapon(this);
 
 }
 
@@ -103,9 +96,8 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("MovementVector: %s"), *MovementVector.ToString()));
 
-	if (Controller != nullptr)
+	if (IsValid(GetController()))
 	{
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
@@ -118,7 +110,7 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	if (IsValid(GetController()))
 	{
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
