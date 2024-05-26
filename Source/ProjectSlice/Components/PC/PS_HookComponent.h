@@ -10,6 +10,20 @@
 class UCableComponent;
 class AProjectSliceCharacter;
 
+USTRUCT(BlueprintType, Category = "Struct")
+struct FSCableWarpParams
+{
+	GENERATED_BODY()
+
+	FSCableWarpParams(){};
+	
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
+	bool bBool = true;
+	
+};
+
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {

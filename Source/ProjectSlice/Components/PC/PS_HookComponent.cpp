@@ -4,6 +4,8 @@
 #include "PS_HookComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
+#include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h" 
+#include "Elements/Framework/TypedElementQueryBuilder.h"
 
 class UCableComponent;
 
@@ -105,9 +107,17 @@ void UPS_HookComponent::UnwrapCableAddbyLast()
 
 void UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc)
 {
-	if(IsValid(cable))
+	if(IsValid(cable) && IsValid(GetWorld()))
 	{
-		
+		const FVector start = cable->GetSocketLocation(FName("CableStart"));
+		const FVector end = cable->GetSocketLocation(FName("CableEnd"));
+
+		const TArray<AActor*> actorsToIgnore;
+		FHitResult outHit;
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), bReverseLoc ? end : start,  bReverseLoc ? start : end, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			true, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+
+		if(!outHit.bBlockingHit || !IsValid(outHit.GetComponent())) return;
 	}
 }
 
