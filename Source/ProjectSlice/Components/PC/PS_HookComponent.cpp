@@ -2,6 +2,8 @@
 
 
 #include "PS_HookComponent.h"
+
+#include "MovieSceneTracksComponentTypes.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h" 
@@ -48,11 +50,7 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	//Debug
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
-	
+	WrapCableAddbyLast();
 }
 
 #pragma region Weapon_Event_Receiver
@@ -88,9 +86,48 @@ void UPS_HookComponent::OnInitWeaponEventReceived()
 
 void UPS_HookComponent::WrapCableAddbyLast()
 {
+	if(!IsValid(GetOwner())) return;
+	
+	//Debug
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
+	
 	if(CableListArray.IsValidIndex(CableListArray.Num()-1))
 	{
-		const UCableComponent* localLatestCable = CableListArray[CableListArray.Num()-1];
+		UCableComponent* localLatestCable = CableListArray[CableListArray.Num()-1];
+		UCableComponent* localNewCable;
+		FSCableWarpParams currentTraceCableWarp = TraceCableWrap(localLatestCable, false);
+
+		//If hit nothing return;
+		if(!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+
+		if(CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance))
+		{
+			CableAttachedArray.AddUnique(localLatestCable);
+			CablePointLocations.Add(currentTraceCableWarp.OutHit.Location);
+			CablePointComponents.Add(currentTraceCableWarp.OutHit.GetComponent());
+
+			const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+			localLatestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
+			localLatestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr, ETeleportType::TeleportPhysics);
+			
+			//Add new cable component 
+			localNewCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
+			localNewCable->RegisterComponent();
+			GetOwner()->AddInstanceComponent(localNewCable);
+
+			//Use zero length and single segment to make it tense
+			localNewCable->CableLength = 0;
+			localNewCable->NumSegments = 0;
+
+			if(bCanUseSphereCaps)
+			{
+				GetOwner()->AddComponentByClass(UStaticMeshComponent::StaticClass(), true, );
+			}
+			
+		}
+		
 		
 	}
 	else
@@ -105,20 +142,37 @@ void UPS_HookComponent::UnwrapCableAddbyLast()
 {
 }
 
-void UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc)
+FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const
 {
 	if(IsValid(cable) && IsValid(GetWorld()))
 	{
-		const FVector start = cable->GetSocketLocation(FName("CableStart"));
-		const FVector end = cable->GetSocketLocation(FName("CableEnd"));
+		FSCableWarpParams out;
+		
+		FVector start = cable->GetSocketLocation(FName("CableStart"));
+		FVector end = cable->GetSocketLocation(FName("CableEnd"));
 
+		out.CableStart = bReverseLoc ? end : start;
+		out.CableEnd = bReverseLoc ? start : end;
+		
 		const TArray<AActor*> actorsToIgnore;
-		FHitResult outHit;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), bReverseLoc ? end : start,  bReverseLoc ? start : end, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-			true, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			true, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, out.OutHit, true);
 
-		if(!outHit.bBlockingHit || !IsValid(outHit.GetComponent())) return;
+		return out;
 	}
+	else
+		return FSCableWarpParams();
+}
+
+bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)
+{
+	bool bPointLocEqual = false;
+	for (auto cableElementLoc : CablePointLocations)
+	{
+		bPointLocEqual = cableElementLoc.Equals(targetLoc, errorTolerance);
+		if(bPointLocEqual) break;
+	}
+	return bPointLocEqual;
 }
 
 //------------------

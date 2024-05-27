@@ -20,7 +20,13 @@ struct FSCableWarpParams
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
-	bool bBool = true;
+	FHitResult OutHit = FHitResult();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
+	FVector CableStart = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
+	FVector CableEnd = FVector::ZeroVector;
 	
 };
 
@@ -102,20 +108,31 @@ private:
 public:
 	//------------------
 protected:
-	UPROPERTY(VisibleAnywhere, Category="Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
+	//Status
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
 	TArray<UCableComponent*> CableAttachedArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Cable|Point", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
 	TArray<UStaticMeshComponent*> CableCapArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
+	TArray<USceneComponent*> CablePointComponents;
+
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
-	UPROPERTY(VisibleAnywhere, Category="Cable", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
-	TArray<float> CablePointUnwrapAlphaArray;
+	// UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
+	// TArray<float> CablePointUnwrapAlphaArray;
+
+	//Parameters
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"))
+	bool bCanUseSphereCaps = true;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
+	float CableWrapErrorTolerance = 0.002;
 
 	UFUNCTION()
 	void WrapCableAddbyLast();
@@ -124,7 +141,11 @@ protected:
 	void UnwrapCableAddbyLast();
 
 	UFUNCTION()
-	void TraceCableWrap(USceneComponent* cable, const bool bReverseLoc);
+	FSCableWarpParams TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const;
+
+	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
+	UFUNCTION()
+	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
 
 
 	
