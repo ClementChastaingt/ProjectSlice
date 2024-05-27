@@ -130,18 +130,34 @@ protected:
 	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"))
 	bool bCanUseSphereCaps = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Static Mesh use for Caps, basically sphere"))
+	UStaticMesh* CapsMesh = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(ToolTip="Use cable shared settings to the start cable, like width, length, basically all settings exlcuding the ones that cannot be changed at runtime, like segments, and etc."))
+	bool bCableUseSharedSettings = true;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
 	float CableWrapErrorTolerance = 0.002;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
+	bool bDebugMaterialColors = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="New Cable Material Instance"))
+	UMaterialInterface* CableDebugMaterialInst = nullptr;
+
+	//Functions
 	UFUNCTION()
-	void WrapCableAddbyLast();
+	void WrapCable();
 
 	UFUNCTION()
-	void UnwrapCableAddbyLast();
+	void UnwrapCable();
 
 	UFUNCTION()
 	FSCableWarpParams TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const;
+
+	UFUNCTION()
+	void AddSphereCaps(const FSCableWarpParams& currentTraceParams);
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION()
