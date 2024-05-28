@@ -23,6 +23,7 @@ UPS_HookComponent::UPS_HookComponent()
 	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
+	FirstCable->SetCollisionProfileName(FName("NoCollision"), true);
 	
 	// HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	// HookMesh->SetSimulatePhysics(false);
@@ -64,6 +65,7 @@ void UPS_HookComponent::OnAttachWeapon()
 	
 	//Setup Cable
 	FirstCable->SetupAttachment(this);
+	FirstCable->SetVisibility(false);
 	CableListArray.AddUnique(FirstCable);
 	
 	
@@ -90,9 +92,9 @@ void UPS_HookComponent::WrapCable()
 	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
 	
 	//Debug
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
 
 	
 	//-----Add Wrap Logic-----
@@ -161,14 +163,29 @@ void UPS_HookComponent::WrapCable()
 	latestCable->NumSegments = 0;
 
 	//Attach New Cable to Hitted Object && Set his position to it
-	newCable->SetWorldLocation(HookThrower->GetComponentLocation());
-	newCable->AttachToComponent(HookThrower, AttachmentRule);
+	if(bIsAddByFirst && CablePointLocations.IsValidIndex(1) && CablePointComponents.IsValidIndex(1))
+	{
+		newCable->SetWorldLocation(CablePointLocations[1]);
+		newCable->AttachToComponent(CablePointComponents[1], AttachmentRule);
+	}
+	else
+	{
+		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
+		newCable->AttachToComponent(HookThrower, AttachmentRule);
+	}
+	
 
 	//Attach End to Last Cable
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
 	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
 	newCable->bAttachEnd = true;
-	!bIsAddByFirst ? CableListArray.AddUnique(newCable) : CableListArray.Insert(newCable,1);
+
+	if(bIsAddByFirst)
+	{
+		CableAttachedArray.Insert(newCable,1);
+		CableListArray.Insert(newCable,1);
+	}else
+		CableListArray.AddUnique(newCable);
 
 	//----Caps Sphere---
 	//Add Sphere on Caps
@@ -189,6 +206,7 @@ void UPS_HookComponent::WrapCable()
 		newCable->CollisionFriction = FirstCable->CollisionFriction;
 		newCable->bEnableCollision = FirstCable->bEnableCollision;
 		newCable->bEnableStiffness = FirstCable->bEnableStiffness;
+		
 	}
 
 
@@ -276,7 +294,7 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 {
 	//Break Hook constraint if already exist
-	if(IsConstrainted())
+	if(IsValid(GetAttachedMesh()))
 	{
 		DettachGrapple();
 		return;
@@ -285,45 +303,34 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	//Trace config
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), sourceLocation,
-										  sourceLocation + SpawnRotation.Vector() * 1000,
+										  sourceLocation + SpawnRotation.Vector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
-										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true);
-
+										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	
-	if (!CurrentHookHitResult.bBlockingHit || !IsValid(CurrentHookHitResult.GetComponent())) return;
+	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UStaticMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
-	//If Hook too Far Away
-	if(CurrentHookHitResult.Distance > MaxHookDistance)
-	{
-		UE_LOG(LogTemp, Log, TEXT("UPS_HookComponent:: Can't Attach, Cable too short"));
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Cable too short")));
-		return;
-	}
+	//Define new attached component 
+	AttachedMesh = Cast<UStaticMeshComponent>(CurrentHookHitResult.GetComponent());
+	FirstCable->SetAttachEndToComponent(AttachedMesh);
+	FirstCable->bAttachEnd = true;
+	FirstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
+	FirstCable->SetVisibility(true);
 
-	// //If Attach
-	// if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
-	//
-	// CurrentHookHitResult.GetComponent()->SetWorldLocation(CableTargetAttach->GetComponentLocation());
-	// //CableMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
-	// CableMesh->SetSimulatePhysics(true);
-	// CableTargetAttach->SetConstrainedComponents(CableMesh, FName("Bone_001"),CurrentHookHitResult.GetComponent(), FName("None"));
-
-	bIsConstrainted = true;
+	//Determine max distance for Pull
+	DistanceOnAttach = UKismetMathLibrary::Vector_Distance(sourceLocation, AttachedMesh->GetComponentLocation());
+	AttachedMesh->SetSimulatePhysics(true);
+	
+	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
 
 void UPS_HookComponent::DettachGrapple()
 {	
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
+	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
 	
-	// CableTargetAttach->BreakConstraint();
-	// //CableMesh->SetCollisionProfileName(FName("NoCollision"), true);
-	// CableMesh->SetSimulatePhysics(false);
-	// CableMesh->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	// CableMesh->SetRelativeRotation(FRotator(90,0,0), false, nullptr, ETeleportType::TeleportPhysics);
-		
-	bIsConstrainted = false;
+	FirstCable->bAttachEnd = false;
+	AttachedMesh = nullptr;
+	
 }
 
 //------------------

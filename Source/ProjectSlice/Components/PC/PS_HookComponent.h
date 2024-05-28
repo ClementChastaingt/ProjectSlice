@@ -48,6 +48,9 @@ public:
 	/** Sets default values for this component's properties */
 	UPS_HookComponent();
 
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -55,10 +58,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bDebug = false;
 
-public:
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
+	
 private:
 	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
@@ -77,30 +77,34 @@ public:
 	UFUNCTION()
 	void OnInitWeaponEventReceived();
 
-	bool IsConstrainted() const{return bIsConstrainted;}
-
 	UFUNCTION()
 	void Grapple(const FVector& sourceLocation);
 
 	UFUNCTION()
 	void DettachGrapple();
+	
+	UStaticMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	UStaticMeshComponent* AttachedMesh = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	double DistanceOnAttach = 0.0f;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status")
-	bool bIsConstrainted = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
-	float MaxHookDistance = 500.0f;
-	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
 	FHitResult CurrentHookHitResult;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook")
+	float HookingMaxDistance = 1000.0f;
+	
 
 private:
 	//------------------
 
 #pragma endregion General
+
 
 #pragma region Rope
 	//------------------
