@@ -93,94 +93,115 @@ void UPS_HookComponent::WrapCable()
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
+
 	
+	//-----Add Wrap Logic-----
+	//Init works Variables
+	UCableComponent* latestCable;
+	
+	//Add By Last
 	if(CableListArray.IsValidIndex(CableListArray.Num()-1))
 	{
-		//Init works Variables
-		UCableComponent* latestCable = CableListArray[CableListArray.Num()-1];
-		FSCableWarpParams currentTraceCableWarp = TraceCableWrap(latestCable, false);
-		const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+		bIsAddByFirst = false;
+		latestCable = CableListArray[CableListArray.Num() - 1];
+	}
+	//Add By First
+	else if(CableListArray.IsValidIndex(0) && CableListArray.Num() > 0)
+	{
+		bIsAddByFirst =  true;
+		latestCable = CableListArray[0];
+	}
+	else
+		return;
 
-		//If hit nothing return;
-		if(!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+	const FSCableWarpParams currentTraceCableWarp = TraceCableWrap(latestCable, bIsAddByFirst);
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+	
+	//If hit nothing return;
+	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
 
-		//If Location Already Exist return
-		if(!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	//If Location Already Exist return
+	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
 
-		//----Last Cable && New Points---
-		//Add new Point Loc && Hitted Component to Array
+	//----Last Cable && New Points---
+	//Add new Point Loc && Hitted Component to Array
+	if(!bIsAddByFirst)
+	{
 		CableAttachedArray.AddUnique(latestCable);
 		CablePointLocations.Add(currentTraceCableWarp.OutHit.Location);
 		CablePointComponents.Add(currentTraceCableWarp.OutHit.GetComponent());
-
-		//Attach Last Cable to Hitted Object && Set his position to it
-		latestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
-		latestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr, ETeleportType::TeleportPhysics);
-
-		//----New Cable---
-		//Add new cable component 
-		UCableComponent* newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
-		if (!IsValid(newCable))
-		{
-			UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: localNewCable Invalid"));
-			return;
-		}
-		newCable->RegisterComponent();
-		//GetOwner()->AddInstanceComponent(localNewCable);
-
-		//Use zero length and single segment to make it tense
-		newCable->CableLength = 0;
-		latestCable->NumSegments = 0;
-
-		//Attach New Cable to Hitted Object && Set his position to it
-		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
-		newCable->AttachToComponent(HookThrower, AttachmentRule);
-
-		//Attach End to Last Cable
-		newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
-		newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
-		newCable->bAttachEnd = true;
-		CableListArray.AddUnique(newCable);
-
-		//----Caps Sphere---
-		//Add Sphere on Caps
-		if (bCanUseSphereCaps)
-			AddSphereCaps(currentTraceCableWarp);
-
-		//----Set New Cable Params identical to First Cable---
-		if(bCableUseSharedSettings)
-		{
-			newCable->CableWidth = FirstCable->CableWidth;
-			
-			//TODO :: Review this thing for Pull by Tens func
-			newCable->CableLength = FirstCable->CableLength;
-			newCable->CableGravityScale = FirstCable->CableGravityScale;
-			newCable->SolverIterations = FirstCable->CableLength;
-			
-			newCable->TileMaterial = FirstCable->TileMaterial;
-			newCable->CollisionFriction = FirstCable->CollisionFriction;
-			newCable->bEnableCollision = FirstCable->bEnableCollision;
-			newCable->bEnableStiffness = FirstCable->bEnableStiffness;
-		}
-		
-
-		//----Debug Cable Color---
-		if(bDebugMaterialColors)
-		{
-			if(!IsValid(CableDebugMaterialInst)) return;
-			
-			UMaterialInstanceDynamic* dynMatInstance = newCable->CreateDynamicMaterialInstance(0, CableDebugMaterialInst);
-			
-			if(!IsValid(dynMatInstance)) return;
-			dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0,360), 1,1,1));
-		}
+		//TODO :: Check utility
+		CablePointUnwrapAlphaArray.Add(0.0f);
 	}
 	else
 	{
-		//TODO:: For Add by First here
+		CablePointLocations.Insert(currentTraceCableWarp.OutHit.Location, 0);
+		CablePointComponents.Insert(currentTraceCableWarp.OutHit.GetComponent(), 0);
+		//TODO :: Check utility
+		CablePointUnwrapAlphaArray.Insert(0.0f, 0);
 	}
 
-		
+	//Attach Last Cable to Hitted Object && Set his position to it
+	latestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
+	latestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
+
+	//----New Cable---
+	//Add new cable component 
+	UCableComponent* newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
+	if (!IsValid(newCable))
+	{
+		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: localNewCable Invalid"));
+		return;
+	}
+	newCable->RegisterComponent();
+	//GetOwner()->AddInstanceComponent(localNewCable);
+
+	//Use zero length and single segment to make it tense
+	newCable->CableLength = 0;
+	latestCable->NumSegments = 0;
+
+	//Attach New Cable to Hitted Object && Set his position to it
+	newCable->SetWorldLocation(HookThrower->GetComponentLocation());
+	newCable->AttachToComponent(HookThrower, AttachmentRule);
+
+	//Attach End to Last Cable
+	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
+	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
+	newCable->bAttachEnd = true;
+	!bIsAddByFirst ? CableListArray.AddUnique(newCable) : CableListArray.Insert(newCable,1);
+
+	//----Caps Sphere---
+	//Add Sphere on Caps
+	if (bCanUseSphereCaps)
+		AddSphereCaps(currentTraceCableWarp);
+
+	//----Set New Cable Params identical to First Cable---
+	if (bCableUseSharedSettings)
+	{
+		newCable->CableWidth = FirstCable->CableWidth;
+
+		//TODO :: Review this thing for Pull by Tens func
+		newCable->CableLength = FirstCable->CableLength;
+		newCable->CableGravityScale = FirstCable->CableGravityScale;
+		newCable->SolverIterations = FirstCable->CableLength;
+
+		newCable->TileMaterial = FirstCable->TileMaterial;
+		newCable->CollisionFriction = FirstCable->CollisionFriction;
+		newCable->bEnableCollision = FirstCable->bEnableCollision;
+		newCable->bEnableStiffness = FirstCable->bEnableStiffness;
+	}
+
+
+	//----Debug Cable Color---
+	if (bDebugMaterialColors)
+	{
+		if (!IsValid(CableDebugMaterialInst)) return;
+
+		UMaterialInstanceDynamic* dynMatInstance = newCable->CreateDynamicMaterialInstance(0, CableDebugMaterialInst);
+
+		if (!IsValid(dynMatInstance)) return;
+		dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0, 360), 1, 1, 1));
+	}
 }
 
 void UPS_HookComponent::UnwrapCable()
@@ -231,7 +252,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), AttachmentRule);
 
 	//Add to list
-	CableCapArray.AddUnique(newCapMesh);
+    !bIsAddByFirst ? CableCapArray.AddUnique(newCapMesh) : CableCapArray.Insert(newCapMesh,1);
 }
 
 bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)

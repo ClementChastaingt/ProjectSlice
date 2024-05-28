@@ -109,6 +109,9 @@ public:
 	//------------------
 protected:
 	//Status
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
+	bool bIsAddByFirst = false;
+	
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
 
@@ -124,8 +127,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
-	// UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
-	// TArray<float> CablePointUnwrapAlphaArray;
+	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
+	TArray<float> CablePointUnwrapAlphaArray;
 
 	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"))
