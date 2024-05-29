@@ -163,8 +163,9 @@ void UPS_WeaponComponent::Fire()
 	                                                  outHalfComponent,
 	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  HalfSectionMaterial);
-	
-	currentSlicedComponent->ChildsProcMesh.Add(outHalfComponent);
+	outHalfComponent->RegisterComponent();
+	if(IsValid(currentProcMeshComponent->GetOwner()))
+		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
 	
 	//Init Physic Config+
 	outHalfComponent->bUseComplexAsSimpleCollision = false;

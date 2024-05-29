@@ -85,12 +85,12 @@ public:
 	UFUNCTION()
 	void DettachGrapple();
 	
-	UStaticMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
+	UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	UStaticMeshComponent* AttachedMesh = nullptr;
+	UMeshComponent* AttachedMesh = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
 	double DistanceOnAttach = 0.0f;
@@ -143,10 +143,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Static Mesh use for Caps, basically sphere"))
 	UStaticMesh* CapsMesh = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Static Mesh use for Caps, basically sphere"))
+	float CapsScaleMultiplicator = 0.0105;
+
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(ToolTip="Use cable shared settings to the start cable, like width, length, basically all settings exlcuding the ones that cannot be changed at runtime, like segments, and etc."))
 	bool bCableUseSharedSettings = true;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
 	float CableWrapErrorTolerance = 0.002;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))

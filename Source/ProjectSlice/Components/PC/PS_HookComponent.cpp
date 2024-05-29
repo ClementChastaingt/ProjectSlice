@@ -21,6 +21,7 @@ UPS_HookComponent::UPS_HookComponent()
 
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
 	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
+	HookThrower->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
 	FirstCable->SetCollisionProfileName(FName("NoCollision"), true);
@@ -193,7 +194,7 @@ void UPS_HookComponent::WrapCable()
 	
 	//----Caps Sphere---
 	//Add Sphere on Caps
-	if (bCanUseSphereCaps)
+	if(bCanUseSphereCaps)
 		AddSphereCaps(currentTraceCableWarp);
 		
 	//----Set New Cable Params identical to First Cable---
@@ -227,6 +228,8 @@ void UPS_HookComponent::WrapCable()
 
 void UPS_HookComponent::UnwrapCable()
 {
+
+	
 }
 
 FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const
@@ -256,7 +259,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
 	
 	FVector rotatedCapTowardTarget = UKismetMathLibrary::GetUpVector(UKismetMathLibrary::FindLookAtRotation(currentTraceParams.CableStart,currentTraceParams.OutHit.Location));
-	const FTransform& capsRelativeTransform = FTransform(rotatedCapTowardTarget.Rotation(),currentTraceParams.OutHit.Location,UKismetMathLibrary::Conv_DoubleToVector(FirstCable->CableWidth * 0.0105));
+	const FTransform& capsRelativeTransform = FTransform(rotatedCapTowardTarget.Rotation(),currentTraceParams.OutHit.Location,UKismetMathLibrary::Conv_DoubleToVector(FirstCable->CableWidth * CapsScaleMultiplicator));
 
 	//Add new Cap Sphere (sphere size should be like 0.0105 of cable to fit)
 	UStaticMeshComponent* newCapMesh = Cast<UStaticMeshComponent>(GetOwner()->AddComponentByClass(UStaticMeshComponent::StaticClass(), true, capsRelativeTransform,false));
@@ -270,6 +273,8 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 
 	//Set Mesh && Attach Cap to Hitted Object
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
+	newCapMesh->SetCollisionProfileName("NoCollision");
+	newCapMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), AttachmentRule);
 
 	//Add to list
@@ -310,10 +315,10 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
 										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	
-	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UStaticMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
+	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
 	//Define new attached component 
-	AttachedMesh = Cast<UStaticMeshComponent>(CurrentHookHitResult.GetComponent());
+	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
@@ -329,9 +334,12 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 void UPS_HookComponent::DettachGrapple()
 {	
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
-	
+
+	//TODO :: Add Destruction of all Cable (like unwrap)
 	FirstCable->bAttachEnd = false;
+	FirstCable->AttachEndTo = FComponentReference();
 	FirstCable->SetVisibility(false);
+	FirstCable->SetCollisionProfileName(FName("NoCollision"), true);
 	AttachedMesh = nullptr;
 	
 }
