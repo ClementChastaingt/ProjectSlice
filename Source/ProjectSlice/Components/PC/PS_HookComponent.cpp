@@ -90,40 +90,44 @@ void UPS_HookComponent::OnInitWeaponEventReceived()
 void UPS_HookComponent::WrapCable()
 {
 	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
-	
-	//Debug
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable List: %i"), CableListArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable Attached: %i"), CableAttachedArray.Num()));
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow, FString::Printf(TEXT("Cable Points Loc: %i"), CablePointLocations.Num()));
 
+	//TryWrap only if attached
+	if(!IsValid(AttachedMesh)) return;
 	
 	//-----Add Wrap Logic-----
 	//Init works Variables
-	UCableComponent* latestCable;
-	
+	UCableComponent* latestCable = nullptr;
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+	FSCableWarpParams currentTraceCableWarp;
+
+	//Add By First
+	if(CableListArray.IsValidIndex(0) && CableListArray.Num() > 0)
+	{
+		latestCable = CableListArray[0];
+		currentTraceCableWarp = TraceCableWrap(latestCable, true);
+
+		//If hit nothing return;
+		if (currentTraceCableWarp.OutHit.bBlockingHit && IsValid(currentTraceCableWarp.OutHit.GetComponent()))
+			bIsAddByFirst = true;
+	}
+
 	//Add By Last
 	if(CableListArray.IsValidIndex(CableListArray.Num()-1))
 	{
-		bIsAddByFirst = false;
 		latestCable = CableListArray[CableListArray.Num() - 1];
+		currentTraceCableWarp = TraceCableWrap(latestCable, false);
+		
+		//If hit nothing return;
+		if (currentTraceCableWarp.OutHit.bBlockingHit && IsValid(currentTraceCableWarp.OutHit.GetComponent()))
+			bIsAddByFirst = false;
 	}
-	//Add By First
-	else if(CableListArray.IsValidIndex(0) && CableListArray.Num() > 0)
-	{
-		bIsAddByFirst =  true;
-		latestCable = CableListArray[0];
-	}
-	else
-		return;
 
-	const FSCableWarpParams currentTraceCableWarp = TraceCableWrap(latestCable, bIsAddByFirst);
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
-	
-	//If hit nothing return;
+	//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
-
+		
 	//If Location Already Exist return
-	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	if (!IsValid(latestCable)|| !CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	
 
 	//----Last Cable && New Points---
 	//Add new Point Loc && Hitted Component to Array
@@ -146,7 +150,7 @@ void UPS_HookComponent::WrapCable()
 	//Attach Last Cable to Hitted Object && Set his position to it
 	latestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	latestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
-
+	
 	//----New Cable---
 	//Add new cable component 
 	UCableComponent* newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
@@ -155,12 +159,13 @@ void UPS_HookComponent::WrapCable()
 		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: localNewCable Invalid"));
 		return;
 	}
-	newCable->RegisterComponent();
-	//GetOwner()->AddInstanceComponent(localNewCable);
 
 	//Use zero length and single segment to make it tense
 	newCable->CableLength = 0;
-	latestCable->NumSegments = 0;
+	newCable->NumSegments = 1;
+	
+	newCable->RegisterComponent();
+	//GetOwner()->AddInstanceComponent(localNewCable);
 
 	//Attach New Cable to Hitted Object && Set his position to it
 	if(bIsAddByFirst && CablePointLocations.IsValidIndex(1) && CablePointComponents.IsValidIndex(1))
@@ -174,7 +179,6 @@ void UPS_HookComponent::WrapCable()
 		newCable->AttachToComponent(HookThrower, AttachmentRule);
 	}
 	
-
 	//Attach End to Last Cable
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
 	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
@@ -186,12 +190,12 @@ void UPS_HookComponent::WrapCable()
 		CableListArray.Insert(newCable,1);
 	}else
 		CableListArray.AddUnique(newCable);
-
+	
 	//----Caps Sphere---
 	//Add Sphere on Caps
 	if (bCanUseSphereCaps)
 		AddSphereCaps(currentTraceCableWarp);
-
+		
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings)
 	{
@@ -209,9 +213,8 @@ void UPS_HookComponent::WrapCable()
 		
 	}
 
-
 	//----Debug Cable Color---
-	if (bDebugMaterialColors)
+	if (bDebug && bDebugMaterialColors)
 	{
 		if (!IsValid(CableDebugMaterialInst)) return;
 
@@ -240,7 +243,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, cons
 		
 		const TArray<AActor*> actorsToIgnore;
 		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
-			true, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, out.OutHit, true);
+			true, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true);
 
 		return out;
 	}
@@ -281,12 +284,11 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 		bPointLocEqual = cableElementLoc.Equals(targetLoc, errorTolerance);
 		if(bPointLocEqual) break;
 	}
-	return bPointLocEqual;
+	return !bPointLocEqual;
 }
 
 //------------------
 #pragma endregion Cable_Wrap_Logic
-
 
 #pragma region Grapple_Logic
 //------------------
@@ -306,7 +308,7 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), sourceLocation,
 										  sourceLocation + SpawnRotation.Vector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
-										  bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
+										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UStaticMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
@@ -329,6 +331,7 @@ void UPS_HookComponent::DettachGrapple()
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
 	
 	FirstCable->bAttachEnd = false;
+	FirstCable->SetVisibility(false);
 	AttachedMesh = nullptr;
 	
 }

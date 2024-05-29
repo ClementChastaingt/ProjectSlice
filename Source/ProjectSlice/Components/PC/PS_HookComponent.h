@@ -58,6 +58,8 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bDebug = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bDebugTick = false;
 	
 private:
 	UPROPERTY(Transient)
@@ -116,10 +118,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
 	bool bIsAddByFirst = false;
 	
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
 	TArray<UCableComponent*> CableAttachedArray;
 
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
@@ -128,7 +130,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
 	TArray<USceneComponent*> CablePointComponents;
 
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
