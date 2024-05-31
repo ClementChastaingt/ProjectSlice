@@ -228,8 +228,53 @@ void UPS_HookComponent::WrapCable()
 
 void UPS_HookComponent::UnwrapCable()
 {
+	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
 
+	//TryWrap only if attached
+	if(!IsValid(AttachedMesh)) return;
 	
+	//-----Add Wrap Logic-----
+	//Init works Variables
+	UCableComponent* pastCable = nullptr;
+	UCableComponent* currentCable = nullptr;
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+
+	//Remove By First
+	if(CableListArray.IsValidIndex(1) && CableListArray.IsValidIndex(0) && !bIsRemoveByFirst)
+	{
+		pastCable = CableListArray[1];
+		currentCable = CableListArray[0];
+		bIsRemoveByFirst = true;
+	}
+	
+	// //Remove By Last
+	// if(CableAttachedArray.IsValidIndex(CableAttachedArray.Num()-1) && CableListArray.IsValidIndex(CableListArray.Num()) && !bIsRemoveByFirst)
+	// {
+	// 	pastCable = CableAttachedArray[CableAttachedArray.Num() - 1];
+	// 	currentCable = CableListArray[CableListArray.Num()-1];
+	// 	bIsRemoveByFirst = false;
+	// }
+
+	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
+
+	const TArray<AActor*> actorsToIgnore;
+
+	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(FName("CableStart"));
+	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(FName("CableEnd"));
+
+	const FVector cableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(currentCableEndSocketLoc, pastCable->GetSocketLocation(FName("CableEnd"))));
+	const float directionDistance = UKismetMathLibrary::Vector_Distance(currentCableEndSocketLoc, pastCableStartSocketLoc);
+
+	const FVector start = currentCable->GetSocketLocation(FName("CableEnd"));
+	const FVector end = start + cableDirection * (directionDistance * 0.91);
+	
+	FHitResult outHit;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+
+	if(outHit.bBlockingHit && !FMath::IsNearlyEqual(outHit.Location, outHit.TraceEnd, CableUnwrapErrorMultiplier)) return;
+
+
 }
 
 FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const
