@@ -67,9 +67,9 @@ private:
 	
 	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
-	
 
-#pragma region General
+
+#pragma region Grapple
 	//------------------
 
 public:
@@ -89,23 +89,35 @@ public:
 
 
 protected:
+	//Status
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
 	UMeshComponent* AttachedMesh = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	double DistanceOnAttach = 0.0f;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
 	FHitResult CurrentHookHitResult;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	double DistanceOnAttach = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
+	bool bCablePowerPull = false;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
+	float ForceWeight = 1.0f;
+
+	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook")
 	float HookingMaxDistance = 1000.0f;
-	
 
+	UFUNCTION()
+	void PowerCablePull();
+
+
+	
 private:
 	//------------------
 
-#pragma endregion General
+#pragma endregion Grapple
 
 
 #pragma region Rope
@@ -148,8 +160,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Static Mesh scale multiplicator use for Caps (CableWeight * this)"))
 	float CapsScaleMultiplicator = 0.0105;
-
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(ToolTip="Use cable shared settings to the start cable, like width, length, basically all settings exlcuding the ones that cannot be changed at runtime, like segments, and etc."))
 	bool bCableUseSharedSettings = true;
 	
@@ -159,6 +170,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."))
 	float CableUnwrapErrorMultiplier = 10.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap trace distance, between start point and second cable point, this value should be around from 5 to 20 for effective work."))
+	float CableUnwrapDistance = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."))
+	float CableUnwrapFirstFrameDelay = 4.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
 	bool bDebugMaterialColors = false;
 	
@@ -181,8 +198,6 @@ protected:
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION()
 	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
-
-
 	
 private:
 	//------------------
