@@ -99,10 +99,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
 	double DistanceOnAttach = 0.0f;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook")
 	bool bCablePowerPull = false;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook")
 	float ForceWeight = 1.0f;
 
 	//Parameters
@@ -129,9 +129,6 @@ protected:
 	//Status
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
 	bool bIsAddByFirst = false;
-
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
-	bool bIsRemoveByFirst = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
@@ -187,7 +184,10 @@ protected:
 	void WrapCable();
 
 	UFUNCTION()
-	void UnwrapCable();
+	void UnwrapCableByFirst();
+
+	UFUNCTION()
+	void UnwrapCableByLast();
 
 	UFUNCTION()
 	FSCableWarpParams TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const;
