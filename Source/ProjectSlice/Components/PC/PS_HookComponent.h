@@ -136,16 +136,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
 	TArray<UCableComponent*> CableAttachedArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
 	TArray<UStaticMeshComponent*> CableCapArray;
 
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
 	TArray<USceneComponent*> CablePointComponents;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
-	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
 	TArray<float> CablePointUnwrapAlphaArray;
 
 	//Parameters
@@ -165,10 +165,10 @@ protected:
 	float CableWrapErrorTolerance = 0.002;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."))
-	float CableUnwrapErrorMultiplier = 10.0f;
+	float CableUnwrapErrorMultiplier = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap trace distance, between start point and second cable point, this value should be around from 5 to 20 for effective work."))
-	float CableUnwrapDistance = 20.0f;
+	float CableUnwrapDistance = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."))
 	float CableUnwrapFirstFrameDelay = 4.0f;

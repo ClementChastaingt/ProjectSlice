@@ -72,6 +72,8 @@ void UPS_HookComponent::OnAttachWeapon()
 	FirstCable->SetupAttachment(this);
 	FirstCable->SetVisibility(false);
 	CableListArray.AddUnique(FirstCable);
+
+	CableCapArray.Add(nullptr);
 	
 	
 	// //Setup HookMesh
@@ -273,7 +275,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
-	false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
+	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return;
@@ -282,12 +284,13 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
-false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Cyan);
 
 	//If no hit, or hit very close to trace end then process unwrap
-	float currentUnwrapAplha = CablePointUnwrapAlphaArray[0];
+	float currentUnwrapAlpha = CablePointUnwrapAlphaArray[0];
 	if(outHit.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier))
 	{
+		UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: Exit by CableUnwrapErrorMultiplier "));
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
 	}
@@ -295,7 +298,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
 	CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
-	if(currentUnwrapAplha < CableUnwrapFirstFrameDelay) return;
+	if(currentUnwrapAlpha < CableUnwrapFirstFrameDelay) return;
 
 	//----Destroy and remove Last Cable tick-----
 	//If attached cables are more than 0 remove the second one (when first cable gets closer to it)
@@ -304,8 +307,9 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	CableListArray[1]->DestroyComponent();
 
 	//----Caps Sphere---
-	if(bCableUseSharedSettings)
+	if(bCanUseSphereCaps)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: CableCap Destroy index %i"), 0);
 		CableCapArray[1]->DestroyComponent();
 		CableCapArray.RemoveAt(1);
 	}
@@ -332,6 +336,8 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(HookThrower, AttachmentRule);
 	}
+	UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: Reset position"));
+
 	
 }
 
@@ -346,9 +352,9 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//Init works Variables
 	UCableComponent* pastCable;
 	UCableComponent* currentCable;
-	float cableListLastIndex = CableListArray.Num()-1;
-	float cableAttachedLastIndex = CableAttachedArray.Num()-1;
-	float cablePointLocationsLastIndex = CablePointLocations.Num()-1;
+	int32 cableListLastIndex = CableListArray.Num()-1;
+	int32 cableAttachedLastIndex = CableAttachedArray.Num()-1;
+	int32 cablePointLocationsLastIndex = CablePointLocations.Num()-1;
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
 	
 	//Remove By Last
@@ -387,20 +393,17 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
-	false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
-	
+	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return;
-
-	UE_LOG(LogTemp, Error, TEXT("Pass Safe Check"));
 
 	//----Main Trace-----
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
-false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	//----Custom tick-----
 	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;
@@ -408,7 +411,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	//If no hit, or hit very close to trace end then process unwrap
 	if(outHit.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier) && CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
 	{
-		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: Unwrap => Hit very close to trace end STOP"));
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 		return;
 	}
@@ -420,7 +422,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] + 1;
 		if(CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapFirstFrameDelay)
 		{
-			UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: inferior to CableUnwrapFirstFrameDelay STOP"));
 			return;
 		}
 	}
@@ -429,8 +430,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
 	}
 	
-	UE_LOG(LogTemp, Error, TEXT("Start Destroy comp"));
-
 	//----Destroy and remove Last Cable tick-----
 	if(!CableAttachedArray.IsValidIndex(0) || !CableAttachedArray.IsValidIndex(cableAttachedLastIndex) || !CableListArray.IsValidIndex(cableListLastIndex)) return;
 
@@ -440,12 +439,13 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	CableListArray[cableListLastIndex]->DestroyComponent();
 
 	//----Caps Sphere---
-	if(bCableUseSharedSettings)
+	if(bCanUseSphereCaps)
 	{
 		if(CableCapArray.IsValidIndex(cableListLastIndex))
 		{
 			CableCapArray[cableListLastIndex]->DestroyComponent();
 			CableCapArray.RemoveAt(cableListLastIndex);
+			UE_LOG(LogTemp, Error, TEXT("UnwrapByLast :: CableCap Destroy index %i"), cableListLastIndex-1);
 		}
 	}
 
@@ -474,11 +474,17 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	// }
 	// else
 	// {
-	
-		//Reset to HookAttach default set
-		FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
-		FirstCable->AttachToComponent(HookThrower, AttachmentRule);
-	
+
+	cableListLastIndex = CableListArray.Num()-1;
+	if(!CableListArray.IsValidIndex(cableListLastIndex)) return;
+	UCableComponent* firstCable = CableListArray[cableListLastIndex];
+
+	UE_LOG(LogTemp, Error, TEXT("UnwrapByLast :: Reset Position"));
+
+	//Reset to HookAttach default set
+	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	firstCable->AttachToComponent(HookThrower, AttachmentRule);
+
 	// }
 	
 }
