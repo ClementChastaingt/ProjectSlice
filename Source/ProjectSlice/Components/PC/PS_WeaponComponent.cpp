@@ -211,7 +211,7 @@ void UPS_WeaponComponent::Grapple()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
-	_HookComponent->Grapple(SightComponent->GetComponentLocation());
+	_HookComponent->Grapple();
 }
 
 

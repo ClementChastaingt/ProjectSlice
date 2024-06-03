@@ -56,8 +56,8 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	WrapCable();
 	UnwrapCableByLast();
-	UnwrapCableByFirst();
-	//PowerCablePull();
+	//UnwrapCableByFirst();
+	PowerCablePull();
 }
 
 #pragma region Weapon_Event_Receiver
@@ -96,10 +96,10 @@ void UPS_HookComponent::OnInitWeaponEventReceived()
 
 void UPS_HookComponent::WrapCable()
 {
-	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
-
 	//Try Wrap only if attached
 	if(!IsValid(AttachedMesh)) return;
+	
+	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
 	
 	//-----Add Wrap Logic-----
 	//Init works Variables
@@ -234,10 +234,10 @@ void UPS_HookComponent::WrapCable()
 
 void UPS_HookComponent::UnwrapCableByFirst()
 {
-	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
-
 	//Try Unwrap only if attached
 	if(!IsValid(AttachedMesh)) return;
+	
+	if(!IsValid(GetOwner()) || !IsValid(FirstCable) || !IsValid(HookThrower)) return;
 	
 	//-----Unwrap Logic-----
 	//Init works Variables
@@ -288,9 +288,8 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 
 	//If no hit, or hit very close to trace end then process unwrap
 	float currentUnwrapAlpha = CablePointUnwrapAlphaArray[0];
-	if(outHit.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier))
+	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
-		UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: Exit by CableUnwrapErrorMultiplier "));
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
 	}
@@ -309,7 +308,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	//----Caps Sphere---
 	if(bCanUseSphereCaps)
 	{
-		UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: CableCap Destroy index %i"), 0);
 		CableCapArray[1]->DestroyComponent();
 		CableCapArray.RemoveAt(1);
 	}
@@ -336,8 +334,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(HookThrower, AttachmentRule);
 	}
-	UE_LOG(LogTemp, Error, TEXT("UnwrapByFirst :: Reset position"));
-
 	
 }
 
@@ -406,10 +402,10 @@ void UPS_HookComponent::UnwrapCableByLast()
 false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	//----Custom tick-----
-	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;
+	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;;
 	
 	//If no hit, or hit very close to trace end then process unwrap
-	if(outHit.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier) && CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
+	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier) && CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
 	{
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 		return;
@@ -445,7 +441,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		{
 			CableCapArray[cableListLastIndex]->DestroyComponent();
 			CableCapArray.RemoveAt(cableListLastIndex);
-			UE_LOG(LogTemp, Error, TEXT("UnwrapByLast :: CableCap Destroy index %i"), cableListLastIndex-1);
 		}
 	}
 
@@ -454,7 +449,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	CablePointComponents.RemoveAt(cablePointLocationsLastIndex);
 	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
 	CablePointLocations.RemoveAt(cablePointLocationsLastIndex);
-
 
 	//----Set first cable Loc && Attach----
 	// if(CablePointLocations.IsValidIndex(0))
@@ -474,12 +468,10 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	// }
 	// else
 	// {
-
+	
 	cableListLastIndex = CableListArray.Num()-1;
 	if(!CableListArray.IsValidIndex(cableListLastIndex)) return;
 	UCableComponent* firstCable = CableListArray[cableListLastIndex];
-
-	UE_LOG(LogTemp, Error, TEXT("UnwrapByLast :: Reset Position"));
 
 	//Reset to HookAttach default set
 	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
@@ -554,10 +546,10 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 #pragma region Grapple_Logic
 //------------------
 
-void UPS_HookComponent::Grapple(const FVector& sourceLocation)
+void UPS_HookComponent::Grapple()
 {
 	//If FirstCable is not in CableList return
-	if(!CableListArray.IsValidIndex(0)) return;
+	if(!CableListArray.IsValidIndex(0) || !IsValid(HookThrower)) return;
 	
 	//Break Hook constraint if already exist
 	if(IsValid(GetAttachedMesh()))
@@ -569,24 +561,29 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 	//Trace config
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), sourceLocation,
-										  sourceLocation + SpawnRotation.Vector() * HookingMaxDistance,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), HookThrower->GetComponentLocation(),
+										  HookThrower->GetComponentLocation() + SpawnRotation.Vector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_PhysicsBody), false, ActorsToIgnore,
 										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
-	//Define new attached component
-	UCableComponent* firstCable = CableListArray[0];
+	//Define new attached component && Setup
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
+	AttachedMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
+	AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	AttachedMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
+	AttachedMesh->SetSimulatePhysics(true);
+
+	//Attach First cable to it
+	UCableComponent* firstCable = CableListArray[0];
 	firstCable->SetAttachEndToComponent(AttachedMesh);
 	firstCable->bAttachEnd = true;
 	firstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
 	firstCable->SetVisibility(true);
 
 	//Determine max distance for Pull
-	DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(sourceLocation, AttachedMesh->GetComponentLocation()));
-	AttachedMesh->SetSimulatePhysics(true);
+	DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), AttachedMesh->GetComponentLocation()));
 	
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
@@ -594,7 +591,7 @@ void UPS_HookComponent::Grapple(const FVector& sourceLocation)
 void UPS_HookComponent::DettachGrapple()
 {
 	//If FirstCable is not in CableList return
-	if(!CableListArray.IsValidIndex(0)) return;
+	if(!CableListArray.IsValidIndex(0) || !IsValid(AttachedMesh)) return;
 
 	//TODO :: Add Destruction of all Cable (like unwrap)
 	UCableComponent* firstCable = CableListArray[0];
@@ -621,22 +618,33 @@ void UPS_HookComponent::PowerCablePull()
 	bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	
 	//Pull Attached Object
-	if(!bCablePowerPull) return;
+	if(!bCablePowerPull)
+	{
+		AttachedMesh->SetPhysicsLinearVelocity(FVector::ZeroVector, true);
+		return;
+	};
 	
 	UCableComponent* firstCable = CableListArray[0];
 	
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), FirstCable->GetSocketLocation(FName("CableStart")));
-	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
+	FRotator finalRot = rotMeshCable;
+	finalRot.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 
-	//TODO:: Maybe replace by AddForce or AddImpulse;
-	FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
-	//UE_LOG(LogTemp, Error, TEXT("newVel: %s, newVelClamped: %s"),*newVel.ToString(), *newVel.GetClampedToSize(0,3000).ToString());
-	AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
+	FVector newVel = finalRot.Vector() * ForceWeight;
+	AttachedMesh->SetPhysicsLinearVelocity(newVel, true);
+	AttachedMesh->SetPhysicsLinearVelocity(AttachedMesh->GetPhysicsLinearVelocity().GetClampedToSize(0.0,3000));
+	
+	
+	//Use Linear Velocity
+	// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (finalRot.Vector() * ForceWeight);
+	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
+
+	//Use Force
+	// FVector newVel = AttachedMesh->GetComponentVelocity() + (rotMeshCable.Vector() * ForceWeight);
+	// AttachedMesh->AddForce(newVel.GetClampedToSize(0,3000));
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
 }
 
+
 //------------------
-#pragma endregion Grapple_Logic
-
-
-
-

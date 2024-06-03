@@ -80,7 +80,7 @@ public:
 	void OnInitWeaponEventReceived();
 
 	UFUNCTION()
-	void Grapple(const FVector& sourceLocation);
+	void Grapple();
 
 	UFUNCTION()
 	void DettachGrapple();
