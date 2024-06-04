@@ -35,10 +35,10 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookThrower = nullptr;
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(meta = (AllowPrivateAccess = "true"))
 	UCableComponent* FirstCable= nullptr;
 	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
@@ -90,7 +90,7 @@ public:
 
 protected:
 	//Status
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	UPROPERTY()
 	UMeshComponent* AttachedMesh = nullptr;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
@@ -130,22 +130,22 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
 	bool bIsAddByFirst = false;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Attached cables array, each attached cable point will be stored here."))
 	TArray<UCableComponent*> CableAttachedArray;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Cable", meta=(ToolTip="Cable caps array, each added cap will be stored here"))
 	TArray<UStaticMeshComponent*> CableCapArray;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
 	TArray<USceneComponent*> CablePointComponents;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
 	TArray<float> CablePointUnwrapAlphaArray;
 
 	//Parameters

@@ -388,7 +388,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
 	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
@@ -398,7 +398,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
 false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	//----Custom tick-----
@@ -494,7 +494,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, cons
 		out.CableEnd = bReverseLoc ? start : end;
 		
 		const TArray<AActor*> actorsToIgnore;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
 			true, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true);
 
 		return out;
@@ -549,7 +549,7 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 void UPS_HookComponent::Grapple()
 {
 	//If FirstCable is not in CableList return
-	if(!CableListArray.IsValidIndex(0) || !IsValid(HookThrower)) return;
+	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
 	
 	//Break Hook constraint if already exist
 	if(IsValid(GetAttachedMesh()))
@@ -568,19 +568,25 @@ void UPS_HookComponent::Grapple()
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
-	//Define new attached component && Setup
+	//Define new attached component
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
+	
+	//Attach First cable to it
+	FirstCable->SetAttachEndToComponent(AttachedMesh);
+	FirstCable->bAttachEnd = true;
+	FirstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
+	FirstCable->SetVisibility(true);
+
+	//Setup  new attached component
+	AttachedMesh->SetGenerateOverlapEvents(true);
 	AttachedMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
 	AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	AttachedMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
+	AttachedMesh->SetLinearDamping(1.0f);
+	AttachedMesh->SetAngularDamping(1.0f);
 	AttachedMesh->SetSimulatePhysics(true);
+	AttachedMesh->WakeRigidBody();
 
-	//Attach First cable to it
-	UCableComponent* firstCable = CableListArray[0];
-	firstCable->SetAttachEndToComponent(AttachedMesh);
-	firstCable->bAttachEnd = true;
-	firstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
-	firstCable->SetVisibility(true);
 
 	//Determine max distance for Pull
 	DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), AttachedMesh->GetComponentLocation()));
@@ -607,7 +613,7 @@ void UPS_HookComponent::DettachGrapple()
 
 void UPS_HookComponent::PowerCablePull()
 {
-	if(!IsValid(AttachedMesh) || !IsValid(FirstCable)) return;
+	if(!IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0)) return;
 
 	//Activate Pull On reach Max Distance
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
@@ -626,18 +632,12 @@ void UPS_HookComponent::PowerCablePull()
 	
 	UCableComponent* firstCable = CableListArray[0];
 	
-	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), FirstCable->GetSocketLocation(FName("CableStart")));
-	FRotator finalRot = rotMeshCable;
-	finalRot.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
-
-	FVector newVel = finalRot.Vector() * ForceWeight;
-	AttachedMesh->SetPhysicsLinearVelocity(newVel, true);
-	AttachedMesh->SetPhysicsLinearVelocity(AttachedMesh->GetPhysicsLinearVelocity().GetClampedToSize(0.0,3000));
-	
+	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(FName("CableStart")));
+	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 	
 	//Use Linear Velocity
-	// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (finalRot.Vector() * ForceWeight);
-	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
+	FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
+	AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
 
 	//Use Force
 	// FVector newVel = AttachedMesh->GetComponentVelocity() + (rotMeshCable.Vector() * ForceWeight);
