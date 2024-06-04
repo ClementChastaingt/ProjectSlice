@@ -35,10 +35,10 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* HookThrower = nullptr;
 	
-	UPROPERTY(meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere,  Category="Component", meta = (AllowPrivateAccess = "true"))
 	UCableComponent* FirstCable= nullptr;
 	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
@@ -190,7 +190,7 @@ protected:
 	void UnwrapCableByLast();
 
 	UFUNCTION()
-	FSCableWarpParams TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const;
+	FSCableWarpParams TraceCableWrap(const USceneComponent* cable, const bool bReverseLoc) const;
 
 	UFUNCTION()
 	void AddSphereCaps(const FSCableWarpParams& currentTraceParams);

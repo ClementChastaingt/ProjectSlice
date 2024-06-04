@@ -13,6 +13,7 @@
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -145,7 +146,7 @@ void UPS_WeaponComponent::Fire()
 	//TODO :: Config Collision channel
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
 	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
-	                                      UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
+	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
@@ -169,10 +170,11 @@ void UPS_WeaponComponent::Fire()
 	
 	//Init Physic Config+
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
-	outHalfComponent->SetCollisionProfileName(TEXT("PhysicsActor"), false);
-	outHalfComponent->SetGenerateOverlapEvents(false);
+	outHalfComponent->SetGenerateOverlapEvents(true);
+	outHalfComponent->SetCollisionProfileName(Profile_GPE, false);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
 	outHalfComponent->SetSimulatePhysics(true);
+
 
 	//Impulse
 	outHalfComponent->AddImpulse(FVector(200, 200, 200));

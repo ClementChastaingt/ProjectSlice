@@ -2,13 +2,10 @@
 
 
 #include "PS_HookComponent.h"
-
-#include "AsyncTreeDifferences.h"
-#include "MovieSceneTracksComponentTypes.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
-#include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h" 
-#include "Elements/Framework/TypedElementQueryBuilder.h"
+#include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
 
 class UCableComponent;
@@ -21,11 +18,11 @@ UPS_HookComponent::UPS_HookComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
-	HookThrower->SetCollisionProfileName(FName("NoCollision"), true);
+	HookThrower->SetCollisionProfileName(Profile_NoCollision, true);
 	HookThrower->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
-	FirstCable->SetCollisionProfileName(FName("NoCollision"), true);
+	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
 	
 	// HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	// HookMesh->SetSimulatePhysics(false);
@@ -388,7 +385,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_Hook),
 	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
@@ -398,7 +395,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Hook),
 false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	//----Custom tick-----
@@ -481,7 +478,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	
 }
 
-FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, const bool bReverseLoc) const
+FSCableWarpParams UPS_HookComponent::TraceCableWrap(const USceneComponent* cable, const bool bReverseLoc) const
 {
 	if(IsValid(cable) && IsValid(GetWorld()))
 	{
@@ -494,7 +491,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(USceneComponent* cable, cons
 		out.CableEnd = bReverseLoc ? start : end;
 		
 		const TArray<AActor*> actorsToIgnore;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_EngineTraceChannel2),
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd,  UEngineTypes::ConvertToTraceType(ECC_Hook),
 			true, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true);
 
 		return out;
@@ -521,8 +518,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 
 	//Set Mesh && Attach Cap to Hitted Object
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
-	newCapMesh->SetCollisionProfileName("NoCollision");
-	newCapMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	newCapMesh->SetCollisionProfileName(Profile_NoCollision);
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), AttachmentRule);
 
 	//Add to list
@@ -574,12 +570,12 @@ void UPS_HookComponent::Grapple()
 	//Attach First cable to it
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
 	FirstCable->bAttachEnd = true;
-	FirstCable->SetCollisionProfileName(FName("PhysicsActor"), true);
+	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
 	FirstCable->SetVisibility(true);
 
 	//Setup  new attached component
 	AttachedMesh->SetGenerateOverlapEvents(true);
-	AttachedMesh->SetCollisionProfileName(FName("PhysicsActor"), true);
+	AttachedMesh->SetCollisionProfileName(Profile_GPE, true);
 	AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	AttachedMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
 	AttachedMesh->SetLinearDamping(1.0f);
@@ -604,7 +600,7 @@ void UPS_HookComponent::DettachGrapple()
 	firstCable->bAttachEnd = false;
 	firstCable->AttachEndTo = FComponentReference();
 	firstCable->SetVisibility(false);
-	firstCable->SetCollisionProfileName(FName("NoCollision"), true);
+	firstCable->SetCollisionProfileName(Profile_NoCollision, true);
 	AttachedMesh = nullptr;
 
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
@@ -636,12 +632,12 @@ void UPS_HookComponent::PowerCablePull()
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 	
 	//Use Linear Velocity
-	FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
-	AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
+	// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
+	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
 
 	//Use Force
-	// FVector newVel = AttachedMesh->GetComponentVelocity() + (rotMeshCable.Vector() * ForceWeight);
-	// AttachedMesh->AddForce(newVel.GetClampedToSize(0,3000));
+	FVector newVel = AttachedMesh->GetComponentVelocity() + (rotMeshCable.Vector() * ForceWeight);
+	AttachedMesh->AddForce(newVel.GetClampedToSize(0,3000));
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
 }
