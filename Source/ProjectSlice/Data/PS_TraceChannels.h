@@ -14,11 +14,12 @@
 #define ECC_DefaultIgnore ECC_GameTraceChannel6
 #define ECC_DefaultOverlap ECC_GameTraceChannel7
 #define ECC_GPE ECC_GameTraceChannel8
-#define ECC_Parkour ECC_GameTraceChannel9
-#define ECC_Slice ECC_GameTraceChannel10
-#define ECC_Hook ECC_GameTraceChannel11
-#define ECC_Landscape ECC_GameTraceChannel12
-#define ECC_Vegetation ECC_GameTraceChannel13
+#define ECC_Landscape ECC_GameTraceChannel9
+#define ECC_Vegetation ECC_GameTraceChannel10
+#define ECC_Slice ECC_GameTraceChannel11
+#define ECC_Rope ECC_GameTraceChannel12
+#define ECC_Parkour ECC_GameTraceChannel13
+
 
 // #define ECC_GameTraceChannel16 ECC_GameTraceChannel14
 // #define ECC_GameTraceChannel17 ECC_GameTraceChannel15

@@ -184,9 +184,6 @@ protected:
 	void WrapCable();
 
 	UFUNCTION()
-	void UnwrapCableByFirst();
-
-	UFUNCTION()
 	void UnwrapCableByLast();
 
 	UFUNCTION()
