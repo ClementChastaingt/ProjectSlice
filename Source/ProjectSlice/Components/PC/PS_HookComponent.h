@@ -96,18 +96,27 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
 	FHitResult CurrentHookHitResult;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook",  meta=(ForceUnits="cm",ToolTip="Distance between player and object grappled on attaching"))
 	double DistanceOnAttach = 0.0f;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Tens"))
 	bool bCablePowerPull = false;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook")
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(ToolTip="Is currently pull Spherical Object"))
+	float bIsPullingSphericalObject = false;
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Current Pull Force"))
 	float ForceWeight = 1.0f;
 
 	//Parameters
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for Grapple Object"))
 	float HookingMaxDistance = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
+	float MaxForceWeight = 10000.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Distance for reach Max Force Weight"))
+	float MaxForcePullingDistance = 1000.0f;
 
 	UFUNCTION()
 	void PowerCablePull();
@@ -148,6 +157,12 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
 	TArray<float> CablePointUnwrapAlphaArray;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Default First Cable lenght"))
+	float FirstCableDefaultLenght = 0;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Default First Cable lenght"))
+	UCurveFloat* CableTensCurve = nullptr;
+	
 	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"))
 	bool bCanUseSphereCaps = true;
@@ -173,6 +188,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."))
 	float CableUnwrapFirstFrameDelay = 4.0f;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
+	float CableMaxTensDistance = 500.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
 	bool bDebugMaterialColors = false;
 	
@@ -180,6 +198,9 @@ protected:
 	UMaterialInterface* CableDebugMaterialInst = nullptr;
 
 	//Functions
+	UFUNCTION()
+	void CableWraping();
+	
 	UFUNCTION()
 	void WrapCable();
 	
@@ -199,8 +220,12 @@ protected:
 	UFUNCTION()
 	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
 	
+	UFUNCTION()
+	void AdaptCableTens();
+	
 private:
 	//------------------
 
 #pragma endregion Rope
 };
+

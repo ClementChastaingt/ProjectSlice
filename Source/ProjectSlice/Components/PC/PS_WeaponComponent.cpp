@@ -166,7 +166,11 @@ void UPS_WeaponComponent::Fire()
 	                                                  HalfSectionMaterial);
 	outHalfComponent->RegisterComponent();
 	if(IsValid(currentProcMeshComponent->GetOwner()))
+	{
+		Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
 		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
+	}
+
 	
 	//Init Physic Config+
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
