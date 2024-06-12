@@ -104,7 +104,7 @@ void UPS_HookComponent::CableWraping()
 	UnwrapCableByLast();
 
 	//Rope Adaptation
-	AdaptCableTens();
+	//AdaptCableTens();
 }
 
 void UPS_HookComponent::WrapCable()
@@ -161,8 +161,9 @@ void UPS_HookComponent::WrapCable()
 		CablePointComponents.Insert(currentTraceCableWarp.OutHit.GetComponent(), 0);
 		CablePointUnwrapAlphaArray.Insert(0.0f, 0);
 	}
-
+	
 	//Attach Last Cable to Hitted Object && Set his position to it
+	latestCable->CableLength = 1;
 	latestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	latestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
 	
@@ -207,7 +208,7 @@ void UPS_HookComponent::WrapCable()
 		CableAttachedArray.Insert(newCable,1);
 
 	}else
-		CableListArray.AddUnique(newCable);
+		CableListArray.Add(newCable);
 	
 	//----Caps Sphere---
 	//Add Sphere on Caps
@@ -424,7 +425,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	if(CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
 	{
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] + 1;
-		if(CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapFirstFrameDelay)
+		if(CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapLastFrameDelay)
 		{
 			return;
 		}

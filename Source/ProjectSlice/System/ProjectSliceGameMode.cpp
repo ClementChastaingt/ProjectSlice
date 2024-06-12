@@ -5,6 +5,7 @@
 #include "../PC/PS_Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()
@@ -53,6 +54,7 @@ void AProjectSliceGameMode::InitSliceableContent()
 			outActor->AddInstanceComponent(newComp);
 			newComp->InitSliceObject();
 			newComp->SetupAttachment(outActor->GetRootComponent());
+			newComp->SetCollisionProfileName(Profile_GPE);
 			if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s add %s"), i++, *outActor->GetName(), *newComp->GetName());
 		}
 		else

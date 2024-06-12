@@ -57,7 +57,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	//TODO:: Need Destroy base mesh
 	_RootMesh->SetSimulatePhysics(false);
 	_RootMesh->SetGenerateOverlapEvents(false);
-	_RootMesh->SetCollisionProfileName(Profile_GPE, true);
+	_RootMesh->SetCollisionProfileName(Profile_NoCollision, true);
 	_RootMesh->SetVisibility(false);
 	
 	//Copy StaticMesh to ProceduralMesh
