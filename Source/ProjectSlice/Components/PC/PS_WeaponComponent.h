@@ -132,8 +132,6 @@ public:
 	/** Make the weapon Fire a Hook */
 	UFUNCTION()
 	void Grapple();
-
-	
 private:
 	UPROPERTY(Transient)
 	UPS_HookComponent* _HookComponent = nullptr;

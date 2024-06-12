@@ -3,7 +3,7 @@
 
 #include "PS_SlicedComponent.h"
 #include "KismetProceduralMeshLibrary.h"
-
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 
 
 // Sets default values for this component's properties
@@ -15,7 +15,7 @@ UPS_SlicedComponent::UPS_SlicedComponent(const FObjectInitializer& objectInitial
 
 	//Init ProcMeshCompo Collision
 	bUseComplexAsSimpleCollision = false;
-	SetCollisionProfileName(TEXT("PhysicsActor"), false);
+	SetCollisionProfileName(Profile_PhysicActor, false);
 	SetGenerateOverlapEvents(false);
 	SetNotifyRigidBodyCollision(true);
 	SetSimulatePhysics(true);
@@ -57,7 +57,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	//TODO:: Need Destroy base mesh
 	_RootMesh->SetSimulatePhysics(false);
 	_RootMesh->SetGenerateOverlapEvents(false);
-	_RootMesh->SetCollisionProfileName(TEXT("NoCollision"), true);
+	_RootMesh->SetCollisionProfileName(Profile_NoCollision, true);
 	_RootMesh->SetVisibility(false);
 	
 	//Copy StaticMesh to ProceduralMesh

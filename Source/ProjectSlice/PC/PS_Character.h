@@ -52,7 +52,7 @@ class AProjectSliceCharacter : public ACharacter
 	
 public:
 	AProjectSliceCharacter();
-
+	
 protected:
 	virtual void BeginPlay();
 
@@ -94,9 +94,11 @@ public:
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
 	/** Returns WeaponComponent **/
+	UFUNCTION(BlueprintCallable)
 	UPS_WeaponComponent* GetWeaponComponent() const{return WeaponComponent;}
 
 	/** Returns HookComponent **/
+	UFUNCTION(BlueprintCallable)
 	UPS_HookComponent* GetHookComponent() const{return HookComponent;}
 };
 

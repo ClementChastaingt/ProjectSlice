@@ -1,4 +1,22 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Scope/=F6696F8185506F41B9C4252540BE9C18/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Scope/=F6696F8185506F41B9C4252540BE9C18/Type/@EntryValue">InCppFile</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Shortcut/@EntryValue">DEBUGonscreen</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=1BD81F6BF00970438857A128A1667630/Text/@EntryValue">if (GEngine) GEngine-&gt;AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow,FString::Printf(TEXT("TEXT: %f"), 3.0));</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Field/=LOCATION/@KeyIndexDefined">True</s:Boolean>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Field/=LOCATION/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Scope/=F6696F8185506F41B9C4252540BE9C18/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Scope/=F6696F8185506F41B9C4252540BE9C18/Type/@EntryValue">InCppFile</s:String>
+	
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=3601BF58A5DDD94BBB2F25E80D07B5C9/Text/@EntryValue">DrawDebugPoint(GetWorld(), $LOCATION$, 20.f, FColor::Orange, false);</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/@KeyIndexDefined">False</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/Applicability/=Live/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/Applicability/=Live/@EntryIndexRemoved">True</s:Boolean>
@@ -8,6 +26,34 @@
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/ShortenQualifiedReferences/@EntryValue">False</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/Text/@EntryValue"></s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=7804C73331D4A140AEF8CDB0CA16CAA5/Scope/=F6696F8185506F41B9C4252540BE9C18/Type/@EntryValue"></s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=B04F12D94E1AAC4CBF0AA2AE662F4940/Text/@EntryValue">UE_LOG(LogTemp, Log, TEXT("TEXT"));</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/Field/=START/@KeyIndexDefined">True</s:Boolean>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/Field/=START/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/Field/=TARGET/@KeyIndexDefined">True</s:Boolean>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/Field/=TARGET/Order/@EntryValue">1</s:Int64>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F2CF909BB41EB94F95BD8F0DCC15AE4B/Text/@EntryValue">DrawDebugLine(GetWorld(), $START$, $TARGET$, FColor::Yellow, false, 2, 10, 3);</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Field/=NAME/@KeyIndexDefined">True</s:Boolean>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Field/=NAME/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Scope/=F6696F8185506F41B9C4252540BE9C18/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Scope/=F6696F8185506F41B9C4252540BE9C18/Type/@EntryValue">InCppFile</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Shortcut/@EntryValue">PRAGMAregion</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F59B3E24DB90F14492E77199B2F73F86/Text/@EntryValue">#pragma region $NAME$ 
+//------------------
+
+public:
+	//------------------
+protected:
+	//------------------
+private:
+	//------------------
+	
+#pragma endregion $NAME$ 
+	</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FA6B80C26983874C9F44FA2395E9DF44/@KeyIndexDefined">False</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FA6B80C26983874C9F44FA2395E9DF44/Applicability/=Live/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FA6B80C26983874C9F44FA2395E9DF44/Applicability/=Live/@EntryIndexRemoved">True</s:Boolean>

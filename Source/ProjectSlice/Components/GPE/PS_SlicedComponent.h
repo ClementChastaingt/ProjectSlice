@@ -36,9 +36,6 @@ public:
 
 	//Getters && Setters
 	UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
-	
-	UPROPERTY(VisibleInstanceOnly)
-	TArray<UProceduralMeshComponent*> ChildsProcMesh;
 
 protected:
 	

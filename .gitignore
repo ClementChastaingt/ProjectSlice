@@ -72,3 +72,8 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+Content/StarterContent/Architecture/Wall_500x500.uasset
+Content/StarterContent/Maps/Advanced_Lighting.umap
+Backup/DefaultEngine.ini
+Content/StarterContent/
+Backup/
