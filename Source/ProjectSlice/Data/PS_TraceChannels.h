@@ -48,6 +48,7 @@
 #define Profile_OverlapOnlyEnemy "OverlapOnlyEnemy"
 #define Profile_GPE "GPE"
 #define Profile_Projectile "Projectile"
+#define Profile_Rope "Rope"
 
 //__________________________________________________
 #pragma endregion ProfilePreset
@@ -69,7 +70,6 @@
 #define EOTQ_GPE EObjectTypeQuery::ObjectTypeQuery12
 #define EOTQ_Landscape EObjectTypeQuery::ObjectTypeQuery13
 #define EOTQ_Vegetation EObjectTypeQuery::ObjectTypeQuery14
-
 
 //__________________________________________________
 #pragma endregion ObjectTypeQuery
