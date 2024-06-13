@@ -637,39 +637,67 @@ void UPS_HookComponent::Grapple()
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
 
+
 void UPS_HookComponent::DettachGrapple()
 {
 	//If FirstCable is not in CableList return
-	if(!CableListArray.IsValidIndex(0) || !IsValid(AttachedMesh)) return;
+	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;
 
-	//----Dettach Grapple ---
-	//Init works Variables
-	UCableComponent* firstCable = CableListArray[0];
-
-	int32 i = 0;
-
+	//----Stop Cable Warping---
+	AttachedMesh = nullptr;
+	
 	//----Clear Cable Warp ---
-	for (auto cable : CableListArray)
+	int i = 1;
+	for (auto cable : CableAttachedArray)
 	{
-		if(!IsValid(cable)) return;
-		i++;
-		cable->DestroyComponent();
+		if(!IsValid(cable))
+		{
+			i++;
+			continue;
+		}
+		
+		//Remove and Destroy cable
+		//Prevent to Destroy FirstCable
+		CableListArray.Remove(cable);
+		if(cable != FirstCable)
+			cable->DestroyComponent();
 
-		if(IsValid(CableCapArray[i]))
-			CableCapArray[i]->DestroyComponent();
+		//Remove and Destroy Cable Cap
+		if(CableCapArray.IsValidIndex(i))
+		{
+			UStaticMeshComponent* currentCap = CableCapArray[i];
+			if(!IsValid(currentCap))
+			{
+				i++;
+				continue;
+			}
+			
+			CableCapArray.Remove(currentCap);
+			currentCap->DestroyComponent();
+		}
+		
 	}
-	CableListArray.Empty();
-	CableCapArray.Empty();
+
+	//Reset Cable List
+	CableListArray[0]->DestroyComponent();
+	CableListArray[0] = FirstCable;
+
+	//Clear Array
+	CableAttachedArray.Empty();
+	CablePointUnwrapAlphaArray.Empty();
 	CablePointLocations.Empty();
 	CablePointComponents.Empty();
 
 	
 	//----Setup First Cable---
-	firstCable->bAttachEnd = false;
-	firstCable->AttachEndTo = FComponentReference();
-	firstCable->SetVisibility(false);
-	firstCable->SetCollisionProfileName(Profile_NoCollision, true);
-	AttachedMesh = nullptr;
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+
+	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	FirstCable->AttachToComponent(HookThrower, AttachmentRule);
+	FirstCable->bAttachEnd = false;
+	FirstCable->AttachEndTo = FComponentReference();
+	FirstCable->SetVisibility(false);
+	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
 
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("BreakConstraint")));
 	
