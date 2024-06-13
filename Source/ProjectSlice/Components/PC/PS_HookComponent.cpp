@@ -242,6 +242,13 @@ void UPS_HookComponent::WrapCable()
 		if (!IsValid(dynMatInstance)) return;
 		dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0, 360), 1, 1, 1));
 	}
+	else if(IsValid(FirstCable))
+	{
+		
+		UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
+		if(IsValid(currentCableMaterialInst))
+			newCable->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
+	}
 }
 
 void UPS_HookComponent::UnwrapCableByFirst()
@@ -526,12 +533,20 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: newCapMesh Invalid"));
 		return;
 	}
-	//GetOwner()->AddInstanceComponent(newCapMesh);
+
 
 	//Set Mesh && Attach Cap to Hitted Object
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
 	newCapMesh->SetCollisionProfileName(Profile_NoCollision);
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), AttachmentRule);
+
+	//Get Cable Material and add to Cable
+	 if(!bDebugMaterialColors)
+	 {
+	 	UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
+	 	if(IsValid(currentCableMaterialInst))
+	 		newCapMesh->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
+	 }
 
 	//Add to list
     !bIsAddByFirst ? CableCapArray.AddUnique(newCapMesh) : CableCapArray.Insert(newCapMesh,1);
@@ -600,7 +615,6 @@ void UPS_HookComponent::Grapple()
 		return;
 	}
 
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.05f, FColor::Yellow, FString::Printf(TEXT("TEXT:")));
 	//Trace config
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
@@ -679,7 +693,7 @@ void UPS_HookComponent::DettachGrapple()
 	}
 
 	//Reset Cable List
-	CableListArray[0]->DestroyComponent();
+	if(CableListArray[0] != FirstCable) CableListArray[0]->DestroyComponent();
 	CableListArray[0] = FirstCable;
 
 	//Clear Array
