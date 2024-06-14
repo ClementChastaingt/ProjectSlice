@@ -267,10 +267,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	}
 
 	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("Unwrap By First"));
-
-
+	
 	//----Unwrap Test-----
 	const TArray<AActor*> actorsToIgnore;
 
@@ -525,7 +522,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	
 	FVector rotatedCapTowardTarget = UKismetMathLibrary::GetUpVector(UKismetMathLibrary::FindLookAtRotation(currentTraceParams.CableStart,currentTraceParams.OutHit.Location));
 	const FTransform& capsRelativeTransform = FTransform(rotatedCapTowardTarget.Rotation(),currentTraceParams.OutHit.Location,UKismetMathLibrary::Conv_DoubleToVector(FirstCable->CableWidth * CapsScaleMultiplicator));
-
+	
 	//Add new Cap Sphere (sphere size should be like 0.0105 of cable to fit)
 	UStaticMeshComponent* newCapMesh = Cast<UStaticMeshComponent>(GetOwner()->AddComponentByClass(UStaticMeshComponent::StaticClass(), true, capsRelativeTransform,false));
 	if (!IsValid(newCapMesh))
@@ -533,7 +530,6 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: newCapMesh Invalid"));
 		return;
 	}
-
 
 	//Set Mesh && Attach Cap to Hitted Object
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);

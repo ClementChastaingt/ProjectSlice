@@ -162,7 +162,7 @@ void UPS_WeaponComponent::Fire()
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
 	                                                  SightComponent->GetUpVector(), true,
 	                                                  outHalfComponent,
-	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
+	                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
 	                                                  HalfSectionMaterial);
 	outHalfComponent->RegisterComponent();
 	if(IsValid(currentProcMeshComponent->GetOwner()))
