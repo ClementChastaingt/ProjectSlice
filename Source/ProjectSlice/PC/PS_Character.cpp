@@ -69,7 +69,6 @@ void AProjectSliceCharacter::BeginPlay()
 	//Init Weapon Componenet on begin play if attach
 	if(GetHasRifle())
 		WeaponComponent->InitWeapon(this);
-
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
