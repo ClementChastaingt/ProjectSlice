@@ -169,6 +169,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Static Mesh use for Caps, basically sphere"))
 	UStaticMesh* CapsMesh = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="New Caps Material Instance"))
+	UMaterialInterface* CableCapsMaterialInst = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(UIMin="0", ClampMin="0", ToolTip="Static Mesh scale multiplicator use for Caps (CableWeight * this)"))
 	float CapsScaleMultiplicator = 0.0105;

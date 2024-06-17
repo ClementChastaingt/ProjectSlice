@@ -26,10 +26,14 @@ class AProjectSliceCharacter : public ACharacter
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	USkeletalMeshComponent* Mesh1P;
 
+	/** ParkourComponent */
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UPS_ParkourComponent* ParkourComponent;
+
 	/** WeaponComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	UPS_WeaponComponent* WeaponComponent;
-
+	
 	/** HookComponent */
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UPS_HookComponent* HookComponent = nullptr;
@@ -92,6 +96,10 @@ public:
 	
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	/** Returns ParkourComponent **/
+	UFUNCTION(BlueprintCallable)
+	UPS_ParkourComponent* GetParkourComponent() const{return ParkourComponent;}
 
 	/** Returns WeaponComponent **/
 	UFUNCTION(BlueprintCallable)

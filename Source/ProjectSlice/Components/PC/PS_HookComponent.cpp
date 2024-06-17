@@ -539,9 +539,8 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	//Get Cable Material and add to Cable
 	 if(!bDebugMaterialColors)
 	 {
-	 	UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
-	 	if(IsValid(currentCableMaterialInst))
-	 		newCapMesh->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
+	 	if(IsValid(CableCapsMaterialInst))
+	 		newCapMesh->CreateDynamicMaterialInstance(0, CableCapsMaterialInst);
 	 }
 
 	//Add to list
