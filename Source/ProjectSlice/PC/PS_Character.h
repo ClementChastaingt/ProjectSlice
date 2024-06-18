@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "..\Components\PC\PS_WeaponComponent.h"
+#include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
 #include "PS_Character.generated.h"
 
 class UInputComponent;
@@ -25,6 +26,10 @@ class AProjectSliceCharacter : public ACharacter
 	/** Pawn mesh: 1st person view (arms; seen only by self) */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	USkeletalMeshComponent* Mesh1P;
+
+	/** ComponentsManager */
+	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
+	UPS_ComponentsManager* ComponentsManager;
 
 	/** ParkourComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
@@ -96,6 +101,8 @@ public:
 	
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	UPS_ComponentsManager* GetComponentsManager() const {return ComponentsManager; }
 
 	/** Returns ParkourComponent **/
 	UFUNCTION(BlueprintCallable)

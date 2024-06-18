@@ -12,7 +12,7 @@
 class AProjectSliceCharacter;
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_ParkourComponent : public USceneComponent
+class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
 {
 	GENERATED_BODY()
 
@@ -24,10 +24,10 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugTick = false;
 
 public:
@@ -53,11 +53,6 @@ protected:
 	UFUNCTION()
 	void OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 	
-	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
-	UCapsuleComponent* ParkourDetector = nullptr;
-
-	
-	
 
 //------------------
 #pragma endregion General
@@ -75,6 +70,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Default player gravity scale"))
 	float DefaultGravity  = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Default player gravity scale"))
+	float EnterVelocity  = 0.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|WallRun", meta=(ToolTip="WallRun timer handler"))
 	FTimerHandle WallRunTimerHandle;
@@ -88,11 +86,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|WallRun", meta=(ToolTip="Player to Wall direction"))
 	FVector WallRunDirection = FVector::ZeroVector;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
+	float VelocityWeight = 0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
 	float WallRunTickRate = 0.02f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
-	float WallRunForceMultiplicator = 1500.0f;
+	float WallRunForceMultiplicator = 200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Time to WallRun for start falling, NEED TO BE SUPERIOR OF WallRunTimeToMaxGravity "))
+	float WallRunTimeToFall = 6.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Speed for reach velocity 0 when time for start begin falling is reached"))
+	float FallingInterpSpeed = 10.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
+	UCurveFloat* WallRunForceCurve = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Gravity", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun target gravity scale"))
 	float WallRunTargetGravity = 0.25f;

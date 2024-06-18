@@ -32,15 +32,14 @@ void UPS_ParkourComponent::BeginPlay()
 	
 	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
-	
-	ParkourDetector = _PlayerCharacter->GetCapsuleComponent();
-	if(IsValid(ParkourDetector))
-	{
-		ParkourDetector->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
-		ParkourDetector->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
-	}
-	
+
+	//Link Event Receiver
+	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
+	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
+
+	//Init Default var	
 	DefaultGravity = _PlayerCharacter->GetCharacterMovement()->GravityScale;
+	EnterVelocity = _PlayerCharacter->GetVelocity().Length();
 
 	//Custom Tick
 	if (IsValid(GetWorld()))
@@ -64,26 +63,32 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_ParkourComponent::WallRunTick()
 {
-	if(!bIsWallRunning) return;
+	if(!bIsWallRunning || !IsValid(_PlayerCharacter)) return;
+
+	WallRunTimestamp = WallRunTimestamp + WallRunTickRate;
+	const float alpha = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
 
 	//Stick to Wall Velocity
-	// const float alphaForce = 
-	// float curvegForceAlpha = alphaForce;
-	//
-	// if(IsValid(WallRunGravityCurve))
-	// 	curvegForceAlpha = WallRunGravityCurve->GetFloatValue(alphaForce);
+	float curveForceAlpha = alpha;
+	if(IsValid(WallRunGravityCurve))
+		curveForceAlpha = WallRunForceCurve->GetFloatValue(alpha);
+	
+	if(WallRunTimestamp > StartWallRunTimestamp + WallRunTimeToFall)
+		VelocityWeight = UKismetMathLibrary::FInterpTo(EnterVelocity, 0, WallRunTimestamp, FallingInterpSpeed);
+	else
+		VelocityWeight = FMath::Lerp(EnterVelocity,EnterVelocity * WallRunForceMultiplicator,curveForceAlpha);
 
-	_PlayerCharacter->GetCharacterMovement()->Velocity = WallRunDirection * WallRunForceMultiplicator;
+	const FVector newPlayerVelocity = WallRunDirection * velocityWeight;
+	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 
 	//Gravity interp
-	WallRunTimestamp = WallRunTimestamp + WallRunTickRate;
-	
-	const float alphaGravity = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
-	float curvegGravityAlpha = alphaGravity;
-	
+	float curveGravityAlpha = alpha;
 	if(IsValid(WallRunGravityCurve))
-		curvegGravityAlpha = WallRunGravityCurve->GetFloatValue(alphaGravity);
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GravityScale,WallRunTargetGravity,curvegGravityAlpha);
+		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alpha);
+	
+	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GravityScale,WallRunTargetGravity,curveGravityAlpha);
+
+	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newPlayerVelocity %f, alpha %f, GravityScale %f, "), newPlayerVelocity.Length(), curveGravityAlpha, _PlayerCharacter->GetCharacterMovement()->GravityScale);
 	
 }
 
@@ -94,7 +99,7 @@ void UPS_ParkourComponent::WallRunTick()
 
 void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
 	AActor* otherActor, UPrimitiveComponent* otherComp, int otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
-{
+{	
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(GetWorld())
 		|| !IsValid(_PlayerCharacter->GetCharacterMovement())
@@ -111,7 +116,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector()));
 	
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,1));
+	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
 
 	StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
 	WallRunTimestamp = StartWallRunTimestamp;
@@ -122,7 +127,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
-	AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
+                                                                    AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
 
 	GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
