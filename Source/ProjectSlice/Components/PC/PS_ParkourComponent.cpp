@@ -76,6 +76,7 @@ void UPS_ParkourComponent::WallRunTick()
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alpha);
 	
 	if(WallRunTimestamp > StartWallRunTimestamp + WallRunTimeToFall)
+		//TODO :: Replace by lerp and alpha curve for more smoothy deceleration
 		VelocityWeight = UKismetMathLibrary::FInterpTo(VelocityWeight, EnterVelocity - WallRunForceFallingDebuff,GetWorld()->GetDeltaSeconds(), FallingInterpSpeed);
 	else
 		VelocityWeight = FMath::Lerp(EnterVelocity,EnterVelocity + WallRunForceBoost,curveForceAlpha);
