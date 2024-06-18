@@ -68,12 +68,13 @@ void UPS_ParkourComponent::WallRunTick()
 	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
 	
 	WallRunTimestamp = WallRunTimestamp + WallRunTickRate;
-	const float alpha = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
+	const float alphaMaxGravity = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
+	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity + WallRunTimeToFall, 0,1);
 
 	//Stick to Wall Velocity
-	float curveForceAlpha = alpha;
+	float curveForceAlpha = alphaMaxGravity;
 	if(IsValid(WallRunGravityCurve))
-		curveForceAlpha = WallRunForceCurve->GetFloatValue(alpha);
+		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaMaxGravity);
 	
 	if(WallRunTimestamp > StartWallRunTimestamp + WallRunTimeToFall)
 		//TODO :: Replace by lerp and alpha curve for more smoothy deceleration
@@ -95,9 +96,10 @@ void UPS_ParkourComponent::WallRunTick()
 	
 
 	//Gravity interp
-	float curveGravityAlpha = alpha;
+	//TODO :: Need review curve
+	float curveGravityAlpha = alphaWallRun;
 	if(IsValid(WallRunGravityCurve))
-		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alpha);
+		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alphaWallRun);
 	
 	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(DefaultGravity,WallRunTargetGravity,curveGravityAlpha);
 
