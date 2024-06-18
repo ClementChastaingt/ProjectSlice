@@ -39,7 +39,6 @@ void UPS_ParkourComponent::BeginPlay()
 
 	//Init Default var	
 	DefaultGravity = _PlayerCharacter->GetCharacterMovement()->GravityScale;
-	EnterVelocity = _PlayerCharacter->GetVelocity().Length();
 
 	//Custom Tick
 	if (IsValid(GetWorld()))
@@ -61,10 +60,13 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 }
 
 
+#pragma region WallRun
+//------------------
+
 void UPS_ParkourComponent::WallRunTick()
 {
-	if(!bIsWallRunning || !IsValid(_PlayerCharacter)) return;
-
+	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+	
 	WallRunTimestamp = WallRunTimestamp + WallRunTickRate;
 	const float alpha = UKismetMathLibrary::MapRangeClamped(WallRunTimestamp, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
 
@@ -74,24 +76,87 @@ void UPS_ParkourComponent::WallRunTick()
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alpha);
 	
 	if(WallRunTimestamp > StartWallRunTimestamp + WallRunTimeToFall)
-		VelocityWeight = UKismetMathLibrary::FInterpTo(EnterVelocity, 0, WallRunTimestamp, FallingInterpSpeed);
+		VelocityWeight = UKismetMathLibrary::FInterpTo(VelocityWeight, EnterVelocity - WallRunForceFallingDebuff,GetWorld()->GetDeltaSeconds(), FallingInterpSpeed);
 	else
-		VelocityWeight = FMath::Lerp(EnterVelocity,EnterVelocity * WallRunForceMultiplicator,curveForceAlpha);
-
-	const FVector newPlayerVelocity = WallRunDirection * velocityWeight;
+		VelocityWeight = FMath::Lerp(EnterVelocity,EnterVelocity + WallRunForceBoost,curveForceAlpha);
+	
+	const FVector newPlayerVelocity = WallRunDirection * VelocityWeight;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
+
+	if(VelocityWeight <= EnterVelocity - WallRunForceFallingDebuff || FMath::IsNearlyEqual(VelocityWeight, EnterVelocity - WallRunForceFallingDebuff, 1))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop By Velocity near EnterVelocity"));
+		OnWallRunStop();
+	}
+
+	
+	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun EnterVelocity %f, VelocityWeight %f"),EnterVelocity, VelocityWeight);
+	
 
 	//Gravity interp
 	float curveGravityAlpha = alpha;
 	if(IsValid(WallRunGravityCurve))
 		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alpha);
 	
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GravityScale,WallRunTargetGravity,curveGravityAlpha);
+	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(DefaultGravity,WallRunTargetGravity,curveGravityAlpha);
 
-	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newPlayerVelocity %f, alpha %f, GravityScale %f, "), newPlayerVelocity.Length(), curveGravityAlpha, _PlayerCharacter->GetCharacterMovement()->GravityScale);
+	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f, GravityScale %f, "), curveGravityAlpha, _PlayerCharacter->GetCharacterMovement()->GravityScale);
 	
 }
 
+void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
+{
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
+	
+	//Activate Only if in Air
+	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
+	
+	if(bDebug)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("StartWallRun")));
+	}
+	
+	//WallRun Logic activation
+	UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector()));
+
+	//Constraint init
+	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
+	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
+
+	//Timer init
+	StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
+	WallRunTimestamp = StartWallRunTimestamp;
+	GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
+
+	//Setup work var
+	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	bIsWallRunning = true;
+	
+}
+
+void UPS_ParkourComponent::OnWallRunStop()
+{
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
+	
+	GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
+	WallRunTimestamp = 0.0f;
+	
+	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
+	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
+
+	_PlayerCharacter->GetCharacterMovement()->GravityScale = DefaultGravity;
+	VelocityWeight = 1.0f;
+
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	
+	bIsWallRunning = false;
+}
+
+
+//------------------
+#pragma endregion WallRun
 
 
 #pragma region Event_Receiver
@@ -106,40 +171,15 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent()) 
 		|| !IsValid(otherActor)) return;
 
-	//Activate Only if in Air
-	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("StartWallRun")));
-
-	//WallRun Logic activation
-	UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector()));
+	OnWallRunStart(otherActor);
 	
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
-
-	StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
-	WallRunTimestamp = StartWallRunTimestamp;
-	GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
-		
-	bIsWallRunning = true;
 		
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
-
-	GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
-	WallRunTimestamp = 0;
-	
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
-
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = DefaultGravity;
-	
-	bIsWallRunning = false;
-	
+	OnWallRunStop();
 }
 
 //------------------

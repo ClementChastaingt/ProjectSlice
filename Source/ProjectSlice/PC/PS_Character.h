@@ -61,9 +61,14 @@ class AProjectSliceCharacter : public ACharacter
 	
 public:
 	AProjectSliceCharacter();
+
+	virtual void TickActor(float DeltaTime, ELevelTick TickType, FActorTickFunction& ThisTickFunction) override;
 	
 protected:
 	virtual void BeginPlay();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
+	bool bDebugGizmo = false;
 
 public:
 		

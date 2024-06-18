@@ -56,6 +56,13 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	WeaponComponent->AttachWeapon(this);
 }
 
+void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FActorTickFunction& ThisTickFunction)
+{
+	Super::TickActor(DeltaTime, TickType, ThisTickFunction);
+
+	if(bDebugGizmo) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
+}
+
 void AProjectSliceCharacter::BeginPlay()
 {
 	// Call the base class  
