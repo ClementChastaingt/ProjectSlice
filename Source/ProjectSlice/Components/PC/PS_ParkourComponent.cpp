@@ -3,6 +3,7 @@
 
 #include "PS_ParkourComponent.h"
 
+#include "InputAction.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -30,7 +31,7 @@ void UPS_ParkourComponent::BeginPlay()
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	if(!IsValid(_PlayerCharacter)) return;
 	
-	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+	_PlayerController =_PlayerCharacter->GetPlayerController();
 	if(!IsValid(_PlayerController)) return;
 
 	//Link Event Receiver
@@ -66,48 +67,40 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UPS_ParkourComponent::WallRunTick()
 {
 	//-----WallRunTick-----
-	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
 
 	//WallRun timer setup
 	WallRunSeconds = WallRunSeconds + WallRunTickRate;
 	const float endTimestamp = StartWallRunTimestamp + WallRunTimeToMaxGravity + WallRunTimeToFall;
-
 	const float alphaMaxGravity = UKismetMathLibrary::MapRangeClamped(WallRunSeconds, StartWallRunTimestamp, StartWallRunTimestamp + WallRunTimeToMaxGravity, 0,1);
-	const float alphaFalling = UKismetMathLibrary::MapRangeClamped(WallRunSeconds, StartWallRunTimestamp + WallRunTimeToFall, endTimestamp, 0,1);
 	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(WallRunSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
 
 	//-----Stuck to Wall Velocity-----
 	//Setup alpha use for Force interp
-	float curveForceAlpha = alphaMaxGravity;
+	float curveForceAlpha = alphaWallRun;
 	if(IsValid(WallRunGravityCurve))
-		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaMaxGravity);
-
-	float curveFallAlpha = alphaFalling;
-	if(IsValid(WallRunFallCurve))
-		curveFallAlpha = WallRunFallCurve->GetFloatValue(alphaFalling);
+		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
 	
-	if(WallRunSeconds > StartWallRunTimestamp + WallRunTimeToFall)
-		VelocityWeight = FMath::Lerp(VelocityWeight, EnterVelocity - WallRunForceFallingDebuff, curveFallAlpha);
-	else
-		VelocityWeight = FMath::Lerp(EnterVelocity,EnterVelocity + WallRunForceBoost,curveForceAlpha);
-	
-	const FVector newPlayerVelocity = WallRunDirection * VelocityWeight;
+	VelocityWeight = FMath::Lerp(EnterVelocity, EnterVelocity + WallRunForceBoost,curveForceAlpha);
+	const FVector newPlayerVelocity = WallRunDirection * VelocityWeight * _PlayerController->GetMoveInput().X;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 
+	
 	//Stop WallRun if he was too long
-	if(VelocityWeight <= EnterVelocity - WallRunForceFallingDebuff || FMath::IsNearlyEqual(VelocityWeight, EnterVelocity - WallRunForceFallingDebuff, 1))
+	if(alphaWallRun > 1 || newPlayerVelocity.IsNearlyZero(0.01))
 	{
-		if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop By Velocity"));
+		if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
 		OnWallRunStop();
 	}
 	
 	//Debug
 	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun EnterVelocity %f, VelocityWeight %f"),EnterVelocity, VelocityWeight);
-	
+
+	//TODO:: Change by Wallrun Z movement
 	//-----Gravity interp-----
-	float curveGravityAlpha = alphaWallRun;
+	float curveGravityAlpha = alphaMaxGravity;
 	if(IsValid(WallRunGravityCurve))
-		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alphaWallRun);
+		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alphaMaxGravity);
 	
 	_PlayerCharacter->GetCharacterMovement()->GravityScale = FMath::Lerp(DefaultGravity,WallRunTargetGravity,curveGravityAlpha);
 
@@ -229,6 +222,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
+	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Wall end"));
 	OnWallRunStop();
 }
 

@@ -11,21 +11,24 @@ class UInputMappingContext;
 /**
  *
  */
-UCLASS()
+UCLASS(config=Game, BlueprintType, Blueprintable)
 class PROJECTSLICE_API AProjectSlicePlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
-protected:
 
+public:
+	FVector2D GetMoveInput() const{return MoveInput;}
+
+	void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
+
+protected:
 	/** Input Mapping Context to be used for player input */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputMappingContext* InputMappingContext;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input)
+	FVector2D MoveInput = FVector2D::ZeroVector;
+
 	// Begin Actor interface
-protected:
-
 	virtual void BeginPlay() override;
-
-	// End Actor interface
 };

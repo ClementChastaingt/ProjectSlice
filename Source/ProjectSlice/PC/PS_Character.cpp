@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "PS_PlayerController.h"
 #include "Engine/LocalPlayer.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
@@ -60,7 +61,7 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 {
 	Super::TickActor(DeltaTime, TickType, ThisTickFunction);
 
-	if(bDebugGizmo) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
+	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -69,9 +70,10 @@ void AProjectSliceCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Add Input Mapping Context
-	if (Cast<APlayerController>(GetController()))
+	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
+	if(IsValid(_PlayerController))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(Cast<APlayerController>(GetController())->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(_PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
@@ -109,13 +111,12 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
-
-	if (IsValid(GetController()))
+	if (IsValid(_PlayerController))
 	{
+		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
 		// add movement 
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
+		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 	}
 }
 

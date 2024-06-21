@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
+#include "ProjectSlice/PC/PS_PlayerController.h"
 #include "PS_ParkourComponent.generated.h"
 
 class AProjectSliceCharacter;
@@ -39,7 +40,7 @@ private:
 	AProjectSliceCharacter* _PlayerCharacter;
 	
 	UPROPERTY(Transient)
-	APlayerController* _PlayerController;
+	AProjectSlicePlayerController* _PlayerController;
 
 #pragma region General
 	//------------------
@@ -109,16 +110,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
 	UCurveFloat* WallRunForceCurve = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force debuff who cause falling end"))
-	float WallRunForceFallingDebuff = 200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, NEED TO BE SUPERIOR OF WallRunTimeToMaxGravity "))
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
-	UCurveFloat* WallRunFallCurve = nullptr;
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Gravity", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun target gravity scale"))
 	float WallRunTargetGravity = 10.0f;
 
