@@ -31,8 +31,8 @@ void UPS_ParkourComponent::BeginPlay()
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	if(!IsValid(_PlayerCharacter)) return;
 	
-	_PlayerController =_PlayerCharacter->GetPlayerController();
-	if(!IsValid(_PlayerController)) return;
+	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
+	if(!IsValid(_PlayerController))return;
 
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
@@ -82,7 +82,8 @@ void UPS_ParkourComponent::WallRunTick()
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
 	
 	VelocityWeight = FMath::Lerp(EnterVelocity, EnterVelocity + WallRunForceBoost,curveForceAlpha);
-	const FVector newPlayerVelocity = WallRunDirection * VelocityWeight * _PlayerController->GetMoveInput().X;
+	UE_LOG(LogTemp, Error, TEXT("_PlayerController->GetMoveInput().X %f"), _PlayerController->GetMoveInput().Y);
+	const FVector newPlayerVelocity = WallRunDirection * VelocityWeight * _PlayerController->GetMoveInput().Y;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 
 	

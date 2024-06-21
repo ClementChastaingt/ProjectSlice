@@ -112,8 +112,9 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	if (IsValid(_PlayerController))
-	{
+	{	
 		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
+
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
