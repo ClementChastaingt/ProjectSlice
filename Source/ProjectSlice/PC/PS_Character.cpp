@@ -10,6 +10,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
+#include "Components/ArrowComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
@@ -36,8 +37,8 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	Mesh1P->bCastDynamicShadow = false;
 	Mesh1P->CastShadow = false;
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
-
-	//Create WeaponComponent
+	
+	//Create ParkourComponent
 	ParkourComponent = CreateDefaultSubobject<UPS_ParkourComponent>(TEXT("ParkourComponent"));
 	ParkourComponent->SetupAttachment(RootComponent);
 	
