@@ -98,16 +98,17 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
-
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AProjectSliceCharacter::Move);
+		
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
+		
 	}
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
 }
-
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
@@ -120,6 +121,12 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 	}
+}
+
+void AProjectSliceCharacter::StopMoving()
+{
+	if(IsValid(_PlayerController))
+		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
 }
 
 void AProjectSliceCharacter::Look(const FInputActionValue& Value)

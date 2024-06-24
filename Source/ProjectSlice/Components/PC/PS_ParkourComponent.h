@@ -27,8 +27,11 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
-	bool bDebugTick = false;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
+	bool bDebugWallRun = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
+	bool bDebugCameraTilt = false;
 
 public:
 	// Called every frame
@@ -98,6 +101,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
 	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt roll on Start"))
+	int32 StartCameraTiltRoll = 360;
+
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Wall to player direction, basiclly use for determine if Wall is to left or right from player"))
 	float WallToPlayerDirection = 0;
@@ -107,6 +113,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
 	float WallRunTickRate = 0.02f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Wall to Player Cam Min Angle for accept launch a WallRun "))
+	float MaxEnterAngle = 8.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunForceBoost = 200.0f;

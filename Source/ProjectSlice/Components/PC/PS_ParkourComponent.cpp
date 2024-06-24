@@ -103,12 +103,12 @@ void UPS_ParkourComponent::WallRunTick()
 	//Stop WallRun if he was too long
 	if(alphaWallRun >= 1 || newPlayerVelocity.IsNearlyZero(0.01))
 	{
-		if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
+		if(bDebugWallRun)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
 		OnWallRunStop();
 	}
 	
 	//Debug
-	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
 	CameraTilt(WallToPlayerDirection, WallRunSeconds, StartWallRunTimestamp);
@@ -116,11 +116,9 @@ void UPS_ParkourComponent::WallRunTick()
 
 void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
 {
-	//-----OnWallRunStart-----
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
-
-	//TODO:: Need check angle to wall for activation
+	if(bIsWallRunning) return;
 	
+	//-----OnWallRunStart-----	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
 	
@@ -132,9 +130,17 @@ void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
 	
 	//WallRun Logic activation
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector()));
-	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(_PlayerCharacter->GetArrowComponent()->GetRightVector()) * -1);
+	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
+
+	if(FMath::Abs(angleObjectFwdToCamFwd) < MaxEnterAngle/10)
+	{
+		if(bDebug )UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
+		return;
+	}
 	
+	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
+	//TODO : Fix WallToPlayerDirection not always good
+	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(_PlayerCharacter->GetArrowComponent()->GetRightVector()));
 	DrawDebugLine(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, FColor::Yellow, false, 2, 10, 3);
 
 	//Constraint init
@@ -148,12 +154,16 @@ void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
 
 	//Setup work var
 	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	StartCameraTiltRoll = _PlayerController->GetControlRotation().Roll;
+	StartCameraTiltRoll = (360 + (StartCameraTiltRoll % 360)) % 360;
 	bIsWallRunning = true;
 	
 }
 
 void UPS_ParkourComponent::OnWallRunStop()
 {
+	if(!bIsWallRunning) return;
+	
 	//-----OnWallRunStop-----
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
 	
@@ -169,6 +179,8 @@ void UPS_ParkourComponent::OnWallRunStop()
 	//----Camera Tilt Smooth reseting-----
 	SetComponentTickEnabled(true);
 	StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();
+	StartCameraTiltRoll = _PlayerController->GetControlRotation().Roll;
+	StartCameraTiltRoll = (360 + (StartCameraTiltRoll % 360)) % 360;
 	bIsResetingCameraTilt = true;
 
 	//----Stop WallRun && Movement falling-----
@@ -181,30 +193,34 @@ void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	
 	//Alpha
-	const float alphaFalling = UKismetMathLibrary::MapRangeClamped(currentSeconds, startWallRunTimestamp, startWallRunTimestamp + WallRunCameraTiltDuration, 0,1);
+	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startWallRunTimestamp, startWallRunTimestamp + WallRunCameraTiltDuration, 0,1);
 	
 	//If Camera tilt already finished stop
-	if(alphaFalling >= 1)
+	if(alphaTilt >= 1)
 	{
 		bIsResetingCameraTilt = false;
 		return;
 	}
 
 	//Interp
-	float curveTiltAlpha = alphaFalling;
-	if(IsValid(WallRunGravityCurve))
-		curveTiltAlpha = WallRunGravityCurve->GetFloatValue(alphaFalling);
+	float curveTiltAlpha = alphaTilt;
+	if(IsValid(WallRunCameraTiltCurve))
+		curveTiltAlpha = WallRunCameraTiltCurve->GetFloatValue(alphaTilt);
 
-	const float newRoll = FMath::Lerp(_PlayerCharacter->GetActorRotation().Roll, WallRunCameraAngle * wallOrientationToPlayer, curveTiltAlpha);
-
+	StartCameraTiltRoll =  StartCameraTiltRoll == 0 ? 360 : StartCameraTiltRoll;
+	const int32 newRoll = FMath::Lerp(StartCameraTiltRoll, (StartCameraTiltRoll > 180 ? 360 : 0) + WallRunCameraAngle * wallOrientationToPlayer, curveTiltAlpha);
+	float newRollInRange = (360 + (newRoll % 360)) % 360;
+	
 	//Target Rot
 	FRotator newControlRot = _PlayerController->GetControlRotation();
-	newControlRot.Roll = newRoll;
+	newControlRot.Roll = newRollInRange;
 	
 	//Rotate
 	_PlayerController->SetControlRotation(newControlRot);
 
-	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun Camera Roll: %f, wallOrientationToPlayer %i"), _PlayerController->GetControlRotation().Roll, wallOrientationToPlayer);
+	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: StartCameraTiltRotation Roll : %i, newRoll: %f, wallOrientationToPlayer %f, alphaTilt %f"), StartCameraTiltRoll, _PlayerController->GetControlRotation().Roll, WallRunCameraAngle * wallOrientationToPlayer, alphaTilt);
+
+	
 }
 
 
@@ -232,7 +248,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
-	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Wall end"));
+	if(bDebug && bIsWallRunning)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Wall end"));
 	OnWallRunStop();
 }
 
