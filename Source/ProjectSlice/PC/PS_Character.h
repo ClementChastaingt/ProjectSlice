@@ -111,11 +111,18 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
+
+	/** Called for Jump input */
+	virtual void Jump() override;
+
+	/** Called for stop Jump input */
+	virtual void StopJumping() override;
+
 	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
-	/** Called for movement input */
+	/** Called for stop movement input */
 	void StopMoving();
 
 	/** Called for looking input */

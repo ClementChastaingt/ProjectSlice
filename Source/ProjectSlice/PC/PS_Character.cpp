@@ -1,7 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "PS_Character.h"
-#include "..\GPE\PS_Projectile.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -10,14 +9,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
-#include "Components/ArrowComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
-
-//////////////////////////////////////////////////////////////////////////
-// AProjectSliceCharacter
 
 AProjectSliceCharacter::AProjectSliceCharacter()
 {	
@@ -85,7 +80,6 @@ void AProjectSliceCharacter::BeginPlay()
 		WeaponComponent->InitWeapon(this);
 }
 
-//////////////////////////////////////////////////////////////////////////// Input
 
 void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -93,8 +87,8 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
@@ -108,6 +102,26 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
+}
+
+#pragma region Move
+//------------------
+
+void AProjectSliceCharacter::Jump()
+{
+	Super::Jump();
+
+	//If in WallRunning 
+	if(IsValid(GetParkourComponent()) && GetParkourComponent()->GetIsWallRunning())
+	{
+		GetParkourComponent()->JumpOffWallRun();
+	}
+	
+}
+
+void AProjectSliceCharacter::StopJumping()
+{
+	Super::StopJumping();
 }
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
@@ -129,6 +143,12 @@ void AProjectSliceCharacter::StopMoving()
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
 }
 
+//------------------
+#pragma endregion Move
+
+#pragma region Look
+//------------------
+
 void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -142,6 +162,12 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+//------------------
+#pragma endregion Look
+
+#pragma region Weapon
+//------------------
+
 void AProjectSliceCharacter::SetHasRifle(bool bNewHasRifle)
 {
 	bHasRifle = bNewHasRifle;
@@ -151,3 +177,8 @@ bool AProjectSliceCharacter::GetHasRifle()
 {
 	return bHasRifle;
 }
+
+//------------------
+
+#pragma endregion Weapon
+

@@ -114,7 +114,7 @@ void UPS_ParkourComponent::WallRunTick()
 	CameraTilt(WallToPlayerDirection, WallRunSeconds, StartWallRunTimestamp);
 }
 
-void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
+void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {
 	if(bIsWallRunning) return;
 	
@@ -132,16 +132,19 @@ void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
 
-	if(FMath::Abs(angleObjectFwdToCamFwd) < MaxEnterAngle/10)
-	{
-		if(bDebug )UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
-		return;
-	}
+	//Check enter angle
+	//TODO : Reactivate while check come from WallRun Jump off is ON
+	// if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10)
+	// {
+	// 	if(bDebug )UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
+	// 	return;
+	// }
 	
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
-	//TODO : Fix WallToPlayerDirection not always good
-	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(_PlayerCharacter->GetArrowComponent()->GetRightVector()));
-	DrawDebugLine(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, FColor::Yellow, false, 2, 10, 3);
+	//TODO : Fix WallToPlayerDirection not always good ==> GetArrowComponent() rotate with Player
+	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(_PlayerCharacter->GetArrowComponent()->GetRightVector()) * -1);
+
+	if(bDebugWallRun) DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
 
 	//Constraint init
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
@@ -156,6 +159,7 @@ void UPS_ParkourComponent::OnWallRunStart(const AActor* otherActor)
 	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
 	StartCameraTiltRoll = _PlayerController->GetControlRotation().Roll;
 	StartCameraTiltRoll = (360 + (StartCameraTiltRoll % 360)) % 360;
+	Wall = otherActor;
 	bIsWallRunning = true;
 	
 }
@@ -209,7 +213,7 @@ void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const
 
 	StartCameraTiltRoll =  StartCameraTiltRoll == 0 ? 360 : StartCameraTiltRoll;
 	const int32 newRoll = FMath::Lerp(StartCameraTiltRoll, (StartCameraTiltRoll > 180 ? 360 : 0) + WallRunCameraAngle * wallOrientationToPlayer, curveTiltAlpha);
-	float newRollInRange = (360 + (newRoll % 360)) % 360;
+	const float newRollInRange = (360 + (newRoll % 360)) % 360;
 	
 	//Target Rot
 	FRotator newControlRot = _PlayerController->GetControlRotation();
@@ -218,9 +222,28 @@ void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const
 	//Rotate
 	_PlayerController->SetControlRotation(newControlRot);
 
-	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: StartCameraTiltRotation Roll : %i, newRoll: %f, wallOrientationToPlayer %f, alphaTilt %f"), StartCameraTiltRoll, _PlayerController->GetControlRotation().Roll, WallRunCameraAngle * wallOrientationToPlayer, alphaTilt);
+	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
 
 	
+}
+
+void UPS_ParkourComponent::JumpOffWallRun()
+{
+	if(!bIsWallRunning) return;
+
+	if(!IsValid(Wall) || !IsValid(_PlayerCharacter)) return;
+
+	if(bDebug)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun jump off"));
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("WallRun Jump Off")));
+	}
+
+	OnWallRunStop();
+	const FVector jumpForce =  Wall->GetActorRightVector() * WallToPlayerDirection * JumpOffForceMultiplicator;
+	if(bDebugWallRunJump) DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
+
+	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);	
 }
 
 

@@ -30,6 +30,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
 	bool bDebugWallRun = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
+	bool bDebugWallRunJump = false;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
 	bool bDebugCameraTilt = false;
 
@@ -68,14 +71,21 @@ public:
 	void WallRunTick();
 
 	UFUNCTION()
-	void OnWallRunStart(const AActor* otherActor);
+	void OnWallRunStart(AActor* otherActor);
 
 	UFUNCTION()
 	void OnWallRunStop();
 
 	UFUNCTION()
 	void CameraTilt(const int32 wallOrientationToPlayer, const float currentSeconds, const float startWallRunTimestamp);
-	
+
+	UFUNCTION()
+	void JumpOffWallRun();
+
+	//Getters && Setters
+	 bool GetIsWallRunning() const
+	{return bIsWallRunning;}
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
 	bool bIsWallRunning = false;
@@ -85,6 +95,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun timer handler"))
 	FTimerHandle WallRunTimerHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall direction"))
+	AActor* Wall = nullptr;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun start time in second"))
 	float StartWallRunTimestamp = TNumericLimits<float>().Lowest();
@@ -106,7 +119,7 @@ protected:
 
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Wall to player direction, basiclly use for determine if Wall is to left or right from player"))
-	float WallToPlayerDirection = 0;
+	int32 WallToPlayerDirection = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;
@@ -115,7 +128,7 @@ protected:
 	float WallRunTickRate = 0.02f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Wall to Player Cam Min Angle for accept launch a WallRun "))
-	float MaxEnterAngle = 8.5f;
+	float MinEnterAngle = 8.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunForceBoost = 200.0f;
@@ -125,6 +138,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
+	float JumpOffForceMultiplicator = 1500.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Gravity", meta=(ToolTip="WallRun gravity interpolation curve"))
 	UCurveFloat* WallRunGravityCurve = nullptr;
