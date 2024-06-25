@@ -74,10 +74,10 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	if (!IsValid(Target_PlayerCharacter)
 		|| Target_PlayerCharacter->GetHasRifle()
 		|| !IsValid(Target_PlayerCharacter->GetHookComponent())
-		|| !IsValid(Target_PlayerCharacter->GetMesh1P()))return;
+		|| !IsValid(Target_PlayerCharacter->GetMesh()))return;
 	
 	// Attach the weapon to the First Person _PlayerCharacter
-	this->SetupAttachment(Target_PlayerCharacter->GetMesh1P(), (TEXT("GripPoint")));
+	this->SetupAttachment(Target_PlayerCharacter->GetMesh(), (TEXT("GripPoint")));
 
 	// Attach Sight to Weapon
 	SightComponent->SetupAttachment(this,FName("Muzzle"));
@@ -192,7 +192,7 @@ void UPS_WeaponComponent::Fire()
 	if (IsValid(FireAnimation))
 	{
 		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = _PlayerCharacter->GetMesh1P()->GetAnimInstance();
+		UAnimInstance* AnimInstance = _PlayerCharacter->GetMesh()->GetAnimInstance();
 		if (IsValid(AnimInstance))
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 	}

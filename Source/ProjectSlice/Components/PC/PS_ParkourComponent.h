@@ -71,7 +71,7 @@ public:
 	void WallRunTick();
 
 	UFUNCTION()
-	void OnWallRunStart(AActor* otherActor);
+	void OnWallRunStart(AActor* otherActor, const FHitResult sweepResult);
 
 	UFUNCTION()
 	void OnWallRunStop();

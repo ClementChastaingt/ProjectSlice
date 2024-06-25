@@ -9,29 +9,38 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
+#include "Components/ArrowComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AProjectSliceCharacter::AProjectSliceCharacter()
-{	
+{
+	//If inherited components are invalids
+	if(!IsValid(GetMesh()) || !IsValid(GetCapsuleComponent()) || !IsValid(GetArrowComponent()))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Inherited Mesh Or Arrow Invalid"));
+		return;
+	}
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-		
+	
 	// Create a CameraComponent	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(-10.f, 0.f, 60.f)); // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
-	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
-	Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
-	Mesh1P->SetOnlyOwnerSee(true);
-	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
-	Mesh1P->bCastDynamicShadow = false;
-	Mesh1P->CastShadow = false;
-	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+	//Setup Mesh
+	//Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
+	GetMesh()->SetOnlyOwnerSee(true);
+	GetMesh()->SetupAttachment(FirstPersonCameraComponent);
+	GetMesh()->bCastDynamicShadow = false;
+	GetMesh()->CastShadow = false;
+	GetMesh()->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+	
 	
 	//Create ParkourComponent
 	ParkourComponent = CreateDefaultSubobject<UPS_ParkourComponent>(TEXT("ParkourComponent"));
@@ -39,7 +48,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	
 	//Create WeaponComponent
 	WeaponComponent = CreateDefaultSubobject<UPS_WeaponComponent>(TEXT("WeaponComponent"));
-	WeaponComponent->SetupAttachment(Mesh1P);
+	WeaponComponent->SetupAttachment(GetMesh());
 	WeaponComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 
 	//Create HookComponent
@@ -78,6 +87,11 @@ void AProjectSliceCharacter::BeginPlay()
 	//Init Weapon Componenet on begin play if attach
 	if(GetHasRifle())
 		WeaponComponent->InitWeapon(this);
+
+
+	// Setup ArrowComponent
+	if(IsValid(GetArrowComponent()))
+		GetArrowComponent()->SetHiddenInGame(!bDebugArrow);
 }
 
 

@@ -24,11 +24,7 @@ UCLASS(config=Game)
 class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
-	/** Pawn mesh: 1st person view (arms; seen only by self) */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
-	USkeletalMeshComponent* Mesh1P;
-
+	
 	/** ComponentsManager */
 	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
 	UPS_ComponentsManager* ComponentsManager;
@@ -56,9 +52,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	AProjectSlicePlayerController* GetPlayerController() const{return _PlayerController;}
-
-	/** Returns Mesh1P subobject **/
-	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
@@ -82,6 +75,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
 	bool bDebugMovementTrail = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug Player direction Arrow"))
+	bool bDebugArrow = false;
 
 private:
 	UPROPERTY(Transient)
