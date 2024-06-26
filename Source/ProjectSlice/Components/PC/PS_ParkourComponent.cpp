@@ -73,7 +73,7 @@ void UPS_ParkourComponent::WallRunTick()
 {
 	//-----WallRunTick-----
 	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
-
+	
 	//WallRun timer setup
 	WallRunSeconds = WallRunSeconds + WallRunTickRate;
 	const float endTimestamp = StartWallRunTimestamp + WallRunTimeToFall;
@@ -114,7 +114,7 @@ void UPS_ParkourComponent::WallRunTick()
 	CameraTilt(WallToPlayerDirection, WallRunSeconds, StartWallRunTimestamp);
 }
 
-void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor, const FHitResult sweepResult)
+void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {
 	if(bIsWallRunning) return;
 	
@@ -130,13 +130,8 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor, const FHitResult s
 	
 	//WallRun Logic activation
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-
-	// FRotator objectForward = sweepResult.Normal.Rotation();
-	// objectForward.Pitch = sweepResult.Normal.Rotation().Pitch + 90.0f;
-	// const float angleObjectFwdToCamFwd = objectForward.Vector().ForwardVector.Dot(playerCam->GetForwardVector());
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
 	
-	//Check enter angle
 	//TODO : Reactivate while check come from WallRun Jump off is ON
 	// if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10)
 	// {
@@ -144,18 +139,20 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor, const FHitResult s
 	// 	return;
 	// }
 	
-	FRotator arrowRot = _PlayerCharacter->GetArrowComponent()->GetComponentLocation().Rotation();
-	arrowRot.Roll = _PlayerCharacter->GetArrowComponent()->GetComponentLocation().Rotation().Roll + angleObjectFwdToCamFwd;
-
-	//TODO :: Maybe Replace otherActor->GetActorRightVector() by (sweepResult.Normal)
+	FRotator arrowRot = _PlayerCharacter->GetActorRotation();
+	arrowRot.Yaw = (arrowRot.Yaw  + otherActor->GetActorRotation().Yaw) * FMath::Sign(angleObjectFwdToCamFwd);
+	arrowRot.Vector().Normalize();
+	UE_LOG(LogTemp, Error, TEXT("arrowRot.Yaw %f, angleObjectFwdToCamFwd %f, playerYaw %f, actorYaw %f"), arrowRot.Yaw, angleObjectFwdToCamFwd, _PlayerCharacter->GetActorRotation().Yaw, otherActor->GetActorRotation().Yaw);
+	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(arrowRot.Vector().RightVector));
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
-	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + sweepResult.Normal).Dot(arrowRot.Vector().RightVector));
+	
 
 	if(bDebugWallRun)
-	{
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetArrowComponent()->GetComponentLocation() , _PlayerCharacter->GetArrowComponent()->GetComponentLocation() + arrowRot.Vector().RightVector * 200, 5.0f, FColor::Blue, false, 2, 10, 2);
-		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
-		//DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + sweepResult.Normal * 200, 10.0f, FColor::Red, false, 2, 10, 3);
+	{ 
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector() * 200, 5.0f, FColor::Black, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector().RightVector * 200, 5.0f, FColor::Emerald, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector().ForwardVector * 200, 5.0f, FColor::Orange, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
 	}
 
@@ -276,7 +273,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent()) 
 		|| !IsValid(otherActor)) return;
 
-	OnWallRunStart(otherActor, sweepResult);
+	OnWallRunStart(otherActor);
 	
 		
 }
