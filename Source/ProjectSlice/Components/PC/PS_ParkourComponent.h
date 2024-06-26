@@ -105,9 +105,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun tick current time in second"))
 	float WallRunSeconds = TNumericLimits<float>().Lowest();
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall direction"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun move direction"))
 	FVector WallRunDirection = FVector::ZeroVector;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraTilt smoothly"))
 	bool bIsResetingCameraTilt = false;
 
@@ -118,8 +118,12 @@ protected:
 	int32 StartCameraTiltRoll = 360;
 
 	//-1:Left, 0:Forward, 1:Right
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Wall to player direction, basiclly use for determine if Wall is to left or right from player"))
-	int32 WallToPlayerDirection = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is to left or right from Wall"))
+	int32 WallToPlayerOrientation = 0;
+
+	//-1:Left, 0:Forward, 1:Right
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Wall orientation from player, basiclly use for determine if Wall is to left or right from Player"))
+	int32 PlayerToWallOrientation = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;

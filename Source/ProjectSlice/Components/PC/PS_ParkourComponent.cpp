@@ -111,7 +111,7 @@ void UPS_ParkourComponent::WallRunTick()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
-	CameraTilt(WallToPlayerDirection, WallRunSeconds, StartWallRunTimestamp);
+	CameraTilt(PlayerToWallOrientation, WallRunSeconds, StartWallRunTimestamp);
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
@@ -131,6 +131,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	//WallRun Logic activation
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
+	const int32 playerToWallOrientation = UKismetMathLibrary::FindLookAtRotation(_PlayerCharacter->GetActorLocation(), otherActor->GetActorLocation()).Yaw;
 	
 	//TODO : Reactivate while check come from WallRun Jump off is ON
 	// if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10)
@@ -140,18 +141,20 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	// }
 	
 	FRotator arrowRot = _PlayerCharacter->GetActorRotation();
-	arrowRot.Yaw = (arrowRot.Yaw  + otherActor->GetActorRotation().Yaw) * FMath::Sign(angleObjectFwdToCamFwd);
+	arrowRot.Yaw = (arrowRot.Yaw + angleObjectFwdToCamFwd * 100 * FMath::Sign(playerToWallOrientation));
 	arrowRot.Vector().Normalize();
-	UE_LOG(LogTemp, Error, TEXT("arrowRot.Yaw %f, angleObjectFwdToCamFwd %f, playerYaw %f, actorYaw %f"), arrowRot.Yaw, angleObjectFwdToCamFwd, _PlayerCharacter->GetActorRotation().Yaw, otherActor->GetActorRotation().Yaw);
-	WallToPlayerDirection = FMath::Sign((otherActor->GetActorLocation() + otherActor->GetActorRightVector()).Dot(arrowRot.Vector().RightVector));
-	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
 	
+	UE_LOG(LogTemp, Error, TEXT("arrowRot.Yaw %f, angleObjectFwdToCamFwd %f, playerYaw %f, actorYaw %f"), arrowRot.Yaw, angleObjectFwdToCamFwd, _PlayerCharacter->GetActorRotation().Yaw, otherActor->GetActorRotation().Yaw);
+	WallToPlayerOrientation = FMath::Sign(otherActor->GetActorRightVector().Dot(arrowRot.Vector()));
+	//TODO:: if take wall on inverse by the forward vector of it nee to inverse WallToPlayerOrientation in CameraTilt
+	//PlayerToWallOrientation = FMath::Sign(arrowRot.Vector().Dot(otherActor->GetActorRightVector()));
+	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
+	UE_LOG(LogTemp, Error, TEXT("WallToPlayerDirection %f, PlayerToWallOrientation %i"),otherActor->GetActorRightVector().Dot(arrowRot.Vector()), PlayerToWallOrientation);	
 
 	if(bDebugWallRun)
-	{ 
+	{
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + WallRunDirection * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector() * 200, 5.0f, FColor::Black, false, 2, 10, 2);
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector().RightVector * 200, 5.0f, FColor::Emerald, false, 2, 10, 2);
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector().ForwardVector * 200, 5.0f, FColor::Orange, false, 2, 10, 2);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
 	}
@@ -250,7 +253,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 
 	OnWallRunStop();
-	const FVector jumpForce =  Wall->GetActorRightVector() * WallToPlayerDirection * JumpOffForceMultiplicator;
+	const FVector jumpForce =  Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
 	if(bDebugWallRunJump) DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
 
 	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);	
