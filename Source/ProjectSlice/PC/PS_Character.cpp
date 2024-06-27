@@ -10,6 +10,7 @@
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
 #include "Components/ArrowComponent.h"
+#include "Components/BoxComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
@@ -121,16 +122,36 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 #pragma region Move
 //------------------
 
+void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovementMode, uint8 previousCustomMode)
+{
+	Super::OnMovementModeChanged(previousMovementMode, previousCustomMode);
+	
+}
+
 void AProjectSliceCharacter::Jump()
 {
 	Super::Jump();
 
 	//If in WallRunning 
-	if(IsValid(GetParkourComponent()) && GetParkourComponent()->GetIsWallRunning())
+	if(IsValid(GetParkourComponent()))
 	{
-		GetParkourComponent()->JumpOffWallRun();
-	}
-	
+		if(!GetParkourComponent()->GetIsWallRunning())
+		{
+			if(GetParkourComponent()->GetOverlapInfos().IsEmpty()) return;
+				
+			//Try WallRunning if already overlap wall 
+			for (const FOverlapInfo& currentOverlapInfo : GetParkourComponent()->GetOverlapInfos())
+			{
+				if (!IsValid(currentOverlapInfo.OverlapInfo.Component.Get()) || !IsValid(currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner()) ||
+					currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner() == this) continue;
+				GetParkourComponent()->SetForceWallRun(true);
+				GetParkourComponent()->OnComponentBeginOverlap.Broadcast(GetParkourComponent(), currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner(), currentOverlapInfo.OverlapInfo.Component.Get(), currentOverlapInfo.GetBodyIndex(), currentOverlapInfo.bFromSweep, currentOverlapInfo.OverlapInfo);
+				break;
+			}
+		}
+		else
+			GetParkourComponent()->JumpOffWallRun();
+	}	
 }
 
 void AProjectSliceCharacter::StopJumping()

@@ -16,6 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector2D,const FVector
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Int_Actor, const int32&, intValue, const AActor*, actor);
 
 
+
 UCLASS()
 class PROJECTSLICE_API UPS_Delegates : public UObject
 {

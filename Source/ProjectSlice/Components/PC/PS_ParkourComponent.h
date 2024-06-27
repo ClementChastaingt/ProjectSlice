@@ -59,7 +59,9 @@ protected:
 	UFUNCTION()
 	void OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 	
-
+	UFUNCTION()
+	void OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode);
+	
 //------------------
 #pragma endregion General
 
@@ -86,10 +88,18 @@ public:
 	 bool GetIsWallRunning() const
 	{return bIsWallRunning;}
 
+	void SetForceWallRun(bool bforceWallRun){this->bForceWallRun = bforceWallRun;}
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
 	bool bIsWallRunning = false;
-		
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning when comming from Air"))
+	bool bComeFromAir = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently force WallRunning"))
+	bool bForceWallRun = false;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Default player gravity scale"))
 	float EnterVelocity  = 0.0f;
 	
@@ -116,14 +126,13 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt roll on Start"))
 	int32 StartCameraTiltRoll = 360;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
+	int32 CameraTiltOrientation = 0;
 
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is to left or right from Wall"))
 	int32 WallToPlayerOrientation = 0;
-
-	//-1:Left, 0:Forward, 1:Right
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Wall orientation from player, basiclly use for determine if Wall is to left or right from Player"))
-	int32 PlayerToWallOrientation = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;
