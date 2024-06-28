@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 
@@ -129,11 +130,30 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("StartWallRun")));
 	}
+
+	FHitResult outHitRight, outHitLeft;
+	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Parkour),
+										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true);
+
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() - _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Parkour),
+									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true);
+	
+	float playerToWallOrientation;
+	if(outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor)
+	{
+		playerToWallOrientation = 1;
+	}else if(outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor)
+	{
+		playerToWallOrientation = -1;
+	}
+	else
+		playerToWallOrientation = 0;
 	
 	//WallRun Logic activation
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
-	const float playerToWallOrientation = UKismetMathLibrary::FindLookAtRotation(_PlayerCharacter->GetActorLocation(), otherActor->GetActorLocation()).Yaw;
+	//const float playerToWallOrientation = outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor
 
 	
 	//TODO : Need to Reactivate
