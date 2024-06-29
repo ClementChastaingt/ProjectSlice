@@ -125,19 +125,31 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
 	
+	//WallRun Logic activation
+	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
+	
+	//Check Enter angle
+	if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10 || bComeFromAir)
+	{
+		if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
+		return;
+	}
+
 	if(bDebug)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("StartWallRun")));
 	}
-
+	
+	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Parkour),
-										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true);
+										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true, FColor::Blue);
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() - _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Parkour),
-									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true);
+									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
 	
 	float playerToWallOrientation;
 	if(outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor)
@@ -148,35 +160,18 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 		playerToWallOrientation = -1;
 	}
 	else
+	{
 		playerToWallOrientation = 0;
+		return;
+	}
 	
-	//WallRun Logic activation
-	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
-	//const float playerToWallOrientation = outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor
-
-	
-	//TODO : Need to Reactivate
-	// if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10 || bComeFromAir)
-	// {
-	// 	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
-	// 	return;
-	// }
-	
-	FRotator arrowRot = _PlayerCharacter->GetActorRotation();
-	arrowRot.Yaw = (arrowRot.Yaw + angleObjectFwdToCamFwd * 100);
-	arrowRot.Vector().Normalize();
-	
-	UE_LOG(LogTemp, Error, TEXT("arrowRot.Yaw %f, angleObjectFwdToCamFwd %f, playerYaw %f, actorYaw %f"), arrowRot.Yaw, angleObjectFwdToCamFwd, _PlayerCharacter->GetActorRotation().Yaw, otherActor->GetActorRotation().Yaw);
-	WallToPlayerOrientation = FMath::Sign((otherActor->GetActorRightVector() * FMath::Sign(playerToWallOrientation)).Dot(arrowRot.Vector()));
+	WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
 	CameraTiltOrientation = WallToPlayerOrientation * FMath::Sign(angleObjectFwdToCamFwd);
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
-	UE_LOG(LogTemp, Error, TEXT("WallToPlayerDirection %f, PlayerToWallOrientation %f"),otherActor->GetActorRightVector().Dot(arrowRot.Vector()), playerToWallOrientation);	
 
 	if(bDebugWallRun)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + WallRunDirection * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + arrowRot.Vector() * 200, 5.0f, FColor::Black, false, 2, 10, 2);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
 	}
@@ -257,10 +252,7 @@ void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const
 	
 	//Rotate
 	_PlayerController->SetControlRotation(newControlRot);
-
 	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
-
-	
 }
 
 void UPS_ParkourComponent::JumpOffWallRun()
