@@ -76,12 +76,11 @@ void AProjectSliceCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Add Input Mapping Context
-	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
 	if(IsValid(_PlayerController))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(_PlayerController->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			Subsystem->AddMappingContext(_PlayerController->GetDefaultMappingContext(), 0);
 		}
 	}
 
@@ -98,20 +97,28 @@ void AProjectSliceCharacter::BeginPlay()
 
 void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
+	if(!IsValid(_PlayerController))
+	{
+		UE_LOG(LogTemplateCharacter, Error, TEXT("SetupPlayerInputComponent failde PlayerController is invalid"));
+		return;
+	}
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
+		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
+
+		// Crouching
+		EnhancedInputComponent->BindAction(_PlayerController->GetCrouchAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Crouching);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AProjectSliceCharacter::Move);
+		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
+		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::Move);
 		
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
-		
+		EnhancedInputComponent->BindAction(_PlayerController->GetLookAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
 	}
 	else
 	{
@@ -159,6 +166,16 @@ void AProjectSliceCharacter::StopJumping()
 	Super::StopJumping();
 }
 
+void AProjectSliceCharacter::Crouching()
+{
+	if(CanCrouch())
+		Crouch();
+	else
+		UnCrouch();
+
+	UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouch %i"),bIsCrouched);
+}
+
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -166,7 +183,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	{	
 		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
 
-		// add movement 
+		// add movement
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 	}

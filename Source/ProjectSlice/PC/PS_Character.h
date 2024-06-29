@@ -85,21 +85,9 @@ private:
 
 #pragma region Move
 	//------------------
+	
 
 public:
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputMappingContext* DefaultMappingContext;
-
-	/** Input Actions **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* MoveAction;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LookAction;
 
 protected:
 	/** Movement **/
@@ -114,6 +102,9 @@ protected:
 
 	/** Called for stop Jump input */
 	virtual void StopJumping() override;
+
+	/** Called for Crouch input */
+	void Crouching();
 	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
