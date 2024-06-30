@@ -106,6 +106,10 @@ protected:
 	/** Called for Crouch input */
 	void Crouching();
 	
+	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
+	void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 

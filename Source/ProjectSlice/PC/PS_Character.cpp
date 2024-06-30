@@ -176,6 +176,16 @@ void AProjectSliceCharacter::Crouching()
 	UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouch %i"),bIsCrouched);
 }
 
+void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	
+}
+
+void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	
+}
+
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
