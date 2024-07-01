@@ -58,12 +58,15 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	if(!bIsResetingCameraTilt && !bIsStooping)
+		SetComponentTickEnabled(false);
+		
+	//-----Smooth crouching-----
+	Stooping();
+
 	//-----CameraTilt smooth reset-----
 	if(bIsResetingCameraTilt)
 		CameraTilt(0, GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
-	else
-		SetComponentTickEnabled(false);
-
 	
 }
 
@@ -273,10 +276,107 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);	
 }
+//------------------
+#pragma endregion WallRun
+
+#pragma region Crouch
+//------------------
+
+
+void UPS_ParkourComponent::OnCrouch()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCapsuleComponent()) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
+
+	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
+
+	StartCrouchHeight = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	StartStoopTimestamp = GetWorld()->GetTimeSeconds();
+		
+	//Crouch
+	if(!bIsCrouched && _PlayerCharacter->GetCharacterMovement() && _PlayerCharacter->GetCharacterMovement()->CanEverCrouch() && _PlayerCharacter->GetRootComponent() && !_PlayerCharacter->GetRootComponent()->IsSimulatingPhysics())
+	{
+		//Begin Slide if Velocity is enough high
+		if(_PlayerCharacter->GetVelocity().Length() > CrouchingEnterMaxVelocity)
+			OnStartSlide();
+		
+		// See if collision is already at desired size.
+		if (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == _PlayerCharacter->GetCharacterMovement()->CrouchedHalfHeight) return;
+				
+		//Activate interp
+		bIsCrouched = true;		
+	}
+	//Uncrouch
+	//TODO :: Need to test if player have enough place for uncrouch 
+	else
+	{
+		// See if collision is already at desired size.
+		if(_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight())return;
+
+		//Activate interp
+		bIsCrouched = false;
+	}
+	
+	bIsStooping = true;
+	SetComponentTickEnabled(bIsStooping);
+	
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: %s"), bIsCrouched ? TEXT("Crouched") : TEXT("Uncrouched"));
+
+}
+
+void UPS_ParkourComponent::Stooping()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+	
+	if(!bIsStooping) return;
+	
+	const float targetHeight = bIsCrouched ? _PlayerCharacter->GetCharacterMovement()->CrouchedHalfHeight : _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>()->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartStoopTimestamp, StartStoopTimestamp + SmoothCrouchDuration, 0,1);
+	
+	float curveAlpha = alpha;
+	if(IsValid(CrouchCurve))
+		curveAlpha = CrouchCurve->GetFloatValue(alpha);
+
+	const float currentHeight = FMath::Lerp(StartCrouchHeight,targetHeight, curveAlpha);
+	_PlayerCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight, true);
+	
+	if(curveAlpha >= 1)
+	{
+		if(!bIsSliding) bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
+		bIsStooping = false;
+	}
+}
+
+//------------------
+#pragma endregion Crouch
+
+#pragma region Slide
+//------------------
+
+
+void UPS_ParkourComponent::OnStartSlide()
+{
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide"));
+}
+
+
+void UPS_ParkourComponent::OnStopSlide()
+{
+}
+
+void UPS_ParkourComponent::OnSlide()
+{
+	
+}
+
+void UPS_ParkourComponent::CalculateFloorInflucence()
+{
+	
+}
+
 
 
 //------------------
-#pragma endregion WallRun
+#pragma endregion Slide
 
 
 #pragma region Event_Receiver

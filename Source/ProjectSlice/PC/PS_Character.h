@@ -76,6 +76,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
 	bool bDebugMovementTrail = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display Player current velocity"))
+	bool bDebugVelocity = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug Player direction Arrow"))
 	bool bDebugArrow = false;
 
@@ -105,10 +108,11 @@ protected:
 
 	/** Called for Crouch input */
 	void Crouching();
-	
-	void OnCrouch();
 
-	void Stooping();
+	//Crouch functions override
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -118,25 +122,7 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	bool bIsCrouch = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	bool bIsStooping = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	float StartStoopTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
-	float StartCrouchHeight = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterMovement|Crounch", meta=(ToolTip="Smooth crouch curve"))
-	UCurveFloat* CrouchCurve;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterMovement|Crounch", meta=(ToolTip="Smooth crouch duration"))
-	float SmoothCrouchDuration = 0.1f;
-
+	
 //------------------
 #pragma endregion Move
 

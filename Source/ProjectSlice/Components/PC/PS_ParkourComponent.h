@@ -171,6 +171,70 @@ private:
 	//------------------
 
 #pragma endregion WallRun
+
+#pragma region Crouch
+	//------------------
+
+public:
+	//Crouch functions
+	void OnCrouch();
+protected:
+
+	//Crouch Tick func
+	void Stooping();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Status|Crounch")
+	bool bIsCrouched = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
+	bool bIsStooping = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
+	float StartStoopTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
+	float StartCrouchHeight = TNumericLimits<float>().Lowest();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Max Velocity threshold for try crouch without Slide"))
+	float CrouchingEnterMaxVelocity = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Smooth crouch curve"))
+	UCurveFloat* CrouchCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Smooth crouch duration"))
+	float SmoothCrouchDuration = 0.1f;
+
+private:
+	//------------------
+
+#pragma endregion Crouch
+
+
+#pragma region Slide
+	//------------------
+
+public:
+	UFUNCTION()
+	void OnStartSlide();
+
+	UFUNCTION()
+	void OnStopSlide();
+
+	UFUNCTION()
+	void OnSlide();
+	
+protected:
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Parameters|Slide")
+	bool bIsSliding = false;
+
+	
+	UFUNCTION()
+	void CalculateFloorInflucence();
+private:
+	//------------------
+
+#pragma endregion Slide
 };
 
 
