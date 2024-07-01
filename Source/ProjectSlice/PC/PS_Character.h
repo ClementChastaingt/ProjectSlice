@@ -106,9 +106,9 @@ protected:
 	/** Called for Crouch input */
 	void Crouching();
 	
-	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	void OnCrouch();
 
-	void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	void Stooping();
 	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -118,6 +118,21 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	bool bIsStooping = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	float StartStoopTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	float StartCrouchHeight = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterMovement|Crounch", meta=(ToolTip="Smooth crouch curve"))
+	UCurveFloat* CrouchCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterMovement|Crounch", meta=(ToolTip="Smooth crouch duration"))
+	float SmoothCrouchDuration = 0.1f;
 
 //------------------
 #pragma endregion Move

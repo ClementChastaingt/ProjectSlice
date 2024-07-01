@@ -12,6 +12,8 @@
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/LocalPlayer.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -68,6 +70,9 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	Super::TickActor(DeltaTime, TickType, ThisTickFunction);
 
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
+
+	//Smooth crouching
+	Stooping();
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -168,21 +173,78 @@ void AProjectSliceCharacter::StopJumping()
 
 void AProjectSliceCharacter::Crouching()
 {
-	if(CanCrouch())
-		Crouch();
-	else
-		UnCrouch();
-
-	UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouch %i"),bIsCrouched);
+	OnCrouch();
 }
 
-void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+void AProjectSliceCharacter::OnCrouch()
 {
+	if(!IsValid(GetCapsuleComponent()) || !IsValid(GetCharacterMovement()) || !IsValid(GetWorld())) return;
+
+	const ACharacter* DefaultCharacter = GetClass()->GetDefaultObject<ACharacter>();
+
+	StartCrouchHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
+	UE_LOG(LogTemp, Warning, TEXT("PS_Character :: OnCrouch"));
 	
+	//Crouch
+	if(CanCrouch())
+	{
+		// See if collision is already at desired size.
+		if (GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == GetCharacterMovement()->CrouchedHalfHeight)
+		{
+			UE_LOG(LogTemp, Error, TEXT("PS_Character :: Error CrouchedHalfHeight %f"),GetCharacterMovement()->CrouchedHalfHeight);
+			bIsCrouched = true;
+			return;
+		}
+
+		GetCharacterMovement()->bForceNextFloorCheck = true;
+
+		UE_LOG(LogTemp, Error, TEXT("PS_Character :: CrouchedHalfHeight %f"),GetCharacterMovement()->CrouchedHalfHeight);
+		//Activate interp
+		bIsCrouched = true;
+		StartStoopTimestamp = GetWorld()->GetTimeSeconds();
+		bIsStooping = true;
+		
+	}
+	//Uncrouch
+	else
+	{
+		// See if collision is already at desired size.
+		if(GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() )
+		{
+			UE_LOG(LogTemp, Error, TEXT("PS_Character :: Error UncrouchHalfHeight %f"),GetCharacterMovement()->CrouchedHalfHeight);
+			bIsCrouched = false;
+			return;
+		}
+
+		//Activate interp
+		UE_LOG(LogTemp, Error, TEXT("PS_Character :: UncrouchHalfHeight %f"),GetCharacterMovement()->CrouchedHalfHeight);
+		bIsCrouched = false;
+		StartStoopTimestamp = GetWorld()->GetTimeSeconds();
+		bIsStooping = true;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Is Crouch %i"),bIsCrouched);
 }
 
-void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+void AProjectSliceCharacter::Stooping()
 {
+	if(!bIsStooping) return;
+	
+	const float targetHeight = bIsCrouched ? GetCharacterMovement()->CrouchedHalfHeight : GetClass()->GetDefaultObject<ACharacter>()->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartStoopTimestamp, StartStoopTimestamp + SmoothCrouchDuration, 0,1);
+	
+	float curveAlpha = alpha;
+	if(IsValid(CrouchCurve))
+		curveAlpha = CrouchCurve->GetFloatValue(alpha);
+
+	const float currentHeight = FMath::Lerp(StartCrouchHeight,targetHeight, curveAlpha);
+	GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight, true);
+
+	UE_LOG(LogTemp, Error, TEXT("PS_Character :: alpha %f, currentHeight %f, targetHeight %f"),curveAlpha, currentHeight, targetHeight);
+
+	if(curveAlpha >= 1)
+		bIsStooping = false;
 	
 }
 
