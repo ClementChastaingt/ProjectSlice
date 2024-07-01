@@ -120,6 +120,9 @@ protected:
 	void Look(const FInputActionValue& Value);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	bool bIsCrouch = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bIsStooping = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
