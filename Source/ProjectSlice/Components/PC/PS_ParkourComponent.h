@@ -36,6 +36,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
 	bool bDebugCameraTilt = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
+	float CustomTickRate = 0.02f;
+
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -79,7 +82,7 @@ public:
 	void OnWallRunStop();
 
 	UFUNCTION()
-	void CameraTilt(const int32 wallOrientationToPlayer, const float currentSeconds, const float startWallRunTimestamp);
+	void CameraTilt(const int32 targetOrientation, const float currentSeconds, const float startTime);
 
 	UFUNCTION()
 	void JumpOffWallRun();
@@ -137,9 +140,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
-	float WallRunTickRate = 0.02f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Wall to Player Cam Min Angle for accept launch a WallRun "))
 	float MinEnterAngle = 8.5f;
 
@@ -175,7 +175,7 @@ private:
 #pragma region Crouch
 	//------------------
 
-public:
+public:	
 	//Crouch functions
 	void OnCrouch();
 protected:
@@ -217,20 +217,45 @@ public:
 	UFUNCTION()
 	void OnStartSlide();
 
+protected:
 	UFUNCTION()
 	void OnStopSlide();
 
 	UFUNCTION()
-	void OnSlide();
-	
-protected:
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Parameters|Slide")
-	bool bIsSliding = false;
-
+	void SlideTick();
 	
 	UFUNCTION()
-	void CalculateFloorInflucence();
+	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
+	bool bIsSliding = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
+	FTimerHandle SlideTimerHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
+	float SlideSeconds = TNumericLimits<float>().Lowest();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Braking Deceleration"))
+	float DefaultBrakingDeceleration = 2048,f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
+	float DefaulGroundFriction = 8.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide", meta=(ToolTip="SLide curve"))
+	UCurveFloat* SlideCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
+	float SlideForceMultiplicator = 150000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
+	float SlideMaxSpeed = 850.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide braking deceleration "))
+	float BrakingDecelerationSlide = 1000.0f;
+	
+	
+
 private:
 	//------------------
 

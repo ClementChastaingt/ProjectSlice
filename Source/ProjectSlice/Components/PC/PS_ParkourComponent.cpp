@@ -35,6 +35,9 @@ void UPS_ParkourComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
 
+	DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
+	DefaultBrakingDeceleration = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
@@ -44,10 +47,15 @@ void UPS_ParkourComponent::BeginPlay()
 	SetComponentTickEnabled(false);
 	if (IsValid(GetWorld()))
 	{
-		FTimerDelegate floorTick_TimerDelegate;
-		floorTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::WallRunTick);
-		GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, floorTick_TimerDelegate, WallRunTickRate, true);
+		FTimerDelegate wallRunTick_TimerDelegate;
+		wallRunTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::WallRunTick);
+		GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
 		GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
+
+		FTimerDelegate slideTick_TimerDelegate;
+		slideTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::SlideTick);
+		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, slideTick_TimerDelegate, CustomTickRate, true);
+		GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	}
 }
 
@@ -80,7 +88,7 @@ void UPS_ParkourComponent::WallRunTick()
 	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
 	
 	//WallRun timer setup
-	WallRunSeconds = WallRunSeconds + WallRunTickRate;
+	WallRunSeconds = WallRunSeconds + CustomTickRate;
 	const float endTimestamp = StartWallRunTimestamp + WallRunTimeToFall;
 	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(WallRunSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
 
@@ -209,7 +217,6 @@ void UPS_ParkourComponent::OnWallRunStop()
 	WallRunSeconds = 0.0f;
 
 	//-----Reset Variables-----
-	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
 	
 	VelocityWeight = 1.0f;
@@ -226,12 +233,12 @@ void UPS_ParkourComponent::OnWallRunStop()
 	bIsWallRunning = false;
 }
 
-void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const float currentSeconds, const float startWallRunTimestamp)
+void UPS_ParkourComponent::CameraTilt(const int32 targetOrientation, const float currentSeconds, const float startTime)
 {
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	
 	//Alpha
-	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startWallRunTimestamp, startWallRunTimestamp + WallRunCameraTiltDuration, 0,1);
+	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + WallRunCameraTiltDuration, 0,1);
 	
 	//If Camera tilt already finished stop
 	if(alphaTilt >= 1)
@@ -246,7 +253,7 @@ void UPS_ParkourComponent::CameraTilt(const int32 wallOrientationToPlayer, const
 		curveTiltAlpha = WallRunCameraTiltCurve->GetFloatValue(alphaTilt);
 
 	StartCameraTiltRoll =  StartCameraTiltRoll == 0 ? 360 : StartCameraTiltRoll;
-	const int32 newRoll = FMath::Lerp(StartCameraTiltRoll, (StartCameraTiltRoll > 180 ? 360 : 0) + WallRunCameraAngle * wallOrientationToPlayer, curveTiltAlpha);
+	const int32 newRoll = FMath::Lerp(StartCameraTiltRoll, (StartCameraTiltRoll > 180 ? 360 : 0) + WallRunCameraAngle * targetOrientation, curveTiltAlpha);
 	const float newRollInRange = (360 + (newRoll % 360)) % 360;
 	
 	//Target Rot
@@ -300,7 +307,7 @@ void UPS_ParkourComponent::OnCrouch()
 			OnStartSlide();
 		
 		// See if collision is already at desired size.
-		if (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == _PlayerCharacter->GetCharacterMovement()->CrouchedHalfHeight) return;
+		if (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == _PlayerCharacter->GetCharacterMovement()->GetCrouchedHalfHeight()) return;
 				
 		//Activate interp
 		bIsCrouched = true;		
@@ -308,7 +315,7 @@ void UPS_ParkourComponent::OnCrouch()
 	//Uncrouch
 	//TODO :: Need to test if player have enough place for uncrouch 
 	else
-	{
+	{		
 		// See if collision is already at desired size.
 		if(_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight())return;
 
@@ -329,7 +336,7 @@ void UPS_ParkourComponent::Stooping()
 	
 	if(!bIsStooping) return;
 	
-	const float targetHeight = bIsCrouched ? _PlayerCharacter->GetCharacterMovement()->CrouchedHalfHeight : _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>()->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	const float targetHeight = bIsCrouched ? _PlayerCharacter->GetCharacterMovement()->GetCrouchedHalfHeight() : _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>()->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartStoopTimestamp, StartStoopTimestamp + SmoothCrouchDuration, 0,1);
 	
 	float curveAlpha = alpha;
@@ -355,22 +362,80 @@ void UPS_ParkourComponent::Stooping()
 
 void UPS_ParkourComponent::OnStartSlide()
 {
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide"));
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
+
+	if(!IsValid(GetWorld())) return;
+
+	bIsSliding = true;
+	SlideSeconds = GetWorld()->GetTimeSeconds();
+
+	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * SlideMaxSpeed;
+	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = BrakingDecelerationSlide;
+	
+	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 }
 
 
 void UPS_ParkourComponent::OnStopSlide()
 {
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
+
+	if(!IsValid(GetWorld())) return;
+
+	bIsSliding = false;
+	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
+	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+	
+	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 }
 
-void UPS_ParkourComponent::OnSlide()
+void UPS_ParkourComponent::SlideTick()
 {
+	if(!IsValid(_PlayerCharacter)) return;
 	
+	if(!bIsSliding) return;
+
+	
+	SlideSeconds = SlideSeconds + CustomTickRate;
+	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
+
+	//CameraTilt()
+
+	//TODO :: Add multiplicator interpolation
+	// const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
+	// float curveAlpha = alpha;
+	// if(IsValid(CrouchCurve))
+	// 	curveAlpha = CrouchCurve->GetFloatValue(alpha);
+
+	//Constraint init
+	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(characterMovement->CurrentFloor.HitResult.Normal);
+	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
+	
+	//Clamp Velocity
+	if(_PlayerCharacter->GetVelocity().Length() > SlideMaxSpeed)
+	{
+		FVector newVel = _PlayerCharacter->GetVelocity();
+		newVel.Normalize();
+
+		characterMovement->Velocity = newVel * SlideMaxSpeed;
+	}
+
+	//-----Stop Slide-----
+	if(_PlayerCharacter->GetVelocity().Length() <= characterMovement->MaxWalkSpeedCrouched)
+		OnStopSlide();
 }
 
-void UPS_ParkourComponent::CalculateFloorInflucence()
+FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNormal) const
 {
-	
+	if(floorNormal.UpVector.IsNearlyZero()) return FVector::ZeroVector;
+
+	FVector out = floorNormal.Cross(floorNormal.Cross(_PlayerCharacter->GetActorUpVector()));
+	out.Normalize();
+
+	return out;
 }
 
 
