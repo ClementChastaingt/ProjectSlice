@@ -69,7 +69,7 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 {
 	Super::TickActor(DeltaTime, TickType, ThisTickFunction);
 
-	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
+	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
 
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
 }
@@ -190,7 +190,7 @@ void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHal
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
-	if (IsValid(_PlayerController))
+	if (IsValid(_PlayerController) && _PlayerController->CanMove())
 	{	
 		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
 
@@ -198,6 +198,9 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 	}
+	else
+		_PlayerController->SetMoveInput(FVector2d::ZeroVector);
+	
 }
 
 void AProjectSliceCharacter::StopMoving()
@@ -217,7 +220,7 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (IsValid(GetController()))
+	if (IsValid(_PlayerController) && _PlayerController->CanLook())
 	{
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);

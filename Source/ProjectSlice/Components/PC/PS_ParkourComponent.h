@@ -33,6 +33,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
 	bool bDebugWallRunJump = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Slide")
+	bool bDebugSlide = false;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
 	bool bDebugCameraTilt = false;
 
@@ -195,9 +198,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	float StartCrouchHeight = TNumericLimits<float>().Lowest();
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Max Velocity threshold for try crouch without Slide"))
-	float CrouchingEnterMaxVelocity = 15.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Smooth crouch curve"))
 	UCurveFloat* CrouchCurve;
 
@@ -246,13 +246,16 @@ protected:
 	UCurveFloat* SlideCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
-	float SlideForceMultiplicator = 150000.0f;
+	float SlideForceMultiplicator = 1500000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
-	float SlideMaxSpeed = 850.0f;
+	float SlideEnterSpeedBuff = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
+	float SlideMaxSpeed = 2000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide braking deceleration "))
-	float BrakingDecelerationSlide = 1000.0f;
+	float BrakingDecelerationSlide = 1500.0f;
 	
 	
 

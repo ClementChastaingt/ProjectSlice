@@ -91,7 +91,8 @@ private:
 	
 
 public:
-
+	//------------------
+	
 protected:
 	/** Movement **/
 	virtual void OnMovementModeChanged(EMovementMode previousMovementMode, uint8 previousCustomMode) override;

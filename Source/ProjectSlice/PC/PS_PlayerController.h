@@ -18,7 +18,6 @@ class PROJECTSLICE_API AProjectSlicePlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
 	
 	FVector2D GetMoveInput() const{return MoveInput;}
 
@@ -33,6 +32,14 @@ public:
 	UInputAction* GetMoveAction() const{return MoveAction;}
 
 	UInputAction* GetLookAction() const{return LookAction;}
+
+	bool CanMove() const{return bCanMove;}
+
+	bool CanLook() const{return bCanLook;}
+
+	void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
+
+	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
 
 protected:
 	/** Input Mapping Context to be used for player input */
@@ -58,6 +65,14 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input)
 	FVector2D MoveInput = FVector2D::ZeroVector;
+
+	/** Bool for force block Move */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
+	bool bCanMove = true;
+
+	/** Bool for force block Look  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
+	bool bCanLook = true;
 
 	// Begin Actor interface
 	virtual void BeginPlay() override;

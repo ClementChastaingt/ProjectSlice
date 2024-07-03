@@ -302,10 +302,6 @@ void UPS_ParkourComponent::OnCrouch()
 	//Crouch
 	if(!bIsCrouched && _PlayerCharacter->GetCharacterMovement() && _PlayerCharacter->GetCharacterMovement()->CanEverCrouch() && _PlayerCharacter->GetRootComponent() && !_PlayerCharacter->GetRootComponent()->IsSimulatingPhysics())
 	{
-		//Begin Slide if Velocity is enough high
-		if(_PlayerCharacter->GetVelocity().Length() > CrouchingEnterMaxVelocity)
-			OnStartSlide();
-		
 		// See if collision is already at desired size.
 		if (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == _PlayerCharacter->GetCharacterMovement()->GetCrouchedHalfHeight()) return;
 				
@@ -321,6 +317,7 @@ void UPS_ParkourComponent::OnCrouch()
 
 		//Activate interp
 		bIsCrouched = false;
+		if(bIsSliding) OnStopSlide();
 	}
 	
 	bIsStooping = true;
@@ -348,8 +345,22 @@ void UPS_ParkourComponent::Stooping()
 	
 	if(curveAlpha >= 1)
 	{
-		if(!bIsSliding) bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
+		//Begin Slide if Velocity is enough high
+		if(_PlayerCharacter->GetVelocity().Length() > 15)
+			OnStartSlide();
+		else if(!bIsSliding)
+			bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
+		
 		bIsStooping = false;
+				
+		// //Begin Slide if Velocity is enough high
+		// if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
+		// {
+		// 	OnStartSlide();
+		// 	return;
+		// }
+		//
+		// bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
 	}
 }
 
@@ -364,15 +375,18 @@ void UPS_ParkourComponent::OnStartSlide()
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
 
-	if(!IsValid(GetWorld())) return;
+	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
 
 	bIsSliding = true;
 	SlideSeconds = GetWorld()->GetTimeSeconds();
+	
 
+	_PlayerController->SetCanMove(false);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed + SlideEnterSpeedBuff);
 	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
-	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * SlideMaxSpeed;
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = BrakingDecelerationSlide;
+
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 }
@@ -386,8 +400,11 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	bIsSliding = false;
 	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
+	_PlayerController->SetCanMove(true);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+
+	if(bIsCrouched) _PlayerCharacter->Crouch();
 	
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 }
@@ -412,7 +429,10 @@ void UPS_ParkourComponent::SlideTick()
 
 	//Constraint init
 	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(characterMovement->CurrentFloor.HitResult.Normal);
+	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,1));
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
+
+	if(bDebugSlide) DrawDebugLine(GetWorld(), _PlayerCharacter->GetActorLocation(),  _PlayerCharacter->GetActorLocation() + CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator, FColor::Magenta, false, 2, 10, 3);
 	
 	//Clamp Velocity
 	if(_PlayerCharacter->GetVelocity().Length() > SlideMaxSpeed)
@@ -423,6 +443,8 @@ void UPS_ParkourComponent::SlideTick()
 		characterMovement->Velocity = newVel * SlideMaxSpeed;
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("SlideTick"));
+
 	//-----Stop Slide-----
 	if(_PlayerCharacter->GetVelocity().Length() <= characterMovement->MaxWalkSpeedCrouched)
 		OnStopSlide();
@@ -430,14 +452,13 @@ void UPS_ParkourComponent::SlideTick()
 
 FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNormal) const
 {
-	if(floorNormal.UpVector.IsNearlyZero()) return FVector::ZeroVector;
+	if(floorNormal.Equals(FVector(0,0,1))) return FVector::ZeroVector;
 
-	FVector out = floorNormal.Cross(floorNormal.Cross(_PlayerCharacter->GetActorUpVector()));
+	FVector out = floorNormal.Cross(floorNormal.Cross(FVector(0,0,1)));
 	out.Normalize();
 
 	return out;
 }
-
 
 
 //------------------
