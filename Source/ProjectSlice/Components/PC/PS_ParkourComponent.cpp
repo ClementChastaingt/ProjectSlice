@@ -345,22 +345,15 @@ void UPS_ParkourComponent::Stooping()
 	
 	if(curveAlpha >= 1)
 	{
-		//Begin Slide if Velocity is enough high
-		if(_PlayerCharacter->GetVelocity().Length() > 15)
+		const float enterSpeed = _PlayerCharacter->GetVelocity().Length();
+		
+		bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
+		
+		//Begin Slide if Velocity on enter is enough high
+		if(bIsCrouched && enterSpeed > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
 			OnStartSlide();
-		else if(!bIsSliding)
-			bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
 		
 		bIsStooping = false;
-				
-		// //Begin Slide if Velocity is enough high
-		// if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
-		// {
-		// 	OnStartSlide();
-		// 	return;
-		// }
-		//
-		// bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
 	}
 }
 
@@ -377,16 +370,17 @@ void UPS_ParkourComponent::OnStartSlide()
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
 
+	//TODO :: Erase when Animation is ready
+	UAnimInstance* animInstance = (_PlayerCharacter()->GetMesh()) ? _PlayerCharacter()->GetMesh()->GetAnimInstance() : nullptr;
+	if(IsValid(animInstance)) animInstance->Montage_Pause();
+
 	bIsSliding = true;
 	SlideSeconds = GetWorld()->GetTimeSeconds();
-	
 
 	_PlayerController->SetCanMove(false);
-	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed + SlideEnterSpeedBuff);
-	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = BrakingDecelerationSlide;
-
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 }
@@ -398,13 +392,16 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	if(!IsValid(GetWorld())) return;
 
+	//TODO :: Erase when Animation is ready
+	UAnimInstance* animInstance = (_PlayerCharacter()->GetMesh()) ? _PlayerCharacter()->GetMesh()->GetAnimInstance() : nullptr;
+	if(IsValid(animInstance)) animInstance->Montage_Resume(nullptr);
+
 	bIsSliding = false;
-	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
 	_PlayerController->SetCanMove(true);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 
-	if(bIsCrouched) _PlayerCharacter->Crouch();
+	if(bIsCrouched) OnCrouch();
 	
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 }
@@ -419,6 +416,7 @@ void UPS_ParkourComponent::SlideTick()
 	SlideSeconds = SlideSeconds + CustomTickRate;
 	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
 
+	//-----Camera Tilt-----
 	//CameraTilt()
 
 	//TODO :: Add multiplicator interpolation
@@ -427,9 +425,7 @@ void UPS_ParkourComponent::SlideTick()
 	// if(IsValid(CrouchCurve))
 	// 	curveAlpha = CrouchCurve->GetFloatValue(alpha);
 
-	//Constraint init
-	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(characterMovement->CurrentFloor.HitResult.Normal);
-	//_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,1));
+	//-----Velocity-----
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
 
 	if(bDebugSlide) DrawDebugLine(GetWorld(), _PlayerCharacter->GetActorLocation(),  _PlayerCharacter->GetActorLocation() + CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator, FColor::Magenta, false, 2, 10, 3);
@@ -442,11 +438,10 @@ void UPS_ParkourComponent::SlideTick()
 
 		characterMovement->Velocity = newVel * SlideMaxSpeed;
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("SlideTick"));
+	
 
 	//-----Stop Slide-----
-	if(_PlayerCharacter->GetVelocity().Length() <= characterMovement->MaxWalkSpeedCrouched)
+	if(_PlayerCharacter->GetVelocity().Length() < characterMovement->MaxWalkSpeedCrouched)
 		OnStopSlide();
 }
 
