@@ -3,9 +3,7 @@
 
 #include "PS_ParkourComponent.h"
 
-#include "InputAction.h"
 #include "Camera/CameraComponent.h"
-#include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -74,7 +72,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	//-----CameraTilt smooth reset-----
 	if(bIsResetingCameraTilt)
-		CameraTilt(0, GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
+		CameraTilt(FRotator::ZeroRotator, GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
 	
 }
 
@@ -124,7 +122,7 @@ void UPS_ParkourComponent::WallRunTick()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
-	CameraTilt(CameraTiltOrientation, WallRunSeconds, StartWallRunTimestamp);
+	CameraTilt(CameraTiltOrientation * WallRunCameraAngle, WallRunSeconds,StartWallRunTimestamp);
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
@@ -176,6 +174,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 		return;
 	}
 	
+	//Determine Orientations
 	WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
 	CameraTiltOrientation = WallToPlayerOrientation * FMath::Sign(angleObjectFwdToCamFwd);
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
@@ -196,10 +195,11 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	WallRunSeconds = StartWallRunTimestamp;
 	GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
 
+	//--------Camera_Tilt Setup--------
+	SetupCameraTilt(false);
+
 	//Setup work var
-	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
-	StartCameraTiltRoll = _PlayerController->GetControlRotation().Roll;
-	StartCameraTiltRoll = (360 + (StartCameraTiltRoll % 360)) % 360;
+	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();	
 	Wall = otherActor;
 	bForceWallRun = false;
 	bIsWallRunning = true;
@@ -221,48 +221,11 @@ void UPS_ParkourComponent::OnWallRunStop()
 	
 	VelocityWeight = 1.0f;
 
-	//----Camera Tilt Smooth reseting-----
-	SetComponentTickEnabled(true);
-	StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();
-	StartCameraTiltRoll = _PlayerController->GetControlRotation().Roll;
-	StartCameraTiltRoll = (360 + (StartCameraTiltRoll % 360)) % 360;
-	bIsResetingCameraTilt = true;
-
-	//----Stop WallRun && Movement falling-----
+	//--------Camera_Tilt 
+	SetupCameraTilt(true);
+	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
-}
-
-void UPS_ParkourComponent::CameraTilt(const int32 targetOrientation, const float currentSeconds, const float startTime)
-{
-	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
-	
-	//Alpha
-	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + WallRunCameraTiltDuration, 0,1);
-	
-	//If Camera tilt already finished stop
-	if(alphaTilt >= 1)
-	{
-		bIsResetingCameraTilt = false;
-		return;
-	}
-
-	//Interp
-	float curveTiltAlpha = alphaTilt;
-	if(IsValid(WallRunCameraTiltCurve))
-		curveTiltAlpha = WallRunCameraTiltCurve->GetFloatValue(alphaTilt);
-
-	StartCameraTiltRoll =  StartCameraTiltRoll == 0 ? 360 : StartCameraTiltRoll;
-	const int32 newRoll = FMath::Lerp(StartCameraTiltRoll, (StartCameraTiltRoll > 180 ? 360 : 0) + WallRunCameraAngle * targetOrientation, curveTiltAlpha);
-	const float newRollInRange = (360 + (newRoll % 360)) % 360;
-	
-	//Target Rot
-	FRotator newControlRot = _PlayerController->GetControlRotation();
-	newControlRot.Roll = newRollInRange;
-	
-	//Rotate
-	_PlayerController->SetControlRotation(newControlRot);
-	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
 }
 
 void UPS_ParkourComponent::JumpOffWallRun()
@@ -285,6 +248,57 @@ void UPS_ParkourComponent::JumpOffWallRun()
 }
 //------------------
 #pragma endregion WallRun
+
+#pragma region Camera_Tilt
+//------------------
+
+void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset)
+{
+	DefaultCameraRot = StartCameraTilt;
+	StartCameraTilt = _PlayerController->GetControlRotation().Clamp();
+	
+	bIsResetingCameraTilt = bIsReset;
+	if(bIsResetingCameraTilt)
+	{
+		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();
+		SetComponentTickEnabled(true);
+	}
+
+}
+
+void UPS_ParkourComponent::CameraTilt(const FRotator& targetAngle, float currentSeconds, const float startTime)
+{
+	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+	
+	//Alpha
+	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + CameraTiltDuration, 0,1);
+	
+	//If Camera tilt already finished stop
+	if(alphaTilt >= 1)
+	{
+		bIsResetingCameraTilt = false;
+		return;
+	}
+
+	//Interp
+	float curveTiltAlpha = alphaTilt;
+	if(IsValid(CameraTiltCurve))
+		curveTiltAlpha = CameraTiltCurve->GetFloatValue(alphaTilt);
+	
+	
+	//Target Rot
+	FRotator newRotTarget = (targetAngle.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraTilt + targetAngle;
+	const FRotator newRot = FMath::Lerp(StartCameraTilt,newRotTarget, curveTiltAlpha);
+	
+	//Rotate
+	_PlayerController->SetControlRotation(newRot);
+	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
+}
+
+
+//------------------
+#pragma endregion Camera_Tilt
+
 
 #pragma region Crouch
 //------------------
@@ -369,14 +383,14 @@ void UPS_ParkourComponent::OnStartSlide()
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
-
-	//TODO :: Erase when Animation is ready
-	UAnimInstance* animInstance = (_PlayerCharacter()->GetMesh()) ? _PlayerCharacter()->GetMesh()->GetAnimInstance() : nullptr;
-	if(IsValid(animInstance)) animInstance->Montage_Pause();
-
+	
 	bIsSliding = true;
 	SlideSeconds = GetWorld()->GetTimeSeconds();
+	
+	//--------Camera_Tilt Setup--------
+	SetupCameraTilt(false);
 
+	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(false);
 	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
@@ -391,12 +405,13 @@ void UPS_ParkourComponent::OnStopSlide()
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
 
 	if(!IsValid(GetWorld())) return;
-
-	//TODO :: Erase when Animation is ready
-	UAnimInstance* animInstance = (_PlayerCharacter()->GetMesh()) ? _PlayerCharacter()->GetMesh()->GetAnimInstance() : nullptr;
-	if(IsValid(animInstance)) animInstance->Montage_Resume(nullptr);
-
+	
 	bIsSliding = false;
+	
+	//--------Camera_Tilt Setup--------
+	SetupCameraTilt(true);
+	
+	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(true);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
@@ -411,13 +426,12 @@ void UPS_ParkourComponent::SlideTick()
 	if(!IsValid(_PlayerCharacter)) return;
 	
 	if(!bIsSliding) return;
-
 	
 	SlideSeconds = SlideSeconds + CustomTickRate;
 	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
 
-	//-----Camera Tilt-----
-	//CameraTilt()
+	//-----Camera_Tilt-----
+	CameraTilt(SlideCameraAngle, SlideSeconds,StartStoopTimestamp);
 
 	//TODO :: Add multiplicator interpolation
 	// const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
@@ -488,6 +502,7 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 {
     bComeFromAir = prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying;
 }
+
 
 //------------------
 #pragma endregion Event_Receiver

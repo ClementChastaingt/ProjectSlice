@@ -70,22 +70,53 @@ protected:
 	
 //------------------
 #pragma endregion General
+	
+#pragma region CameraTilt
+	//------------------
+
+public:
+	UFUNCTION()
+	void SetupCameraTilt(const bool bIsReset);
+	
+protected:
+	UFUNCTION()
+	void CameraTilt(const FRotator& targetAngle, float currentSeconds, const float startTime);
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraTilt smoothly"))
+	bool bIsResetingCameraTilt = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
+	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
+	FRotator DefaultCameraRot = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rot on Start"))
+	FRotator StartCameraTilt = FRotator::ZeroRotator;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
+	int32 CameraTiltOrientation = 0;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	float CameraTiltDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
+	UCurveFloat* CameraTiltCurve = nullptr;
+
+private:
+	//------------------
+
+#pragma endregion CameraTilt
 
 #pragma region WallRun
 	//------------------
 
 public:
 	UFUNCTION()
-	void WallRunTick();
-
-	UFUNCTION()
 	void OnWallRunStart(AActor* otherActor);
 
 	UFUNCTION()
 	void OnWallRunStop();
-
-	UFUNCTION()
-	void CameraTilt(const int32 targetOrientation, const float currentSeconds, const float startTime);
 
 	UFUNCTION()
 	void JumpOffWallRun();
@@ -97,6 +128,9 @@ public:
 	void SetForceWallRun(bool bforceWallRun){this->bForceWallRun = bforceWallRun;}
 
 protected:
+	UFUNCTION()
+	void WallRunTick();
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
 	bool bIsWallRunning = false;
 
@@ -124,18 +158,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun move direction"))
 	FVector WallRunDirection = FVector::ZeroVector;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraTilt smoothly"))
-	bool bIsResetingCameraTilt = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
-	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt roll on Start"))
-	int32 StartCameraTiltRoll = 360;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
-	int32 CameraTiltOrientation = 0;
-
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is to left or right from Wall"))
 	int32 WallToPlayerOrientation = 0;
@@ -154,21 +176,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun gravity interpolation curve"))
+	UCurveFloat* WallRunGravityCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
 	float JumpOffForceMultiplicator = 1500.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Gravity", meta=(ToolTip="WallRun gravity interpolation curve"))
-	UCurveFloat* WallRunGravityCurve = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Angle of the camera in relation to the wall when the player is stuck to it"))
-	float WallRunCameraAngle = 20.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
-	float WallRunCameraTiltDuration = 0.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
-	UCurveFloat* WallRunCameraTiltCurve = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Angle of the camera in relation to the wall when the player is stuck to it"))
+	FRotator WallRunCameraAngle = FRotator(0,0,20.0f);
 	
 private:
 	//------------------
@@ -209,7 +225,6 @@ private:
 
 #pragma endregion Crouch
 
-
 #pragma region Slide
 	//------------------
 
@@ -226,7 +241,8 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
-	
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	bool bIsSliding = false;
 
@@ -245,19 +261,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide", meta=(ToolTip="SLide curve"))
 	UCurveFloat* SlideCurve;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Z force multiplicator"))
 	float SlideForceMultiplicator = 1500000.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide force multiplicator "))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Enter speed Buff"))
 	float SlideEnterSpeedBuff = 1000.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Speed "))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Speed"))
 	float SlideMaxSpeed = 2000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide braking deceleration "))
 	float BrakingDecelerationSlide = 500.0f;
-	
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Angle of the camera when the player is sliding"))
+	FRotator SlideCameraAngle = FRotator(20.0f,0,0);
 
 private:
 	//------------------
