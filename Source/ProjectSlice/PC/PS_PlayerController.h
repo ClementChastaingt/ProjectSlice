@@ -41,6 +41,9 @@ public:
 
 	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
 
+	UFUNCTION()
+	void GetWorldInputDirection();
+
 protected:
 	/** Input Mapping Context to be used for player input */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)

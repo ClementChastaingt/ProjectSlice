@@ -76,11 +76,11 @@ protected:
 
 public:
 	UFUNCTION()
-	void SetupCameraTilt(const bool bIsReset);
+	void SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle);
 	
 protected:
 	UFUNCTION()
-	void CameraTilt(const FRotator& targetAngle, float currentSeconds, const float startTime);
+	void CameraTilt(float currentSeconds, const float startTime);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraTilt smoothly"))
 	bool bIsResetingCameraTilt = false;
@@ -91,16 +91,19 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
 	FRotator DefaultCameraRot = FRotator::ZeroRotator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rot on Start"))
-	FRotator StartCameraTilt = FRotator::ZeroRotator;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot on Start tiliting"))
+	FRotator StartCameraRot = FRotator::ZeroRotator;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=( ToolTip="Camera rot Target tiliting"))
+	FRotator TargetCameraRot = FRotator::ZeroRotator;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	int32 CameraTiltOrientation = 0;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
@@ -257,24 +260,27 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	float DefaulGroundFriction = 8.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide", meta=(ToolTip="SLide curve"))
-	UCurveFloat* SlideCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Z force multiplicator"))
 	float SlideForceMultiplicator = 1500000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Enter speed Buff"))
-	float SlideEnterSpeedBuff = 1000.0f;
+	float SlideEnterSpeedBuff = 500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Speed"))
 	float SlideMaxSpeed = 2000.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide braking deceleration "))
-	float BrakingDecelerationSlide = 500.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Deceleration", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max braking deceleration "))
+	float MaxBrakingDecelerationSlide = 500.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Time to Max Braking Deceleration"))
+	float TimeToBrakingDeceleration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(ToolTip="Braking Deceleration Curve"))
+	UCurveFloat* BrakingDecelerationCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Angle of the camera when the player is sliding"))
-	FRotator SlideCameraAngle = FRotator(20.0f,0,0);
+	FRotator SlideCameraAngle = FRotator(5.0f,0,0);
 
 private:
 	//------------------

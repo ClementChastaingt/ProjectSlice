@@ -17,3 +17,12 @@ void AProjectSlicePlayerController::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("BeginPlay"));
 	}
 }
+
+
+
+void AProjectSlicePlayerController::GetWorldInputDirection()
+{
+	// FVector worldInputDirection = _PlayerCharacter->GetActorRightVector() * moveInput.Y +_PlayerCharacter->GetActorForwardVector() * moveInput.X;
+	// worldInputDirection.Z = 0;
+	// worldInputDirection.Normalize();
+}

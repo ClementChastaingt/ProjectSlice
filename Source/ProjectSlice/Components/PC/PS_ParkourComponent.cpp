@@ -72,7 +72,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	//-----CameraTilt smooth reset-----
 	if(bIsResetingCameraTilt)
-		CameraTilt(FRotator::ZeroRotator, GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
+		CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
 	
 }
 
@@ -122,7 +122,7 @@ void UPS_ParkourComponent::WallRunTick()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
-	CameraTilt(CameraTiltOrientation * WallRunCameraAngle, WallRunSeconds,StartWallRunTimestamp);
+	CameraTilt(WallRunSeconds, StartWallRunTimestamp);
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
@@ -196,7 +196,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
 
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(false);
+	SetupCameraTilt(false, CameraTiltOrientation * WallRunCameraAngle);
 
 	//Setup work var
 	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();	
@@ -221,8 +221,8 @@ void UPS_ParkourComponent::OnWallRunStop()
 	
 	VelocityWeight = 1.0f;
 
-	//--------Camera_Tilt 
-	SetupCameraTilt(true);
+	//--------Camera_Tilt--------
+	SetupCameraTilt(true, FRotator::ZeroRotator);
 	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
@@ -252,10 +252,11 @@ void UPS_ParkourComponent::JumpOffWallRun()
 #pragma region Camera_Tilt
 //------------------
 
-void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset)
+void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle)
 {
-	DefaultCameraRot = StartCameraTilt;
-	StartCameraTilt = _PlayerController->GetControlRotation().Clamp();
+	DefaultCameraRot = StartCameraRot - targetAngle;
+	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
+	TargetCameraRot = StartCameraRot + targetAngle;
 	
 	bIsResetingCameraTilt = bIsReset;
 	if(bIsResetingCameraTilt)
@@ -266,7 +267,7 @@ void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset)
 
 }
 
-void UPS_ParkourComponent::CameraTilt(const FRotator& targetAngle, float currentSeconds, const float startTime)
+void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTime)
 {
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	
@@ -287,8 +288,8 @@ void UPS_ParkourComponent::CameraTilt(const FRotator& targetAngle, float current
 	
 	
 	//Target Rot
-	FRotator newRotTarget = (targetAngle.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraTilt + targetAngle;
-	const FRotator newRot = FMath::Lerp(StartCameraTilt,newRotTarget, curveTiltAlpha);
+	FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraRot + TargetCameraRot;
+	const FRotator newRot = FMath::Lerp(StartCameraRot,newRotTarget, curveTiltAlpha);
 	
 	//Rotate
 	_PlayerController->SetControlRotation(newRot);
@@ -307,6 +308,8 @@ void UPS_ParkourComponent::CameraTilt(const FRotator& targetAngle, float current
 void UPS_ParkourComponent::OnCrouch()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCapsuleComponent()) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
+
+	if(_PlayerCharacter->GetCharacterMovement()->MovementMode != MOVE_Walking) return;
 
 	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 
@@ -388,13 +391,15 @@ void UPS_ParkourComponent::OnStartSlide()
 	SlideSeconds = GetWorld()->GetTimeSeconds();
 	
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(false);
+	SetupCameraTilt(false, SlideCameraAngle);
 
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(false);
-	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed);
+	// FVector worldInputDirection = _PlayerCharacter->GetActorRightVector() * _PlayerController->GetMoveInput().Y +_PlayerCharacter->GetActorForwardVector() * _PlayerController->GetMoveInput().X;
+	// worldInputDirection.Z = _PlayerCharacter->GetCharacterMovement()->Velocity.Z;
+	// _PlayerCharacter->GetCharacterMovement()->Velocity = worldInputDirection * _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed;
+	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed + SlideEnterSpeedBuff);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = BrakingDecelerationSlide;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 }
@@ -409,7 +414,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	bIsSliding = false;
 	
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(true);
+	SetupCameraTilt(true, FRotator::ZeroRotator);
 	
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(true);
@@ -431,17 +436,18 @@ void UPS_ParkourComponent::SlideTick()
 	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
 
 	//-----Camera_Tilt-----
-	CameraTilt(SlideCameraAngle, SlideSeconds,StartStoopTimestamp);
+	CameraTilt(SlideSeconds,StartStoopTimestamp);
 
-	//TODO :: Add multiplicator interpolation
-	// const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
-	// float curveAlpha = alpha;
-	// if(IsValid(CrouchCurve))
-	// 	curveAlpha = CrouchCurve->GetFloatValue(alpha);
 
 	//-----Velocity-----
+	const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, StartWallRunTimestamp + TimeToBrakingDeceleration  , 0,1);
+	float curveAlpha = alpha;
+	if(IsValid(CrouchCurve))
+		curveAlpha = CrouchCurve->GetFloatValue(alpha);
+	
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
-
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveAlpha);
+	
 	if(bDebugSlide) DrawDebugLine(GetWorld(), _PlayerCharacter->GetActorLocation(),  _PlayerCharacter->GetActorLocation() + CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator, FColor::Magenta, false, 2, 10, 3);
 	
 	//Clamp Velocity
@@ -472,7 +478,6 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 //------------------
 #pragma endregion Slide
-
 
 #pragma region Event_Receiver
 //------------------

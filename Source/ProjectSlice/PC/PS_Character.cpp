@@ -173,7 +173,8 @@ void AProjectSliceCharacter::StopJumping()
 void AProjectSliceCharacter::Crouching()
 {
 	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
-		GetParkourComponent()->OnCrouch();
+	
+	GetParkourComponent()->OnCrouch();
 }
 
 
