@@ -222,7 +222,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
-	SetupCameraTilt(true, FRotator::ZeroRotator);
+	SetupCameraTilt(true, CameraTiltOrientation * WallRunCameraAngle);
 	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
@@ -254,8 +254,8 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle)
 {
-	DefaultCameraRot = StartCameraRot - targetAngle;
 	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
+	DefaultCameraRot = StartCameraRot - targetAngle;
 	TargetCameraRot = StartCameraRot + targetAngle;
 	
 	bIsResetingCameraTilt = bIsReset;
@@ -288,7 +288,7 @@ void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTim
 	
 	
 	//Target Rot
-	FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraRot + TargetCameraRot;
+	const FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraRot + TargetCameraRot;
 	const FRotator newRot = FMath::Lerp(StartCameraRot,newRotTarget, curveTiltAlpha);
 	
 	//Rotate
@@ -398,6 +398,7 @@ void UPS_ParkourComponent::OnStartSlide()
 	// FVector worldInputDirection = _PlayerCharacter->GetActorRightVector() * _PlayerController->GetMoveInput().Y +_PlayerCharacter->GetActorForwardVector() * _PlayerController->GetMoveInput().X;
 	// worldInputDirection.Z = _PlayerCharacter->GetCharacterMovement()->Velocity.Z;
 	// _PlayerCharacter->GetCharacterMovement()->Velocity = worldInputDirection * _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed;
+	//TODO :: Check movement direction
 	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed + SlideEnterSpeedBuff);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
@@ -414,7 +415,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	bIsSliding = false;
 	
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(true, FRotator::ZeroRotator);
+	SetupCameraTilt(true, SlideCameraAngle);
 	
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(true);
