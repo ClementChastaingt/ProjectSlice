@@ -254,9 +254,12 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle)
 {
+	
 	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	DefaultCameraRot = StartCameraRot - targetAngle;
+	DefaultCameraRot = StartCameraRot + UKismetMathLibrary::NegateRotator(targetAngle);
 	TargetCameraRot = StartCameraRot + targetAngle;
+
+	UE_LOG(LogTemp, Error, TEXT("StartCameraRot %s, DefaultCameraRot %s, TargetCameraRot %s"),*StartCameraRot.ToString(),*DefaultCameraRot.ToString(),*TargetCameraRot.ToString());
 	
 	bIsResetingCameraTilt = bIsReset;
 	if(bIsResetingCameraTilt)
@@ -288,7 +291,7 @@ void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTim
 	
 	
 	//Target Rot
-	const FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : StartCameraRot + TargetCameraRot;
+	const FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : TargetCameraRot;
 	const FRotator newRot = FMath::Lerp(StartCameraRot,newRotTarget, curveTiltAlpha);
 	
 	//Rotate
@@ -412,7 +415,8 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	if(!IsValid(GetWorld())) return;
 	
-	bIsSliding = false;
+	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
+	SlideSeconds = 0;
 	
 	//--------Camera_Tilt Setup--------
 	SetupCameraTilt(true, SlideCameraAngle);
@@ -422,9 +426,9 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 
+	bIsSliding = false;
 	if(bIsCrouched) OnCrouch();
 	
-	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 }
 
 void UPS_ParkourComponent::SlideTick()
