@@ -63,6 +63,11 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);
+
+	//Config CharacterMovement
+	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
+	
+	
 }
 
 void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FActorTickFunction& ThisTickFunction)
@@ -210,22 +215,35 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	if (IsValid(_PlayerController) && _PlayerController->CanMove())
 	{
 		UE_LOG(LogTemp, Error, TEXT("InputValue %s"), *Value.Get<FVector2D>().ToString());
-		
-		//Add movement
-		AddMovementInput(GetActorForwardVector(), Value.Get<FVector2D>().Y);
-		AddMovementInput(GetActorRightVector(), Value.Get<FVector2D>().X, 0.5);
 
-		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
+		AnalogAlpha = FMath::Clamp(AnalogAlpha + (GetWorld()->GetDeltaSeconds() / AnalogMovementDuration),0,1);		
+		float curveAlpha = AnalogAlpha;
+		if(IsValid(MoveSpeedCurve))
+			curveAlpha = MoveSpeedCurve->GetFloatValue(AnalogAlpha);
+		
+		_PlayerController->SetMoveInput(FMath::Lerp(_PlayerController->GetMoveInput(), Value.Get<FVector2D>(), curveAlpha));
+			
+		//Add movement
+		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
+		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 	}
 	else
+	{
+		AnalogAlpha = 0;
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
+	}
+
 	
 }
 
 void AProjectSliceCharacter::StopMoving()
 {
 	if(IsValid(_PlayerController))
+	{
+		AnalogAlpha = 0;
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
+	}
+
 }
 
 //------------------

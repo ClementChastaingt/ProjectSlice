@@ -19,11 +19,6 @@ class PROJECTSLICE_API AProjectSlicePlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	
-	FVector2D GetMoveInput() const{return MoveInput;}
-
-	void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
-
 	UInputMappingContext* GetDefaultMappingContext() const{return DefaultMappingContext;}
 
 	UInputAction* GetJumpAction() const{return JumpAction;}
@@ -34,17 +29,6 @@ public:
 
 	UInputAction* GetLookAction() const{return LookAction;}
 
-	bool CanMove() const{return bCanMove;}
-
-	bool CanLook() const{return bCanLook;}
-
-	void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
-
-	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
-
-	UFUNCTION()
-	FVector GetWorldInputDirection() const;
-
 protected:
 	/** Input Mapping Context to be used for player input */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
@@ -53,7 +37,7 @@ protected:
 	/** DefaultMappingContext use in begin play */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
-
+		
 	/** Input Actions **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* JumpAction;
@@ -67,6 +51,29 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	// Begin Actor interface
+	virtual void BeginPlay() override;
+
+#pragma region Input
+	//------------------
+
+public:
+	FVector2D GetMoveInput() const{return MoveInput;}
+	
+	void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
+	
+	UFUNCTION()
+	FVector GetWorldInputDirection() const;
+
+	bool CanMove() const{return bCanMove;}
+
+	bool CanLook() const{return bCanLook;}
+
+	void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
+
+	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input)
 	FVector2D MoveInput = FVector2D::ZeroVector;
 
@@ -77,9 +84,10 @@ protected:
 	/** Bool for force block Look  */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	bool bCanLook = true;
+private:
+	//------------------
 
-	// Begin Actor interface
-	virtual void BeginPlay() override;
+#pragma endregion Input
 
 
 #pragma region Misc

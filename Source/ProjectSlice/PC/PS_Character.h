@@ -130,8 +130,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Input")
 	float DefaultMinAnalogSpeed = 0.0f;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Input")
+	float AnalogAlpha = 0.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
 	UCurveFloat* MoveSpeedCurve = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Analog Movement")
+	float AnalogMovementDuration = 0.5f;
 	
 //------------------
 #pragma endregion Move
