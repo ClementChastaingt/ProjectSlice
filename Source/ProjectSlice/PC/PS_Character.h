@@ -6,7 +6,7 @@
 #include "PS_PlayerController.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "..\Components\PC\PS_WeaponComponent.h"
+#include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "PS_Character.generated.h"

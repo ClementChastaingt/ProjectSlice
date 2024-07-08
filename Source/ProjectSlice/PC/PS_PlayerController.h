@@ -7,6 +7,7 @@
 #include "GameFramework/PlayerController.h"
 #include "PS_PlayerController.generated.h"
 
+class AProjectSliceCharacter;
 class UInputMappingContext;
 
 /**
@@ -42,7 +43,7 @@ public:
 	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
 
 	UFUNCTION()
-	void GetWorldInputDirection();
+	FVector GetWorldInputDirection() const;
 
 protected:
 	/** Input Mapping Context to be used for player input */
@@ -79,4 +80,21 @@ protected:
 
 	// Begin Actor interface
 	virtual void BeginPlay() override;
+
+
+#pragma region Misc
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Status")
+	AProjectSliceCharacter* CurrentPossessingPawn = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebugMode = false;
+private:
+	//------------------
+
+#pragma endregion Misc
 };

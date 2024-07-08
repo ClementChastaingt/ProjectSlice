@@ -3,6 +3,8 @@
 
 #include "PS_PlayerController.h"
 #include "EnhancedInputSubsystems.h"
+#include "PS_Character.h"
+#include "Kismet/GameplayStatics.h"
 
 void AProjectSlicePlayerController::BeginPlay()
 {
@@ -16,13 +18,17 @@ void AProjectSlicePlayerController::BeginPlay()
 
 		UE_LOG(LogTemp, Warning, TEXT("BeginPlay"));
 	}
+
+	// Setup player ref
+	if(!IsValid(GetWorld())) return;
+	CurrentPossessingPawn = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
 
 
-
-void AProjectSlicePlayerController::GetWorldInputDirection()
+FVector AProjectSlicePlayerController::GetWorldInputDirection() const
 {
-	// FVector worldInputDirection = _PlayerCharacter->GetActorRightVector() * moveInput.Y +_PlayerCharacter->GetActorForwardVector() * moveInput.X;
-	// worldInputDirection.Z = 0;
-	// worldInputDirection.Normalize();
+	FVector worldInputDirection = CurrentPossessingPawn->GetFirstPersonCameraComponent()->GetRightVector() * GetMoveInput().X + CurrentPossessingPawn->GetFirstPersonCameraComponent()->GetForwardVector() * GetMoveInput().Y;
+	worldInputDirection.Z = 0;
+	worldInputDirection.Normalize();
+	return worldInputDirection;
 }

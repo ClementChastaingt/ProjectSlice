@@ -254,16 +254,19 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle)
 {
-	
 	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
 	DefaultCameraRot = StartCameraRot + UKismetMathLibrary::NegateRotator(targetAngle);
 	TargetCameraRot = StartCameraRot + targetAngle;
 
-	UE_LOG(LogTemp, Error, TEXT("StartCameraRot %s, DefaultCameraRot %s, TargetCameraRot %s"),*StartCameraRot.ToString(),*DefaultCameraRot.ToString(),*TargetCameraRot.ToString());
+	if(bDebugCameraTilt)
+		UE_LOG(LogTemp, Warning, TEXT("%S bIsReset %i, StartCameraRot %s, DefaultCameraRot %s, TargetCameraRot %s"),__FUNCTION__, bIsReset, *StartCameraRot.ToString(),*DefaultCameraRot.ToString(),*TargetCameraRot.ToString());
 	
+	//TODO :: Only good for WallRun reset
 	bIsResetingCameraTilt = bIsReset;
 	if(bIsResetingCameraTilt)
 	{
+		DefaultCameraRot.Pitch = 0;
+		DefaultCameraRot.Roll = 0;
 		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();
 		SetComponentTickEnabled(true);
 	}
@@ -391,18 +394,15 @@ void UPS_ParkourComponent::OnStartSlide()
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
 	
 	bIsSliding = true;
-	SlideSeconds = GetWorld()->GetTimeSeconds();
+	StartSlideTimestamp = GetWorld()->GetTimeSeconds();
+	SlideSeconds = StartSlideTimestamp;
 	
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(false, SlideCameraAngle);
+	// SetupCameraTilt(false, SlideCameraAngle);
 
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(false);
-	// FVector worldInputDirection = _PlayerCharacter->GetActorRightVector() * _PlayerController->GetMoveInput().Y +_PlayerCharacter->GetActorForwardVector() * _PlayerController->GetMoveInput().X;
-	// worldInputDirection.Z = _PlayerCharacter->GetCharacterMovement()->Velocity.Z;
-	// _PlayerCharacter->GetCharacterMovement()->Velocity = worldInputDirection * _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed;
-	//TODO :: Check movement direction
-	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetActorForwardVector() * (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed + SlideEnterSpeedBuff);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerController->GetWorldInputDirection() * (_PlayerCharacter->GetCharacterMovement()->Velocity.Size() + SlideEnterSpeedBuff);
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
@@ -419,7 +419,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	SlideSeconds = 0;
 	
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(true, SlideCameraAngle);
+	// SetupCameraTilt(true, SlideCameraAngle);
 	
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetCanMove(true);
@@ -436,12 +436,12 @@ void UPS_ParkourComponent::SlideTick()
 	if(!IsValid(_PlayerCharacter)) return;
 	
 	if(!bIsSliding) return;
-	
+
 	SlideSeconds = SlideSeconds + CustomTickRate;
 	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
 
 	//-----Camera_Tilt-----
-	CameraTilt(SlideSeconds,StartStoopTimestamp);
+	// CameraTilt(SlideSeconds,StartSlideTimestamp);
 
 
 	//-----Velocity-----

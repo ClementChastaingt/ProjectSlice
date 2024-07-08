@@ -252,6 +252,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
 	FTimerHandle SlideTimerHandle;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
+	float StartSlideTimestamp = TNumericLimits<float>().Lowest();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
 	float SlideSeconds = TNumericLimits<float>().Lowest();
 	

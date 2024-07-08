@@ -208,15 +208,17 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	if (IsValid(_PlayerController) && _PlayerController->CanMove())
-	{	
-		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
+	{
+		UE_LOG(LogTemp, Error, TEXT("InputValue %s"), *Value.Get<FVector2D>().ToString());
+		
+		//Add movement
+		AddMovementInput(GetActorForwardVector(), Value.Get<FVector2D>().Y);
+		AddMovementInput(GetActorRightVector(), Value.Get<FVector2D>().X, 0.5);
 
-		// add movement
-		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
-		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
+		_PlayerController->SetMoveInput(Value.Get<FVector2D>());
 	}
 	else
-		_PlayerController->SetMoveInput(FVector2d::ZeroVector);
+		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
 	
 }
 
