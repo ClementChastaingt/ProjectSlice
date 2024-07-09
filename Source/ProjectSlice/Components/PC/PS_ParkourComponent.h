@@ -202,6 +202,9 @@ public:
 	void OnCrouch();
 protected:
 
+	//Check if can Stand
+	bool CanStand() const;
+
 	//Crouch Tick func
 	void Stooping();
 	
