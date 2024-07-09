@@ -211,38 +211,28 @@ void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHal
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
-	if (IsValid(_PlayerController) && _PlayerController->CanMove())
+	//0.2 is the Deadzone min threshold for Gamepad
+	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{
-		UE_LOG(LogTemp, Error, TEXT("InputValue %s"), *Value.Get<FVector2D>().ToString());
-
-		AnalogAlpha = FMath::Clamp(AnalogAlpha + (GetWorld()->GetDeltaSeconds() / AnalogMovementDuration),0,1);		
-		float curveAlpha = AnalogAlpha;
-		if(IsValid(MoveSpeedCurve))
-			curveAlpha = MoveSpeedCurve->GetFloatValue(AnalogAlpha);
+		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, InputSmoothingWeight);
+		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, InputSmoothingWeight);
+		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
-		_PlayerController->SetMoveInput(FMath::Lerp(_PlayerController->GetMoveInput(), Value.Get<FVector2D>(), curveAlpha));
-			
 		//Add movement
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
+		
 	}
 	else
-	{
-		AnalogAlpha = 0;
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-	}
-
 	
 }
 
 void AProjectSliceCharacter::StopMoving()
 {
 	if(IsValid(_PlayerController))
-	{
-		AnalogAlpha = 0;
+	
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-	}
 
 }
 

@@ -124,20 +124,17 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Input")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	float DefaultMaxWalkSpeed = 0.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Input")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	float DefaultMinAnalogSpeed = 0.0f;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Input")
-	float AnalogAlpha = 0.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
 	UCurveFloat* MoveSpeedCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Analog Movement")
-	float AnalogMovementDuration = 0.5f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
+	double InputSmoothingWeight = 0.05f;
 	
 //------------------
 #pragma endregion Move
