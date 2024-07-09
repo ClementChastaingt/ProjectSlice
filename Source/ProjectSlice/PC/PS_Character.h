@@ -134,7 +134,7 @@ protected:
 	UCurveFloat* MoveSpeedCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
-	double InputSmoothingWeight = 0.04f;
+	double InputSmoothingWeight = 0.06f;
 	
 //------------------
 #pragma endregion Move

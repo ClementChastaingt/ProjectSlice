@@ -216,6 +216,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	{
 		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, InputSmoothingWeight);
 		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, InputSmoothingWeight);
+
 		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
 		//Add movement
