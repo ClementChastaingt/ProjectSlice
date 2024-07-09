@@ -271,7 +271,7 @@ protected:
 	float SlideForceMultiplicator = 1500000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Enter speed Buff"))
-	float SlideEnterSpeedBuff = 500.0f;
+	float SlideEnterSpeedBuff = 300.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Speed"))
 	float SlideMaxSpeed = 2000.0f;

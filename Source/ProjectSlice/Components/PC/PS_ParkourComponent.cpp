@@ -316,7 +316,7 @@ void UPS_ParkourComponent::OnCrouch()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCapsuleComponent()) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 
-	if(_PlayerCharacter->GetCharacterMovement()->MovementMode != MOVE_Walking) return;
+	if(_PlayerCharacter->GetCharacterMovement()->MovementMode != MOVE_Walking && !bIsCrouched) return;
 
 	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 
@@ -356,18 +356,14 @@ bool UPS_ParkourComponent::CanStand() const
 	if(!IsValid(GetWorld())) return false;
 
 	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
-	const float feet = (_PlayerCharacter->GetActorLocation().Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + _PlayerCharacter->GetCharacterMovement()->CurrentFloor.FloorDist;
-	DrawDebugPoint(GetWorld(), FVector(_PlayerCharacter->GetActorLocation().X, _PlayerCharacter->GetActorLocation().Y,feet), 20.f, FColor::Orange, true);
-
-	//TODO :: décalage en height de 1/4 de capsule
+	
 	FVector start = _PlayerCharacter->GetActorLocation();
-	start.Z = feet + 30;
 	FVector end = _PlayerCharacter->GetActorLocation();
-	end.Z = feet + DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + 30;
+	end.Z = _PlayerCharacter->GetActorLocation().Z + DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() - 15;
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 	return (!outHit.bBlockingHit && !outHit.bStartPenetrating);
 }
@@ -533,6 +529,8 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 	uint8 previousCustomMode)
 {
     bComeFromAir = prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying;
+
+	if(bComeFromAir && bIsCrouched) OnCrouch();
 }
 
 
