@@ -86,26 +86,57 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-#pragma region Move
+#pragma region Input
 	//------------------
-	
 
 public:
-	//------------------
+	UFUNCTION()
+	bool IsCrouchInputTrigger() const{return _bIsCrouchInputTrigger;}
 	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	bool _bIsCrouchInputTrigger = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
+	double InputMaxSmoothingWeight = 0.5f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
+	double InputMinSmoothingWeight = 0.06f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Coyote")
+	float CoyoteTime = 0.35f;
+private:
+	//------------------
+
+#pragma endregion Input
+
+#pragma region Move
+	//------------------
+
+public:
+
 protected:
 	/** Movement **/
 	virtual void OnMovementModeChanged(EMovementMode previousMovementMode, uint8 previousCustomMode) override;
+	
+	virtual void Landed(const FHitResult& Hit) override;
 	
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 
 	/** Called for Jump input */
+	virtual bool CanJumpInternal_Implementation() const override;
+	
+	/** Called for Jump input */
 	virtual void Jump() override;
 
 	/** Called for stop Jump input */
 	virtual void StopJumping() override;
+
+	void CoyoteTimeStart();
+
+	void CoyoteTimeStop();
 
 	/** Called for Crouch input */
 	void Crouching();
@@ -124,21 +155,21 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	float DefaultMaxWalkSpeed = 0.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	float DefaultMinAnalogSpeed = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
+	FTimerHandle CoyoteTimerHandle;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters")
 	UCurveFloat* MoveSpeedCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Input")
-	double InputSmoothingWeight = 0.06f;
-	
 //------------------
 #pragma endregion Move
-
 
 #pragma region Weapon
 	//------------------

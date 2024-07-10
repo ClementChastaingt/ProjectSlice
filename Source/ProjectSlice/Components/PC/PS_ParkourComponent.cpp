@@ -53,6 +53,11 @@ void UPS_ParkourComponent::BeginPlay()
 		GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
 		GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
 
+		FTimerDelegate canStandTick_TimerDelegate;
+		canStandTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::CanStandTick);
+		GetWorld()->GetTimerManager().SetTimer(CanStandTimerHandle, canStandTick_TimerDelegate, CustomTickRate, true);
+		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
+
 		FTimerDelegate slideTick_TimerDelegate;
 		slideTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::SlideTick);
 		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, slideTick_TimerDelegate, CustomTickRate, true);
@@ -322,6 +327,7 @@ void UPS_ParkourComponent::OnCrouch()
 
 	StartCrouchHeight = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	StartStoopTimestamp = GetWorld()->GetTimeSeconds();
+	bIsStooping = false;
 		
 	//Crouch
 	if(!bIsCrouched && _PlayerCharacter->GetCharacterMovement() && _PlayerCharacter->GetCharacterMovement()->CanEverCrouch() && _PlayerCharacter->GetRootComponent() && !_PlayerCharacter->GetRootComponent()->IsSimulatingPhysics())
@@ -330,10 +336,12 @@ void UPS_ParkourComponent::OnCrouch()
 		if (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == _PlayerCharacter->GetCharacterMovement()->GetCrouchedHalfHeight()) return;
 				
 		//Activate interp
-		bIsCrouched = true;		
+		bIsCrouched = true;
+		bIsStooping = true;
+
+		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouched"));
 	}
 	//Uncrouch
-	//TODO :: Need to test if player have enough place for uncrouch 
 	else if(CanStand())
 	{		
 		// See if collision is already at desired size.
@@ -341,13 +349,12 @@ void UPS_ParkourComponent::OnCrouch()
 
 		//Activate interp
 		bIsCrouched = false;
+		bIsStooping = true;
 		if(bIsSliding) OnStopSlide();
+
+		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
 	}
-	
-	bIsStooping = true;
 	SetComponentTickEnabled(bIsStooping);
-	
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: %s"), bIsCrouched ? TEXT("Crouched") : TEXT("Uncrouched"));
 
 }
 
@@ -365,7 +372,20 @@ bool UPS_ParkourComponent::CanStand() const
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
-	return (!outHit.bBlockingHit && !outHit.bStartPenetrating);
+	const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
+	if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
+		GetWorld()->GetTimerManager().UnPauseTimer(CanStandTimerHandle);
+	else
+		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
+
+	return canStand;
+}
+
+void UPS_ParkourComponent::CanStandTick()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+
+	if(!_PlayerCharacter->IsCrouchInputTrigger()) OnCrouch();
 }
 
 void UPS_ParkourComponent::Stooping()

@@ -119,7 +119,6 @@ void AProjectSliceCharacter::BeginPlay()
 	
 }
 
-
 void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
@@ -154,9 +153,36 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 #pragma region Move
 //------------------
 
+#pragma region CharacterMovementComponent
+//------------------
+
 void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovementMode, uint8 previousCustomMode)
 {
 	Super::OnMovementModeChanged(previousMovementMode, previousCustomMode);
+
+	CoyoteTimeStart();	
+}
+
+void AProjectSliceCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
+}
+
+//------------------
+#pragma endregion CharacterMovementComponent
+
+#pragma region Jump
+//------------------
+
+bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
+{
+	if(!CoyoteTimerHandle.IsValid())
+		return Super::CanJumpInternal_Implementation();
+
+	return (Super::CanJumpInternal_Implementation() || GetWorld()->GetTimerManager().GetTimerRemaining(CoyoteTimerHandle) > 0)
+	&& !GetWorld()->GetTimerManager().IsTimerActive(CoyoteTimerHandle);
 	
 }
 
@@ -191,31 +217,68 @@ void AProjectSliceCharacter::StopJumping()
 	Super::StopJumping();
 }
 
+#pragma region Coyote
+//------------------
+
+
+void AProjectSliceCharacter::CoyoteTimeStart()
+{
+	//Coyote Time
+	if(GetCharacterMovement()->MovementMode == MOVE_Falling)
+	{
+		const float alpha = FMath::Clamp(UKismetMathLibrary::NormalizeToRange(GetVelocity().Length(),0,GetCharacterMovement()->GetMaxSpeed()),0,1);
+		const float coyoteDuration = FMath::Lerp(0.25,1,alpha) * CoyoteTime;
+		
+		FTimerDelegate coyote_TimerDelegate;
+		coyote_TimerDelegate.BindUObject(this, &AProjectSliceCharacter::CoyoteTimeStop);
+		GetWorld()->GetTimerManager().SetTimer(CoyoteTimerHandle, coyote_TimerDelegate, coyoteDuration, false);
+	}
+}
+
+void AProjectSliceCharacter::CoyoteTimeStop()
+{
+	
+}
+
+//------------------
+#pragma endregion Coyote
+
+
+//------------------
+#pragma endregion Jump
+
+#pragma region Crouch
+//------------------
+
+
+
 void AProjectSliceCharacter::Crouching()
 {
 	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
-	
+
+	_bIsCrouchInputTrigger = !_bIsCrouchInputTrigger;
 	GetParkourComponent()->OnCrouch();
 }
 
 
 void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-
 }
 
 void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-
 }
+//------------------
+#pragma endregion Crouch
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{
-		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, InputSmoothingWeight);
-		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, InputSmoothingWeight);
+		const double inputWeight = UKismetMathLibrary::MapRangeClamped(GetVelocity().Length(), 0, GetCharacterMovement()->GetMaxSpeed(),InputMaxSmoothingWeight, InputMinSmoothingWeight);
+		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, inputWeight);
+		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, inputWeight);
 
 		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
@@ -234,7 +297,6 @@ void AProjectSliceCharacter::StopMoving()
 	if(IsValid(_PlayerController))
 	
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-
 }
 
 //------------------

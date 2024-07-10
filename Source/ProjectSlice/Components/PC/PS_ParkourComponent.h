@@ -205,6 +205,9 @@ protected:
 	//Check if can Stand
 	bool CanStand() const;
 
+	UFUNCTION()
+	void CanStandTick();
+
 	//Crouch Tick func
 	void Stooping();
 	
@@ -213,6 +216,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	bool bIsStooping = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
+	FTimerHandle CanStandTimerHandle;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	float StartStoopTimestamp = TNumericLimits<float>().Lowest();
@@ -248,7 +254,6 @@ protected:
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
 
-protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	bool bIsSliding = false;
 
