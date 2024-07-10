@@ -43,7 +43,12 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	GetMesh()->bCastDynamicShadow = false;
 	GetMesh()->CastShadow = false;
 	GetMesh()->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
-	
+
+	//Create WeaponComponent
+	ComponentsManager = CreateDefaultSubobject<UPS_ComponentsManager>(TEXT("ComponentManager"));
+
+	//Create WeaponComponent
+	ProceduralAnimComponent = CreateDefaultSubobject<UPS_ProceduralAnimComponent>(TEXT("ProceduralAnimComponent"));
 	
 	//Create ParkourComponent
 	ParkourComponent = CreateDefaultSubobject<UPS_ParkourComponent>(TEXT("ParkourComponent"));
@@ -57,9 +62,6 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	//Create HookComponent
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
 	HookComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
-
-	//Create WeaponComponent
-	ComponentsManager = CreateDefaultSubobject<UPS_ComponentsManager>(TEXT("ComponentManager"));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);

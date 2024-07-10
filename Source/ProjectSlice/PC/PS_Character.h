@@ -8,6 +8,7 @@
 #include "Logging/LogMacros.h"
 #include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
+#include "ProjectSlice/Components/Common/PS_ProceduralAnimComponent.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "PS_Character.generated.h"
 
@@ -28,6 +29,10 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 	/** ComponentsManager */
 	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
 	UPS_ComponentsManager* ComponentsManager;
+
+	/** ProceduralAnimComponent */
+	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
+	UPS_ProceduralAnimComponent* ProceduralAnimComponent;
 
 	/** ParkourComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
@@ -56,7 +61,11 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	/** Returns ComponentsManager **/
 	UPS_ComponentsManager* GetComponentsManager() const {return ComponentsManager; }
+
+	/** Returns ComponentsManager **/
+	UPS_ProceduralAnimComponent* GetProceduralAnimComponent() const {return ProceduralAnimComponent; }
 
 	/** Returns ParkourComponent **/
 	UFUNCTION(BlueprintCallable)
