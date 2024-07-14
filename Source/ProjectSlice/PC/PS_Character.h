@@ -140,6 +140,8 @@ protected:
 	/** Called for Jump input */
 	virtual void Jump() override;
 
+	virtual void OnJumped_Implementation() override;
+
 	/** Called for stop Jump input */
 	virtual void StopJumping() override;
 

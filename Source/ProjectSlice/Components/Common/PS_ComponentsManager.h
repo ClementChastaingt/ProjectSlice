@@ -16,6 +16,7 @@ enum class ECustomComponentType : uint8
 	WEAPON = 2 UMETA(DisplayName = "Weapon"),
 	HOOK = 3 UMETA(DisplayName = "Hook"),
 	PROC_ANIM = 4 UMETA(DisplayName = "Procedural Anim"),
+	DASH = 4 UMETA(DisplayName = "Dash"),
 };
 
 

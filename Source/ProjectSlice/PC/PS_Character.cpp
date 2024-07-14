@@ -169,6 +169,7 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
+	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
 }
 
@@ -211,7 +212,19 @@ void AProjectSliceCharacter::Jump()
 		}
 		else
 			GetParkourComponent()->JumpOffWallRun();
-	}	
+	}
+}
+
+void AProjectSliceCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+
+	//Clear Coyote time
+	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
+
+	//Dip
+	if(IsValid(GetProceduralAnimComponent()))
+		GetProceduralAnimComponent()->StartDip(5.0f, 1.0f);
 }
 
 void AProjectSliceCharacter::StopJumping()
@@ -275,6 +288,9 @@ void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHal
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
+	if(IsValid(GetProceduralAnimComponent()))
+		GetProceduralAnimComponent()->StartDip();
+	
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{
