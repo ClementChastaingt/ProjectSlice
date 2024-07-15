@@ -168,6 +168,10 @@ void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovemen
 void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
+	
+	//Dip on Landing
+	if(IsValid(GetProceduralAnimComponent()))
+		GetProceduralAnimComponent()->LandingDip();
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);

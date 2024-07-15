@@ -3,6 +3,7 @@
 
 #include "PS_ProceduralAnimComponent.h"
 
+#include "Curves/CurveLinearColor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -16,7 +17,7 @@ UPS_ProceduralAnimComponent::UPS_ProceduralAnimComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
+	
 	// ...
 }
 
@@ -34,6 +35,7 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
+	
 	
 }
 
@@ -65,8 +67,10 @@ void UPS_ProceduralAnimComponent::LandingDip()
 {
 	if(!IsValid(_PlayerCharacter)) return;
 
-	// UKismetMathLibrary::Vector4_Size(FVector(0,0,_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Z))
-
+	const float lastUpdateVel = UKismetMathLibrary::Vector4_Size(FVector(0,0,_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Z));
+	const float dipStrenght = FMath::Clamp(UKismetMathLibrary::NormalizeToRange(lastUpdateVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->JumpZVelocity),0.0f,1.0f);
+	
+	StartDip(3.0f, dipStrenght);
 }
 
 void UPS_ProceduralAnimComponent::Dip()
@@ -98,6 +102,43 @@ void UPS_ProceduralAnimComponent::Dip()
 	}		
 }
 
+void UPS_ProceduralAnimComponent::Walking()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+
+	//Calculate dip alpha
+	const float alpha = FMath::Clamp((GetWorld()->GetTimeSeconds() / (DipStartTimestamp + DipDuration)) * DipSpeed,0,1.0f);
+
+	//R: LeftRightAlpha, G: UpDown_Alpha, B: Roll_Alpha, A: Footstep 
+	FLinearColor curveWalkingAlpha = FLinearColor(alpha,alpha,alpha,alpha);	
+	if(IsValid(WalkingProcAnimCurve))
+		curveWalkingAlpha = WalkingProcAnimCurve->GetLinearColorValue(alpha);
+
+	//Left/Right && Up/down
+	WalkAnimPos.X = FMath::Lerp(WalkingLeftRightOffest * -1,WalkingLeftRightOffest, curveWalkingAlpha.R);
+	WalkAnimPos.Z = FMath::Lerp(WalkingDownOffest,WalkingUpOffest, curveWalkingAlpha.G);
+
+	//Roll rot
+	WalkAnimRot.Pitch = FMath::Lerp(1,-1, curveWalkingAlpha.B);
+
+	//Find WalkAnim Alpha
+	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
+	WalkAnimAlpha = playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed());
+
+	
+	const float speed = FMath::Lerp(0.0f,1.65f, WalkAnimAlpha);
+	
+}
+
 //------------------
 #pragma endregion Dip
+
+#pragma region Walking
+//------------------
+
+
+
+//------------------
+#pragma endregion Walking
+	
 
