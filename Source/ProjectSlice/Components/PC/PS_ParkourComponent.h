@@ -225,6 +225,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	float StartCrouchHeight = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
+	float CrouchAlpha = TNumericLimits<float>().Lowest();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Crounch", meta=(ToolTip="Smooth crouch curve"))
 	UCurveFloat* CrouchCurve;

@@ -402,6 +402,7 @@ void UPS_ParkourComponent::Stooping()
 		curveAlpha = CrouchCurve->GetFloatValue(alpha);
 
 	const float currentHeight = FMath::Lerp(StartCrouchHeight,targetHeight, curveAlpha);
+	CrouchAlpha = curveAlpha;
 	_PlayerCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(currentHeight, true);
 	
 	if(curveAlpha >= 1)

@@ -65,6 +65,7 @@ public:
 	UPS_ComponentsManager* GetComponentsManager() const {return ComponentsManager; }
 
 	/** Returns ComponentsManager **/
+	UFUNCTION(BlueprintCallable)
 	UPS_ProceduralAnimComponent* GetProceduralAnimComponent() const {return ProceduralAnimComponent; }
 
 	/** Returns ParkourComponent **/
