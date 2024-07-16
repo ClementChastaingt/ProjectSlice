@@ -134,7 +134,6 @@ void UPS_WeaponComponent::Fire()
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 
 	//Try Slice a Mesh
-	
 	//Trace Loc && Rot
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
@@ -142,10 +141,8 @@ void UPS_WeaponComponent::Fire()
 
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
-
-	//TODO :: Config Collision channel
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 1000,
+	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 5000,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
@@ -181,7 +178,8 @@ void UPS_WeaponComponent::Fire()
 
 
 	//Impulse
-	outHalfComponent->AddImpulse(FVector(200, 200, 200));
+	//TODO :: Rework Impulse
+	outHalfComponent->AddImpulse(FVector(500, 500, 500), NAME_None, true);
 	
 	
 	// Try and play the sound if specified

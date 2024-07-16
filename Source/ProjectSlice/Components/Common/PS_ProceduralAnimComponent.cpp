@@ -45,7 +45,7 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	Dip();
+	// Dip();
 
 	
 }
@@ -72,7 +72,7 @@ void UPS_ProceduralAnimComponent::LandingDip()
 	const float lastUpdateVel = UKismetMathLibrary::Vector4_Size(FVector(0,0,_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Z));
 	const float dipStrenght = FMath::Clamp(UKismetMathLibrary::NormalizeToRange(lastUpdateVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->JumpZVelocity),0.0f,1.0f);
 	
-	StartDip(3.0f, dipStrenght);
+	// StartDip(3.0f, dipStrenght);
 }
 
 void UPS_ProceduralAnimComponent::Dip()
@@ -111,7 +111,7 @@ void UPS_ProceduralAnimComponent::Dip()
 #pragma region Walking
 //------------------
 
-void UPS_ProceduralAnimComponent::SetVelocityLagPosition()
+void UPS_ProceduralAnimComponent::GetVelocityLagPosition()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
 		return;
@@ -128,7 +128,7 @@ void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const floa
 {
 	if(!IsValid(_PlayerCharacter)) return;
 	
-	//Left/Right && Up/down 
+	//Left/Right && Up/down
 	WalkAnimPos.X = FMath::Lerp(WalkingLeftRightOffest * -1,WalkingLeftRightOffest, leftRightAlpha);
 	WalkAnimPos.Z = FMath::Lerp(WalkingDownOffest,WalkingUpOffest, upDownAlpha);
 
@@ -140,7 +140,6 @@ void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const floa
 	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
-	SetVelocityLagPosition();
 }
 
 //------------------

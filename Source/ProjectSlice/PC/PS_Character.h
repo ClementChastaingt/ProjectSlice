@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "PS_PlayerController.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Logging/LogMacros.h"
 #include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
@@ -25,6 +26,23 @@ UCLASS(config=Game)
 class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
+	/** FirstPerson RootComponent */
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	USceneComponent* FirstPersonRoot;
+
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	USpringArmComponent* MeshRoot;
+
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	USpringArmComponent* CamRoot;
+
+	/** First person camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent* CameraSkeletalMeshComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UCameraComponent* FirstPersonCameraComponent;
 	
 	/** ComponentsManager */
 	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
@@ -43,12 +61,8 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 	UPS_WeaponComponent* WeaponComponent;
 	
 	/** HookComponent */
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
 	UPS_HookComponent* HookComponent = nullptr;
-
-	/** First person camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FirstPersonCameraComponent;
 	
 public:
 	AProjectSliceCharacter();

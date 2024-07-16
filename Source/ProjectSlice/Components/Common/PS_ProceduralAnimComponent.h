@@ -85,13 +85,13 @@ private:
 
 public:
 	
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void Walking(const float leftRightAlpha, const float upDownAlpha, const float rollAlpha);
 	
 protected:
 
-	UFUNCTION()
-	void SetVelocityLagPosition();
+	UFUNCTION(BlueprintCallable)
+	void GetVelocityLagPosition();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(ToolTip="Walking anim position"))
 	FVector WalkAnimPos = FVector::Zero();

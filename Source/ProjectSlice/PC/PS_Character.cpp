@@ -29,20 +29,43 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
+
+	// Create a RootCompônents
+	FirstPersonRoot = CreateDefaultSubobject<USceneComponent>(TEXT("FP_Root"));
+	FirstPersonRoot->SetupAttachment(GetCapsuleComponent());
+
+	MeshRoot = CreateDefaultSubobject<USpringArmComponent>(TEXT("Mesh_Root"));
+	MeshRoot->SetupAttachment(FirstPersonRoot);
+	MeshRoot->TargetArmLength = 0.0f;
+	MeshRoot->bUsePawnControlRotation = true;
+	MeshRoot->bDoCollisionTest = false;
+	MeshRoot->bInheritPitch = true;
+	MeshRoot->bInheritYaw = true;
+	MeshRoot->bInheritRoll = false;
+
+	CamRoot = CreateDefaultSubobject<USpringArmComponent>(TEXT("Cam_Root"));
+	CamRoot->SetupAttachment(FirstPersonRoot);
+	CamRoot->TargetArmLength = 0.0f;
+	CamRoot->bUsePawnControlRotation = true;
+	CamRoot->bDoCollisionTest = false;
+	CamRoot->bInheritPitch = true;
+	CamRoot->bInheritYaw = true;
+	CamRoot->bInheritRoll = false;
 	
-	// Create a CameraComponent	
+	// Create a CameraComponent
+	CameraSkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Cam_Skel"));
+	CameraSkeletalMeshComponent->SetupAttachment(CamRoot);
+	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
-	FirstPersonCameraComponent->SetRelativeLocation(FVector(-10.f, 0.f, 60.f)); // Position the camera
+	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Camera"));
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
 	//Setup Mesh
 	//Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
 	GetMesh()->SetOnlyOwnerSee(true);
-	GetMesh()->SetupAttachment(FirstPersonCameraComponent);
+	GetMesh()->SetupAttachment(MeshRoot);
 	GetMesh()->bCastDynamicShadow = false;
 	GetMesh()->CastShadow = false;
-	GetMesh()->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
 	//Create WeaponComponent
 	ComponentsManager = CreateDefaultSubobject<UPS_ComponentsManager>(TEXT("ComponentManager"));
@@ -57,11 +80,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	//Create WeaponComponent
 	WeaponComponent = CreateDefaultSubobject<UPS_WeaponComponent>(TEXT("WeaponComponent"));
 	WeaponComponent->SetupAttachment(GetMesh());
-	WeaponComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 
 	//Create HookComponent
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->SetRelativeLocation(FVector(30.f, 0.f, 150.f));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);
@@ -170,8 +191,8 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 	Super::Landed(Hit);
 	
 	//Dip on Landing
-	if(IsValid(GetProceduralAnimComponent()))
-		GetProceduralAnimComponent()->LandingDip();
+	// if(IsValid(GetProceduralAnimComponent()))
+	// 	GetProceduralAnimComponent()->LandingDip();
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
@@ -226,9 +247,9 @@ void AProjectSliceCharacter::OnJumped_Implementation()
 	//Clear Coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
 
-	//Dip
-	if(IsValid(GetProceduralAnimComponent()))
-		GetProceduralAnimComponent()->StartDip(5.0f, 1.0f);
+	// //Dip
+	// if(IsValid(GetProceduralAnimComponent()))
+	// 	GetProceduralAnimComponent()->StartDip(5.0f, 1.0f);
 }
 
 void AProjectSliceCharacter::StopJumping()
