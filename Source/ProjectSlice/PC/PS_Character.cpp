@@ -292,8 +292,6 @@ void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHal
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
-	if(IsValid(GetProceduralAnimComponent()))
-		GetProceduralAnimComponent()->StartDip();
 	
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)

@@ -84,13 +84,14 @@ private:
 	//------------------
 
 public:
+	
 	UFUNCTION()
-	void SetVelocityLagPosition();
+	void Walking(const float leftRightAlpha, const float upDownAlpha, const float rollAlpha);
 	
 protected:
-	
+
 	UFUNCTION()
-	void Walking();
+	void SetVelocityLagPosition();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(ToolTip="Walking anim position"))
 	FVector WalkAnimPos = FVector::Zero();
@@ -104,6 +105,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(ToolTip="Location lag position"))
 	FVector LocationLagPosition = FVector::ZeroVector;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Current Walking speed"))
+	float WalkingSpeed = 0.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMin = "0", ClampMin="0", ToolTip="Walking Left/Right Offest"))
 	float WalkingLeftRightOffest = 0.4f;
 
@@ -112,11 +116,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Walking Down Offest"))
 	float WalkingDownOffest = -0.35f;
-
-	//R: LeftRightAlpha, G: UpDown_Alpha, B: Roll_Alpha, A: Footstep 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(ToolTip="Walking animation Timeline"))
-	UCurveLinearColor* WalkingProcAnimCurve;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Walking Down Offest"))
 	float WalkingMaxSpeed = 1.65f;
 private:

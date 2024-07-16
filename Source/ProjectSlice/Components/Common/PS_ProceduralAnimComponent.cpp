@@ -46,6 +46,8 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	Dip();
+
+	
 }
 
 #pragma region Dip
@@ -103,6 +105,12 @@ void UPS_ProceduralAnimComponent::Dip()
 	}		
 }
 
+//------------------
+#pragma endregion Dip
+
+#pragma region Walking
+//------------------
+
 void UPS_ProceduralAnimComponent::SetVelocityLagPosition()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
@@ -116,42 +124,24 @@ void UPS_ProceduralAnimComponent::SetVelocityLagPosition()
 	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), GetWorld()->GetDeltaSeconds(), (1 / GetWorld()->GetDeltaSeconds()) / 6.0f);
 }
 
-void UPS_ProceduralAnimComponent::Walking()
+void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const float upDownAlpha,  const float rollAlpha)
 {
 	if(!IsValid(_PlayerCharacter)) return;
-
-	//Calculate dip alpha
-	const float alpha = FMath::Clamp((GetWorld()->GetTimeSeconds() / (DipStartTimestamp + DipDuration)) * DipSpeed,0,1.0f);
-
 	
-	//R: LeftRightAlpha, G: UpDown_Alpha, B: Roll_Alpha, A: Footstep 
-	FLinearColor curveWalkingAlpha = FLinearColor(alpha,alpha,alpha,alpha);	
-	if(IsValid(WalkingProcAnimCurve))
-		curveWalkingAlpha = WalkingProcAnimCurve->GetLinearColorValue(alpha);
-
 	//Left/Right && Up/down 
-	WalkAnimPos.X = FMath::Lerp(WalkingLeftRightOffest * -1,WalkingLeftRightOffest, curveWalkingAlpha.R);
-	WalkAnimPos.Z = FMath::Lerp(WalkingDownOffest,WalkingUpOffest, curveWalkingAlpha.G);
+	WalkAnimPos.X = FMath::Lerp(WalkingLeftRightOffest * -1,WalkingLeftRightOffest, leftRightAlpha);
+	WalkAnimPos.Z = FMath::Lerp(WalkingDownOffest,WalkingUpOffest, upDownAlpha);
 
 	//Roll rot
-	WalkAnimRot.Pitch = FMath::Lerp(1,-1, curveWalkingAlpha.B);
+	WalkAnimRot.Pitch = FMath::Lerp(1,-1, rollAlpha);
 
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
-	const float speed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
+	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
+	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
-	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed())) * speed;
-
 	SetVelocityLagPosition();
 }
-
-//------------------
-#pragma endregion Dip
-
-#pragma region Walking
-//------------------
-
-
 
 //------------------
 #pragma endregion Walking
