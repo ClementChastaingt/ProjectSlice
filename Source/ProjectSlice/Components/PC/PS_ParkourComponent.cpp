@@ -416,6 +416,7 @@ void UPS_ParkourComponent::Stooping()
 			OnStartSlide();
 		
 		bIsStooping = false;
+		CrouchAlpha = 0.0f;
 	}
 }
 

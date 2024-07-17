@@ -80,28 +80,29 @@ void UPS_ProceduralAnimComponent::Dip()
 	if(!bIsDipping || !IsValid(_PlayerCharacter)) return;
 
 	//Calculate dip alpha
-	const float alpha = FMath::Clamp((GetWorld()->GetTimeSeconds() / (DipStartTimestamp + DipDuration)) * DipSpeed,0,1.0f);
+	const float alpha = FMath::Clamp( UKismetMathLibrary::SafeDivide(GetWorld()->GetTimeSeconds() , (DipStartTimestamp + DipDuration)) * DipSpeed,0,1.0f);
 	
 	float curveForceAlpha = alpha;
 	if(IsValid(DipCurve))
 		curveForceAlpha = DipCurve->GetFloatValue(alpha);
 
-	const float dipAlpha = curveForceAlpha * DipStrenght;
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f"), __FUNCTION__, alpha);
+	DipAlpha = curveForceAlpha * DipStrenght;
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f"), __FUNCTION__, DipAlpha);
 
 	//Move player loc
 	//TODO :: Surly need to use other comp
 	USceneComponent* playerRoot = _PlayerCharacter->GetFirstPersonRoot();
 
 	FVector newCamLoc = playerRoot->GetRelativeLocation();
-	newCamLoc.Z = FMath::Lerp(0,-10, dipAlpha);
+	newCamLoc.Z = FMath::Lerp(0,-10, DipAlpha);
 	playerRoot->SetRelativeLocation(newCamLoc);
 
 	//Stop dip
-	if(dipAlpha >= 1.0f)
+	if(alpha >= 1.0f)
 	{
 		bIsDipping = false;
-		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: stop dip"), __FUNCTION__);
+		DipAlpha = 0.0f;
+		if(bDebug) UE_LOG(LogTemp, Error, TEXT("%S :: stop dip"), __FUNCTION__);
 	}		
 }
 
@@ -138,7 +139,6 @@ void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const floa
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
 	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
-	UE_LOG(LogTemp, Error, TEXT("WalkAnimAlpha %f, playerMovementComp->GetMaxSpeed() %f"), WalkAnimAlpha, playerMovementComp->GetMaxSpeed());
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
 }
