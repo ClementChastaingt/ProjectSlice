@@ -102,15 +102,6 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
 	
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
-
-	//Analogic movement
-	const float alpha = _PlayerController->GetMoveInput().Size();
-	float curveAlpha = alpha;
-	if(IsValid(MoveSpeedCurve))
-		curveAlpha = MoveSpeedCurve->GetFloatValue(alpha);
-
-	const float inputMoveSpeed = FMath::Lerp(DefaultMinAnalogSpeed, DefaultMaxWalkSpeed, curveAlpha);
-	GetCharacterMovement()->MaxWalkSpeed = inputMoveSpeed;
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -191,8 +182,8 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 	Super::Landed(Hit);
 	
 	//Dip on Landing
-	// if(IsValid(GetProceduralAnimComponent()))
-	// 	GetProceduralAnimComponent()->LandingDip();
+	 if(IsValid(GetProceduralAnimComponent()))
+	 	GetProceduralAnimComponent()->LandingDip();
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
@@ -247,9 +238,9 @@ void AProjectSliceCharacter::OnJumped_Implementation()
 	//Clear Coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
 
-	// //Dip
-	// if(IsValid(GetProceduralAnimComponent()))
-	// 	GetProceduralAnimComponent()->StartDip(5.0f, 1.0f);
+	//Dip
+	if(IsValid(GetProceduralAnimComponent()))
+		GetProceduralAnimComponent()->StartDip(5.0f, 1.0f);
 }
 
 void AProjectSliceCharacter::StopJumping()

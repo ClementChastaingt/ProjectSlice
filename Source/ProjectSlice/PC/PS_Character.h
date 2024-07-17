@@ -73,6 +73,18 @@ public:
 	AProjectSlicePlayerController* GetPlayerController() const{return _PlayerController;}
 	
 	/** Returns FirstPersonCameraComponent subobject **/
+	USceneComponent* GetFirstPersonRoot() const { return FirstPersonRoot; }
+	
+	/** Returns FirstPersonCameraComponent subobject **/
+	USpringArmComponent* GetMeshRoot() const { return MeshRoot; }
+
+	/** Returns FirstPersonCameraComponent subobject **/
+	USpringArmComponent* GetCamRoot() const { return CamRoot; }
+
+	/** Returns FirstPersonCameraComponent subobject **/
+	USkeletalMeshComponent* GetCameraSkeletalMeshComponent() const { return CameraSkeletalMeshComponent; }
+	
+	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
 	/** Returns ComponentsManager **/
@@ -190,9 +202,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
 	FTimerHandle CoyoteTimerHandle;
 	
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters")
-	UCurveFloat* MoveSpeedCurve = nullptr;
 
 //------------------
 #pragma endregion Move
