@@ -281,8 +281,6 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 #pragma region Crouch
 //------------------
 
-
-
 void AProjectSliceCharacter::Crouching()
 {
 	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;

@@ -24,11 +24,3 @@ void AProjectSlicePlayerController::BeginPlay()
 	CurrentPossessingPawn = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
 
-
-FVector AProjectSlicePlayerController::GetWorldInputDirection() const
-{
-	FVector worldInputDirection = CurrentPossessingPawn->GetFirstPersonCameraComponent()->GetRightVector() * GetMoveInput().X + CurrentPossessingPawn->GetFirstPersonCameraComponent()->GetForwardVector() * GetMoveInput().Y;
-	worldInputDirection.Z = 0;
-	worldInputDirection.Normalize();
-	return worldInputDirection;
-}

@@ -56,6 +56,8 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 void UPS_ProceduralAnimComponent::StartDip(const float speed, const float strenght)
 {
 	if(!IsValid(GetWorld()) || bIsDipping) return;
+
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
 	DipStrenght = strenght;
 	DipSpeed = speed;
@@ -80,17 +82,16 @@ void UPS_ProceduralAnimComponent::Dip()
 	if(!bIsDipping || !IsValid(_PlayerCharacter)) return;
 
 	//Calculate dip alpha
-	const float alpha = FMath::Clamp( UKismetMathLibrary::SafeDivide(GetWorld()->GetTimeSeconds() , (DipStartTimestamp + DipDuration)) * DipSpeed,0,1.0f);
+	const float alpha = FMath::Clamp(((GetWorld()->GetTimeSeconds() - DipStartTimestamp) / DipDuration) * DipSpeed, 0, 1.0f);
 	
 	float curveForceAlpha = alpha;
 	if(IsValid(DipCurve))
 		curveForceAlpha = DipCurve->GetFloatValue(alpha);
 
 	DipAlpha = curveForceAlpha * DipStrenght;
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f"), __FUNCTION__, DipAlpha);
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f, alpha %f"), __FUNCTION__, DipAlpha, alpha);
 
 	//Move player loc
-	//TODO :: Surly need to use other comp
 	USceneComponent* playerRoot = _PlayerCharacter->GetFirstPersonRoot();
 
 	FVector newCamLoc = playerRoot->GetRelativeLocation();
@@ -102,7 +103,7 @@ void UPS_ProceduralAnimComponent::Dip()
 	{
 		bIsDipping = false;
 		DipAlpha = 0.0f;
-		if(bDebug) UE_LOG(LogTemp, Error, TEXT("%S :: stop dip"), __FUNCTION__);
+		if(bDebug) UE_LOG(LogTemp, Log, TEXT("UPS_ProceduralAnimComponent :: Stop Dip"));
 	}		
 }
 
@@ -138,7 +139,7 @@ void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const floa
 
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
-	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
+	WalkAnimAlpha = (playerMovementComp->MovementMode == MOVE_Falling || playerMovementComp->IsCrouching() ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
 }

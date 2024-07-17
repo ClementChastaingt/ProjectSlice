@@ -75,6 +75,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dip", meta=(ToolTip="Dip proc animation Curve"))
 	UCurveFloat* DipCurve;
+
 private:
 	//------------------
 

@@ -139,8 +139,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
 	double InputMinSmoothingWeight = 0.06f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Coyote")
-	float CoyoteTime = 0.35f;
 private:
 	//------------------
 
@@ -150,6 +148,9 @@ private:
 	//------------------
 
 public:
+	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return DefaultMaxWalkSpeed;}
+
+	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
 
 protected:
 	/** Movement **/
@@ -201,9 +202,22 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
 	FTimerHandle CoyoteTimerHandle;
+
 	
 
-//------------------
+
+#pragma region Jump
+	//------------------
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Jump|Coyote")
+	float CoyoteTime = 0.35f;
+
+
+#pragma endregion Jump
+
+
+	//------------------
 #pragma endregion Move
 
 #pragma region Weapon

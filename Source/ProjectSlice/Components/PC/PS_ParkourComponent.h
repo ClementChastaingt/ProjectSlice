@@ -268,6 +268,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
 	float SlideSeconds = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
+	FVector SlideDirection = FVector::ZeroVector;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Braking Deceleration"))
 	float DefaultBrakingDeceleration = 2048,f;
@@ -291,7 +294,7 @@ protected:
 	float TimeToBrakingDeceleration = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(ToolTip="Braking Deceleration Curve"))
-	UCurveFloat* BrakingDecelerationCurve;
+	UCurveFloat* SlideCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Camera", meta=(ToolTip="Angle of the camera when the player is sliding"))
 	FRotator SlideCameraAngle = FRotator(0,355,0);

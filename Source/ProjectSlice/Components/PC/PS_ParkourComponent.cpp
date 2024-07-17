@@ -441,8 +441,9 @@ void UPS_ParkourComponent::OnStartSlide()
 	// SetupCameraTilt(false, SlideCameraAngle);
 
 	//--------Configure Movement Behaviour-------
-	_PlayerController->SetCanMove(false);
-	_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerController->GetWorldInputDirection() * (_PlayerCharacter->GetCharacterMovement()->Velocity.Size() + SlideEnterSpeedBuff);
+	_PlayerController->SetIgnoreMoveInput(true);
+	//_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * (_PlayerCharacter->GetCharacterMovement()->Velocity.Size() + SlideEnterSpeedBuff);
+	SlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * ((_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity() * FVector(1,1,0)).Length()); 
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
@@ -462,7 +463,9 @@ void UPS_ParkourComponent::OnStopSlide()
 	// SetupCameraTilt(true, SlideCameraAngle);
 	
 	//--------Configure Movement Behaviour-------
-	_PlayerController->SetCanMove(true);
+	
+	_PlayerController->SetIgnoreMoveInput(false);
+	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed();
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 
@@ -487,13 +490,14 @@ void UPS_ParkourComponent::SlideTick()
 	//-----Velocity-----
 	const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, StartWallRunTimestamp + TimeToBrakingDeceleration  , 0,1);
 	float curveAlpha = alpha;
-	if(IsValid(CrouchCurve))
-		curveAlpha = CrouchCurve->GetFloatValue(alpha);
+	if(IsValid(SlideCurve))
+		curveAlpha = SlideCurve->GetFloatValue(alpha);
 	
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
+
+	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = FMath::Lerp(_PlayerCharacter->GetDefaultMaxWalkSpeed() * 0.65, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 5.0f, curveAlpha);
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveAlpha);
-	
-	if(bDebugSlide) DrawDebugLine(GetWorld(), _PlayerCharacter->GetActorLocation(),  _PlayerCharacter->GetActorLocation() + CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator, FColor::Magenta, false, 2, 10, 3);
+	_PlayerCharacter->AddMovementInput(SlideDirection, curveAlpha ,true);
 	
 	//Clamp Velocity
 	if(_PlayerCharacter->GetVelocity().Length() > SlideMaxSpeed)
