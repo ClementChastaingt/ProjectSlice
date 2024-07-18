@@ -89,7 +89,7 @@ void UPS_ProceduralAnimComponent::Dip()
 		curveForceAlpha = DipCurve->GetFloatValue(alpha);
 
 	DipAlpha = curveForceAlpha * DipStrenght;
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f, alpha %f"), __FUNCTION__, DipAlpha, alpha);
+	if(bDebugDip) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f, alpha %f"), __FUNCTION__, DipAlpha, alpha);
 
 	//Move player loc
 	USceneComponent* playerRoot = _PlayerCharacter->GetFirstPersonRoot();

@@ -149,8 +149,11 @@ private:
 
 public:
 	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return DefaultMaxWalkSpeed;}
-
+	
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
+
+	/** Called for Crouch input */
+	void Crouching();
 
 protected:
 	/** Movement **/
@@ -176,9 +179,6 @@ protected:
 	void CoyoteTimeStart();
 
 	void CoyoteTimeStop();
-
-	/** Called for Crouch input */
-	void Crouching();
 
 	//Crouch functions override
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

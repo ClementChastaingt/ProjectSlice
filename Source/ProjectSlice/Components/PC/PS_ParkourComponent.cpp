@@ -53,15 +53,15 @@ void UPS_ParkourComponent::BeginPlay()
 		GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
 		GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
 
-		FTimerDelegate canStandTick_TimerDelegate;
-		canStandTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::CanStandTick);
-		GetWorld()->GetTimerManager().SetTimer(CanStandTimerHandle, canStandTick_TimerDelegate, CustomTickRate, true);
-		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
-
 		FTimerDelegate slideTick_TimerDelegate;
 		slideTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::SlideTick);
 		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, slideTick_TimerDelegate, CustomTickRate, true);
 		GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
+
+		FTimerDelegate canStandTick_TimerDelegate;
+		canStandTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::CanStandTick);
+		GetWorld()->GetTimerManager().SetTimer(CanStandTimerHandle, canStandTick_TimerDelegate, CanStandTickRate, true);
+		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
 	}
 }
 
@@ -366,7 +366,7 @@ bool UPS_ParkourComponent::CanStand() const
 	
 	FVector start = _PlayerCharacter->GetActorLocation();
 	FVector end = _PlayerCharacter->GetActorLocation();
-	end.Z = _PlayerCharacter->GetActorLocation().Z + DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() - 15;
+	end.Z = _PlayerCharacter->GetActorLocation().Z + DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
@@ -442,7 +442,6 @@ void UPS_ParkourComponent::OnStartSlide()
 
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetIgnoreMoveInput(true);
-	//_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * (_PlayerCharacter->GetCharacterMovement()->Velocity.Size() + SlideEnterSpeedBuff);
 	SlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * ((_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity() * FVector(1,1,0)).Length()); 
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
@@ -454,7 +453,7 @@ void UPS_ParkourComponent::OnStopSlide()
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
 
-	if(!IsValid(GetWorld())) return;
+	if(!IsValid(GetWorld()) || !IsValid(_PlayerCharacter)) return;
 	
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	SlideSeconds = 0;
@@ -470,7 +469,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
 
 	bIsSliding = false;
-	if(bIsCrouched) OnCrouch();
+	if(bIsCrouched) _PlayerCharacter->Crouching();
 	
 }
 
@@ -488,24 +487,30 @@ void UPS_ParkourComponent::SlideTick()
 
 
 	//-----Velocity-----
-	const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartWallRunTimestamp, StartWallRunTimestamp + TimeToBrakingDeceleration  , 0,1);
-	float curveAlpha = alpha;
-	if(IsValid(SlideCurve))
-		curveAlpha = SlideCurve->GetFloatValue(alpha);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartSlideTimestamp, StartSlideTimestamp + TimeToMaxBrakingDeceleration, 0,1);
+	float curveDecAlpha = alpha;
+	float curveAccAlpha = alpha;
+	if(IsValid(SlideBrakingDecelerationCurve))
+		curveDecAlpha = SlideBrakingDecelerationCurve->GetFloatValue(alpha);
+
+	if(IsValid(SlideAccelerationCurve))
+		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(alpha);
 	
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveDecAlpha);
 
-	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = FMath::Lerp(_PlayerCharacter->GetDefaultMaxWalkSpeed() * 0.65, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 5.0f, curveAlpha);
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveAlpha);
-	_PlayerCharacter->AddMovementInput(SlideDirection, curveAlpha ,true);
+	if(alpha < 1 )
+		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection * 2.0f,curveAccAlpha);
+
+	UE_LOG(LogTemp, Log, TEXT("MaxWalkSpedd :%f, InputScale : %f, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, curveAccAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
 	
 	//Clamp Velocity
-	if(_PlayerCharacter->GetVelocity().Length() > SlideMaxSpeed)
+	if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
 	{
 		FVector newVel = _PlayerCharacter->GetVelocity();
 		newVel.Normalize();
-
-		characterMovement->Velocity = newVel * SlideMaxSpeed;
+	
+		characterMovement->Velocity = newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator;
 	}
 	
 
