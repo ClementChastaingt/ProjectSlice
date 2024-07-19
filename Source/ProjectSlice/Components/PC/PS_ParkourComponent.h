@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/PC/PS_PlayerController.h"
 #include "PS_ParkourComponent.generated.h"
 
@@ -249,6 +250,10 @@ private:
 public:
 	UFUNCTION()
 	void OnStartSlide();
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnSlideEvent;
+;
 
 protected:
 	UFUNCTION()

@@ -446,6 +446,8 @@ void UPS_ParkourComponent::OnStartSlide()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
+
+	OnSlideEvent.Broadcast(bIsSliding);
 }
 
 
@@ -470,6 +472,8 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	bIsSliding = false;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
+
+	OnSlideEvent.Broadcast(bIsSliding);
 	
 }
 
