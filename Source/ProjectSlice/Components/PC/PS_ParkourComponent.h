@@ -277,6 +277,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
 	float SlideSeconds = TNumericLimits<float>().Lowest();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Current slide alpha"))
+	float SlideAlpha = 0;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	FVector SlideDirection = FVector::ZeroVector;
 	

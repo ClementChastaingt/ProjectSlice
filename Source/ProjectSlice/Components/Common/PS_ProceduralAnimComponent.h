@@ -42,7 +42,6 @@ private:
 	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
 
-
 #pragma region Dip
 	//------------------
 
@@ -123,8 +122,68 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Walking Down Offest"))
 	float WalkingMaxSpeed = 1.65f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking|Lag", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Velocity Lag postion interpolation"))
+	float VelocityLagSmoothingSpeed = 6.0f;
+
+	
+	
 private:
 	//------------------
 
 #pragma endregion Walking
+
+#pragma region Aerial
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Aerial", meta=(UIMax= "0", ClampMax="0", ToolTip="Aerial Tilt lag rotator"))
+	FRotator InAirTilt = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Aerial", meta=(UIMax= "0", ClampMax="0", ToolTip="Aerial Tilt lag offset"))
+	FVector InAirOffset = FVector::ZeroVector;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Aerial|Lag", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Air Tilt Lag postion interpolation"))
+	float AirTiltLagSmoothingSpeed = 12.0f;
+private:
+	//------------------
+
+#pragma endregion Aerial
+
+
+#pragma region Sway
+	//------------------
+
+public:
+	//------------------
+protected:
+	UFUNCTION(BlueprintCallable)
+	void ApplyLookSwayAndOffset(const FRotator& camRotPrev);
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Pitch Offset position"))
+	FVector PitchOffsetPos = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation Offset position"))
+	FVector CamRotOffset = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Current Camera rotation"))
+	FRotator CamRotCurrent = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation rate"))
+	FRotator CamRotRate = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin="0", ClampMin="0", ToolTip="Max pitch Offset modifier for look input "))
+	FVector MaxPitchOffset = FVector(35.0f ,3.0f, 2.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Sway rotation lag interpolation"))
+	float SwayLagSmoothingSpeed = 6.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin="0", ClampMin="0", ToolTip="Max sway Offset modifier for look input "))
+	FVector MaxSwayOffset = FVector(10.0f ,0.0f, 6.0f);
+private:
+	//------------------
+
+#pragma endregion Sway
 };

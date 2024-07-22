@@ -123,7 +123,14 @@ void UPS_ProceduralAnimComponent::GetVelocityLagPosition()
 	LagVector.Y =  UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorForwardVector()) , _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed() * -1);
 	LagVector.Z =  UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorUpVector()) , _PlayerCharacter->GetCharacterMovement()->JumpZVelocity * -1);
 
-	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), GetWorld()->GetDeltaSeconds(), (1 / GetWorld()->GetDeltaSeconds()) / 6.0f);
+	const float deltaTime = GetWorld()->GetDeltaSeconds();
+	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), deltaTime, (1 / deltaTime) / VelocityLagSmoothingSpeed);
+
+	//In Air Animation
+	UKismetMathLibrary::RInterpTo(InAirTilt, FRotator(0.0f, LocationLagPosition.Z * -2.0f,0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
+	UKismetMathLibrary::VInterpTo(InAirOffset,FVector(LocationLagPosition.Z * 0.5f, 0.0f, 0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
+	
+	
 }
 
 void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const float upDownAlpha,  const float rollAlpha)
@@ -146,5 +153,44 @@ void UPS_ProceduralAnimComponent::Walking(const float leftRightAlpha, const floa
 
 //------------------
 #pragma endregion Walking
+
+#pragma region 
+//------------------
+
+void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotPrev)
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
+		return;
+
+	// Pitch Offset
+	const float alphaPitchOffset = UKismetMathLibrary::NormalizeToRange((_PlayerCharacter->GetControlRotation() - _PlayerCharacter->GetActorRotation()).Pitch, -90.0f,90.0f);
+	PitchOffsetPos = FVector(0.0f, FMath::Lerp(MaxPitchOffset.Y, -MaxPitchOffset.Y, alphaPitchOffset), FMath::Lerp(MaxPitchOffset.Z,-MaxPitchOffset.Z,alphaPitchOffset));
+	
+	const float alphaRelativeLoc = FMath::Clamp(UKismetMathLibrary::NormalizeToRange(alphaPitchOffset, 0.0f, 0.5f), 0.0, 1.0);
+
+	FVector newPlayerPos = _PlayerCharacter->GetFirstPersonRoot()->GetRelativeLocation();
+	newPlayerPos.X = FMath::Lerp(MaxPitchOffset.X, 0.0f, alphaRelativeLoc);
+	_PlayerCharacter->GetFirstPersonRoot()->SetRelativeLocation(newPlayerPos);
+
+	// Camera Sway
+	CamRotCurrent =_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentRotation();
+
+	FRotator newPitchedCamRot = CamRotCurrent - camRotPrev;
+	newPitchedCamRot.Pitch = FMath::Clamp(newPitchedCamRot.Pitch * -1, -5.0f,5.0f);
+	newPitchedCamRot.Yaw = FMath::Clamp(newPitchedCamRot.Yaw, -5.0f,5.0f);
+
+	const float deltaTime = GetWorld()->GetDeltaSeconds();
+	CamRotRate =UKismetMathLibrary::RInterpTo(CamRotRate, newPitchedCamRot,deltaTime, (1.0/deltaTime)/SwayLagSmoothingSpeed);
+
+	// Camera Sway Offset
+	CamRotOffset.X =  FMath::Lerp(-MaxSwayOffset.Z, MaxSwayOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRate.Yaw, -5.0f,5.0f));
+	CamRotOffset.Y = 0.0f;
+	CamRotOffset.Z = FMath::Lerp(-MaxSwayOffset.X, MaxSwayOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRate.Roll, -5.0f,5.0f));
+	
+}
+
+//------------------
+#pragma endregion 
+	
 	
 

@@ -459,6 +459,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	SlideSeconds = 0;
+	SlideAlpha = 0.0f;
 	
 	//--------Camera_Tilt Setup--------
 	// SetupCameraTilt(true, SlideCameraAngle);
@@ -491,19 +492,19 @@ void UPS_ParkourComponent::SlideTick()
 
 
 	//-----Velocity-----
-	const float alpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartSlideTimestamp, StartSlideTimestamp + TimeToMaxBrakingDeceleration, 0,1);
-	float curveDecAlpha = alpha;
-	float curveAccAlpha = alpha;
+	SlideAlpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartSlideTimestamp, StartSlideTimestamp + TimeToMaxBrakingDeceleration, 0,1);
+	float curveDecAlpha = SlideAlpha;
+	float curveAccAlpha = SlideAlpha;
 	if(IsValid(SlideBrakingDecelerationCurve))
-		curveDecAlpha = SlideBrakingDecelerationCurve->GetFloatValue(alpha);
+		curveDecAlpha = SlideBrakingDecelerationCurve->GetFloatValue(SlideAlpha);
 
 	if(IsValid(SlideAccelerationCurve))
-		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(alpha);
+		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(SlideAlpha);
 	
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveDecAlpha);
 
-	if(alpha < 1 )
+	if(SlideAlpha < 1 )
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection * 2.0f,curveAccAlpha);
 
 	UE_LOG(LogTemp, Log, TEXT("MaxWalkSpedd :%f, InputScale : %f, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, curveAccAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
