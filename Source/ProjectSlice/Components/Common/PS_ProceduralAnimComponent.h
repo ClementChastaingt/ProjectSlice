@@ -89,12 +89,21 @@ private:
 public:
 	
 	UFUNCTION(BlueprintCallable)
-	void Walking(const float leftRightAlpha, const float upDownAlpha, const float rollAlpha);
-	
+	FORCEINLINE void Walking(const float& leftRightAlpha, const float& upDownAlpha, const float& rollAlpha);
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetWalkAnimPos() const{return WalkAnimPos;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetLocationLagPosition() const{return LocationLagPosition;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FRotator GetWalkAnimRot() const{return WalkAnimRot;}
+
 protected:
 
 	UFUNCTION(BlueprintCallable)
-	void GetVelocityLagPosition();
+	void SetLagPositionAndAirTilt();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(ToolTip="Walking anim position"))
 	FVector WalkAnimPos = FVector::Zero();
@@ -108,7 +117,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(ToolTip="Location lag position"))
 	FVector LocationLagPosition = FVector::ZeroVector;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Current Walking speed"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Current Walking Timeline play rate"))
 	float WalkingSpeed = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMin = "0", ClampMin="0", ToolTip="Walking Left/Right Offest"))
@@ -157,7 +166,9 @@ private:
 	//------------------
 
 public:
-	//------------------
+	UFUNCTION(BlueprintCallable)
+	FRotator GetCurrentCamRot() const{return CurrentCamRot;}
+
 protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyLookSwayAndOffset(const FRotator& camRotPrev);
@@ -169,7 +180,7 @@ protected:
 	FVector CamRotOffset = FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Current Camera rotation"))
-	FRotator CamRotCurrent = FRotator::ZeroRotator;
+	FRotator CurrentCamRot = FRotator::ZeroRotator;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation rate"))
 	FRotator CamRotRate = FRotator::ZeroRotator;
@@ -181,7 +192,7 @@ protected:
 	float SwayLagSmoothingSpeed = 6.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin="0", ClampMin="0", ToolTip="Max sway Offset modifier for look input "))
-	FVector MaxSwayOffset = FVector(10.0f ,0.0f, 6.0f);
+	FVector MaxCamRotOffset = FVector(6.0f ,0.0f, 10.0f);
 private:
 	//------------------
 

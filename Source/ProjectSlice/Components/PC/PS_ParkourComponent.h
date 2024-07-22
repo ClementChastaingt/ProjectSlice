@@ -129,8 +129,7 @@ public:
 	void JumpOffWallRun();
 
 	//Getters && Setters
-	 bool GetIsWallRunning() const
-	{return bIsWallRunning;}
+	FORCEINLINE bool GetIsWallRunning() const  {return bIsWallRunning;}
 
 	void SetForceWallRun(bool bforceWallRun){this->bForceWallRun = bforceWallRun;}
 
