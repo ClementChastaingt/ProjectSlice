@@ -91,15 +91,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE void Walking(const float& leftRightAlpha, const float& upDownAlpha, const float& rollAlpha);
 
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetWalkAnimPos() const{return WalkAnimPos;}
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetLocationLagPosition() const{return LocationLagPosition;}
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FRotator GetWalkAnimRot() const{return WalkAnimRot;}
-
 protected:
 
 	UFUNCTION(BlueprintCallable)
