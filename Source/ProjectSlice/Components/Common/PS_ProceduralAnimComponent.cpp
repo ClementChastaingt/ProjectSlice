@@ -184,17 +184,17 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 
 	//TODO ::  Bug come from newCamRotNorm.Yaw who jump from -5.0 to 5.0, clamp newCamRotNorm fix it bug break feature
 	//FRotator newCamRotNorm = UKismetMathLibrary::NormalizedDeltaRotator(GetCurrentCamRot(), camRotPrev).Clamp();
-	FRotator newCamRotNorm = UKismetMathLibrary::NormalizedDeltaRotator(GetCurrentCamRot(), camRotPrev);
+	FRotator newCamRotNorm = UKismetMathLibrary::NormalizedDeltaRotator(CurrentCamRot, camRotPrev);
 	FRotator targetCamRotRate;
 	targetCamRotRate.Roll = FMath::Clamp(newCamRotNorm.Pitch * -1, -5.0f,5.0f);
 	targetCamRotRate.Pitch = 0.0f;
 	targetCamRotRate.Yaw = FMath::Clamp(newCamRotNorm.Yaw, -5.0f,5.0f);
 
-	UE_LOG(LogTemp, Warning, TEXT("CurrentCamRot %s, camRotPrev %s"), *CurrentCamRot.ToString(),  *camRotPrev.ToString());
-	UE_LOG(LogTemp, Log, TEXT("newCamRotNorm %s, Yaw %f"), *newCamRotNorm.ToString(),  FMath::Clamp(newCamRotNorm.Yaw, -5.0f,5.0f));
-
 	const float deltaTime = GetWorld()->GetDeltaSeconds();
-	CamRotRate = (FMath::RInterpTo(CamRotRate, targetCamRotRate, deltaTime, (1.0/deltaTime) / SwayLagSmoothingSpeed));
+
+	//TODO :: Temp fix camRotRateSpeed
+	const float camRotRateSpeed = FMath::Lerp(SwayLagSmoothingSpeed, SwayLagSmoothingSpeed * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
+	CamRotRate = (FMath::RInterpTo(CamRotRate, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeed));
 
 	//Counteract weapon sway rotation
 	CamRotOffset.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRate.Yaw, -5.0f,5.0f));

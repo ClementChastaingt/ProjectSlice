@@ -8,6 +8,7 @@
 #include "PS_ProceduralAnimComponent.generated.h"
 
 
+class AProjectSlicePlayerController;
 class AProjectSliceCharacter;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -40,7 +41,7 @@ private:
 	AProjectSliceCharacter* _PlayerCharacter;
 
 	UPROPERTY(Transient)
-	APlayerController* _PlayerController;
+	AProjectSlicePlayerController* _PlayerController;
 
 #pragma region Dip
 	//------------------

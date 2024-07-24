@@ -17,7 +17,7 @@ enum ECustomMovementMode
 };
 
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(BLueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_CharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
