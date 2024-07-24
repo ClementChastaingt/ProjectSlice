@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
