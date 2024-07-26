@@ -39,6 +39,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
 	bool bDebugCameraTilt = false;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Mantle")
+	bool bDebugMantle = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
 	float CustomTickRate = 0.02f;
@@ -263,6 +266,7 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
+	bool CanMantle() const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	bool bIsSliding = false;
@@ -313,6 +317,20 @@ private:
 	//------------------
 
 #pragma endregion Slide
+
+#pragma region Mantle
+//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max Height for try Mantle"))
+	float MaxMantleHeight = 200.0f;
+private:
+	//------------------
+	
+//------------------
+#pragma endregion Mantle
 };
 
 

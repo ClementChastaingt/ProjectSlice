@@ -72,7 +72,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                             FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
+	
 	if(!bIsResetingCameraTilt && !bIsStooping)
 		SetComponentTickEnabled(false);
 		
@@ -80,8 +80,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	Stooping();
 
 	//-----CameraTilt smooth reset-----
-	if(bIsResetingCameraTilt)
-		CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
+	CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
 	
 }
 
@@ -284,6 +283,8 @@ void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& 
 
 void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTime)
 {
+	if(!bIsResetingCameraTilt) return;
+		
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	
 	//Alpha
@@ -363,15 +364,15 @@ bool UPS_ParkourComponent::CanStand() const
 {
 	if(!IsValid(GetWorld())) return false;
 
-	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
+	const ACharacter* defaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 	
 	FVector start = _PlayerCharacter->GetActorLocation();
 	FVector end = _PlayerCharacter->GetActorLocation();
-	end.Z = _PlayerCharacter->GetActorLocation().Z + DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	end.Z = _PlayerCharacter->GetActorLocation().Z + defaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,defaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 	const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
 	if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
@@ -427,7 +428,6 @@ void UPS_ParkourComponent::Stooping()
 #pragma region Slide
 //------------------
 
-
 void UPS_ParkourComponent::OnStartSlide()
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
@@ -450,7 +450,6 @@ void UPS_ParkourComponent::OnStartSlide()
 
 	OnSlideEvent.Broadcast(bIsSliding);
 }
-
 
 void UPS_ParkourComponent::OnStopSlide()
 {
@@ -538,6 +537,53 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 //------------------
 #pragma endregion Slide
+
+#pragma region Mantle
+//------------------
+
+bool UPS_ParkourComponent::CanMantle() const
+{
+	if(!IsValid(GetWorld()) || bIsCrouched) return false;
+
+	const ACharacter* defaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
+	
+	
+	FHitResult outHitFwd, outHitHgt;
+	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
+	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() * 2;
+	
+	//Forward Trace
+	FVector startFwd = _PlayerCharacter->GetActorLocation();
+	startFwd.Z = _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
+	
+	FVector endFwd = startFwd + _PlayerCharacter->GetActorForwardVector() * capsuleOffset;
+	endFwd.Z = startFwd.Z;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), startFwd, endFwd, UEngineTypes::ConvertToTraceType(ECC_Visibility),false, actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitFwd, true);
+
+	if(!outHitFwd.bBlockingHit) return false;
+	
+	//Height Trace
+	FVector startHgt = outHitFwd.Location + outHitFwd.Normal * -1 *capsuleOffset;
+	startHgt.Z = startHgt.Z + MaxMantleHeight;
+	
+	FVector endHgt = outHitFwd.Location + outHitFwd.Normal * -1 * _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true);
+
+	//UKismetSystemLibrary::SphereTraceSingle(GetWorld(),startHgt,endHgt,defaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true);
+
+	// const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
+	// if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
+	// 	GetWorld()->GetTimerManager().UnPauseTimer(CanStandTimerHandle);
+	// else
+	// 	GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
+
+	return false;
+}
+
+//------------------
+#pragma endregion Mantle
+
 
 #pragma region Event_Receiver
 //------------------
