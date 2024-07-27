@@ -215,7 +215,7 @@ void AProjectSliceCharacter::Jump()
 		if(!GetParkourComponent()->GetIsWallRunning())
 		{
 			if(GetParkourComponent()->GetOverlapInfos().IsEmpty()) return;
-				
+			
 			//Try WallRunning if already overlap wall 
 			for (const FOverlapInfo& currentOverlapInfo : GetParkourComponent()->GetOverlapInfos())
 			{

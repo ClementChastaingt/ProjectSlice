@@ -544,33 +544,31 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 bool UPS_ParkourComponent::CanMantle() const
 {
 	if(!IsValid(GetWorld()) || bIsCrouched) return false;
-
-	const ACharacter* defaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 	
-	
-	FHitResult outHitFwd, outHitHgt;
+	FHitResult outHitFwd, outHitHgt, outCapsHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() * 2;
 	
 	//Forward Trace
 	FVector startFwd = _PlayerCharacter->GetActorLocation();
-	startFwd.Z = _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
+	startFwd.Z = _PlayerCharacter->GetMesh()->GetComponentLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
+
+	DrawDebugPoint(GetWorld(), startFwd, 20.f, FColor::Orange, false);
 	
 	FVector endFwd = startFwd + _PlayerCharacter->GetActorForwardVector() * capsuleOffset;
 	endFwd.Z = startFwd.Z;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), startFwd, endFwd, UEngineTypes::ConvertToTraceType(ECC_Visibility),false, actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitFwd, true);
-
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), startFwd, endFwd, UEngineTypes::ConvertToTraceType(ECC_Visibility),false, actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitFwd, true, FColor::Magenta);
 	if(!outHitFwd.bBlockingHit) return false;
 	
 	//Height Trace
-	FVector startHgt = outHitFwd.Location + outHitFwd.Normal * -1 *capsuleOffset;
+	FVector startHgt = outHitFwd.Location + outHitFwd.Normal * -1 * capsuleOffset;
 	startHgt.Z = startHgt.Z + MaxMantleHeight;
-	
-	FVector endHgt = outHitFwd.Location + outHitFwd.Normal * -1 * _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
-	
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true);
+	FVector endHgt = outHitFwd.Location + outHitFwd.Normal * -1 * capsuleOffset;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
 
-	//UKismetSystemLibrary::SphereTraceSingle(GetWorld(),startHgt,endHgt,defaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true);
+
+	//Capsule trace for check if have enough place for player
+	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),outHitHgt.Location,outHitHgt.Location,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
 
 	// const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
 	// if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
@@ -588,6 +586,7 @@ bool UPS_ParkourComponent::CanMantle() const
 #pragma region Event_Receiver
 //------------------
 
+
 void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
 	AActor* otherActor, UPrimitiveComponent* otherComp, int otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {	
@@ -596,9 +595,25 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetCharacterMovement())
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent()) 
 		|| !IsValid(otherActor)) return;
-	
-	OnWallRunStart(otherActor);
-		
+
+	FHitResult outHit;
+	const TArray<AActor*> actorsToIgnore;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetComponentLocation(), GetComponentLocation() + GetForwardVector() * GetUnscaledCapsuleRadius() * 2, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false, actorsToIgnore, false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+
+	const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
+
+
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: angle between hit and player forward %f"), __FUNCTION__ , angle);
+
+	if(angle > MaxMantleAngle)
+	{
+		OnWallRunStart(otherActor);
+	}
+	else
+	{
+		CanMantle();
+	}
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,

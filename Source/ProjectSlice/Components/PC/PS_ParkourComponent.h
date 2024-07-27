@@ -64,8 +64,7 @@ private:
 #pragma region General
 	//------------------
 
-protected:
-
+protected:	
 	UFUNCTION()
 	void OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
 
@@ -117,6 +116,24 @@ private:
 	//------------------
 
 #pragma endregion CameraTilt
+	
+#pragma region Mantle
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max angle for try Mantle and not WallRun"))
+	float MaxMantleAngle = 40.0f;
+
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max Height for try Mantle"))
+	float MaxMantleHeight = 200.0f;
+private:
+	//------------------
+	
+	//------------------
+#pragma endregion Mantle
 
 #pragma region WallRun
 	//------------------
@@ -318,19 +335,7 @@ private:
 
 #pragma endregion Slide
 
-#pragma region Mantle
-//------------------
 
-public:
-	//------------------
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max Height for try Mantle"))
-	float MaxMantleHeight = 200.0f;
-private:
-	//------------------
-	
-//------------------
-#pragma endregion Mantle
 };
 
 
