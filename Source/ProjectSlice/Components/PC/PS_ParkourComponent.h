@@ -123,14 +123,42 @@ private:
 public:
 	//------------------
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
+	bool bIsMantling = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
+	float StartMantleTimestamp = TNumericLimits<float>().Lowest();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max angle for try Mantle and not WallRun"))
 	float MaxMantleAngle = 40.0f;
-
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max Height for try Mantle"))
 	float MaxMantleHeight = 200.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between capsule test and height test (for surface with asperities)"))
+	float MantleCapsuletHeightTestOffset = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
+	UCurveFloat* MantleCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
+	float MantleDuration = 0.5f;
+	
+	UFUNCTION()
+	bool CanMantle();
+
+	UFUNCTION()
+	void OnStartMantle();
+	
+	UFUNCTION()
+	void MantleTick() ;
+	
 private:
-	//------------------
+	UPROPERTY(Transient)
+	FVector _StartMantleLoc;
+
+	UPROPERTY(Transient)
+	FVector _TargetMantleLoc;
 	
 	//------------------
 #pragma endregion Mantle
@@ -283,8 +311,7 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
-	bool CanMantle() const;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	bool bIsSliding = false;
 

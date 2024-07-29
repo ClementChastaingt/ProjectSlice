@@ -73,14 +73,19 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(!bIsResetingCameraTilt && !bIsStooping)
+	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling)
 		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
 	Stooping();
 
+	//-----Mantling move -----
+	MantleTick();
+
 	//-----CameraTilt smooth reset-----
 	CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
+
+	
 	
 }
 
@@ -541,7 +546,7 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 #pragma region Mantle
 //------------------
 
-bool UPS_ParkourComponent::CanMantle() const
+bool UPS_ParkourComponent::CanMantle()
 {
 	if(!IsValid(GetWorld()) || bIsCrouched) return false;
 	
@@ -552,11 +557,10 @@ bool UPS_ParkourComponent::CanMantle() const
 	//Forward Trace
 	FVector startFwd = _PlayerCharacter->GetActorLocation();
 	startFwd.Z = _PlayerCharacter->GetMesh()->GetComponentLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
-
-	DrawDebugPoint(GetWorld(), startFwd, 20.f, FColor::Orange, false);
 	
 	FVector endFwd = startFwd + _PlayerCharacter->GetActorForwardVector() * capsuleOffset;
 	endFwd.Z = startFwd.Z;
+	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), startFwd, endFwd, UEngineTypes::ConvertToTraceType(ECC_Visibility),false, actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitFwd, true, FColor::Magenta);
 	if(!outHitFwd.bBlockingHit) return false;
 	
@@ -564,20 +568,57 @@ bool UPS_ParkourComponent::CanMantle() const
 	FVector startHgt = outHitFwd.Location + outHitFwd.Normal * -1 * capsuleOffset;
 	startHgt.Z = startHgt.Z + MaxMantleHeight;
 	FVector endHgt = outHitFwd.Location + outHitFwd.Normal * -1 * capsuleOffset;
+	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
-
+	if(!outHitHgt.bBlockingHit) return false;
 
 	//Capsule trace for check if have enough place for player
-	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),outHitHgt.Location,outHitHgt.Location,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
+	FVector capsLoc = outHitHgt.Location;
+	capsLoc.Z = outHitHgt.Location.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
 
-	// const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
-	// if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
-	// 	GetWorld()->GetTimerManager().UnPauseTimer(CanStandTimerHandle);
-	// else
-	// 	GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
+	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),capsLoc,capsLoc,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
+	if(!outCapsHit.bBlockingHit) return false;
 
-	return false;
+	//Set TargetLoc
+	_TargetMantleLoc = outHitHgt.Location;
+
+	return true;
 }
+
+void UPS_ParkourComponent::OnStartMantle()
+{
+	if(!IsValid(GetWorld())) return;
+
+	//TODO :: Change for Custom Move mode CMOVE_Climbing when add custom move mode
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_None);
+		
+	bIsMantling = true;
+	StartMantleTimestamp = GetWorld()->GetTimeSeconds();
+	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
+}
+
+void UPS_ParkourComponent::MantleTick()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+	
+	if(!bIsMantling) return;
+	
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleTimestamp, StartMantleTimestamp + MantleDuration, 0,1);
+	
+	float curveAlpha = alpha;
+	if(IsValid(MantleCurve))
+		curveAlpha = MantleCurve->GetFloatValue(alpha);
+
+	const FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleLoc, curveAlpha);
+	_PlayerCharacter->SetActorLocation(newPlayerLoc);
+	
+	if(curveAlpha >= 1)
+	{		
+		bIsMantling = false;
+		_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+}
+
 
 //------------------
 #pragma endregion Mantle
@@ -612,7 +653,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	}
 	else
 	{
-		CanMantle();
+		if(CanMantle()) OnStartMantle();
 	}
 }
 
