@@ -36,10 +36,7 @@ void UPS_ParkourComponent::BeginPlay()
 
 	DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
 	DefaultBrakingDeceleration = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
-
-	//Debug
-	_PlayerCharacter->GetCapsuleComponent()->SetHiddenInGame(!bDebugSlide);
-
+	
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
@@ -140,7 +137,8 @@ void UPS_ParkourComponent::WallRunTick()
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {
-	UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun try start bIsWallRunning %i"), bIsWallRunning);
+	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S, bIsWallRunning %i"), __FUNCTION__, bIsWallRunning);
+	
 	if(bIsWallRunning) return;
 	
 	//-----OnWallRunStart-----	
@@ -158,7 +156,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	// 	return;
 	// }
 
-	if(bDebug)
+	if(bDebugWallRun)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("StartWallRun")));
@@ -224,7 +222,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	if(!bIsWallRunning) return;
 	
 	//-----OnWallRunStop-----
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
+	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
 	
 	GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
 	WallRunSeconds = 0.0f;
@@ -247,7 +245,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	if(!IsValid(Wall) || !IsValid(_PlayerCharacter)) return;
 
-	if(bDebug)
+	if(bDebugWallRunJump)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun jump off"));
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("WallRun Jump Off")));
@@ -346,7 +344,7 @@ void UPS_ParkourComponent::OnCrouch()
 		bIsCrouched = true;
 		bIsStooping = true;
 
-		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouched"));
+		if(bDebugCrouch) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Crouched"));
 	}
 	//Uncrouch
 	else if(CanStand())
@@ -359,7 +357,7 @@ void UPS_ParkourComponent::OnCrouch()
 		bIsStooping = true;
 		if(bIsSliding) OnStopSlide();
 
-		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
+		if(bDebugCrouch) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
 	}
 	SetComponentTickEnabled(bIsStooping);
 
@@ -435,7 +433,7 @@ void UPS_ParkourComponent::Stooping()
 
 void UPS_ParkourComponent::OnStartSlide()
 {
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
+	if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Start"));
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
 	
@@ -458,7 +456,7 @@ void UPS_ParkourComponent::OnStartSlide()
 
 void UPS_ParkourComponent::OnStopSlide()
 {
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
+	if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerCharacter)) return;
 	
@@ -512,7 +510,7 @@ void UPS_ParkourComponent::SlideTick()
 	if(SlideAlpha < 1 )
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection * 2.0f,curveAccAlpha);
 
-	UE_LOG(LogTemp, Log, TEXT("MaxWalkSpedd :%f, InputScale : %f, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, curveAccAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
+	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("MaxWalkSpeed :%f, InputScale : %f, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, curveAccAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
 	
 	//Clamp Velocity
 	if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
@@ -577,43 +575,53 @@ bool UPS_ParkourComponent::CanMantle()
 	capsLoc.Z = outHitHgt.Location.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
 
 	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),capsLoc,capsLoc,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
-	if(!outCapsHit.bBlockingHit) return false;
+	if(outCapsHit.bBlockingHit) return false;
 
 	//Set TargetLoc
-	_TargetMantleLoc = outHitHgt.Location;
+	_TargetMantleLoc = capsLoc;
 
 	return true;
 }
 
 void UPS_ParkourComponent::OnStartMantle()
 {
+	if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	
 	if(!IsValid(GetWorld())) return;
 
 	//TODO :: Change for Custom Move mode CMOVE_Climbing when add custom move mode
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_None);
-		
+
 	bIsMantling = true;
 	StartMantleTimestamp = GetWorld()->GetTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
+	SetComponentTickEnabled(bIsMantling);
 }
 
 void UPS_ParkourComponent::MantleTick()
-{
+{	
 	if(!IsValid(_PlayerCharacter)) return;
-	
+		
 	if(!bIsMantling) return;
-	
+		
 	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleTimestamp, StartMantleTimestamp + MantleDuration, 0,1);
+	if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("alpha %f"), alpha);
 	
-	float curveAlpha = alpha;
-	if(IsValid(MantleCurve))
-		curveAlpha = MantleCurve->GetFloatValue(alpha);
+	float curveAlphaXY = alpha;
+	if(IsValid(MantleCurveXY))
+		curveAlphaXY = MantleCurveXY->GetFloatValue(alpha);
 
-	const FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleLoc, curveAlpha);
+	float curveAlphaZ = alpha;
+	if(IsValid(MantleCurveZ))
+		curveAlphaZ = MantleCurveZ->GetFloatValue(alpha);
+
+	FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleLoc, curveAlphaXY);
+	newPlayerLoc.Z = FMath::Lerp(_StartMantleLoc.Z,_TargetMantleLoc.Z, curveAlphaZ);
 	_PlayerCharacter->SetActorLocation(newPlayerLoc);
-	
-	if(curveAlpha >= 1)
-	{		
+		
+	if(alpha >= 1)
+	{
+		if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("UPS_ParkourComponent::StopMantle"));
 		bIsMantling = false;
 		_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
@@ -651,17 +659,19 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	{
 		OnWallRunStart(otherActor);
 	}
-	else
+	else if(CanMantle())
 	{
-		if(CanMantle()) OnStartMantle();
+		 OnStartMantle();
 	}
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
-	if(bDebug && bIsWallRunning)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Wall end"));
-	OnWallRunStop();
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+
+	if(bIsWallRunning)UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
+		OnWallRunStop();
 }
 
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode,

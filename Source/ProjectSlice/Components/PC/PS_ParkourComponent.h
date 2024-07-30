@@ -34,7 +34,10 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
 	bool bDebugWallRunJump = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Slide")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Crouch")
+	bool bDebugCrouch = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Crouch")
 	bool bDebugSlide = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
@@ -139,7 +142,10 @@ protected:
 	float MantleCapsuletHeightTestOffset = 15.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
-	UCurveFloat* MantleCurve;
+	UCurveFloat* MantleCurveXY;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
+	UCurveFloat* MantleCurveZ;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
 	float MantleDuration = 0.5f;
