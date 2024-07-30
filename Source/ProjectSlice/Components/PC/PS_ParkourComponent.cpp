@@ -286,8 +286,6 @@ void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& 
 
 void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTime)
 {
-	if(!bIsResetingCameraTilt) return;
-		
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	
 	//Alpha
@@ -585,7 +583,7 @@ bool UPS_ParkourComponent::CanMantle()
 
 void UPS_ParkourComponent::OnStartMantle()
 {
-	if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT ("%S"), __FUNCTION__);
 	
 	if(!IsValid(GetWorld())) return;
 
@@ -595,6 +593,7 @@ void UPS_ParkourComponent::OnStartMantle()
 	bIsMantling = true;
 	StartMantleTimestamp = GetWorld()->GetTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
+	//_PlayerCharacter->SetActorLocation(FVector(_TargetMantleLoc.X, _StartMantleLoc.Y, _StartMantleLoc.Z));
 	SetComponentTickEnabled(bIsMantling);
 }
 
@@ -630,7 +629,6 @@ void UPS_ParkourComponent::MantleTick()
 
 //------------------
 #pragma endregion Mantle
-
 
 #pragma region Event_Receiver
 //------------------

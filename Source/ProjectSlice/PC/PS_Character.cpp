@@ -327,7 +327,7 @@ void AProjectSliceCharacter::StopMoving()
 	if(IsValid(_PlayerController))
 	
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-}
+}	
 
 //------------------
 #pragma endregion Move
