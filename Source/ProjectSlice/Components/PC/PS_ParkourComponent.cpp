@@ -576,10 +576,18 @@ bool UPS_ParkourComponent::CanMantle()
 	if(outCapsHit.bBlockingHit) return false;
 
 	//Set TargetLoc for 1st and 2nd phase
-	_TargetMantleSnapLoc = outHitFwd.Location + outHitFwd.Normal * _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	_TargetMantleSnapLoc = outHitFwd.Location + outHitFwd.Normal * (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2);
 	_TargetMantleSnapLoc.Z = outHitHgt.Location.Z - MantleSnapOffset;
 	
 	_TargetMantlePullUpLoc = capsLoc;
+
+	//Rotate player forward object
+	//TODO :: rotate forward object normal
+	// FRotator newRot = _PlayerController->GetControlRotation();
+	// float angleNormalToFwd = UKismetMathLibrary::DegAcos(outHitFwd.Normal.Dot(_PlayerCharacter->GetActorForwardVector()));
+	// newRot.Yaw = -(newRot.Yaw + angleNormalToFwd);
+	// UE_LOG(LogTemp, Error, TEXT("PlayerYaw %f, newYaw %f, angle %f"),_PlayerController->GetControlRotation().Yaw, newRot.Yaw,  UKismetMathLibrary::DegAcos(outHitFwd.Normal.Dot(_PlayerCharacter->GetActorForwardVector())));
+	// _PlayerController->SetControlRotation(newRot.Clamp());
 
 	return true;
 }
@@ -594,9 +602,35 @@ void UPS_ParkourComponent::OnStartMantle()
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_None);
 
 	bIsMantling = true;
-	StartMantleTimestamp = GetWorld()->GetTimeSeconds();
+
+	//Block 3C
+	SetGenerateOverlapEvents(false);
+	SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	_PlayerController->SetIgnoreMoveInput(true);
+	_PlayerController->SetIgnoreLookInput(true);
+
+	//Init variables
+	StartMantleSnapTimestamp = GetWorld()->GetTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
+
+	//Start movement
 	SetComponentTickEnabled(bIsMantling);
+}
+
+void UPS_ParkourComponent::OnStoptMantle()
+{
+	if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__); 
+	
+	bIsMantling = false;
+	_MantlePhase = EMantlePhase::NONE;
+
+	SetGenerateOverlapEvents(true);
+	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	_PlayerController->SetIgnoreMoveInput(false);
+	_PlayerController->SetIgnoreLookInput(false);
 }
 
 void UPS_ParkourComponent::MantleTick()
@@ -606,13 +640,18 @@ void UPS_ParkourComponent::MantleTick()
 	if(!bIsMantling) return;
 
 	//1st phase
-	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleTimestamp, StartMantleTimestamp + MantleSnapDuration, 0,1);
+	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + MantleSnapDuration, 0,1);
 	
 	//1sdt Phase
 	if(alphaSnap < 1)
 	{
 		_MantlePhase = EMantlePhase::SNAP;
-		FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleSnapLoc, alphaSnap);
+
+		float curveAlphaSnap = alphaSnap;
+		if(IsValid(MantleSnapCurve))
+			curveAlphaSnap = MantleSnapCurve->GetFloatValue(alphaSnap);
+		
+		FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleSnapLoc, curveAlphaSnap);
 		_PlayerCharacter->SetActorLocation(newPlayerLoc);
 		StartMantlePullUpTimestamp = GetWorld()->GetTimeSeconds();
 		if(bDebugMantle)
@@ -630,12 +669,12 @@ void UPS_ParkourComponent::MantleTick()
 		if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPullUp %f"),__FUNCTION__, alphaPullUp);
 		
 		float curveAlphaXY = alphaPullUp;
-		if(IsValid(MantleCurveXY))
-			curveAlphaXY = MantleCurveXY->GetFloatValue(alphaPullUp);
+		if(IsValid(MantlePullUpCurveXY))
+			curveAlphaXY = MantlePullUpCurveXY->GetFloatValue(alphaPullUp);
 		
 		float curveAlphaZ = alphaPullUp;
-		if(IsValid(MantleCurveZ))
-			curveAlphaZ = MantleCurveZ->GetFloatValue(alphaPullUp);
+		if(IsValid(MantlePullUpCurveZ))
+			curveAlphaZ = MantlePullUpCurveZ->GetFloatValue(alphaPullUp);
 		
 		FVector newPlayerLoc = FMath::Lerp(_TargetMantleSnapLoc,_TargetMantlePullUpLoc, curveAlphaXY);
 		newPlayerLoc.Z = FMath::Lerp(_TargetMantleSnapLoc.Z,_TargetMantlePullUpLoc.Z, curveAlphaZ);
@@ -643,10 +682,7 @@ void UPS_ParkourComponent::MantleTick()
 		
 		if(alphaPullUp >= 1)
 		{
-			if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("UPS_ParkourComponent::StopMantle"));
-			bIsMantling = false;
-			_MantlePhase = EMantlePhase::NONE;
-			_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+			OnStoptMantle();
 		}
 	}
 

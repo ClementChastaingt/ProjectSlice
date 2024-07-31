@@ -140,10 +140,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
 	bool bIsMantling = false;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
-	float StartMantleTimestamp = TNumericLimits<float>().Lowest();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle|Snap")
+	float StartMantleSnapTimestamp = TNumericLimits<float>().Lowest();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle|PullUp")
 	float StartMantlePullUpTimestamp = TNumericLimits<float>().Lowest();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max angle for try Mantle and not WallRun"))
@@ -154,27 +154,33 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between capsule test and height test (for surface with asperities)"))
 	float MantleCapsuletHeightTestOffset = 15.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|PullUp", meta=(ToolTip="Mantle PullUp curve XY"))
+	UCurveFloat* MantlePullUpCurveXY;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between obstacle border and player position for simulate 'arms lenght' "))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|PullUp", meta=(ToolTip="Mantle PullUp curve Z"))
+	UCurveFloat* MantlePullUpCurveZ;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|PullUp", meta=(ToolTip="Smooth PullUp Mantle duration"))
+	float MantlePullUpDuration = 0.2f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=(ToolTip="Smooth Snap Mantle duration"))
+	float MantleSnapDuration = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=(ToolTip="Offset between obstacle border and player position for simulate 'arms lenght' "))
 	float MantleSnapOffset = 50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
-	UCurveFloat* MantleCurveXY;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
-	UCurveFloat* MantleCurveZ;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
-	float MantleSnapDuration = 0.2f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
-	float MantlePullUpDuration = 0.2f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=(ToolTip="Mantle Snap curve"))
+	UCurveFloat* MantleSnapCurve;
 	
 	UFUNCTION()
 	bool CanMantle();
 
 	UFUNCTION()
 	void OnStartMantle();
+
+	UFUNCTION()
+	void OnStoptMantle();
 	
 	UFUNCTION()
 	void MantleTick() ;
