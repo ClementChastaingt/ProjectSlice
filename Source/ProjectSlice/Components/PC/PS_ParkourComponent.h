@@ -12,6 +12,14 @@
 
 class AProjectSliceCharacter;
 
+UENUM()
+enum class EMantlePhase : uint8
+{
+	NONE = 0	UMETA(DisplayName ="None"),
+	SNAP = 1 UMETA(DisplayName ="Snap"),
+	PULL_UP = 2 UMETA(DisplayName ="Pull up"),
+};
+
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
 {
@@ -124,6 +132,9 @@ private:
 	//------------------
 
 public:
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE EMantlePhase GetMantlePhase() const{return _MantlePhase;}
+
 	//------------------
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
@@ -131,6 +142,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
 	float StartMantleTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
+	float StartMantlePullUpTimestamp = TNumericLimits<float>().Lowest();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Max angle for try Mantle and not WallRun"))
 	float MaxMantleAngle = 40.0f;
@@ -141,6 +155,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between capsule test and height test (for surface with asperities)"))
 	float MantleCapsuletHeightTestOffset = 15.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between obstacle border and player position for simulate 'arms lenght' "))
+	float MantleSnapOffset = 50.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle curve"))
 	UCurveFloat* MantleCurveXY;
 
@@ -148,7 +165,10 @@ protected:
 	UCurveFloat* MantleCurveZ;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
-	float MantleDuration = 0.5f;
+	float MantleSnapDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Smooth Mantle duration"))
+	float MantlePullUpDuration = 0.2f;
 	
 	UFUNCTION()
 	bool CanMantle();
@@ -161,10 +181,16 @@ protected:
 	
 private:
 	UPROPERTY(Transient)
+	EMantlePhase _MantlePhase = EMantlePhase::NONE;
+	
+	UPROPERTY(Transient)
 	FVector _StartMantleLoc;
 
 	UPROPERTY(Transient)
-	FVector _TargetMantleLoc;
+	FVector _TargetMantlePullUpLoc;
+
+	UPROPERTY(Transient)
+	FVector _TargetMantleSnapLoc;
 	
 	//------------------
 #pragma endregion Mantle

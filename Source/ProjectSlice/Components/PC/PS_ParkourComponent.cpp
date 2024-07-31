@@ -575,8 +575,11 @@ bool UPS_ParkourComponent::CanMantle()
 	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),capsLoc,capsLoc,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
 	if(outCapsHit.bBlockingHit) return false;
 
-	//Set TargetLoc
-	_TargetMantleLoc = capsLoc;
+	//Set TargetLoc for 1st and 2nd phase
+	_TargetMantleSnapLoc = outHitFwd.Location + outHitFwd.Normal * _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	_TargetMantleSnapLoc.Z = outHitHgt.Location.Z - MantleSnapOffset;
+	
+	_TargetMantlePullUpLoc = capsLoc;
 
 	return true;
 }
@@ -593,7 +596,6 @@ void UPS_ParkourComponent::OnStartMantle()
 	bIsMantling = true;
 	StartMantleTimestamp = GetWorld()->GetTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
-	//_PlayerCharacter->SetActorLocation(FVector(_TargetMantleLoc.X, _StartMantleLoc.Y, _StartMantleLoc.Z));
 	SetComponentTickEnabled(bIsMantling);
 }
 
@@ -602,28 +604,52 @@ void UPS_ParkourComponent::MantleTick()
 	if(!IsValid(_PlayerCharacter)) return;
 		
 	if(!bIsMantling) return;
-		
-	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleTimestamp, StartMantleTimestamp + MantleDuration, 0,1);
-	if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("alpha %f"), alpha);
+
+	//1st phase
+	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleTimestamp, StartMantleTimestamp + MantleSnapDuration, 0,1);
 	
-	float curveAlphaXY = alpha;
-	if(IsValid(MantleCurveXY))
-		curveAlphaXY = MantleCurveXY->GetFloatValue(alpha);
-
-	float curveAlphaZ = alpha;
-	if(IsValid(MantleCurveZ))
-		curveAlphaZ = MantleCurveZ->GetFloatValue(alpha);
-
-	FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleLoc, curveAlphaXY);
-	newPlayerLoc.Z = FMath::Lerp(_StartMantleLoc.Z,_TargetMantleLoc.Z, curveAlphaZ);
-	_PlayerCharacter->SetActorLocation(newPlayerLoc);
-		
-	if(alpha >= 1)
+	//1sdt Phase
+	if(alphaSnap < 1)
 	{
-		if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("UPS_ParkourComponent::StopMantle"));
-		bIsMantling = false;
-		_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		_MantlePhase = EMantlePhase::SNAP;
+		FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleSnapLoc, alphaSnap);
+		_PlayerCharacter->SetActorLocation(newPlayerLoc);
+		StartMantlePullUpTimestamp = GetWorld()->GetTimeSeconds();
+		if(bDebugMantle)
+		{
+			UE_LOG(LogTemp, Log, TEXT("%S :: alphaSnap %f"),__FUNCTION__, alphaSnap);
+			DrawDebugPoint(GetWorld(), _TargetMantleSnapLoc, 20.f, FColor::Green, false);
+		}
 	}
+	//2nd Phase
+	else
+	{
+		_MantlePhase = EMantlePhase::PULL_UP;
+		
+		const float alphaPullUp = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantlePullUpTimestamp, StartMantlePullUpTimestamp + MantlePullUpDuration, 0,1);
+		if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPullUp %f"),__FUNCTION__, alphaPullUp);
+		
+		float curveAlphaXY = alphaPullUp;
+		if(IsValid(MantleCurveXY))
+			curveAlphaXY = MantleCurveXY->GetFloatValue(alphaPullUp);
+		
+		float curveAlphaZ = alphaPullUp;
+		if(IsValid(MantleCurveZ))
+			curveAlphaZ = MantleCurveZ->GetFloatValue(alphaPullUp);
+		
+		FVector newPlayerLoc = FMath::Lerp(_TargetMantleSnapLoc,_TargetMantlePullUpLoc, curveAlphaXY);
+		newPlayerLoc.Z = FMath::Lerp(_TargetMantleSnapLoc.Z,_TargetMantlePullUpLoc.Z, curveAlphaZ);
+		_PlayerCharacter->SetActorLocation(newPlayerLoc);
+		
+		if(alphaPullUp >= 1)
+		{
+			if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("UPS_ParkourComponent::StopMantle"));
+			bIsMantling = false;
+			_MantlePhase = EMantlePhase::NONE;
+			_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		}
+	}
+
 }
 
 
