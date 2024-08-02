@@ -544,7 +544,9 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 bool UPS_ParkourComponent::CanMantle()
 {
-	if(!IsValid(GetWorld()) || bIsCrouched) return false;
+	if(!IsValid(GetWorld())) return false;
+
+	if(bIsCrouched) OnCrouch();
 	
 	FHitResult outHitFwd, outHitHgt, outCapsHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
@@ -566,7 +568,7 @@ bool UPS_ParkourComponent::CanMantle()
 	FVector endHgt = outHitFwd.Location + outHitFwd.Normal * -1 * capsuleOffset;
 	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
-	if(!outHitHgt.bBlockingHit) return false;
+	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating) return false;
 
 	//Capsule trace for check if have enough place for player
 	FVector capsLoc = outHitHgt.Location;
@@ -575,20 +577,12 @@ bool UPS_ParkourComponent::CanMantle()
 	UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),capsLoc,capsLoc,_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
 	if(outCapsHit.bBlockingHit) return false;
 
-	//Set TargetLoc for 1st and 2nd phase
+	//Set TargetLoc && TargteROt for 1st and 2nd phase
 	_TargetMantleSnapLoc = outHitFwd.Location + outHitFwd.Normal * (_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2);
 	_TargetMantleSnapLoc.Z = outHitHgt.Location.Z - MantleSnapOffset;
-	
 	_TargetMantlePullUpLoc = capsLoc;
-
-	//Rotate player forward object
-	//TODO :: rotate forward object normal
-	// FRotator newRot = _PlayerController->GetControlRotation();
-	// float angleNormalToFwd = UKismetMathLibrary::DegAcos(outHitFwd.Normal.Dot(_PlayerCharacter->GetActorForwardVector()));
-	// newRot.Yaw = -(newRot.Yaw + angleNormalToFwd);
-	// UE_LOG(LogTemp, Error, TEXT("PlayerYaw %f, newYaw %f, angle %f"),_PlayerController->GetControlRotation().Yaw, newRot.Yaw,  UKismetMathLibrary::DegAcos(outHitFwd.Normal.Dot(_PlayerCharacter->GetActorForwardVector())));
-	// _PlayerController->SetControlRotation(newRot.Clamp());
-
+	_TargetMantleRot =  (outHitFwd.Normal * -1).Rotation();
+	
 	return true;
 }
 
@@ -613,6 +607,8 @@ void UPS_ParkourComponent::OnStartMantle()
 	//Init variables
 	StartMantleSnapTimestamp = GetWorld()->GetTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
+	_StartMantleRot = _PlayerCharacter->GetControlRotation();
+	_TargetMantleRot = FRotator(_StartMantleRot.Pitch, _TargetMantleRot.Yaw, _StartMantleRot.Roll);
 
 	//Start movement
 	SetComponentTickEnabled(bIsMantling);
@@ -652,8 +648,14 @@ void UPS_ParkourComponent::MantleTick()
 			curveAlphaSnap = MantleSnapCurve->GetFloatValue(alphaSnap);
 		
 		FVector newPlayerLoc = FMath::Lerp(_StartMantleLoc,_TargetMantleSnapLoc, curveAlphaSnap);
+
 		_PlayerCharacter->SetActorLocation(newPlayerLoc);
+
+		//Rotate player forward object
+		_PlayerController->SetControlRotation(UKismetMathLibrary::RInterpTo(_StartMantleRot.Clamp(), _TargetMantleRot.Clamp(), GetWorld()->GetTimeSeconds() - StartMantleSnapTimestamp, MantleFacingRotationSpeed));
+		
 		StartMantlePullUpTimestamp = GetWorld()->GetTimeSeconds();
+		
 		if(bDebugMantle)
 		{
 			UE_LOG(LogTemp, Log, TEXT("%S :: alphaSnap %f"),__FUNCTION__, alphaSnap);
