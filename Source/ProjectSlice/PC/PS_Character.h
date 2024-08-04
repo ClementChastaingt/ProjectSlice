@@ -152,6 +152,8 @@ public:
 	
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
 
+	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
+
 	/** Called for Crouch input */
 	void Crouching();
 
@@ -199,6 +201,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	float DefaultMinAnalogSpeed = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
+	FVector OnJumpLocation = FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
 	FTimerHandle CoyoteTimerHandle;

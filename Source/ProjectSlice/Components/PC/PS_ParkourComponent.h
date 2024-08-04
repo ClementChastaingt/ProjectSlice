@@ -32,7 +32,7 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
 
@@ -60,6 +60,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
 	float CanStandTickRate = 0.1f;
 
+
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -71,6 +72,10 @@ private:
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+	UPROPERTY(Transient)
+	int32 _PreviousMovementMode;
+
 
 #pragma region General
 	//------------------
@@ -166,7 +171,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|PullUp", meta=(ForceUnits="sec", ToolTip="Smooth PullUp Mantle duration"))
 	float MantlePullUpDuration = 0.2f;
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=( ForceUnits="sec", ToolTip="Smooth Snap Mantle duration"))
 	float MantleSnapDuration = 2.0f;
 
@@ -177,7 +182,7 @@ protected:
 	UCurveFloat* MantleSnapCurve;
 	
 	UFUNCTION()
-	bool CanMantle();
+	bool CanMantle(const FHitResult& inFwdHit);
 
 	UFUNCTION()
 	void OnStartMantle();

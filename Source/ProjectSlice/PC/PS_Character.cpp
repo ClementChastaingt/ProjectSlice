@@ -229,6 +229,8 @@ void AProjectSliceCharacter::Jump()
 		else
 			GetParkourComponent()->JumpOffWallRun();
 	}
+
+	OnJumpLocation = GetActorLocation();
 }
 
 void AProjectSliceCharacter::OnJumped_Implementation()
