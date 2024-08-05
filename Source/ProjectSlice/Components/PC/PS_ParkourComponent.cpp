@@ -559,10 +559,10 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 		
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
 
-	//TODO :: to fix
-	const bool bComeFromJumpWhoSucceed = _PreviousMovementMode == MOVE_Walking && (_PlayerCharacter->GetOnJumpLocation().Z + (outHitHgt.Location.Z - inFwdHit.Location.Z) <_PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight());
+	//TODO :: Do this a func in characMovmeent
+	const bool bIsInAir =  _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
+	const bool bComeFromJumpWhoSucceed = _PreviousMovementMode == MOVE_Walking && bIsInAir && _PlayerCharacter->GetOnJumpLocation().Z + outHitHgt.Location.Z < _PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
 
-	UE_LOG(LogTemp, Error, TEXT("bComeFromJumpWhoSucceed: %i, _PreviousMovementMode Walking %i, Mantle Offset %f, JumpMaxHeight %f"), bComeFromJumpWhoSucceed, _PreviousMovementMode == MOVE_Walking, _PlayerCharacter->GetOnJumpLocation().Z + (outHitHgt.Location.Z - inFwdHit.Location.Z), _PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight());
 	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating || bComeFromJumpWhoSucceed) return false;
 
 	//Capsule trace for check if have enough place for player
@@ -633,7 +633,19 @@ void UPS_ParkourComponent::MantleTick()
 	if(!bIsMantling) return;
 
 	//1st phase
-	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + MantleSnapDuration, 0,1);
+	DrawDebugPoint(GetWorld(), _StartMantleLoc, 20.f, FColor::Magenta, true);
+	DrawDebugPoint(GetWorld(), _TargetMantleSnapLoc, 20.f, FColor::Purple, true);
+
+	const bool bComeFromHigher = _StartMantleLoc.Z > _TargetMantleSnapLoc.Z ;
+	const float minMantleHeight = bComeFromHigher ? _TargetMantleSnapLoc.Z : _StartMantleLoc.Z;
+	const float maxMantleHeight = bComeFromHigher ? _StartMantleLoc.Z : _TargetMantleSnapLoc.Z;
+
+
+	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(maxMantleHeight - minMantleHeight, minMantleHeight, maxMantleHeight, 0.0f, 1.0f); 
+	const float dynSnapDuration = FMath::Lerp(MantleMinSnapDuration, MantlMaxSnapDuration,alphaHeight);
+	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
+
+	if(bDebugMantle)UE_LOG(LogTemp, Error, TEXT("%S :: dynSnapDuration %f, alphaHeight %f, DistStartargte %f"),__FUNCTION__,dynSnapDuration, alphaHeight, maxMantleHeight - minMantleHeight);
 	
 	//1sdt Phase
 	if(alphaSnap < 1)
@@ -707,7 +719,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 
 	if(bIsMantling || bIsWallRunning) return;
 
-	FHitResult outHit, outCapsHit;
+	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
 
 	//TODO :: Do this a func in characMovmeent
@@ -718,37 +730,36 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + GetForwardVector() * GetUnscaledCapsuleRadius() * 2, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
-	
+
+
+	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
 	//Force WallRun if lineTrace don't hit
-	bool bIsWallRun = false;
-	if(!outHit.bBlockingHit)
+	if(outHit.bBlockingHit)
 	{
-		UKismetSystemLibrary::CapsuleTraceSingle(GetWorld(),_PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation(),GetUnscaledCapsuleRadius(),GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Parkour), false,actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outCapsHit, true);
-		if(!outCapsHit.bBlockingHit) return;
+				
+		//Check angle if use LineTrace
+		const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
 
-		bIsWallRun = true;
-	}
-		
-	//Check angle if use LineTrace
-	const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
-
-	//Debug
-	if(bDebug)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-		if(outHit.bBlockingHit) UE_LOG(LogTemp, Log, TEXT("%S :: angle between hit and player forward %f"), __FUNCTION__ , angle);
-	}
+		//Debug
+		if(bDebug)
+			if(outHit.bBlockingHit) UE_LOG(LogTemp, Log, TEXT("%S :: angle between hit and player forward %f"), __FUNCTION__ , angle);
 	
-	//Choose right parkour logic to execute
-	if(angle > MaxMantleAngle || bIsWallRun)
+		//Choose right parkour logic to execute
+		if(angle > MaxMantleAngle)
+		{
+			OnWallRunStart(otherActor);
+		}
+		else if(CanMantle(outHit))
+		{
+			OnStartMantle();
+		}
+	}
+	else
 	{
 		OnWallRunStart(otherActor);
 	}
-	else if(CanMantle(outHit))
-	{
-		 OnStartMantle();
-	}
+
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,

@@ -207,6 +207,8 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 
 void AProjectSliceCharacter::Jump()
 {
+	OnJumpLocation = GetActorLocation();
+
 	Super::Jump();
 
 	//If in WallRunning 
@@ -230,7 +232,6 @@ void AProjectSliceCharacter::Jump()
 			GetParkourComponent()->JumpOffWallRun();
 	}
 
-	OnJumpLocation = GetActorLocation();
 }
 
 void AProjectSliceCharacter::OnJumped_Implementation()

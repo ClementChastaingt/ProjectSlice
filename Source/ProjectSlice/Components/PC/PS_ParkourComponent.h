@@ -173,7 +173,10 @@ protected:
 	float MantlePullUpDuration = 0.2f;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=( ForceUnits="sec", ToolTip="Smooth Snap Mantle duration"))
-	float MantleSnapDuration = 2.0f;
+	float MantlMaxSnapDuration = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=( ForceUnits="sec", ToolTip="Smooth Snap Mantle duration"))
+	float MantleMinSnapDuration = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle|Snap", meta=(ToolTip="Offset between obstacle border and player position for simulate 'arms lenght' "))
 	float MantleSnapOffset = 50.0f;
