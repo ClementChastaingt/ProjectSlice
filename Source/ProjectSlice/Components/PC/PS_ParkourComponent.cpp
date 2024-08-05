@@ -550,7 +550,7 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	
 	FHitResult outHitHgt, outCapsHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
-	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() * 2;
+	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
 
 	//Height Trace
 	FVector startHgt = inFwdHit.Location + inFwdHit.Normal * -1 * capsuleOffset;
@@ -636,17 +636,13 @@ void UPS_ParkourComponent::MantleTick()
 	DrawDebugPoint(GetWorld(), _StartMantleLoc, 20.f, FColor::Magenta, true);
 	DrawDebugPoint(GetWorld(), _TargetMantleSnapLoc, 20.f, FColor::Purple, true);
 
-	const bool bComeFromHigher = _StartMantleLoc.Z > _TargetMantleSnapLoc.Z ;
-	const float minMantleHeight = bComeFromHigher ? _TargetMantleSnapLoc.Z : _StartMantleLoc.Z;
-	const float maxMantleHeight = bComeFromHigher ? _StartMantleLoc.Z : _TargetMantleSnapLoc.Z;
+	bIsAerialLedging = _StartMantleLoc.Z > _TargetMantleSnapLoc.Z ;
 
-
-	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(maxMantleHeight - minMantleHeight, minMantleHeight, maxMantleHeight, 0.0f, 1.0f); 
+	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(_TargetMantleSnapLoc.Z - _StartMantleLoc.Z, -_PlayerCharacter->GetCharacterMovement()->MaxStepHeight, _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight(), 0.0f, 1.0f);
 	const float dynSnapDuration = FMath::Lerp(MantleMinSnapDuration, MantlMaxSnapDuration,alphaHeight);
-	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
-
-	if(bDebugMantle)UE_LOG(LogTemp, Error, TEXT("%S :: dynSnapDuration %f, alphaHeight %f, DistStartargte %f"),__FUNCTION__,dynSnapDuration, alphaHeight, maxMantleHeight - minMantleHeight);
 	
+	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
+		
 	//1sdt Phase
 	if(alphaSnap < 1)
 	{

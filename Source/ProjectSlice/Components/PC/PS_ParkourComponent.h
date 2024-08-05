@@ -144,6 +144,9 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
 	bool bIsMantling = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
+	bool bIsAerialLedging = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle|Snap")
 	float StartMantleSnapTimestamp = TNumericLimits<float>().Lowest();
