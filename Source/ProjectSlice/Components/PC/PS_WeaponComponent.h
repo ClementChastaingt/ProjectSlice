@@ -94,6 +94,10 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult CurrentFireHitResult;
+
+	/** AnimMontage to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	float MaxFireDistance = 5000.0f;
 	
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
@@ -131,7 +135,14 @@ public:
 	
 	/** Make the weapon Fire a Hook */
 	UFUNCTION()
-	void Grapple();
+	void HookObject();
+
+	UFUNCTION()
+	void OnStartWinderPull();
+
+	UFUNCTION()
+	void OnStopWinderPull();
+	
 private:
 	UPROPERTY(Transient)
 	UPS_HookComponent* _HookComponent = nullptr;

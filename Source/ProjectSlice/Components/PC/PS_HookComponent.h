@@ -80,13 +80,14 @@ public:
 	void OnInitWeaponEventReceived();
 
 	UFUNCTION()
-	void Grapple();
+	void HookObject();
 
 	UFUNCTION()
 	void DettachGrapple();
 	
-	UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
+	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 
+	FORCEINLINE void SetCableWinderPull(const bool bcableWinderPull){this->bCableWinderPull = bcableWinderPull;}
 
 protected:
 	//Status
@@ -101,6 +102,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Tens"))
 	bool bCablePowerPull = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
+	bool bCableWinderPull = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(ToolTip="Is currently pull Spherical Object"))
 	float bIsPullingSphericalObject = false;
@@ -109,7 +113,7 @@ protected:
 	float ForceWeight = 1.0f;
 
 	//Parameters
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for Grapple Object"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
 	float HookingMaxDistance = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))

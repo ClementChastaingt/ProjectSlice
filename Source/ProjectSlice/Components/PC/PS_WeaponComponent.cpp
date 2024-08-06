@@ -119,7 +119,9 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
 
 		// Hook Launch
-		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Grapple);
+		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
+		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Ongoing, this, &UPS_WeaponComponent::OnStartWinderPull);
+		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Completed, this, &UPS_WeaponComponent::OnStopWinderPull);
 	}
 
 	OnWeaponInit.Broadcast();
@@ -142,7 +144,7 @@ void UPS_WeaponComponent::Fire()
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * 5000,
+	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
@@ -211,11 +213,22 @@ void UPS_WeaponComponent::TurnRack()
 	
 }
 
-void UPS_WeaponComponent::Grapple()
+void UPS_WeaponComponent::HookObject()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
-	_HookComponent->Grapple();
+	_HookComponent->HookObject();
+}
+
+void UPS_WeaponComponent::OnStartWinderPull()
+{
+	UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	_HookComponent->SetCableWinderPull(true);
+}
+
+void UPS_WeaponComponent::OnStopWinderPull()
+{
+	_HookComponent->SetCableWinderPull(false);
 }
 
 

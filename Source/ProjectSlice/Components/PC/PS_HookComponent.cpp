@@ -598,7 +598,7 @@ void UPS_HookComponent::AdaptCableTens()
 #pragma region Grapple_Logic
 //------------------
 
-void UPS_HookComponent::Grapple()
+void UPS_HookComponent::HookObject()
 {
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
@@ -653,6 +653,7 @@ void UPS_HookComponent::DettachGrapple()
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;
 
 	//----Stop Cable Warping---
+	bCableWinderPull = false;
 	AttachedMesh = nullptr;
 	
 	//----Clear Cable Warp ---
@@ -719,13 +720,15 @@ void UPS_HookComponent::PowerCablePull()
 	//Activate Pull On reach Max Distance
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 	float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
-	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 
-	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
+	//TODO :: When winder pull alpha need to be scalar by time 
+	const float alpha = bCableWinderPull ? 1.0f : UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+	
 	bCablePowerPull = baseToMeshDist > DistanceOnAttach;
+	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
 	
 	//Pull Attached Object
-	if(!bCablePowerPull) return;
+	if(!bCablePowerPull && !bCableWinderPull) return;
 	
 	UCableComponent* firstCable = CableListArray[0];
 	

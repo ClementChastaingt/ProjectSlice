@@ -252,9 +252,9 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 
 	OnWallRunStop();
-	const FVector jumpForce =  Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
+	const FVector jumpForce = Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
 	if(bDebugWallRunJump) DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
-
+		
 	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);	
 }
 //------------------
@@ -558,12 +558,38 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	FVector endHgt = inFwdHit.Location + inFwdHit.Normal * -1 * capsuleOffset;
 		
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
-
+	
+	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating) return false;
+	
 	//TODO :: Do this a func in characMovmeent
-	const bool bIsInAir =  _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
-	const bool bComeFromJumpWhoSucceed = _PreviousMovementMode == MOVE_Walking && bIsInAir && _PlayerCharacter->GetOnJumpLocation().Z + outHitHgt.Location.Z < _PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
+	const bool bIsInAir = _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement();
 
-	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating || bComeFromJumpWhoSucceed) return false;
+	//If try by meet edge check if not too low
+	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > MantleSnapOffset;
+	if(bComeFromAirAndTooLowToEdge) return false;
+
+	//If come from Jump who can pass without Mantle
+	const bool bPlayerUpperThanTarget = outHitHgt.Location.Z < _PlayerCharacter->GetMesh()->GetComponentLocation().Z;
+	const bool bComeFromJumpWhoSucceed = _PreviousMovementMode == MOVE_Walking
+										&& bIsInAir
+	                                    && _PlayerCharacter->GetOnJumpLocation().Z + outHitHgt.Location.Z < _PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
+	
+	if(bComeFromJumpWhoSucceed)
+	{
+		//Force Landing
+		if(!bPlayerUpperThanTarget)
+		{
+			//TODO :: Need to find a better logic
+			FVector landLoc = outHitHgt.Location;
+			//FVector landLoc = _PlayerCharacter->GetActorLocation();
+			landLoc.Z = outHitHgt.Location.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
+			
+			_PlayerCharacter->SetActorLocation(landLoc, true);
+
+			return false;
+		}
+	}
+		
 
 	//Capsule trace for check if have enough place for player
 	FVector capsLoc = outHitHgt.Location;
@@ -633,9 +659,6 @@ void UPS_ParkourComponent::MantleTick()
 	if(!bIsMantling) return;
 
 	//1st phase
-	DrawDebugPoint(GetWorld(), _StartMantleLoc, 20.f, FColor::Magenta, true);
-	DrawDebugPoint(GetWorld(), _TargetMantleSnapLoc, 20.f, FColor::Purple, true);
-
 	bIsAerialLedging = _StartMantleLoc.Z > _TargetMantleSnapLoc.Z ;
 
 	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(_TargetMantleSnapLoc.Z - _StartMantleLoc.Z, -_PlayerCharacter->GetCharacterMovement()->MaxStepHeight, _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight(), 0.0f, 1.0f);
