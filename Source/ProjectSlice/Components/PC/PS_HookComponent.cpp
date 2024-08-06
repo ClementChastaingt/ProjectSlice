@@ -603,10 +603,17 @@ void UPS_HookComponent::HookObject()
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
 	
-	//Break Hook constraint if already exist
+	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()))
 	{
-		DettachGrapple();
+		if(!bCableWinderPull)
+		{
+			bCableWinderPull = true;
+		}
+		else
+		{
+			DettachGrapple();
+		}
 		return;
 	}
 

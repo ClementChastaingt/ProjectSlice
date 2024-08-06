@@ -118,10 +118,10 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 		// Rotate Rack
 		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
 
-		// Hook Launch
+		//Hook Launch
 		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
-		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Ongoing, this, &UPS_WeaponComponent::OnStartWinderPull);
-		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Completed, this, &UPS_WeaponComponent::OnStopWinderPull);
+				
+		
 	}
 
 	OnWeaponInit.Broadcast();
@@ -218,17 +218,6 @@ void UPS_WeaponComponent::HookObject()
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
 	_HookComponent->HookObject();
-}
-
-void UPS_WeaponComponent::OnStartWinderPull()
-{
-	UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	_HookComponent->SetCableWinderPull(true);
-}
-
-void UPS_WeaponComponent::OnStopWinderPull()
-{
-	_HookComponent->SetCableWinderPull(false);
 }
 
 

@@ -137,12 +137,6 @@ public:
 	UFUNCTION()
 	void HookObject();
 
-	UFUNCTION()
-	void OnStartWinderPull();
-
-	UFUNCTION()
-	void OnStopWinderPull();
-	
 private:
 	UPROPERTY(Transient)
 	UPS_HookComponent* _HookComponent = nullptr;

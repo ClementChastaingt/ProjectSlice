@@ -87,8 +87,6 @@ public:
 	
 	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 
-	FORCEINLINE void SetCableWinderPull(const bool bcableWinderPull){this->bCableWinderPull = bcableWinderPull;}
-
 protected:
 	//Status
 	UPROPERTY()
@@ -123,9 +121,7 @@ protected:
 	float MaxForcePullingDistance = 1000.0f;
 
 	UFUNCTION()
-	void PowerCablePull();
-
-
+	void PowerCablePull();	
 	
 private:
 	//------------------
@@ -133,6 +129,7 @@ private:
 #pragma endregion Grapple
 
 
+#pragma region Rope
 #pragma region Rope
 	//------------------
 
