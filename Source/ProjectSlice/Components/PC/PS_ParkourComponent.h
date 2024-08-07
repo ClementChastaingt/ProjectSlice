@@ -203,6 +203,9 @@ protected:
 	void OnStartLedge(const FVector& targetLoc);
 
 	UFUNCTION()
+	void OnStopLedge();
+
+	UFUNCTION()
 	void LedgeTick() ;
 	
 private:

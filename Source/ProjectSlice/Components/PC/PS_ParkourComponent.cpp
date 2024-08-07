@@ -139,14 +139,17 @@ void UPS_ParkourComponent::WallRunTick()
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
-{
-	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S, bIsWallRunning %i"), __FUNCTION__, bIsWallRunning);
-	
+{	
 	if(bIsWallRunning) return;
 	
-	//-----OnWallRunStart-----	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
+
+	if(bDebugWallRun)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("%S :: StartWallRun"),__FUNCTION__));
+	}
 	
 	//WallRun Logic activation
 	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
@@ -158,12 +161,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	// 	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
 	// 	return;
 	// }
-
-	if(bDebugWallRun)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun start"));
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("%S :: StartWallRun"),__FUNCTION__));
-	}
+	
 	
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
@@ -563,33 +561,32 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
 	
 	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating) return false;
-	
-	//TODO :: Do this a func in characMovmeent
-	const bool bIsInAir = _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement();
-
-	//If try by meet edge check if not too low
-	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > MantleSnapOffset;
-	if(bComeFromAirAndTooLowToEdge) return false;
-
-	//If come from Jump who can pass without Mantle
-	const bool bPlayerUpperThanTarget = outHitHgt.Location.Z < _PlayerCharacter->GetMesh()->GetComponentLocation().Z;
-	const bool bComeFromJumpWhoSucceed = _PreviousMovementMode == MOVE_Walking
-										&& bIsInAir
-	                                    && _PlayerCharacter->GetOnJumpLocation().Z + outHitHgt.Location.Z < _PlayerCharacter->GetOnJumpLocation().Z + _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight();
-	
-	if(bComeFromJumpWhoSucceed)
-	{
-		//Force Landing by Ledge
-		if(!bPlayerUpperThanTarget)
-		{
-			if(!_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff)
-				OnStartLedge(outHitHgt.Location);
-
-			return false;
-		}
-	}
 		
+	//TODO :: Do this a func in characMovmeent
+	const bool bIsInAir = _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
+		
+	//If try by meet edge check if not too low
+	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	if(bComeFromAirAndTooLowToEdge)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: bComeFromAirAndTooLowToEdge true"), __FUNCTION__);
+		return false;
+	}
+	
+	//If come from Jump who can pass without Mantle
+	const bool bPlayerUpperThanTarget = bIsInAir && _PlayerCharacter->GetMesh()->GetComponentLocation().Z < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
 
+	DrawDebugPoint(GetWorld(), _PlayerCharacter->GetMesh()->GetComponentLocation(), 20.f, FColor::Green, true);
+
+	UE_LOG(LogTemp, Error, TEXT("bIsInAir %i, bPlayerUpperThanTarget %i"), bIsInAir, outHitHgt.Location.Z < _PlayerCharacter->GetMesh()->GetComponentLocation().Z);
+	
+	//Force Landing by Ledge
+	if(bPlayerUpperThanTarget/* && !_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff*/)
+	{
+		OnStartLedge(outHitHgt.Location);
+		return false;
+	}
+	
 	//Capsule trace for check if have enough place for player
 	FVector capsLoc = outHitHgt.Location;
 	capsLoc.Z = outHitHgt.Location.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
@@ -714,6 +711,14 @@ void UPS_ParkourComponent::MantleTick()
 
 }
 
+//------------------
+#pragma endregion Mantle
+
+
+#pragma region Ledge
+//------------------
+
+
 void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 {
 	if(bDebugLedge) UE_LOG(LogTemp, Warning, TEXT ("%S"), __FUNCTION__);
@@ -730,7 +735,22 @@ void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 	
 	bIsLedging = true;
 	StartLedgeTimestamp = GetWorld()->GetTimeSeconds();
+	
+	SetComponentTickEnabled(true);
+	SetGenerateOverlapEvents(false);
+	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+}
+
+void UPS_ParkourComponent::OnStopLedge()
+{
+	if(bDebugLedge) UE_LOG(LogTemp, Warning, TEXT ("%S"), __FUNCTION__);
+	
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	SetGenerateOverlapEvents(true);
+	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	bIsLedging = false;
 
 }
 
@@ -739,7 +759,6 @@ void UPS_ParkourComponent::LedgeTick()
 	if(!IsValid(_PlayerCharacter)) return;
 	
 	if(!bIsLedging) return;
-	
 
 	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(),StartLedgeTimestamp, StartLedgeTimestamp + LedgeDuration, 0.0f, 1.0f);
 	float curveAlpha = alpha;
@@ -750,18 +769,20 @@ void UPS_ParkourComponent::LedgeTick()
 	}
 
 	FVector newLoc = FMath::Lerp(_StartLedgeLoc,_TargetLedgeLoc, curveAlpha);
-	_PlayerCharacter->SetActorLocation(newLoc, true);
+	_PlayerCharacter->SetActorLocation(newLoc);
+
+	UE_LOG(LogTemp, Error, TEXT("newLoc %s, _StartLedgeLoc %s, _TargetLedgeLoc %s, alpha %f"), *newLoc.ToString(), *_StartLedgeLoc.ToString(),*_TargetLedgeLoc.ToString(), alpha);
+	DrawDebugPoint(GetWorld(), _TargetLedgeLoc, 20.f, FColor::Magenta, true);
 
 	if(alpha >= 1.0f)
 	{
-		bIsLedging = false;
-		if(bDebugLedge) UE_LOG(LogTemp, Warning, TEXT ("UPS_ParkourComponent :: Stop Ledge"));
+		OnStopLedge();
 	}
 }
 
-
 //------------------
-#pragma endregion Mantle
+#pragma endregion Ledge
+
 
 #pragma region Event_Receiver
 //------------------
