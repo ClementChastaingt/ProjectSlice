@@ -75,6 +75,11 @@ protected:
 	/** Hook Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
 	class UInputAction* HookAction;
+
+	/** Winder Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
+	class UInputAction* WinderAction;
+	
 	
 private:
 	//------------------
@@ -136,6 +141,12 @@ public:
 	/** Make the weapon Fire a Hook */
 	UFUNCTION()
 	void HookObject();
+
+	UFUNCTION()
+	void WindeHook();
+
+	UFUNCTION()
+	void StopWindeHook();
 
 private:
 	UPROPERTY(Transient)

@@ -602,22 +602,18 @@ void UPS_HookComponent::HookObject()
 {
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
+
+	UE_LOG(LogTemp, Error, TEXT("Time 1 : %f, bCableWinderPull %i"), GetWorld()->GetTimeSeconds(), bCableWinderPull);
 	
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()))
 	{
-		if(!bCableWinderPull)
-		{
-			bCableWinderPull = true;
-		}
-		else
-		{
-			DettachGrapple();
-		}
+		DettachHook();
 		return;
 	}
 
 	//Trace config
+	//TODO :: Make a TraceType for Hook Object
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), HookThrower->GetComponentLocation(),
@@ -653,8 +649,23 @@ void UPS_HookComponent::HookObject()
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
 
+void UPS_HookComponent::WindeHook()
+{
+	//Break Hook constraint if already exist Or begin Winding
+	if(IsValid(GetAttachedMesh()))
+		bCableWinderPull = true;
 
-void UPS_HookComponent::DettachGrapple()
+		
+}
+
+void UPS_HookComponent::StopWindeHook()
+{
+	UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	bCableWinderPull = false;
+}
+
+
+void UPS_HookComponent::DettachHook()
 {
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;

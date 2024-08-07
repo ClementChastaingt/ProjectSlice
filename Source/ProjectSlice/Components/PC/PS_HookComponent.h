@@ -83,7 +83,13 @@ public:
 	void HookObject();
 
 	UFUNCTION()
-	void DettachGrapple();
+	void WindeHook();
+	
+	UFUNCTION()
+	void StopWindeHook();
+
+	UFUNCTION()
+	void DettachHook();
 	
 	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 

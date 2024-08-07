@@ -120,7 +120,10 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 
 		//Hook Launch
 		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
-				
+
+		//Winder Launch
+		EnhancedInputComponent->BindAction(WinderAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
+		EnhancedInputComponent->BindAction(WinderAction, ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);				
 		
 	}
 
@@ -218,6 +221,20 @@ void UPS_WeaponComponent::HookObject()
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
 	_HookComponent->HookObject();
+}
+
+void UPS_WeaponComponent::WindeHook()
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
+	
+	_HookComponent->WindeHook();
+}
+
+void UPS_WeaponComponent::StopWindeHook()
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
+	
+	_HookComponent->StopWindeHook();
 }
 
 
