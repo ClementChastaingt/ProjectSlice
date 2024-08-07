@@ -602,9 +602,7 @@ void UPS_HookComponent::HookObject()
 {
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
-
-	UE_LOG(LogTemp, Error, TEXT("Time 1 : %f, bCableWinderPull %i"), GetWorld()->GetTimeSeconds(), bCableWinderPull);
-	
+		
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()))
 	{
@@ -652,15 +650,16 @@ void UPS_HookComponent::HookObject()
 void UPS_HookComponent::WindeHook()
 {
 	//Break Hook constraint if already exist Or begin Winding
-	if(IsValid(GetAttachedMesh()))
+	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
+	{
 		bCableWinderPull = true;
-
+		CableStartWindeTimestamp = GetWorld()->GetTimeSeconds();
+	}
 		
 }
 
 void UPS_HookComponent::StopWindeHook()
 {
-	UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	bCableWinderPull = false;
 }
 
@@ -733,20 +732,34 @@ void UPS_HookComponent::DettachHook()
 
 void UPS_HookComponent::PowerCablePull()
 {
-	if(!IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0)) return;
+	if(!IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 
+	//Activate Pull if Winde
+	float alpha;
+	if(bCableWinderPull)
+	{
+		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
+		alpha = windeAlpha;
+		if(IsValid(WindePullingCurve))
+		{
+			alpha = WindePullingCurve->GetFloatValue(windeAlpha);
+		}
+	}
 	//Activate Pull On reach Max Distance
-	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
-	float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
+	else
+	{
+		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
+		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
-	//TODO :: When winder pull alpha need to be scalar by time 
-	const float alpha = bCableWinderPull ? 1.0f : UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 	
-	bCablePowerPull = baseToMeshDist > DistanceOnAttach;
-	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
+		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
+	}
+
+	if(!bCablePowerPull && !bCableWinderPull) return;
 	
 	//Pull Attached Object
-	if(!bCablePowerPull && !bCableWinderPull) return;
+	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
 	
 	UCableComponent* firstCable = CableListArray[0];
 	
