@@ -70,7 +70,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling)
+	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling && !bIsLedging)
 		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
@@ -78,6 +78,9 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	//-----Mantling move -----
 	MantleTick();
+
+	//-----Ledge move -----
+	LedgeTick();
 
 	//-----CameraTilt smooth reset-----
 	CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
@@ -576,15 +579,11 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	
 	if(bComeFromJumpWhoSucceed)
 	{
-		//Force Landing
+		//Force Landing by Ledge
 		if(!bPlayerUpperThanTarget)
 		{
-			//TODO :: Need to find a better logic
-			FVector landLoc = outHitHgt.Location;
-			//FVector landLoc = _PlayerCharacter->GetActorLocation();
-			landLoc.Z = outHitHgt.Location.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
-			
-			_PlayerCharacter->SetActorLocation(landLoc, true);
+			if(!_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff)
+				OnStartLedge(outHitHgt.Location);
 
 			return false;
 		}
@@ -658,15 +657,12 @@ void UPS_ParkourComponent::MantleTick()
 		
 	if(!bIsMantling) return;
 
-	//1st phase
-	bIsAerialLedging = _StartMantleLoc.Z > _TargetMantleSnapLoc.Z ;
-
 	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(_TargetMantleSnapLoc.Z - _StartMantleLoc.Z, -_PlayerCharacter->GetCharacterMovement()->MaxStepHeight, _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight(), 0.0f, 1.0f);
 	const float dynSnapDuration = FMath::Lerp(MantleMinSnapDuration, MantlMaxSnapDuration,alphaHeight);
 	
 	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
 		
-	//1sdt Phase
+	//1st Phase
 	if(alphaSnap < 1)
 	{
 		_MantlePhase = EMantlePhase::SNAP;
@@ -716,6 +712,51 @@ void UPS_ParkourComponent::MantleTick()
 		}
 	}
 
+}
+
+void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
+{
+	if(bDebugLedge) UE_LOG(LogTemp, Warning, TEXT ("%S"), __FUNCTION__);
+	
+	if(!IsValid(GetWorld())) return;
+
+	//TODO :: Change for Custom Move mode CMOVE_Climbing when add custom move mode
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_None);
+	
+	_StartLedgeLoc = _PlayerCharacter->GetActorLocation();
+	_TargetLedgeLoc = targetLoc;
+	//FVector landLoc = _PlayerCharacter->GetActorLocation();
+	_TargetLedgeLoc.Z = targetLoc.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
+	
+	bIsLedging = true;
+	StartLedgeTimestamp = GetWorld()->GetTimeSeconds();
+
+
+}
+
+void UPS_ParkourComponent::LedgeTick()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+	
+	if(!bIsLedging) return;
+	
+
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(),StartLedgeTimestamp, StartLedgeTimestamp + LedgeDuration, 0.0f, 1.0f);
+	float curveAlpha = alpha;
+
+	if(IsValid(LedgePullUpCurve))
+	{
+		curveAlpha = LedgePullUpCurve->GetFloatValue(alpha);
+	}
+
+	FVector newLoc = FMath::Lerp(_StartLedgeLoc,_TargetLedgeLoc, curveAlpha);
+	_PlayerCharacter->SetActorLocation(newLoc, true);
+
+	if(alpha >= 1.0f)
+	{
+		bIsLedging = false;
+		if(bDebugLedge) UE_LOG(LogTemp, Warning, TEXT ("UPS_ParkourComponent :: Stop Ledge"));
+	}
 }
 
 

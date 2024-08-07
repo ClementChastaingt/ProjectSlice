@@ -54,6 +54,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Mantle")
 	bool bDebugMantle = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Ledge")
+	bool bDebugLedge = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
 	float CustomTickRate = 0.02f;
 
@@ -144,9 +147,6 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
 	bool bIsMantling = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
-	bool bIsAerialLedging = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle|Snap")
 	float StartMantleSnapTimestamp = TNumericLimits<float>().Lowest();
@@ -197,7 +197,13 @@ protected:
 	void OnStoptMantle();
 	
 	UFUNCTION()
-	void MantleTick() ;
+	void MantleTick();
+
+	UFUNCTION()
+	void OnStartLedge(const FVector& targetLoc);
+
+	UFUNCTION()
+	void LedgeTick() ;
 	
 private:
 	UPROPERTY(Transient)
@@ -220,6 +226,36 @@ private:
 	
 	//------------------
 #pragma endregion Mantle
+
+#pragma region Ledge
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Ledge")
+	bool bIsLedging = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Ledge")
+	float StartLedgeTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Ledge", meta=(ForceUnits="sec", ToolTip="Smooth Ledge duration"))
+	float LedgeDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Ledge", meta=(ToolTip="Ledge curve"))
+	UCurveFloat* LedgePullUpCurve;
+	
+	
+private:
+	UPROPERTY(Transient)
+	FVector _StartLedgeLoc;
+	
+	UPROPERTY(Transient)
+	FVector _TargetLedgeLoc;
+	
+
+#pragma endregion Ledge
+
 
 #pragma region WallRun
 	//------------------
