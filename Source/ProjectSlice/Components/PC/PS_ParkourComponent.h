@@ -76,10 +76,6 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-	UPROPERTY(Transient)
-	int32 _PreviousMovementMode;
-
-
 #pragma region General
 	//------------------
 
@@ -284,10 +280,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
 	bool bIsWallRunning = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning when comming from Air"))
-	bool bComeFromAir = false;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently force WallRunning"))
 	bool bForceWallRun = false;
 	

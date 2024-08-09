@@ -414,6 +414,7 @@ void UPS_ParkourComponent::Stooping()
 		const float enterSpeed = _PlayerCharacter->GetVelocity().Length();
 		
 		bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
+		UE_LOG(LogTemp, Error, TEXT("%S :: bIsCrouched"), __FUNCTION__,bIsCrouched );
 		
 		//Begin Slide if Velocity on enter is enough high
 		if(bIsCrouched && enterSpeed > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
@@ -581,7 +582,7 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	UE_LOG(LogTemp, Error, TEXT("bIsInAir %i, bPlayerUpperThanTarget %i"), bIsInAir, outHitHgt.Location.Z < _PlayerCharacter->GetMesh()->GetComponentLocation().Z);
 	
 	//Force Landing by Ledge
-	if(bPlayerUpperThanTarget/* && !_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff*/)
+	if(bPlayerUpperThanTarget && !_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff)
 	{
 		OnStartLedge(outHitHgt.Location);
 		return false;
@@ -855,16 +856,11 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode,
 	uint8 previousCustomMode)
 {
-    bComeFromAir = prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying;
-
-	UEnum* movementMode = StaticEnum<EMovementMode>();
-	_PreviousMovementMode = movementMode->GetIndexByValue(prevMovementMode);
+	//TODO :: Replace by CMOVE_Slide
+    const bool bForceUncrouch = prevMovementMode == MOVE_Walking && (character->GetCharacterMovement()->MovementMode == MOVE_Falling ||  character->GetCharacterMovement()->MovementMode == MOVE_Flying);
 		
-	if(bComeFromAir && bIsCrouched)
-	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: OnCrouch"), __FUNCTION__);
+	if(bForceUncrouch && bIsCrouched)
 		OnCrouch();
-	}
 }
 
 

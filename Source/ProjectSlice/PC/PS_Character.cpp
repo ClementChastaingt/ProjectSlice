@@ -198,19 +198,27 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 {
 	if(!CoyoteTimerHandle.IsValid())
-		return Super::CanJumpInternal_Implementation();
+	{
+		//If crouch && try jump => Uncrouch for jump
+		// Need to stoop instantly for work
+		if(bIsCrouched/* && GetParkourComponent()->CanStand()*/)
+			GetParkourComponent()->OnCrouch();
 
-	return (Super::CanJumpInternal_Implementation() || GetWorld()->GetTimerManager().GetTimerRemaining(CoyoteTimerHandle) > 0)
-	&& !GetWorld()->GetTimerManager().IsTimerActive(CoyoteTimerHandle);
+		UE_LOG(LogTemp, Log, TEXT("!bIsCrouched %i, JumpIsAllowedInternal %i"), !bIsCrouched, JumpIsAllowedInternal());
+		return Super::CanJumpInternal_Implementation();
+	}
+	
+	return (Super::CanJumpInternal_Implementation() || GetWorld()->GetTimerManager().GetTimerRemaining(CoyoteTimerHandle) > 0) && !GetWorld()->GetTimerManager().IsTimerActive(CoyoteTimerHandle);
 	
 }
 
 void AProjectSliceCharacter::Jump()
-{
+{	
 	OnJumpLocation = GetActorLocation();
-
+	
 	Super::Jump();
-
+	UE_LOG(LogTemp, Error, TEXT("%S"), __FUNCTION__);
+	
 	//If in WallRunning 
 	if(IsValid(GetParkourComponent()))
 	{
@@ -218,7 +226,7 @@ void AProjectSliceCharacter::Jump()
 		{
 			if(GetParkourComponent()->GetOverlapInfos().IsEmpty()) return;
 			
-			//Try WallRunning if already overlap wall 
+			//Try Parkour if already overlap wall 
 			for (const FOverlapInfo& currentOverlapInfo : GetParkourComponent()->GetOverlapInfos())
 			{
 				if (!IsValid(currentOverlapInfo.OverlapInfo.Component.Get()) || !IsValid(currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner()) ||
