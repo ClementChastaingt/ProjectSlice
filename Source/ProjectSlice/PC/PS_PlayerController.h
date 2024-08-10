@@ -29,6 +29,8 @@ public:
 
 	UInputAction* GetLookAction() const{return LookAction;}
 
+	UInputAction* GetSlowmoAction() const{return SlowmoAction;}
+
 protected:
 	/** Input Mapping Context to be used for player input */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
@@ -50,6 +52,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SlowmoAction;
 
 	// Begin Actor interface
 	virtual void BeginPlay() override;

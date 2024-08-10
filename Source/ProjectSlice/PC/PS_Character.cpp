@@ -72,6 +72,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 
 	//Create WeaponComponent
 	ProceduralAnimComponent = CreateDefaultSubobject<UPS_ProceduralAnimComponent>(TEXT("ProceduralAnimComponent"));
+
+	//Create SlowmoComponent
+	SlowmoComponent = CreateDefaultSubobject<UPS_SlowmoComponent>(TEXT("SlowmoComponent"));
 	
 	//Create ParkourComponent
 	ParkourComponent = CreateDefaultSubobject<UPS_ParkourComponent>(TEXT("ParkourComponent"));
@@ -157,6 +160,9 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		
 		// Looking
 		EnhancedInputComponent->BindAction(_PlayerController->GetLookAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
+
+		// Slowmotion
+		EnhancedInputComponent->BindAction(_PlayerController->GetSlowmoAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Slowmo);
 	}
 	else
 	{
@@ -359,8 +365,24 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 //------------------
 #pragma endregion Look
 
+#pragma region Slowmo
+//------------------
+
+void AProjectSliceCharacter::Slowmo()
+{
+	if(IsValid(GetSlowmoComponent()))
+	{
+		GetSlowmoComponent()->OnStartSlowmo();
+	}
+}
+
+//------------------
+#pragma endregion Slowmo
+
+
 #pragma region Weapon
 //------------------
+
 
 void AProjectSliceCharacter::SetHasRifle(bool bNewHasRifle)
 {

@@ -11,6 +11,7 @@
 #include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
 #include "ProjectSlice/Components/Common/PS_ProceduralAnimComponent.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
+#include "ProjectSlice/Components/PC/PS_SlowmoComponent.h"
 #include "PS_Character.generated.h"
 
 class UInputComponent;
@@ -54,6 +55,10 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 
 	/** ParkourComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UPS_SlowmoComponent* SlowmoComponent;
+
+	/** ParkourComponent */
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	UPS_ParkourComponent* ParkourComponent;
 
 	/** WeaponComponent */
@@ -93,6 +98,10 @@ public:
 	/** Returns ComponentsManager **/
 	UFUNCTION(BlueprintCallable)
 	UPS_ProceduralAnimComponent* GetProceduralAnimComponent() const {return ProceduralAnimComponent; }
+
+	/** Returns ComponentsManager **/
+	UFUNCTION(BlueprintCallable)
+	UPS_SlowmoComponent* GetSlowmoComponent() const {return SlowmoComponent; }
 
 	/** Returns ParkourComponent **/
 	UFUNCTION(BlueprintCallable)
@@ -214,6 +223,20 @@ protected:
 
 	//------------------
 #pragma endregion Move
+
+#pragma region Slowmo
+	//------------------
+
+public:
+	//------------------
+protected:
+	/** Called for Slowmo input */
+	void Slowmo();
+	
+private:
+	//------------------
+#pragma endregion Slowmo
+
 
 #pragma region Weapon
 	//------------------
