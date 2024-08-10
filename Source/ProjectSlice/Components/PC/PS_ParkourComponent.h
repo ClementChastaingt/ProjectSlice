@@ -341,6 +341,9 @@ private:
 public:	
 	//Crouch functions
 	void OnCrouch();
+
+	FORCEINLINE float GetSmoothCrouchDuration() const{ return SmoothCrouchDuration;}
+
 protected:
 
 	//Check if can Stand

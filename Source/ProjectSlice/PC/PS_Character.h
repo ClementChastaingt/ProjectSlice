@@ -169,7 +169,7 @@ protected:
 
 	/** Called for Jump input */
 	virtual bool CanJumpInternal_Implementation() const override;
-	
+
 	/** Called for Jump input */
 	virtual void Jump() override;
 
@@ -207,20 +207,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
 	FTimerHandle CoyoteTimerHandle;
-
 	
-
-
-#pragma region Jump
-	//------------------
-
-protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Jump|Coyote")
 	float CoyoteTime = 0.35f;
-
-
-#pragma endregion Jump
-
+	
 
 	//------------------
 #pragma endregion Move

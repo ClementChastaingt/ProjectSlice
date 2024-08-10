@@ -192,6 +192,27 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 //------------------
 #pragma endregion CharacterMovementComponent
 
+#pragma region Crouch
+//------------------
+
+void AProjectSliceCharacter::Crouching()
+{
+	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
+
+	_bIsCrouchInputTrigger = !_bIsCrouchInputTrigger;
+	GetParkourComponent()->OnCrouch();
+}
+
+void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+}
+
+void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+}
+//------------------
+#pragma endregion Crouch
+
 #pragma region Jump
 //------------------
 
@@ -199,12 +220,10 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 {
 	if(!CoyoteTimerHandle.IsValid())
 	{
-		//If crouch && try jump => Uncrouch for jump
-		// Need to stoop instantly for work
-		if(bIsCrouched/* && GetParkourComponent()->CanStand()*/)
-			GetParkourComponent()->OnCrouch();
-
-		UE_LOG(LogTemp, Log, TEXT("!bIsCrouched %i, JumpIsAllowedInternal %i"), !bIsCrouched, JumpIsAllowedInternal());
+		//If crouch && try jump force jump (Uncrouch automaticaly)
+		if(bIsCrouched && IsValid(GetParkourComponent()))
+			return true;
+		
 		return Super::CanJumpInternal_Implementation();
 	}
 	
@@ -212,12 +231,12 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 	
 }
 
+
 void AProjectSliceCharacter::Jump()
 {	
 	OnJumpLocation = GetActorLocation();
 	
 	Super::Jump();
-	UE_LOG(LogTemp, Error, TEXT("%S"), __FUNCTION__);
 	
 	//If in WallRunning 
 	if(IsValid(GetParkourComponent()))
@@ -289,28 +308,6 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 //------------------
 #pragma endregion Jump
 
-#pragma region Crouch
-//------------------
-
-void AProjectSliceCharacter::Crouching()
-{
-	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
-
-	_bIsCrouchInputTrigger = !_bIsCrouchInputTrigger;
-	GetParkourComponent()->OnCrouch();
-}
-
-
-void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
-{
-}
-
-void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
-{
-}
-//------------------
-#pragma endregion Crouch
-
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
 	
@@ -338,7 +335,7 @@ void AProjectSliceCharacter::StopMoving()
 	if(IsValid(_PlayerController))
 	
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-}	
+}
 
 //------------------
 #pragma endregion Move

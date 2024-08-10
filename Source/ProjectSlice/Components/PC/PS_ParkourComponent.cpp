@@ -350,7 +350,7 @@ void UPS_ParkourComponent::OnCrouch()
 	{		
 		// See if collision is already at desired size.
 		if(_PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight())return;
-
+		
 		//Activate interp
 		bIsCrouched = false;
 		bIsStooping = true;
@@ -389,7 +389,8 @@ void UPS_ParkourComponent::CanStandTick()
 {
 	if(!IsValid(_PlayerCharacter)) return;
 
-	if(!_PlayerCharacter->IsCrouchInputTrigger()) OnCrouch();
+	if(!_PlayerCharacter->IsCrouchInputTrigger())
+		OnCrouch();
 }
 
 void UPS_ParkourComponent::Stooping()
@@ -414,7 +415,6 @@ void UPS_ParkourComponent::Stooping()
 		const float enterSpeed = _PlayerCharacter->GetVelocity().Length();
 		
 		bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
-		UE_LOG(LogTemp, Error, TEXT("%S :: bIsCrouched"), __FUNCTION__,bIsCrouched );
 		
 		//Begin Slide if Velocity on enter is enough high
 		if(bIsCrouched && enterSpeed > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
@@ -741,6 +741,8 @@ void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 	SetGenerateOverlapEvents(false);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	if(bDebugLedge) DrawDebugPoint(GetWorld(), _TargetLedgeLoc, 20.f, FColor::Magenta, true);
+
 }
 
 void UPS_ParkourComponent::OnStopLedge()
@@ -771,10 +773,7 @@ void UPS_ParkourComponent::LedgeTick()
 
 	FVector newLoc = FMath::Lerp(_StartLedgeLoc,_TargetLedgeLoc, curveAlpha);
 	_PlayerCharacter->SetActorLocation(newLoc);
-
-	UE_LOG(LogTemp, Error, TEXT("newLoc %s, _StartLedgeLoc %s, _TargetLedgeLoc %s, alpha %f"), *newLoc.ToString(), *_StartLedgeLoc.ToString(),*_TargetLedgeLoc.ToString(), alpha);
-	DrawDebugPoint(GetWorld(), _TargetLedgeLoc, 20.f, FColor::Magenta, true);
-
+	
 	if(alpha >= 1.0f)
 	{
 		OnStopLedge();
@@ -861,6 +860,7 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 		
 	if(bForceUncrouch && bIsCrouched)
 		OnCrouch();
+
 }
 
 
