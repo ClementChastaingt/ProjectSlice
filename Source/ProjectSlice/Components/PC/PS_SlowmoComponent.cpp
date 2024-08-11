@@ -4,7 +4,7 @@
 #include "PS_SlowmoComponent.h"
 
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 
@@ -14,7 +14,7 @@ UPS_SlowmoComponent::UPS_SlowmoComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
+	
 	// ...
 }
 
@@ -23,6 +23,8 @@ UPS_SlowmoComponent::UPS_SlowmoComponent()
 void UPS_SlowmoComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetComponentTickEnabled(false);
 
 	//Init default Variable
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
@@ -33,26 +35,79 @@ void UPS_SlowmoComponent::BeginPlay()
 
 }
 
-
 // Called every frame
 void UPS_SlowmoComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
+	
+	if(!bIsSlowmoTransiting && IsComponentTickEnabled())
+		SetComponentTickEnabled(false);
+	
+	SlowmoTransition(DeltaTime);
 }
 
-void UPS_SlowmoComponent::OnStartSlowmo()
+
+void UPS_SlowmoComponent::SlowmoTransition(const float& DeltaTime)
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+	if(bIsSlowmoTransiting)
+	{
+		SlowmoTime = SlowmoTime + DeltaTime;
+		if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
 
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+		const float alpha = UKismetMathLibrary::MapRangeClamped(SlowmoTime, StartSlowmoTimestamp ,StartSlowmoTimestamp + SlowmoTransitionDuration,0.0,1.0);
+		float curveAlpha = alpha;
+		if(IsValid(SlowmoCurve))
+		{
+			curveAlpha = SlowmoCurve->GetFloatValue(alpha);
+		}
+	
+		float globalDilationTarget = bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
+		float playerDilationTarget = bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
+		
+		float globalTimeDilation = FMath::Lerp(StartTimeDilation,globalDilationTarget,curveAlpha);		
+		float playerTimeDilation = FMath::Lerp(StartTimeDilation,playerDilationTarget,curveAlpha);
 
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.5f);
-	_PlayerCharacter->CustomTimeDilation = 0.8f;
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), globalTimeDilation);
+		_PlayerCharacter->CustomTimeDilation = playerTimeDilation;
+
+		UE_LOG(LogTemp, Log, TEXT("%S :: SlowmoTime %f, alpha %f, globalDilationTarget %f, playerTimeDilation %f "),  __FUNCTION__,SlowmoTime,alpha, globalDilationTarget, playerTimeDilation);
+
+		if(alpha >= 1.0f)
+		{
+			bIsSlowmoTransiting = false;
+
+			if(!bSlowmoActive) return;
+			
+			FTimerDelegate stopSlowmo_TimerDelegate;
+			stopSlowmo_TimerDelegate.BindUObject(this, &UPS_SlowmoComponent::OnTriggerSlowmo);
+			GetWorld()->GetTimerManager().SetTimer(SlowmoTimerHandle, stopSlowmo_TimerDelegate, SlowmoDuration, false);
+		}
+	}
+
+}
+
+
+void UPS_SlowmoComponent::OnTriggerSlowmo()
+{
+	if(!IsValid(GetWorld()))
+		return;
+	
+	StartTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+	StartSlowmoTimestamp = GetWorld()->GetTimeSeconds();
+	SlowmoTime = StartSlowmoTimestamp;
+
+	bSlowmoActive = !bSlowmoActive;
+	GetWorld()->GetTimerManager().ClearTimer(SlowmoTimerHandle);
+	
+	bIsSlowmoTransiting = true;
+	SetComponentTickEnabled(true);
+
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: %s"), __FUNCTION__, bSlowmoActive ? TEXT("On") :  TEXT("Off"));
 	
 }
+
+
 
 
 

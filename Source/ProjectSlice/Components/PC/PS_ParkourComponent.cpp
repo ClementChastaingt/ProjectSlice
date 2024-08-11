@@ -70,7 +70,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling && !bIsLedging)
+	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
@@ -140,7 +140,7 @@ void UPS_ParkourComponent::WallRunTick()
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {	
-	if(bIsWallRunning) return;
+	if(bIsWallRunning || bIsCrouched) return;
 	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
@@ -818,7 +818,6 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	//Force WallRun if lineTrace don't hit
 	if(outHit.bBlockingHit)
 	{
-				
 		//Check angle if use LineTrace
 		const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
 
@@ -852,14 +851,20 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 		OnWallRunStop();
 }
 
-void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode,
-	uint8 previousCustomMode)
+void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode)
 {
-	//TODO :: Replace by CMOVE_Slide
+	if (!IsValid(_PlayerCharacter)) return;
+	
+	//TODO :: Replace by CMOVE_Slide // use isInAIr from custom character movement
     const bool bForceUncrouch = prevMovementMode == MOVE_Walking && (character->GetCharacterMovement()->MovementMode == MOVE_Falling ||  character->GetCharacterMovement()->MovementMode == MOVE_Flying);
-		
-	if(bForceUncrouch && bIsCrouched)
+	const bool bForceCrouch = character->GetCharacterMovement()->MovementMode == MOVE_Walking && (prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying) && _PlayerCharacter->IsCrouchInputTrigger();
+
+	if(bForceUncrouch && bIsCrouched || bForceCrouch && !bIsCrouched)
+	{
+		if(bForceUncrouch && bIsCrouched)_PlayerCharacter->SetIsCrouchInputTrigger(false);
 		OnCrouch();
+	}
+
 
 }
 

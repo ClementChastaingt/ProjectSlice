@@ -136,11 +136,11 @@ private:
 
 public:
 	UFUNCTION()
-	bool IsCrouchInputTrigger() const{return _bIsCrouchInputTrigger;}
+	bool IsCrouchInputTrigger() const{return bIsCrouchInputTrigger;}
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
-	bool _bIsCrouchInputTrigger = false;
+	bool bIsCrouchInputTrigger = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
 	double InputMaxSmoothingWeight = 0.5f;
@@ -163,8 +163,11 @@ public:
 
 	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
 
+	FORCEINLINE void SetIsCrouchInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
+
 	/** Called for Crouch input */
 	void Crouching();
+
 
 protected:
 	/** Movement **/
@@ -190,7 +193,7 @@ protected:
 	void CoyoteTimeStart();
 
 	void CoyoteTimeStop();
-
+	
 	//Crouch functions override
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 

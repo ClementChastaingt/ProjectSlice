@@ -205,7 +205,12 @@ void AProjectSliceCharacter::Crouching()
 {
 	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
 
-	_bIsCrouchInputTrigger = !_bIsCrouchInputTrigger;
+	if(GetParkourComponent()->GetIsWallRunning()
+		|| GetParkourComponent()->IsLedging()
+		||  GetParkourComponent()->GetMantlePhase() != EMantlePhase::NONE)
+		return;
+
+	bIsCrouchInputTrigger = !bIsCrouchInputTrigger;
 	GetParkourComponent()->OnCrouch();
 }
 
@@ -216,6 +221,7 @@ void AProjectSliceCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledH
 void AProjectSliceCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 }
+
 //------------------
 #pragma endregion Crouch
 
@@ -241,6 +247,9 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 void AProjectSliceCharacter::Jump()
 {	
 	OnJumpLocation = GetActorLocation();
+
+	if(bIsCrouched)
+		bIsCrouchInputTrigger = false;
 	
 	Super::Jump();
 	
@@ -372,7 +381,7 @@ void AProjectSliceCharacter::Slowmo()
 {
 	if(IsValid(GetSlowmoComponent()))
 	{
-		GetSlowmoComponent()->OnStartSlowmo();
+		GetSlowmoComponent()->OnTriggerSlowmo();
 	}
 }
 

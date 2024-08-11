@@ -230,7 +230,8 @@ private:
 	//------------------
 
 public:
-	//------------------
+	FORCEINLINE bool IsLedging() const{return bIsLedging;}
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Ledge")
 	bool bIsLedging = false;
@@ -254,7 +255,6 @@ private:
 	
 
 #pragma endregion Ledge
-
 
 #pragma region WallRun
 	//------------------
@@ -338,7 +338,8 @@ private:
 #pragma region Crouch
 	//------------------
 
-public:	
+public:
+	
 	//Crouch functions
 	void OnCrouch();
 

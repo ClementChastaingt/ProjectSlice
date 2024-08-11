@@ -10,7 +10,7 @@
 class AProjectSlicePlayerController;
 class AProjectSliceCharacter;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_SlowmoComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -44,10 +44,46 @@ private:
 
 public:
 	UFUNCTION()
-	void OnStartSlowmo();
-
+	void OnTriggerSlowmo();
+		
+	UFUNCTION()
+	void SlowmoTransition(const float& DeltaTime);
+	
 protected:
-	//------------------
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	bool bSlowmoActive = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	bool bIsSlowmoTransiting = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float StartSlowmoTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float SlowmoTime = 0.0f;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slowmo")
+	FTimerHandle SlowmoTimerHandle;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float StartTimeDilation = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
+	float GlobalTimeDilationTarget = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
+	float PlayerTimeDilationTarget = 0.8f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo transition duration"))
+	float SlowmoTransitionDuration = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
+	UCurveFloat* SlowmoCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo Max duration"))
+	float SlowmoDuration = 1.0f;
+		
 private:
 	//------------------
 
