@@ -20,7 +20,7 @@ enum class EMantlePhase : uint8
 	PULL_UP = 2 UMETA(DisplayName ="Pull up"),
 };
 
-UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
 {
 	GENERATED_BODY()

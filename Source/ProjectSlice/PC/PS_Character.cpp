@@ -15,6 +15,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
+#include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -56,7 +57,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	CameraSkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Cam_Skel"));
 	CameraSkeletalMeshComponent->SetupAttachment(CamRoot);
 	
-	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	FirstPersonCameraComponent = CreateDefaultSubobject<UPS_PlayerCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Camera"));
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 

@@ -3,10 +3,10 @@
 
 #include "PS_ProceduralAnimComponent.h"
 
-#include "Curves/CurveLinearColor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "ProjectSlice/PC/PS_PlayerController.h"
 

@@ -30,7 +30,7 @@ public:
 	
 };
 
-UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 {
 	GENERATED_BODY()

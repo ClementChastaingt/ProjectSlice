@@ -11,7 +11,7 @@
 class AProjectSlicePlayerController;
 class AProjectSliceCharacter;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(Animation), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ProceduralAnimComponent : public UActorComponent
 {
 	GENERATED_BODY()

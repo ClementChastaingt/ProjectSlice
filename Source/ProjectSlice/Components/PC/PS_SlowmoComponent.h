@@ -10,7 +10,7 @@
 class AProjectSlicePlayerController;
 class AProjectSliceCharacter;
 
-UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_SlowmoComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -49,6 +49,8 @@ public:
 	UFUNCTION()
 	void SlowmoTransition(const float& DeltaTime);
 	
+	FORCEINLINE bool IsSlowmoActive() const{return bSlowmoActive;}
+
 protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
@@ -62,6 +64,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
 	float SlowmoTime = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float SlowmoAlpha = 0.0f;
 		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slowmo")
 	FTimerHandle SlowmoTimerHandle;

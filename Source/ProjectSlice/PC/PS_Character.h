@@ -14,6 +14,7 @@
 #include "ProjectSlice/Components/PC/PS_SlowmoComponent.h"
 #include "PS_Character.generated.h"
 
+class UPS_PlayerCameraComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -43,7 +44,7 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 	USkeletalMeshComponent* CameraSkeletalMeshComponent;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FirstPersonCameraComponent;
+	UPS_PlayerCameraComponent* FirstPersonCameraComponent;
 	
 	/** ComponentsManager */
 	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
@@ -90,7 +91,7 @@ public:
 	USkeletalMeshComponent* GetCameraSkeletalMeshComponent() const { return CameraSkeletalMeshComponent; }
 	
 	/** Returns FirstPersonCameraComponent subobject **/
-	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+	UPS_PlayerCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
 	/** Returns ComponentsManager **/
 	UPS_ComponentsManager* GetComponentsManager() const {return ComponentsManager; }

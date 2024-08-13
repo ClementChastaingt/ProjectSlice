@@ -3,12 +3,10 @@
 
 #include "PS_ParkourComponent.h"
 
-#include "Camera/CameraComponent.h"
+#include "PS_PlayerCameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "ProjectSlice/Data/PS_GlobalType.h"
-#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 
@@ -152,7 +150,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	}
 	
 	//WallRun Logic activation
-	const UCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
 	
 	//Check Enter angle

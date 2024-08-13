@@ -11,7 +11,7 @@
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
-UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()

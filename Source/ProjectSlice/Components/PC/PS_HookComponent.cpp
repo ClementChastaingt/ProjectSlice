@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
+#include "GameFramework/PhysicsVolume.h"
 #include "Image/ImageBuilder.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -772,6 +773,10 @@ void UPS_HookComponent::PowerCablePull()
 	//
 	//// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
 	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
+
+	//If slowmo is in use
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive())
+		AttachedMesh->GetPhysicsVolume()->CustomTimeDilation = 1.0f;
 
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;

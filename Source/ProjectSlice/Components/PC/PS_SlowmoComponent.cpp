@@ -61,6 +61,7 @@ void UPS_SlowmoComponent::SlowmoTransition(const float& DeltaTime)
 		{
 			curveAlpha = SlowmoCurve->GetFloatValue(alpha);
 		}
+		SlowmoAlpha = bSlowmoActive ? curveAlpha : 1.0f - curveAlpha;
 	
 		float globalDilationTarget = bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
 		float playerDilationTarget = bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
