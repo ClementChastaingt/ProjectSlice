@@ -6,6 +6,8 @@
 #include "Camera/CameraComponent.h"
 #include "PS_PlayerCameraComponent.generated.h"
 
+class AProjectSlicePlayerController;
+class AProjectSliceCharacter;
 /**
  * 
  */
@@ -24,8 +26,20 @@ protected:
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	void CreatePostProcessMaterial(const UMaterialInterface* Material, UMaterialInstanceDynamic& outMatInst,
-		FWeightedBlendable& outWeightedBlendable) const;
+
+protected:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
+	bool bDebugPostProcess = false;
+
+private:
+	UPROPERTY(Transient)
+	AProjectSliceCharacter* _PlayerCharacter;
+	
+	UPROPERTY(Transient)
+	AProjectSlicePlayerController* _PlayerController;
+
+
 
 #pragma region Post-Process
 	//------------------
@@ -33,15 +47,24 @@ public:
 public:
 	//------------------
 protected:
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	TArray<FWeightedBlendable> WeightedBlendableArray;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
 	UMaterialInstanceDynamic* SlowmoMatInst = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* SlowmoMaterial = nullptr;
 	
 	UFUNCTION()
 	void InitPostProcess();
+
+	UFUNCTION()
+	void CreatePostProcessMaterial(const UMaterialInterface* material, UMaterialInstanceDynamic*& outMatInst);
+
+	UFUNCTION()
+	void SlowmoTick();
 	
 private:
 	//------------------

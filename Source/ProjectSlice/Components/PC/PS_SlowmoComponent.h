@@ -30,8 +30,7 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
-
-private:
+	
 private:
 	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
@@ -48,8 +47,12 @@ public:
 		
 	UFUNCTION()
 	void SlowmoTransition(const float& DeltaTime);
-	
+
+	FORCEINLINE bool IsIsSlowmoTransiting() const{return bIsSlowmoTransiting;}
+
 	FORCEINLINE bool IsSlowmoActive() const{return bSlowmoActive;}
+
+	FORCEINLINE float GetSlowmoAlpha() const{return SlowmoAlpha;}
 
 protected:
 	

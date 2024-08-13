@@ -775,8 +775,12 @@ void UPS_HookComponent::PowerCablePull()
 	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
 
 	//If slowmo is in use
-	if(IsValid(_PlayerCharacter->GetSlowmoComponent()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive())
-		AttachedMesh->GetPhysicsVolume()->CustomTimeDilation = 1.0f;
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()) && IsValid(AttachedMesh->GetOwner()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive())
+	{
+		UE_LOG(LogTemp, Error, TEXT("CustomTimeDilation HookedObject"));
+		AttachedMesh->GetOwner()->CustomTimeDilation = 1.0f;
+	}
+	
 
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
