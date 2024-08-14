@@ -147,7 +147,7 @@ void UPS_WeaponComponent::Fire()
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-	                                      SightComponent->GetComponentLocation() + SpawnRotation.Vector() * MaxFireDistance,
+	                                      SightComponent->GetComponentLocation() + SightComponent->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
