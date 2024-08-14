@@ -32,6 +32,10 @@ public:
 	
 	FOnPSDelegate OnWeaponInit;
 
+	UStaticMeshComponent* GetSightComponent1() const
+	{
+		return SightComponent;
+	}
 
 protected:
 	virtual void BeginPlay() override;
@@ -158,6 +162,7 @@ private:
 	//------------------
 
 public:
+	UFUNCTION(BlueprintCallable)
 	UStaticMeshComponent* GetSightComponent() const{return SightComponent;}
 
 protected:
