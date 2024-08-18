@@ -12,6 +12,7 @@
 #include "KismetProceduralMeshLibrary.h"
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
+#include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 
@@ -39,6 +40,31 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
+	FHitResult outHit;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
+										  SightComponent->GetComponentLocation() + SightComponent->GetForwardVector() * MaxFireDistance,
+										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
+											false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
+	
+	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetComponent()->GetMaterial(0)))
+	{				
+
+		UE_LOG(LogTemp, Warning, TEXT("bMaxFireDistReached"));
+
+		CurrentSightDistance = outHit.Distance;
+
+		TArray<UMaterialFunctionInterface*> outDependantFunc;
+		outHit.GetComponent()->GetMaterial(0)->GetDependentFunctions(outDependantFunc);
+
+		for (auto OutDependantFunc : outDependantFunc)
+		{
+			UE_LOG(LogTemp, Error, TEXT("outDependantFunc : %s"), *OutDependantFunc->GetName());
+		}
+	}
+
+
+	
 	//Smoothly rotate Sight Mesh
 	if(bInterpRackRotation)
 	{
@@ -161,11 +187,24 @@ void UPS_WeaponComponent::Fire()
 	if (!IsValid(currentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 
 	UProceduralMeshComponent* outHalfComponent;
+
+	//Setup material
+	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
+	
+	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+
+	FLinearColor baseMaterialColor;
+	currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
+
+	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+
+	//Slice mesh
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
 	                                                  SightComponent->GetUpVector(), true,
 	                                                  outHalfComponent,
 	                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
-	                                                  HalfSectionMaterial);
+	                                                  matInst);
 	outHalfComponent->RegisterComponent();
 	if(IsValid(currentProcMeshComponent->GetOwner()))
 	{

@@ -32,11 +32,6 @@ public:
 	
 	FOnPSDelegate OnWeaponInit;
 
-	UStaticMeshComponent* GetSightComponent1() const
-	{
-		return SightComponent;
-	}
-
 protected:
 	virtual void BeginPlay() override;
 	
@@ -98,7 +93,7 @@ public:
 	/** Make the weapon Fire a Slice */
 	UFUNCTION()
 	void Fire();
-	
+
 protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
@@ -107,6 +102,10 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float MaxFireDistance = 5000.0f;
+
+	/** AnimMontage to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	float CurrentSightDistance = 0.0f;
 	
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
@@ -115,9 +114,8 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
 	UAnimMontage* FireAnimation;
+
 	
-private:
-	//------------------
 
 #pragma endregion Fire
 

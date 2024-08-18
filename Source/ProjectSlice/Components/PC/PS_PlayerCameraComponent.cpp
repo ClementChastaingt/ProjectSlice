@@ -75,7 +75,8 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 		}
 		else if(!_PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive()) 
 		{
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);    
+			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
+			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);   
 		}
 	}	
 }
