@@ -17,7 +17,10 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 	GENERATED_BODY()
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UStaticMeshComponent* SightComponent = nullptr;
+	UStaticMeshComponent* SightMesh = nullptr;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
+	UStaticMeshComponent* SightShaderMesh = nullptr;
 
 public:
 	/** Sets default values for this component's properties */
@@ -34,7 +37,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	/** Ends gameplay for this component. */
@@ -102,11 +105,7 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float MaxFireDistance = 5000.0f;
-
-	/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
-	float CurrentSightDistance = 0.0f;
-	
+		
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
 	USoundBase* FireSound;
@@ -114,8 +113,6 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
 	UAnimMontage* FireAnimation;
-
-	
 
 #pragma endregion Fire
 
@@ -161,7 +158,11 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable)
-	UStaticMeshComponent* GetSightComponent() const{return SightComponent;}
+	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
+
+	UFUNCTION(BlueprintCallable)
+	UStaticMeshComponent* GetSightShaderComponent() const{return SightShaderMesh;}
+	
 
 protected:
 	/** Make the weapon Turn his Rack */

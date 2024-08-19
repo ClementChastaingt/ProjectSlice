@@ -25,8 +25,16 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
 	//Create Component and Attach
-	SightComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
-	RackDefaultRotation = SightComponent->GetRelativeRotation();
+	SightMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
+	SightMesh->SetCollisionProfileName(Profile_NoCollision);
+	SightMesh->SetGenerateOverlapEvents(false);
+	RackDefaultRotation = SightMesh->GetRelativeRotation();
+
+	SightShaderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightShader"));
+	SightShaderMesh->SetCollisionProfileName(Profile_NoCollision);
+	SightShaderMesh->SetGenerateOverlapEvents(false);
+	
+	SightShaderMesh->SetRelativeRotation(RackDefaultRotation);
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -34,36 +42,22 @@ void UPS_WeaponComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
-
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
+	//Sight Shader
 	FHitResult outHit;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-										  SightComponent->GetComponentLocation() + SightComponent->GetForwardVector() * MaxFireDistance,
-										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-											false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
-	
-	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetComponent()->GetMaterial(0)))
-	{				
+	const TArray<AActor*> actorsToIgnore;
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
 
-		UE_LOG(LogTemp, Warning, TEXT("bMaxFireDistReached"));
-
-		CurrentSightDistance = outHit.Distance;
-
-		TArray<UMaterialFunctionInterface*> outDependantFunc;
-		outHit.GetComponent()->GetMaterial(0)->GetDependentFunctions(outDependantFunc);
-
-		for (auto OutDependantFunc : outDependantFunc)
-		{
-			UE_LOG(LogTemp, Error, TEXT("outDependantFunc : %s"), *OutDependantFunc->GetName());
-		}
+	if(outHit.bBlockingHit)
+	{
+		SightShaderMesh->SetWorldLocation(outHit.Location);
 	}
-
-
+	
 	
 	//Smoothly rotate Sight Mesh
 	if(bInterpRackRotation)
@@ -74,7 +68,7 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			curveAlpha = RackRotCurve->GetFloatValue(alpha);
 
 		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation,curveAlpha);
-		SightComponent->SetRelativeRotation(newRotation);
+		SightMesh->SetRelativeRotation(newRotation);
 
 		//Stop Rot
 		if(alpha > 1)
@@ -106,7 +100,8 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	this->SetupAttachment(Target_PlayerCharacter->GetMesh(), (TEXT("GripPoint")));
 
 	// Attach Sight to Weapon
-	SightComponent->SetupAttachment(this,FName("Muzzle"));
+	SightMesh->SetupAttachment(this,FName("Muzzle"));
+	SightShaderMesh->SetupAttachment(SightMesh);
 
 	// Attach Hook to Weapon
 	_HookComponent = Target_PlayerCharacter->GetHookComponent();
@@ -172,8 +167,8 @@ void UPS_WeaponComponent::Fire()
 
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightComponent->GetComponentLocation(),
-	                                      SightComponent->GetComponentLocation() + SightComponent->GetForwardVector() * MaxFireDistance,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
+	                                      SightMesh->GetComponentLocation() + SightMesh->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
@@ -201,7 +196,7 @@ void UPS_WeaponComponent::Fire()
 
 	//Slice mesh
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
-	                                                  SightComponent->GetUpVector(), true,
+	                                                  SightMesh->GetUpVector(), true,
 	                                                  outHalfComponent,
 	                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
 	                                                  matInst);
@@ -242,11 +237,11 @@ void UPS_WeaponComponent::Fire()
 
 void UPS_WeaponComponent::TurnRack()
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightComponent)) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
 	
 	bRackInHorizontal = !bRackInHorizontal;
 
-	StartRackRotation = SightComponent->GetRelativeRotation();
+	StartRackRotation = SightMesh->GetRelativeRotation();
 	TargetRackRotation = RackDefaultRotation;
 	TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
 
