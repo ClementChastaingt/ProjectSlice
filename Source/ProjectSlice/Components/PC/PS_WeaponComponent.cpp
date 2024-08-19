@@ -56,6 +56,7 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(outHit.bBlockingHit)
 	{
 		SightShaderMesh->SetWorldLocation(outHit.Location);
+		outHit.GetActor()->GetActorBounds(false,BoundOrigin,BoundExtent, true);
 	}
 	
 	
