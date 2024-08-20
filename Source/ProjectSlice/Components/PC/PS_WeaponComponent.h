@@ -176,6 +176,9 @@ protected:
 	UFUNCTION()
 	void SightShaderTick();
 	
+	UFUNCTION()
+	void ResetSightRackProperties();
+	
 	/** Rack is placed in horizontal */
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	bool bRackInHorizontal = true;
@@ -211,13 +214,13 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	UPrimitiveComponent* CurrentSightedComponent;
+	UPrimitiveComponent* _CurrentSightedComponent;
 
 	UPROPERTY(Transient)
-	UMaterialInterface* CurrentSightedBaseMat;
+	UMaterialInterface* _CurrentSightedBaseMat;
 
 	UPROPERTY(Transient)
-	UMaterialInstanceDynamic* CurrentSightedMatInst;
+	UMaterialInstanceDynamic* _CurrentSightedMatInst;
 
 
 #pragma endregion SightRack

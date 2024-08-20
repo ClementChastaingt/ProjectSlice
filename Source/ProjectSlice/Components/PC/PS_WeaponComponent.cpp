@@ -42,41 +42,6 @@ void UPS_WeaponComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
-void UPS_WeaponComponent::SightShaderTick()
-{
-	FHitResult outHit;
-	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, bDebugSightShader ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
-
-	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && CurrentSightedComponent != outHit.GetComponent())
-	{
-		if(IsValid(CurrentSightedComponent) && IsValid(CurrentSightedMatInst))
-			CurrentSightedComponent->SetMaterial(0, CurrentSightedBaseMat);
-		
-		CurrentSightedComponent = outHit.GetComponent();
-		SightShaderMesh->SetWorldLocation(outHit.Location);
-	
-		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), CurrentSightedComponent->GetMaterial(0));
-		if(!IsValid(matInst)) return;
-		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
-
-		CurrentSightedMatInst = matInst;
-		CurrentSightedBaseMat = CurrentSightedComponent->GetMaterial(0);
-		CurrentSightedComponent->SetMaterial(0, CurrentSightedMatInst);
-
-		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *CurrentSightedComponent->GetName());
-	}
-	else if(!outHit.bBlockingHit)
-	{
-		if(IsValid(CurrentSightedComponent) && IsValid(CurrentSightedMatInst))
-		{
-			CurrentSightedComponent->SetMaterial(0, CurrentSightedBaseMat);
-			CurrentSightedComponent = nullptr;
-			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset"), __FUNCTION__);
-		}
-	}
-}
 
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -182,6 +147,9 @@ void UPS_WeaponComponent::Fire()
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 
+	
+	//Reset object mat if currently use SightRackCustomMat;
+	ResetSightRackProperties();
 
 	//Cut ProceduralMesh
 	UProceduralMeshComponent* currentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
@@ -190,7 +158,7 @@ void UPS_WeaponComponent::Fire()
 	if (!IsValid(currentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 
 	UProceduralMeshComponent* outHalfComponent;
-
+	
 	//Setup material
 	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
 	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
@@ -199,7 +167,6 @@ void UPS_WeaponComponent::Fire()
 
 	FLinearColor baseMaterialColor;
 	currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
-
 	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
 
 	//Slice mesh
@@ -303,6 +270,52 @@ void UPS_WeaponComponent::SightMeshRotation()
 		if(alpha > 1)
 			bInterpRackRotation = false;
 		
+	}
+}
+
+void UPS_WeaponComponent::SightShaderTick()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+	
+	FHitResult outHit;
+	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Slice),
+		false, actorsToIgnore, bDebugSightShader ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+	
+	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && _CurrentSightedComponent != outHit.GetComponent())
+	{
+		
+		ResetSightRackProperties();
+		
+		_CurrentSightedComponent = outHit.GetComponent();
+		SightShaderMesh->SetWorldLocation(outHit.Location);
+	
+		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
+		if(!IsValid(matInst)) return;
+		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
+
+		_CurrentSightedMatInst = matInst;
+		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
+		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedMatInst);
+
+		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
+	}
+	else if(!outHit.bBlockingHit && IsValid(_CurrentSightedComponent))
+	{
+		ResetSightRackProperties();
+	}
+}
+
+
+void UPS_WeaponComponent::ResetSightRackProperties()
+{
+	if(IsValid(_CurrentSightedComponent) && _CurrentSightedMatInst->IsValidLowLevel())
+	{
+		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *_CurrentSightedBaseMat->GetName());
+		
+		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedBaseMat);
+		_CurrentSightedComponent = nullptr;
+		_CurrentSightedMatInst = nullptr;
 	}
 }
 
