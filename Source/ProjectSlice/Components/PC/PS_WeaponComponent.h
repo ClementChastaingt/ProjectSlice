@@ -105,13 +105,7 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float MaxFireDistance = 5000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
-	FVector BoundOrigin = FVector::ZeroVector;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
-	FVector BoundExtent = FVector::ZeroVector;
-		
+			
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Weapon")
 	USoundBase* FireSound;
@@ -174,6 +168,13 @@ protected:
 	/** Make the weapon Turn his Rack */
 	UFUNCTION()
 	void TurnRack();
+
+	UFUNCTION()
+	void SightMeshRotation();
+
+	/**Sight slice shader */
+	UFUNCTION()
+	void SightShaderTick();
 	
 	/** Rack is placed in horizontal */
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
@@ -193,7 +194,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FRotator TargetRackRotation = FRotator::ZeroRotator;
-	
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere,  Category="Debug")
+	bool bDebugSightShader = false;
 
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
@@ -205,10 +208,17 @@ protected:
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
 	UCurveFloat* RackRotCurve;
-	
-	
+
 private:
-	//------------------
+	UPROPERTY(Transient)
+	UPrimitiveComponent* CurrentSightedComponent;
+
+	UPROPERTY(Transient)
+	UMaterialInterface* CurrentSightedBaseMat;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* CurrentSightedMatInst;
+
 
 #pragma endregion SightRack
 };

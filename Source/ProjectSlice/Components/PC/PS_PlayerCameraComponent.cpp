@@ -49,7 +49,7 @@ void UPS_PlayerCameraComponent::CreatePostProcessMaterial(const UMaterialInterfa
 		FWeightedBlendable outWeightedBlendable = FWeightedBlendable(1.0f, matInst);
 		WeightedBlendableArray.Add(outWeightedBlendable);
 
-		if(bDebugPostProcess) UE_LOG(LogTemp, Error, TEXT("%S :: outMatInst %s, BlendableArray %i"), __FUNCTION__, *outMatInst->GetName(), WeightedBlendableArray.Num());
+		if(bDebugPostProcess) UE_LOG(LogTemp, Warning, TEXT("%S :: outMatInst %s, BlendableArray %i"), __FUNCTION__, *outMatInst->GetName(), WeightedBlendableArray.Num());
 	}
 }
 

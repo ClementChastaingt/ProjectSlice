@@ -42,44 +42,52 @@ void UPS_WeaponComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
+void UPS_WeaponComponent::SightShaderTick()
+{
+	FHitResult outHit;
+	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Slice),
+		false, actorsToIgnore, bDebugSightShader ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+
+	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && CurrentSightedComponent != outHit.GetComponent())
+	{
+		if(IsValid(CurrentSightedComponent) && IsValid(CurrentSightedMatInst))
+			CurrentSightedComponent->SetMaterial(0, CurrentSightedBaseMat);
+		
+		CurrentSightedComponent = outHit.GetComponent();
+		SightShaderMesh->SetWorldLocation(outHit.Location);
+	
+		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), CurrentSightedComponent->GetMaterial(0));
+		if(!IsValid(matInst)) return;
+		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
+
+		CurrentSightedMatInst = matInst;
+		CurrentSightedBaseMat = CurrentSightedComponent->GetMaterial(0);
+		CurrentSightedComponent->SetMaterial(0, CurrentSightedMatInst);
+
+		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *CurrentSightedComponent->GetName());
+	}
+	else if(!outHit.bBlockingHit)
+	{
+		if(IsValid(CurrentSightedComponent) && IsValid(CurrentSightedMatInst))
+		{
+			CurrentSightedComponent->SetMaterial(0, CurrentSightedBaseMat);
+			CurrentSightedComponent = nullptr;
+			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset"), __FUNCTION__);
+		}
+	}
+}
+
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	//Sight Shader
-	FHitResult outHit;
-	const TArray<AActor*> actorsToIgnore;
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
-
-	if(outHit.bBlockingHit)
-	{
-		SightShaderMesh->SetWorldLocation(outHit.Location);
-		outHit.GetActor()->GetActorBounds(false,BoundOrigin,BoundExtent, true);
-	}
 	
-	
-	//Smoothly rotate Sight Mesh
-	if(bInterpRackRotation)
-	{
-		const float alpha = (GetWorld()->GetTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
-		float curveAlpha = alpha;
-		if(IsValid(RackRotCurve))
-			curveAlpha = RackRotCurve->GetFloatValue(alpha);
+	SightShaderTick();
 
-		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation,curveAlpha);
-		SightMesh->SetRelativeRotation(newRotation);
-
-		//Stop Rot
-		if(alpha > 1)
-			bInterpRackRotation = false;
-		
-	}
+	SightMeshRotation();
 		
 }
-
-
 
 void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
@@ -151,7 +159,6 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 
 	OnWeaponInit.Broadcast();
 }
-
 
 #pragma region Input
 //__________________________________________________
@@ -275,5 +282,32 @@ void UPS_WeaponComponent::StopWindeHook()
 
 //__________________________________________________
 #pragma endregion Input
+
+#pragma region Sight
+//------------------
+
+void UPS_WeaponComponent::SightMeshRotation()
+{
+	//Smoothly rotate Sight Mesh
+	if(bInterpRackRotation)
+	{
+		const float alpha = (GetWorld()->GetTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
+		float curveAlpha = alpha;
+		if(IsValid(RackRotCurve))
+			curveAlpha = RackRotCurve->GetFloatValue(alpha);
+
+		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation,curveAlpha);
+		SightMesh->SetRelativeRotation(newRotation);
+
+		//Stop Rot
+		if(alpha > 1)
+			bInterpRackRotation = false;
+		
+	}
+}
+
+//------------------
+#pragma endregion Sight
+	
 
 
