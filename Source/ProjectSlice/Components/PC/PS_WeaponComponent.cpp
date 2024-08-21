@@ -131,8 +131,8 @@ void UPS_WeaponComponent::FireTriggered()
 	//Slice when release
 	if(!bIsHoldingFire)
 		Fire();
-	else
-		SetupSliceBump();
+
+	SetupSliceBump();
 
 }
 
@@ -154,11 +154,7 @@ void UPS_WeaponComponent::Fire()
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
-
 	
-	//Reset object mat if currently use SightRackCustomMat;
-	ResetSightRackProperties();
-
 	//Cut ProceduralMesh
 	UProceduralMeshComponent* currentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
@@ -295,24 +291,30 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && _CurrentSightedComponent != outHit.GetComponent())
 	{
-		
+		//Reset last material properties
 		ResetSightRackProperties();
 		_CurrentSightedComponent = outHit.GetComponent();
-	
+
+		//Set new Mat instance
 		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
-		if(!IsValid(matInst)) return;
+		float scalarParam;
+		if(!IsValid(matInst) || _CurrentSightedComponent->GetMaterial(0)->GetScalarParameterValue(FName("bIsInUse"), scalarParam) == NULL) return;
 		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
 
 		_CurrentSightedMatInst = matInst;
 		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
 		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedMatInst);
 
+		//Setup Bump to Old params if effective
+		ForceInitSliceBump();
+
 		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
 	}
+	//If don't Lbock reset old mat properties
 	else if(!outHit.bBlockingHit && IsValid(_CurrentSightedComponent))
 		ResetSightRackProperties();
 
-	//Bump on shoot
+	//On shoot Bump tick logic 
 	SliceBump();
 	
 }
@@ -329,18 +331,27 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 	}
 }
 
+void UPS_WeaponComponent::ForceInitSliceBump()
+{
+	if( _CurrentSightedMatInst->IsValidLowLevel())
+	{
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
+	}
+}
+
+
 void UPS_WeaponComponent::SetupSliceBump()
 {
 	if(IsValid(_CurrentSightedComponent) && _CurrentSightedMatInst->IsValidLowLevel() && IsValid(GetWorld()))
 	{
-		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: Bump %s"), __FUNCTION__, bIsHoldingFire ? TEXT("IN") : TEXT("OUT"));
 
 
 		StartSliceBumpTimestamp = GetWorld()->GetTimeSeconds();
 		bSliceBumping = true;
 
 		_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("bSliceBumping"), bSliceBumping);
 	}
 }
 
@@ -350,19 +361,19 @@ void UPS_WeaponComponent::SliceBump()
 
 	if(bSliceBumping)
 	{
-		const float alpha = (GetWorld()->GetDeltaSeconds() - StartSliceBumpTimestamp) / SliceBumpDuration;
+		const float alpha = (GetWorld()->GetTimeSeconds() - StartSliceBumpTimestamp) / SliceBumpDuration;
 
-		float curveAlpha = alpha;
+		CurrentCurveAlpha = alpha;
 		if(IsValid(SliceBumpCurve))
 		{
-			curveAlpha = SliceBumpCurve->GetFloatValue(alpha);
+			CurrentCurveAlpha = SliceBumpCurve->GetFloatValue(alpha);
 		}
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), curveAlpha);
+
+		UE_LOG(LogTemp, Log, TEXT("%S :: curveAlpha %f "), __FUNCTION__, CurrentCurveAlpha);
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
 
 		if(alpha >= 1)
-		{
 			bSliceBumping = false;
-		}
 	}
 			
 }

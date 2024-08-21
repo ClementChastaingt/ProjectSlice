@@ -183,6 +183,9 @@ protected:
 	void ResetSightRackProperties();
 
 	UFUNCTION()
+	void ForceInitSliceBump();
+
+	UFUNCTION()
 	void SetupSliceBump();
 	
 	UFUNCTION()
@@ -208,10 +211,13 @@ protected:
 	FRotator TargetRackRotation = FRotator::ZeroRotator;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
-	bool bSliceBumping = true;
+	bool bSliceBumping = false;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Shader")
 	float StartSliceBumpTimestamp = TNumericLimits<float>().Min();
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Shader")
+	float CurrentCurveAlpha = 0;
 	
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
