@@ -19,9 +19,6 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SightMesh = nullptr;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UStaticMeshComponent* SightShaderMesh = nullptr;
-
 public:
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
@@ -44,9 +41,12 @@ protected:
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugSightShader = false;
+	
 private:
 	/** The Character holding this weapon*/
 	UPROPERTY(Transient)
@@ -93,11 +93,18 @@ private:
 	//------------------
 
 public:
+
+	UFUNCTION()
+	void FireTriggered();
+	
 	/** Make the weapon Fire a Slice */
 	UFUNCTION()
 	void Fire();
 
 protected:
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	bool bIsHoldingFire = false;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult CurrentFireHitResult;
@@ -160,10 +167,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
-	UFUNCTION(BlueprintCallable)
-	UStaticMeshComponent* GetSightShaderComponent() const{return SightShaderMesh;}
-	
-
 protected:
 	/** Make the weapon Turn his Rack */
 	UFUNCTION()
@@ -171,36 +174,45 @@ protected:
 
 	UFUNCTION()
 	void SightMeshRotation();
-
+	
 	/**Sight slice shader */
 	UFUNCTION()
 	void SightShaderTick();
 	
 	UFUNCTION()
 	void ResetSightRackProperties();
+
+	UFUNCTION()
+	void SetupSliceBump();
+	
+	UFUNCTION()
+	void SliceBump();
 	
 	/** Rack is placed in horizontal */
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	bool bRackInHorizontal = true;
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	bool bInterpRackRotation = false;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	float InterpRackRotStartTimestamp = TNumericLimits<float>().Lowest();
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FRotator RackDefaultRotation = FRotator::ZeroRotator;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FRotator StartRackRotation = FRotator::ZeroRotator;
 
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FRotator TargetRackRotation = FRotator::ZeroRotator;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere,  Category="Debug")
-	bool bDebugSightShader = false;
-
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
+	bool bSliceBumping = true;
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Shader")
+	float StartSliceBumpTimestamp = TNumericLimits<float>().Min();
+	
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
 	FVector MuzzleOffset;
@@ -211,6 +223,12 @@ protected:
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
 	UCurveFloat* RackRotCurve;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
+	float SliceBumpDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
+	UCurveFloat* SliceBumpCurve;
 
 private:
 	UPROPERTY(Transient)

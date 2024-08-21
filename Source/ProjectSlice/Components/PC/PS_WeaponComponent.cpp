@@ -12,6 +12,7 @@
 #include "KismetProceduralMeshLibrary.h"
 #include "PS_HookComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
+#include "Analytics/RPCDoSDetectionAnalytics.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
@@ -30,11 +31,6 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	SightMesh->SetGenerateOverlapEvents(false);
 	RackDefaultRotation = SightMesh->GetRelativeRotation();
 
-	SightShaderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightShader"));
-	SightShaderMesh->SetCollisionProfileName(Profile_NoCollision);
-	SightShaderMesh->SetGenerateOverlapEvents(false);
-	
-	SightShaderMesh->SetRelativeRotation(RackDefaultRotation);
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -75,7 +71,6 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 	// Attach Sight to Weapon
 	SightMesh->SetupAttachment(this,FName("Muzzle"));
-	SightShaderMesh->SetupAttachment(SightMesh);
 
 	// Attach Hook to Weapon
 	_HookComponent = Target_PlayerCharacter->GetHookComponent();
@@ -108,7 +103,7 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(_PlayerController->InputComponent))
 	{
 		// Fire
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::Fire);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::FireTriggered);
 
 		// Rotate Rack
 		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
@@ -128,16 +123,29 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 #pragma region Input
 //__________________________________________________
 
+void UPS_WeaponComponent::FireTriggered()
+{
+	//Update Holding Fire
+	bIsHoldingFire = !bIsHoldingFire;
+
+	//Slice when release
+	if(!bIsHoldingFire)
+		Fire();
+	else
+		SetupSliceBump();
+
+}
+
 void UPS_WeaponComponent::Fire()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
-
+	
 	//Try Slice a Mesh
-	//Trace Loc && Rot
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
 	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
 	//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
+	
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
@@ -193,7 +201,7 @@ void UPS_WeaponComponent::Fire()
 
 	//Impulse
 	//TODO :: Rework Impulse
-	outHalfComponent->AddImpulse(FVector(500, 500, 500), NAME_None, true);
+	outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
 	
 	
 	// Try and play the sound if specified
@@ -276,19 +284,20 @@ void UPS_WeaponComponent::SightMeshRotation()
 void UPS_WeaponComponent::SightShaderTick()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
-	
+
+	const FVector start = GetSightMeshComponent()->GetComponentLocation();
+	const FVector target =  GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+		
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetSightMeshComponent()->GetComponentLocation(), GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance, UEngineTypes::ConvertToTraceType(ECC_Slice),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, bDebugSightShader ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
-	
+
 	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && _CurrentSightedComponent != outHit.GetComponent())
 	{
 		
 		ResetSightRackProperties();
-		
 		_CurrentSightedComponent = outHit.GetComponent();
-		SightShaderMesh->SetWorldLocation(outHit.Location);
 	
 		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
 		if(!IsValid(matInst)) return;
@@ -301,11 +310,12 @@ void UPS_WeaponComponent::SightShaderTick()
 		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
 	}
 	else if(!outHit.bBlockingHit && IsValid(_CurrentSightedComponent))
-	{
 		ResetSightRackProperties();
-	}
-}
 
+	//Bump on shoot
+	SliceBump();
+	
+}
 
 void UPS_WeaponComponent::ResetSightRackProperties()
 {
@@ -317,6 +327,44 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		_CurrentSightedComponent = nullptr;
 		_CurrentSightedMatInst = nullptr;
 	}
+}
+
+void UPS_WeaponComponent::SetupSliceBump()
+{
+	if(IsValid(_CurrentSightedComponent) && _CurrentSightedMatInst->IsValidLowLevel() && IsValid(GetWorld()))
+	{
+		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+
+
+		StartSliceBumpTimestamp = GetWorld()->GetTimeSeconds();
+		bSliceBumping = true;
+
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("bSliceBumping"), bSliceBumping);
+	}
+}
+
+void UPS_WeaponComponent::SliceBump()
+{
+	if(!_CurrentSightedMatInst->IsValidLowLevel() || !IsValid(GetWorld())) return;
+
+	if(bSliceBumping)
+	{
+		const float alpha = (GetWorld()->GetDeltaSeconds() - StartSliceBumpTimestamp) / SliceBumpDuration;
+
+		float curveAlpha = alpha;
+		if(IsValid(SliceBumpCurve))
+		{
+			curveAlpha = SliceBumpCurve->GetFloatValue(alpha);
+		}
+		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), curveAlpha);
+
+		if(alpha >= 1)
+		{
+			bSliceBumping = false;
+		}
+	}
+			
 }
 
 //------------------
