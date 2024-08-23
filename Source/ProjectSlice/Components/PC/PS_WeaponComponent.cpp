@@ -164,6 +164,7 @@ void UPS_WeaponComponent::Fire()
 	UProceduralMeshComponent* outHalfComponent;
 	
 	//Setup material
+	ResetSightRackProperties();
 	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
 	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
 	
@@ -287,20 +288,31 @@ void UPS_WeaponComponent::SightShaderTick()
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, bDebugSightShader ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true);
+		false, actorsToIgnore, EDrawDebugTrace::None, outHit, true);
 
-	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && _CurrentSightedComponent != outHit.GetComponent())
+	//TODO:: Change by laser VFX
+	DrawDebugLine(GetWorld(), start, target, FColor::Red, false);
+	
+	//On shoot Bump tick logic 
+	SliceBump();
+
+	
+	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetActor()))
 	{
+		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == outHit.GetComponent())
+			return;
+		
 		//Reset last material properties
 		ResetSightRackProperties();
+		if(!IsValid(outHit.GetComponent()->GetMaterial(0)) /*|| !outHit.GetActor()->ActorHasTag(FName("Sliceable"))*/) return;
+		
 		_CurrentSightedComponent = outHit.GetComponent();
-
+		
 		//Set new Mat instance
 		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
-		float scalarParam;
-		if(!IsValid(matInst) || _CurrentSightedComponent->GetMaterial(0)->GetScalarParameterValue(FName("bIsInUse"), scalarParam) == NULL) return;
+		if(!IsValid(matInst)) return;
 		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
-
+		
 		_CurrentSightedMatInst = matInst;
 		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
 		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedMatInst);
@@ -313,10 +325,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	//If don't Lbock reset old mat properties
 	else if(!outHit.bBlockingHit && IsValid(_CurrentSightedComponent))
 		ResetSightRackProperties();
-
-	//On shoot Bump tick logic 
-	SliceBump();
-	
+		
 }
 
 void UPS_WeaponComponent::ResetSightRackProperties()
@@ -328,6 +337,7 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedBaseMat);
 		_CurrentSightedComponent = nullptr;
 		_CurrentSightedMatInst = nullptr;
+
 	}
 }
 
@@ -357,7 +367,7 @@ void UPS_WeaponComponent::SetupSliceBump()
 
 void UPS_WeaponComponent::SliceBump()
 {
-	if(!_CurrentSightedMatInst->IsValidLowLevel() || !IsValid(GetWorld())) return;
+	if(!IsValid(_CurrentSightedComponent) || !_CurrentSightedMatInst->IsValidLowLevel() || !IsValid(GetWorld())) return;
 
 	if(bSliceBumping)
 	{

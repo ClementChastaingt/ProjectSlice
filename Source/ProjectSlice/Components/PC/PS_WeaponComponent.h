@@ -239,7 +239,7 @@ protected:
 private:
 	UPROPERTY(Transient)
 	UPrimitiveComponent* _CurrentSightedComponent;
-
+	
 	UPROPERTY(Transient)
 	UMaterialInterface* _CurrentSightedBaseMat;
 
