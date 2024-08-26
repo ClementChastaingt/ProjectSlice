@@ -130,10 +130,17 @@ void UPS_WeaponComponent::FireTriggered()
 
 	//Slice when release
 	if(!bIsHoldingFire)
+	{
+		if( _CurrentSightedMatInst->IsValidLowLevel())
+		{
+			_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+			_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), 0.0f);
+		}
 		Fire();
-
-	SetupSliceBump();
-
+	}
+	else
+		SetupSliceBump();
+	
 }
 
 void UPS_WeaponComponent::Fire()
@@ -151,7 +158,7 @@ void UPS_WeaponComponent::Fire()
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
 	                                      SightMesh->GetComponentLocation() + SightMesh->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
+	                                        false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 	
@@ -165,6 +172,7 @@ void UPS_WeaponComponent::Fire()
 	
 	//Setup material
 	ResetSightRackProperties();
+	
 	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
 	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
 	
