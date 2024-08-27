@@ -307,6 +307,9 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetActor()))
 	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *outHit.GetComponent()->GetName(), *outHit.GetComponent()->GetLocalBounds().Origin.ToString(), *outHit.GetComponent()->GetLocalBounds().BoxExtent.ToString());
+		if(bDebugSightShader) DrawDebugBox(GetWorld(),outHit.GetComponent()->GetComponentLocation() + outHit.GetComponent()->GetLocalBounds().Origin, outHit.GetComponent()->GetLocalBounds().BoxExtent, FColor::Yellow, false,-1 , 1 ,2);
+		
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == outHit.GetComponent())
 			return;
 		
@@ -344,8 +347,8 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		
 		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedBaseMat);
 		_CurrentSightedComponent = nullptr;
+		_CurrentSightedMatInst->MarkAsGarbage();
 		_CurrentSightedMatInst = nullptr;
-
 	}
 }
 
