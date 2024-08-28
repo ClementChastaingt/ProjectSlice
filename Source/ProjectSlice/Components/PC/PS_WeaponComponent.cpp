@@ -173,14 +173,24 @@ void UPS_WeaponComponent::Fire()
 	//Setup material
 	ResetSightRackProperties();
 	
-	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
-	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
+	// UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	// if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
+	//
+	// matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+	//
+	// FLinearColor baseMaterialColor;
+	// currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
+	// matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+
+
+	if(!IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
+	
+	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), currentProcMeshComponent->GetMaterial(0));
+	if(!IsValid(matInst)) return;
 	
 	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
-
-	FLinearColor baseMaterialColor;
-	currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
-	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
+	
 
 	//Slice mesh
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
@@ -307,8 +317,11 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetActor()))
 	{
-		UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *outHit.GetComponent()->GetName(), *outHit.GetComponent()->GetLocalBounds().Origin.ToString(), *outHit.GetComponent()->GetLocalBounds().BoxExtent.ToString());
-		if(bDebugSightShader) DrawDebugBox(GetWorld(),outHit.GetComponent()->GetComponentLocation() + outHit.GetComponent()->GetLocalBounds().Origin, outHit.GetComponent()->GetLocalBounds().BoxExtent, FColor::Yellow, false,-1 , 1 ,2);
+		if(bDebugSightShader)
+		{
+			UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *outHit.GetComponent()->GetName(), *outHit.GetComponent()->GetLocalBounds().Origin.ToString(), *outHit.GetComponent()->GetLocalBounds().BoxExtent.ToString());
+			DrawDebugBox(GetWorld(),outHit.GetComponent()->GetComponentLocation() + outHit.GetComponent()->GetLocalBounds().Origin, outHit.GetComponent()->GetLocalBounds().BoxExtent, FColor::Yellow, false,-1 , 1 ,2);
+		}
 		
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == outHit.GetComponent())
 			return;
@@ -323,7 +336,6 @@ void UPS_WeaponComponent::SightShaderTick()
 		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
 		if(!IsValid(matInst)) return;
 		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
-		matInst->SetVectorParameterValue(FName("Bound"), outHit.GetComponent()->GetLocalBounds().BoxExtent);
 		
 		_CurrentSightedMatInst = matInst;
 		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
