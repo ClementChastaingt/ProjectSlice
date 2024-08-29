@@ -448,9 +448,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(ToolTip="Braking Deceleration Curve"))
 	UCurveFloat* SlideBrakingDecelerationCurve;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Camera", meta=(ToolTip="Angle of the camera when the player is sliding"))
-	FRotator SlideCameraAngle = FRotator(0,355,0);
-
 private:
 	//------------------
 

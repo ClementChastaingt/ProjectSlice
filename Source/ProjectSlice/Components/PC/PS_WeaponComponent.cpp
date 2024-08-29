@@ -43,7 +43,8 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
+
+	//TODO :: Made custom tick for that
 	SightShaderTick();
 
 	SightMeshRotation();
@@ -190,7 +191,6 @@ void UPS_WeaponComponent::Fire()
 	
 	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
 	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
-	
 
 	//Slice mesh
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
@@ -199,6 +199,7 @@ void UPS_WeaponComponent::Fire()
 	                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
 	                                                  matInst);
 	outHalfComponent->RegisterComponent();
+	
 	if(IsValid(currentProcMeshComponent->GetOwner()))
 	{
 		Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
@@ -313,10 +314,11 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	//On shoot Bump tick logic 
 	SliceBump();
-
 	
-	if(outHit.bBlockingHit && IsValid(outHit.GetComponent()) && IsValid(outHit.GetActor()))
+	if(outHit.bBlockingHit && IsValid(outHit.GetActor()))
 	{
+		if(!IsValid(outHit.GetComponent())) return;
+		
 		if(bDebugSightShader)
 		{
 			UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *outHit.GetComponent()->GetName(), *outHit.GetComponent()->GetLocalBounds().Origin.ToString(), *outHit.GetComponent()->GetLocalBounds().BoxExtent.ToString());
@@ -329,15 +331,14 @@ void UPS_WeaponComponent::SightShaderTick()
 		//Reset last material properties
 		ResetSightRackProperties();
 		if(!IsValid(outHit.GetComponent()->GetMaterial(0)) /*|| !outHit.GetActor()->ActorHasTag(FName("Sliceable"))*/) return;
-		
 		_CurrentSightedComponent = outHit.GetComponent();
-		
-		//Set new Mat instance
-		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
-		if(!IsValid(matInst)) return;
-		matInst->SetScalarParameterValue(FName("bIsInUse"), true);
-		
-		_CurrentSightedMatInst = matInst;
+				
+		//Set new Object Mat instance
+		UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
+		if(!IsValid(matInstObject)) return;
+		matInstObject->SetScalarParameterValue(FName("bIsInUse"), true);
+
+		_CurrentSightedMatInst = matInstObject;
 		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
 		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedMatInst);
 

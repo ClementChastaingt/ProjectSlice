@@ -439,9 +439,6 @@ void UPS_ParkourComponent::OnStartSlide()
 	StartSlideTimestamp = GetWorld()->GetTimeSeconds();
 	SlideSeconds = StartSlideTimestamp;
 	
-	//--------Camera_Tilt Setup--------
-	// SetupCameraTilt(false, SlideCameraAngle);
-
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetIgnoreMoveInput(true);
 	SlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * ((_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity() * FVector(1,1,0)).Length()); 
@@ -461,9 +458,6 @@ void UPS_ParkourComponent::OnStopSlide()
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	SlideSeconds = 0;
 	SlideAlpha = 0.0f;
-	
-	//--------Camera_Tilt Setup--------
-	// SetupCameraTilt(true, SlideCameraAngle);
 	
 	//--------Configure Movement Behaviour-------
 	
@@ -487,10 +481,7 @@ void UPS_ParkourComponent::SlideTick()
 
 	SlideSeconds = SlideSeconds + CustomTickRate;
 	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
-
-	//-----Camera_Tilt-----
-	// CameraTilt(SlideSeconds,StartSlideTimestamp);
-
+	
 
 	//-----Velocity-----
 	SlideAlpha = UKismetMathLibrary::MapRangeClamped(SlideSeconds, StartSlideTimestamp, StartSlideTimestamp + TimeToMaxBrakingDeceleration, 0,1);
