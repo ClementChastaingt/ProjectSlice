@@ -193,10 +193,11 @@ void UPS_WeaponComponent::Fire()
 	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
 
 	//Slice mesh
+	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
 	                                                  SightMesh->GetUpVector(), true,
 	                                                  outHalfComponent,
-	                                                  EProcMeshSliceCapOption::CreateNewSectionForCap,
+	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  matInst);
 	outHalfComponent->RegisterComponent();
 	
