@@ -232,15 +232,18 @@ protected:
 	//------------------
 
 public:
-	//------------------
+
+	UFUNCTION()
+	void SetPlayerTimeDilation(const float newDilation);
+	
 protected:
 	/** Called for Slowmo input */
+	UFUNCTION()
 	void Slowmo();
 	
 private:
 	//------------------
 #pragma endregion Slowmo
-
 
 #pragma region Weapon
 	//------------------

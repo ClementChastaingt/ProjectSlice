@@ -3,6 +3,7 @@
 
 #include "PS_SlowmoComponent.h"
 
+#include "PS_PlayerCameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/PC/PS_Character.h"
@@ -66,13 +67,13 @@ void UPS_SlowmoComponent::SlowmoTransition(const float& DeltaTime)
 		float globalDilationTarget = bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
 		float playerDilationTarget = bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
 		
-		float globalTimeDilation = FMath::Lerp(StartTimeDilation,globalDilationTarget,curveAlpha);		
-		float playerTimeDilation = FMath::Lerp(StartTimeDilation,playerDilationTarget,curveAlpha);
+		float globalTimeDilation = FMath::Lerp(StartGlobalTimeDilation,globalDilationTarget,curveAlpha);		
+		float playerTimeDilation = FMath::Lerp(StartPlayerTimeDilation,playerDilationTarget,curveAlpha);
 
 		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), globalTimeDilation);
-		_PlayerCharacter->CustomTimeDilation = playerTimeDilation;
+		_PlayerCharacter->SetPlayerTimeDilation(playerTimeDilation / globalTimeDilation);
 
-		UE_LOG(LogTemp, Log, TEXT("%S :: SlowmoTime %f, alpha %f, globalDilationTarget %f, playerTimeDilation %f "),  __FUNCTION__,SlowmoTime,alpha, globalDilationTarget, playerTimeDilation);
+		UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
 
 		if(alpha >= 1.0f)
 		{
@@ -94,7 +95,9 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	if(!IsValid(GetWorld()))
 		return;
 	
-	StartTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+	StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+	StartPlayerTimeDilation = _PlayerCharacter->CustomTimeDilation;
+	
 	StartSlowmoTimestamp = GetWorld()->GetTimeSeconds();
 	SlowmoTime = StartSlowmoTimestamp;
 
@@ -104,6 +107,13 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	bIsSlowmoTransiting = true;
 	SetComponentTickEnabled(true);
 
+	//Trigger FOV slowmo, duration is SlowmoTransitionDuration
+	UPS_PlayerCameraComponent* playerCam = Cast<UPS_PlayerCameraComponent>(_PlayerCharacter->GetFirstPersonCameraComponent());
+	UCurveFloat* slowmoCurve = SlowmoFOVCurves[bSlowmoActive ? 0 : 1];
+	if(!IsValid(slowmoCurve)) slowmoCurve = SlowmoFOVCurves[0];
+		
+	playerCam->SetupFOVInterp(bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(),bSlowmoActive ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
+	
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: %s"), __FUNCTION__, bSlowmoActive ? TEXT("On") :  TEXT("Off"));
 	
 }

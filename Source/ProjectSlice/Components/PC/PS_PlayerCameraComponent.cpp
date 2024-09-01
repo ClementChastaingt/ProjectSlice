@@ -4,10 +4,12 @@
 #include "PS_PlayerCameraComponent.h"
 
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
+
 }
 
 void UPS_PlayerCameraComponent::BeginPlay()
@@ -21,6 +23,8 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
 
+	DefaultFOV = FieldOfView;
+
 	InitPostProcess();
 }
 
@@ -31,8 +35,60 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	SlowmoTick();
-	
+
+	FieldOfViewTick();
 }
+
+#pragma region General
+//------------------
+
+
+void UPS_PlayerCameraComponent::SetupFOVInterp(const float targetFOV, const float duration, UCurveFloat* interCurve)
+{
+	if(targetFOV == FieldOfView) return;
+	
+	StartFOV = FieldOfView;
+	TargetFOV = targetFOV;
+	
+	StartFOVInterpTimestamp = GetWorld()->GetAudioTimeSeconds();
+	FOVIntertpDuration = duration;
+	FOVIntertpCurve = interCurve;
+	
+	bFieldOfViewInterpChange = true;
+
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: StartFOV:%f, TargetFOV:%f "), __FUNCTION__, StartFOV, TargetFOV);
+}
+
+void UPS_PlayerCameraComponent::FieldOfViewTick()
+{
+	if(bFieldOfViewInterpChange)
+	{
+		if(!IsValid(GetWorld())) return;
+		
+		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), StartFOVInterpTimestamp, StartFOVInterpTimestamp + FOVIntertpDuration, 0.0f, 1.0f);
+		float curveAlpha = alpha;
+
+		if(IsValid(FOVIntertpCurve))
+		{
+			curveAlpha = FOVIntertpCurve->GetFloatValue(alpha);
+		}
+		
+		SetFieldOfView(FMath::Lerp(StartFOV,TargetFOV,curveAlpha));
+		
+		if(alpha >= 1.0f)
+		{
+			bFieldOfViewInterpChange = false;
+			if(bDebug) UE_LOG(LogTemp, Warning, TEXT("StopFOVInterp"));
+		}
+
+	}
+}
+
+
+//------------------
+#pragma endregion General
+
+
 
 #pragma region Post-Process
 //------------------

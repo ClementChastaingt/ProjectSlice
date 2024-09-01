@@ -30,6 +30,9 @@ public:
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
+	bool bDebug = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
 	bool bDebugPostProcess = false;
 
 private:
@@ -39,6 +42,45 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
+#pragma region General
+	//------------------
+
+public:
+	UFUNCTION()
+	void SetupFOVInterp(const float targetFOV, const float duration, UCurveFloat* interCurve = nullptr);
+
+	FORCEINLINE float GetDefaultFOV() const{return DefaultFOV;}
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	bool bFieldOfViewInterpChange = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	float DefaultFOV;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	float StartFOV = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV",  meta = (UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0", Units = deg))
+	float TargetFOV = 60.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	float StartFOVInterpTimestamp = TNumericLimits<float>::Min();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	float FOVIntertpDuration = 1.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	UCurveFloat* FOVIntertpCurve = nullptr;
+	
+	
+	
+	UFUNCTION()
+	void FieldOfViewTick();
+private:
+	//------------------
+
+#pragma endregion General
 
 
 #pragma region Post-Process

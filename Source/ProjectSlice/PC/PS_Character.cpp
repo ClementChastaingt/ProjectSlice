@@ -378,6 +378,11 @@ void AProjectSliceCharacter::Look(const FInputActionValue& Value)
 #pragma region Slowmo
 //------------------
 
+void AProjectSliceCharacter::SetPlayerTimeDilation(const float newDilation)
+{
+	CustomTimeDilation = newDilation;
+}
+
 void AProjectSliceCharacter::Slowmo()
 {
 	if(IsValid(GetSlowmoComponent()))

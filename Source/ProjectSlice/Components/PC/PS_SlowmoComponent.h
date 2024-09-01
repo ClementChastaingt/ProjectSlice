@@ -75,10 +75,13 @@ protected:
 	FTimerHandle SlowmoTimerHandle;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float StartTimeDilation = 0.0f;
+	float StartGlobalTimeDilation = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float GlobalTimeDilationTarget = 0.5f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float StartPlayerTimeDilation = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float PlayerTimeDilationTarget = 0.8f;
@@ -88,9 +91,19 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	UCurveFloat* SlowmoCurve;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo Max duration"))
 	float SlowmoDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ToolTip="Slowmo target Field Of View"))
+	float TargetFOV = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV transition duration"))
+	float SlowmoFOVResetDuration = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV curves IN // OUT"))
+	TArray<UCurveFloat*> SlowmoFOVCurves;
+
 		
 private:
 	//------------------
