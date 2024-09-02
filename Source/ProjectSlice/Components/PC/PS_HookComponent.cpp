@@ -613,11 +613,13 @@ void UPS_HookComponent::HookObject()
 
 	//Trace config
 	//TODO :: Make a TraceType for Hook Object
-	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
+	UStaticMeshComponent* sightMesh = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent();
+	if(!IsValid(sightMesh)) return;
+	
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), HookThrower->GetComponentLocation(),
-										  HookThrower->GetComponentLocation() + SpawnRotation.Vector() * HookingMaxDistance,
-										  UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), sightMesh->GetComponentLocation(),
+										  sightMesh->GetComponentLocation() + sightMesh->GetForwardVector() * HookingMaxDistance,
+										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
@@ -654,7 +656,7 @@ void UPS_HookComponent::WindeHook()
 	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
 	{
 		bCableWinderPull = true;
-		CableStartWindeTimestamp = GetWorld()->GetTimeSeconds();
+		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
 	}
 		
 }
@@ -739,7 +741,7 @@ void UPS_HookComponent::PowerCablePull()
 	float alpha;
 	if(bCableWinderPull)
 	{
-		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
+		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
 		alpha = windeAlpha;
 		if(IsValid(WindePullingCurve))
 		{
@@ -766,8 +768,8 @@ void UPS_HookComponent::PowerCablePull()
 	
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(FName("CableStart")));
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
-
-	DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
+-
+	if(bDebugTick) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
 	
 	//Use Linear Velocity
 	//
@@ -775,16 +777,18 @@ void UPS_HookComponent::PowerCablePull()
 	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
 
 	//If slowmo is in use
-	if(IsValid(_PlayerCharacter->GetSlowmoComponent()) && IsValid(AttachedMesh->GetOwner()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive())
+	if(!IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
-		UE_LOG(LogTemp, Error, TEXT("CustomTimeDilation HookedObject"));
-		AttachedMesh->GetOwner()->CustomTimeDilation = 1.0f;
+		UE_LOG(LogTemp, Error, TEXT("%S :: SlowmoComponent invalid"), __FUNCTION__);
+		return;
 	}
-	
 
 	//Use Force
-	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+	FVector newVel = (AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight) / _PlayerCharacter->CustomTimeDilation;
+
+	//TODO :: Need to replace by AddImpulse (not dependent from frame rate)
 	AttachedMesh->AddForce(newVel);
+	//AttachedMesh->AddImpulse(newVel * GetWorld()->GetAudioTimeSeconds() * (1/60));
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
 }

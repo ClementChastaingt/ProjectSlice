@@ -45,16 +45,17 @@ void UPS_SlowmoComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(!bIsSlowmoTransiting && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 	
-	SlowmoTransition(DeltaTime);
+	SlowmoTransition();
 }
 
 
-void UPS_SlowmoComponent::SlowmoTransition(const float& DeltaTime)
+void UPS_SlowmoComponent::SlowmoTransition()
 {
 	if(bIsSlowmoTransiting)
 	{
-		SlowmoTime = SlowmoTime + DeltaTime;
 		if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+
+		SlowmoTime = SlowmoTime + GetWorld()->DeltaRealTimeSeconds;
 
 		const float alpha = UKismetMathLibrary::MapRangeClamped(SlowmoTime, StartSlowmoTimestamp ,StartSlowmoTimestamp + SlowmoTransitionDuration,0.0,1.0);
 		float curveAlpha = alpha;
@@ -82,7 +83,8 @@ void UPS_SlowmoComponent::SlowmoTransition(const float& DeltaTime)
 			if(!bSlowmoActive) return;
 			
 			FTimerDelegate stopSlowmo_TimerDelegate;
-			stopSlowmo_TimerDelegate.BindUObject(this, &UPS_SlowmoComponent::OnTriggerSlowmo);
+			stopSlowmo_TimerDelegate.BindUObject(+
+				this, &UPS_SlowmoComponent::OnTriggerSlowmo);
 			GetWorld()->GetTimerManager().SetTimer(SlowmoTimerHandle, stopSlowmo_TimerDelegate, SlowmoDuration, false);
 		}
 	}
@@ -98,7 +100,7 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
 	StartPlayerTimeDilation = _PlayerCharacter->CustomTimeDilation;
 	
-	StartSlowmoTimestamp = GetWorld()->GetTimeSeconds();
+	StartSlowmoTimestamp = GetWorld()->GetAudioTimeSeconds();
 	SlowmoTime = StartSlowmoTimestamp;
 
 	bSlowmoActive = !bSlowmoActive;
@@ -112,7 +114,9 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	UCurveFloat* slowmoCurve = SlowmoFOVCurves[bSlowmoActive ? 0 : 1];
 	if(!IsValid(slowmoCurve)) slowmoCurve = SlowmoFOVCurves[0];
 		
-	playerCam->SetupFOVInterp(bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(),bSlowmoActive ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
+	playerCam->SetupFOVInterp(bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(), bSlowmoActive ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
+
+	OnSlowmoEvent.Broadcast(bSlowmoActive);
 	
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: %s"), __FUNCTION__, bSlowmoActive ? TEXT("On") :  TEXT("Off"));
 	

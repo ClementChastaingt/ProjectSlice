@@ -394,7 +394,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
-;
 
 protected:
 	UFUNCTION()

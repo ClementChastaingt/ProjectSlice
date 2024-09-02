@@ -158,7 +158,7 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	|| playerMovementComp->IsCrouching()
 	|| playerMovementComp->MovementMode == MOVE_None;
 		
-	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()) * _PlayerCharacter->GetActorTimeDilation());
+	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
 }

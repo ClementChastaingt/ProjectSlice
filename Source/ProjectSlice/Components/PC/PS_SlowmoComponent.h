@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_SlowmoComponent.generated.h"
 
 
@@ -42,11 +43,14 @@ private:
 	//------------------
 
 public:
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnSlowmoEvent;
+	
 	UFUNCTION()
 	void OnTriggerSlowmo();
 		
 	UFUNCTION()
-	void SlowmoTransition(const float& DeltaTime);
+	void SlowmoTransition();
 
 	FORCEINLINE bool IsIsSlowmoTransiting() const{return bIsSlowmoTransiting;}
 
