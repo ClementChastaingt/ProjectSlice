@@ -68,17 +68,19 @@ private:
 	UPROPERTY(Transient)
 	APlayerController* _PlayerController;
 
-
 #pragma region Grapple
 	//------------------
 
 public:
 	UFUNCTION()
+	void OnSlowmoTriggerEventReceived(const bool bIsActive);
+	
+	UFUNCTION()
 	void OnAttachWeapon();
 
 	UFUNCTION()
 	void OnInitWeaponEventReceived();
-
+	
 	UFUNCTION()
 	void HookObject();
 
@@ -143,8 +145,6 @@ private:
 
 #pragma endregion Grapple
 
-
-#pragma region Rope
 #pragma region Rope
 	//------------------
 

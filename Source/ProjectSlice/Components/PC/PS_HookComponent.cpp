@@ -48,6 +48,11 @@ void UPS_HookComponent::BeginPlay()
 	if(IsValid(FirstCable))
 		FirstCableDefaultLenght = FirstCable->CableLength;
 
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
+	}
+
 }
 
 // Called every frame
@@ -83,6 +88,12 @@ void UPS_HookComponent::OnAttachWeapon()
 
 
 void UPS_HookComponent::OnInitWeaponEventReceived()
+{
+	
+}
+
+
+void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsActive)
 {
 	
 }
@@ -768,7 +779,7 @@ void UPS_HookComponent::PowerCablePull()
 	
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(FName("CableStart")));
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
--
+
 	if(bDebugTick) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
 	
 	//Use Linear Velocity
@@ -784,11 +795,8 @@ void UPS_HookComponent::PowerCablePull()
 	}
 
 	//Use Force
-	FVector newVel = (AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight) / _PlayerCharacter->CustomTimeDilation;
-
-	//TODO :: Need to replace by AddImpulse (not dependent from frame rate)
-	AttachedMesh->AddForce(newVel);
-	//AttachedMesh->AddImpulse(newVel * GetWorld()->GetAudioTimeSeconds() * (1/60));
+	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
 }
