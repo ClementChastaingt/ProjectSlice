@@ -245,7 +245,7 @@ void UPS_WeaponComponent::TurnRack()
 	TargetRackRotation = RackDefaultRotation;
 	TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
 
-	InterpRackRotStartTimestamp = GetWorld()->GetTimeSeconds();
+	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
 }
@@ -283,7 +283,7 @@ void UPS_WeaponComponent::SightMeshRotation()
 	//Smoothly rotate Sight Mesh
 	if(bInterpRackRotation)
 	{
-		const float alpha = (GetWorld()->GetTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
+		const float alpha = (GetWorld()->GetAudioTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
 		float curveAlpha = alpha;
 		if(IsValid(RackRotCurve))
 			curveAlpha = RackRotCurve->GetFloatValue(alpha);

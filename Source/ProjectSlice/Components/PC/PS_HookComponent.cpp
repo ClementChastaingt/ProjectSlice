@@ -50,7 +50,7 @@ void UPS_HookComponent::BeginPlay()
 
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
-		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
+		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
 
 }
@@ -93,9 +93,15 @@ void UPS_HookComponent::OnInitWeaponEventReceived()
 }
 
 
-void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsActive)
+void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 {
-	
+	//If slowmo is in use
+	const UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
+	if(IsValid(slowmoComp) && IsValid(AttachedMesh))
+	{
+		if(!IsValid(AttachedMesh->GetOwner())) return;
+		AttachedMesh->GetOwner()->CustomTimeDilation = bIsSlowed ? (slowmoComp->GetGlobalTimeDilationTarget() / slowmoComp->GetPlayerTimeDilationTarget()) : 1.0f;
+	}
 }
 
 //------------------
@@ -786,14 +792,7 @@ void UPS_HookComponent::PowerCablePull()
 	//
 	//// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
 	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
-
-	//If slowmo is in use
-	if(!IsValid(_PlayerCharacter->GetSlowmoComponent()))
-	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: SlowmoComponent invalid"), __FUNCTION__);
-		return;
-	}
-
+	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
 	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);

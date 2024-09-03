@@ -73,7 +73,7 @@ private:
 
 public:
 	UFUNCTION()
-	void OnSlowmoTriggerEventReceived(const bool bIsActive);
+	void OnSlowmoTriggerEventReceived(const bool bIsSlowed);
 	
 	UFUNCTION()
 	void OnAttachWeapon();

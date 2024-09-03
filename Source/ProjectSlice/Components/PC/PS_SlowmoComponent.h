@@ -58,6 +58,10 @@ public:
 
 	FORCEINLINE float GetSlowmoAlpha() const{return SlowmoAlpha;}
 
+	FORCEINLINE float GetGlobalTimeDilationTarget() const{return GlobalTimeDilationTarget;}
+
+	FORCEINLINE float GetPlayerTimeDilationTarget() const{return PlayerTimeDilationTarget;}
+
 protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
