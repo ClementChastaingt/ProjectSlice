@@ -683,7 +683,6 @@ void UPS_HookComponent::StopWindeHook()
 	bCableWinderPull = false;
 }
 
-
 void UPS_HookComponent::DettachHook()
 {
 	//If FirstCable is not in CableList return
@@ -787,11 +786,6 @@ void UPS_HookComponent::PowerCablePull()
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 
 	if(bDebugTick) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
-	
-	//Use Linear Velocity
-	//
-	//// FVector newVel = AttachedMesh->GetPhysicsLinearVelocity() + (rotMeshCable.Vector() * ForceWeight);
-	// AttachedMesh->SetPhysicsLinearVelocity(newVel.GetClampedToSize(0,3000));
 	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;

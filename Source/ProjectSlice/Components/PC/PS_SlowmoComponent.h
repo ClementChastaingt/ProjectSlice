@@ -74,47 +74,65 @@ protected:
 	float StartSlowmoTimestamp = TNumericLimits<float>().Lowest();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float SlowmoTime = 0.0f;
+	float SlowmoAlpha = 0.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float SlowmoAlpha = 0.0f;
-		
+	float SlowmoTime = 0.0f;
+			
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slowmo")
 	FTimerHandle SlowmoTimerHandle;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
 	float StartGlobalTimeDilation = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
-	float GlobalTimeDilationTarget = 0.5f;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
 	float StartPlayerTimeDilation = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
-	float PlayerTimeDilationTarget = 0.8f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo transition duration"))
-	float SlowmoTransitionDuration = 0.3f;
+	float GlobalTimeDilationTarget = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
-	UCurveFloat* SlowmoCurve;
-	
+	float PlayerTimeDilationTarget = 0.75f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo Max duration"))
 	float SlowmoDuration = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ToolTip="Slowmo target Field Of View"))
-	float TargetFOV = 60.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(ForceUnits="sec", ToolTip="Slowmo transition duration"))
+	float SlowmoTransitionDuration = 0.25f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV transition duration"))
-	float SlowmoFOVResetDuration = 0.3f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV curves IN // OUT"))
-	TArray<UCurveFloat*> SlowmoFOVCurves;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition")
+	UCurveFloat* SlowmoCurve;
 		
 private:
 	//------------------
 
 #pragma endregion Routine
+
+#pragma region Feedback
+	//------------------
+
+public:
+
+	FORCEINLINE float GetSlowmoPostProcessAlpha() const{return SlowmoPostProcessAlpha;}
+	
+protected:
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo|Feedback")
+	float SlowmoPostProcessAlpha = 0.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ToolTip="Slowmo target Field Of View"))
+	float TargetFOV = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV transition duration"))
+	float SlowmoFOVResetDuration = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV curves IN // OUT"))
+	TArray<UCurveFloat*> SlowmoFOVCurves;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|PostProcess")
+	TArray<UCurveFloat*> SlowmoPostProcessCurves;
+private:
+	//------------------
+
+#pragma endregion Feedback
 };

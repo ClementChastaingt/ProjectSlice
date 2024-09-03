@@ -492,9 +492,14 @@ void UPS_ParkourComponent::SlideTick()
 
 	if(IsValid(SlideAccelerationCurve))
 		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(SlideAlpha);
-	
+
+	//Use Force
+	//TODO :: rework Slide Force
 	characterMovement->AddForce(CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator);
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveDecAlpha);
+	
+	// FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+	// AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 
 	if(SlideAlpha < 1 )
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection * 2.0f,curveAccAlpha);
@@ -704,7 +709,6 @@ void UPS_ParkourComponent::MantleTick()
 //------------------
 #pragma endregion Mantle
 
-
 #pragma region Ledge
 //------------------
 
@@ -771,7 +775,6 @@ void UPS_ParkourComponent::LedgeTick()
 
 //------------------
 #pragma endregion Ledge
-
 
 #pragma region Event_Receiver
 //------------------

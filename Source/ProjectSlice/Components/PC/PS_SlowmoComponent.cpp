@@ -8,7 +8,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
-
 // Sets default values for this component's properties
 UPS_SlowmoComponent::UPS_SlowmoComponent()
 {
@@ -18,7 +17,6 @@ UPS_SlowmoComponent::UPS_SlowmoComponent()
 	
 	// ...
 }
-
 
 // Called when the game starts
 void UPS_SlowmoComponent::BeginPlay()
@@ -48,7 +46,6 @@ void UPS_SlowmoComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	SlowmoTransition();
 }
 
-
 void UPS_SlowmoComponent::SlowmoTransition()
 {
 	if(bIsSlowmoTransiting)
@@ -57,14 +54,24 @@ void UPS_SlowmoComponent::SlowmoTransition()
 
 		SlowmoTime = SlowmoTime + GetWorld()->DeltaRealTimeSeconds;
 
+		//Time Dilation alpha
 		const float alpha = UKismetMathLibrary::MapRangeClamped(SlowmoTime, StartSlowmoTimestamp ,StartSlowmoTimestamp + SlowmoTransitionDuration,0.0,1.0);
 		float curveAlpha = alpha;
 		if(IsValid(SlowmoCurve))
 		{
 			curveAlpha = SlowmoCurve->GetFloatValue(alpha);
 		}
+
+		//Set PostProccess alpha
 		SlowmoAlpha = bSlowmoActive ? curveAlpha : 1.0f - curveAlpha;
+		SlowmoPostProcessAlpha = SlowmoAlpha;
+		UCurveFloat* currentCurve = SlowmoPostProcessCurves.IsValidIndex(bSlowmoActive ? 0 : 1) ? SlowmoPostProcessCurves[bSlowmoActive ? 0 : 1] : nullptr ;
+		if(IsValid(currentCurve))
+		{
+			SlowmoPostProcessAlpha = currentCurve->GetFloatValue(SlowmoAlpha);
+		}
 	
+		//Set time Dilation
 		float globalDilationTarget = bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
 		float playerDilationTarget = bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
 		
@@ -74,8 +81,9 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), globalTimeDilation);
 		_PlayerCharacter->SetPlayerTimeDilation(playerTimeDilation / globalTimeDilation);
 
-		UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
+		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
 
+		//Exit
 		if(alpha >= 1.0f)
 		{
 			bIsSlowmoTransiting = false;
@@ -90,7 +98,6 @@ void UPS_SlowmoComponent::SlowmoTransition()
 	}
 
 }
-
 
 void UPS_SlowmoComponent::OnTriggerSlowmo()
 {

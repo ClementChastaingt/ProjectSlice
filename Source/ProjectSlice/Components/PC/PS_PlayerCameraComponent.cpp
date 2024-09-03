@@ -127,11 +127,13 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 		if(_PlayerCharacter->GetSlowmoComponent()->IsIsSlowmoTransiting())
 		{
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
+			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
 			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
 		}
 		else if(!_PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive()) 
 		{
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
+			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
 			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);   
 		}
 	}	
