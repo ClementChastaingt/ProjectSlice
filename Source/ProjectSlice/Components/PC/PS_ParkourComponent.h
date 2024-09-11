@@ -419,7 +419,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Current slide alpha"))
 	float SlideAlpha = 0;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	FVector SlideDirection = FVector::ZeroVector;
 	
@@ -428,12 +428,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	float DefaulGroundFriction = 8.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Z force multiplicator"))
-	float SlideForceMultiplicator = 1500000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Speed"))
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Speed multiplicator, use when slide on flat surface"))
 	float SlideSpeedMultiplicator = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Clamped Speed multiplicator"))
+	float SlideMaxSpeedFromDefaultMultiplicator = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Deceleration", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max braking deceleration "))
 	float MaxBrakingDecelerationSlide = 1000.0f;

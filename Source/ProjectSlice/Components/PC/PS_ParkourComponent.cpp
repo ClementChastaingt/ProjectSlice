@@ -475,12 +475,12 @@ void UPS_ParkourComponent::OnStopSlide()
 
 void UPS_ParkourComponent::SlideTick()
 {
-	if(!IsValid(_PlayerCharacter)) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 	
 	if(!bIsSliding) return;
 
 	SlideSeconds = SlideSeconds + CustomTickRate;
-	UCharacterMovementComponent* characterMovement =  _PlayerCharacter->GetCharacterMovement();
+	UCharacterMovementComponent* characterMovement = _PlayerCharacter->GetCharacterMovement();
 	
 
 	//-----Velocity-----
@@ -494,29 +494,37 @@ void UPS_ParkourComponent::SlideTick()
 	if(IsValid(SlideAccelerationCurve))
 		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(SlideAlpha);
 
-	//Use Force
-	if(SlideAlpha < 1 )
+	//Use Impulse
+	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
+	FVector minSlideVel = SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	
+	if(slideVel.SquaredLength() > minSlideVel.SquaredLength())
 	{
-		FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * SlideForceMultiplicator;
 		characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveDecAlpha);
-		
-		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->Velocity, SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length(),curveAccAlpha);
-		//_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection + ((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation),curveAccAlpha);
-		
+		UE_LOG(LogTemp, Warning, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
 	}
+	//Use Velocity
+	else if(SlideAlpha < 1)
+	{
+		//_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity(), SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length(), curveAccAlpha);
+		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, minSlideVel * SlideSpeedMultiplicator, curveAccAlpha);
+		UE_LOG(LogTemp, Error, TEXT("Velocity Force: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+
+		//Clamp Velocity
+		if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
+		{
+			FVector newVel = _PlayerCharacter->GetVelocity();
+			newVel.Normalize();
+	
+			characterMovement->Velocity = newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator;
+		}
+	}
+
+	//Change BrakingVel
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0, MaxBrakingDecelerationSlide, curveDecAlpha);
 	
 	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("MaxWalkSpeed :%f, floorInflucen : %s, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
-	
-	//Clamp Velocity
-	if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
-	{
-		FVector newVel = _PlayerCharacter->GetVelocity();
-		newVel.Normalize();
-	
-		characterMovement->Velocity = newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator;
-	}
-	
+		
 
 	//-----Stop Slide-----
 	if(_PlayerCharacter->GetVelocity().Length() < characterMovement->MaxWalkSpeedCrouched)
