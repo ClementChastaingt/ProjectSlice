@@ -501,14 +501,14 @@ void UPS_ParkourComponent::SlideTick()
 	if(slideVel.SquaredLength() > minSlideVel.SquaredLength())
 	{
 		characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-		UE_LOG(LogTemp, Warning, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
 	}
 	//Use Velocity
 	else if(SlideAlpha < 1)
 	{
 		//_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity(), SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length(), curveAccAlpha);
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, minSlideVel * SlideSpeedMultiplicator, curveAccAlpha);
-		UE_LOG(LogTemp, Error, TEXT("Velocity Force: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f, SlideDirection: %s"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length(), *SlideDirection.ToString());
 
 		//Clamp Velocity
 		if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
