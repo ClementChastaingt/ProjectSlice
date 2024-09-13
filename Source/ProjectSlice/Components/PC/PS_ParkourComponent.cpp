@@ -441,7 +441,7 @@ void UPS_ParkourComponent::OnStartSlide()
 	
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetIgnoreMoveInput(true);
-	SlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * FVector(1,1,0)/* * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length()*/; 
+	SlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector(); 
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
@@ -631,7 +631,7 @@ void UPS_ParkourComponent::OnStartMantle()
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
 	_StartMantleRot = _PlayerCharacter->GetControlRotation();
 	_TargetMantleRot = FRotator(_StartMantleRot.Pitch, _TargetMantleRot.Yaw, _StartMantleRot.Roll);
-
+	
 	//Start movement
 	SetComponentTickEnabled(bIsMantling);
 }

@@ -150,16 +150,17 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	startWalkAnimRot.Pitch = 1;
 	targetWalkAnimRot.Pitch = -1;
 	WalkAnimRot = UKismetMathLibrary::RLerp(startWalkAnimRot,targetWalkAnimRot, rollAlpha, true);
-
+	
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
-	//TODO :: Do a var when custom mode in place for tweak in BP the proc walk move frobidden state 
+	//TODO :: Do a var when custom mode in place for tweak in BP the proc walk move forbidden state 
 	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_PlayerCharacter->GetParkourComponent()->GetIsWallRunning())
 	|| playerMovementComp->IsCrouching()
 	|| playerMovementComp->MovementMode == MOVE_None;
 		
 	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
+	
 	
 }
 

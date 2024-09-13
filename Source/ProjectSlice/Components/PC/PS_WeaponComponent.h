@@ -45,6 +45,9 @@ protected:
 	bool bDebug = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugSightSliceBump = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSightShader = false;
 	
 private:

@@ -326,7 +326,6 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 {
-	
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{
@@ -339,10 +338,11 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		//Add movement
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
-		
 	}
 	else
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
+
+
 	
 }
 

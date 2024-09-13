@@ -405,7 +405,7 @@ void UPS_WeaponComponent::SliceBump()
 			CurrentCurveAlpha = SliceBumpCurve->GetFloatValue(alpha);
 		}
 
-		UE_LOG(LogTemp, Log, TEXT("%S :: curveAlpha %f "), __FUNCTION__, CurrentCurveAlpha);
+		if(bDebugSightSliceBump) UE_LOG(LogTemp, Log, TEXT("%S :: curveAlpha %f "), __FUNCTION__, CurrentCurveAlpha);
 		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
 
 		if(alpha >= 1)
