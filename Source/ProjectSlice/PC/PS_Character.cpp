@@ -338,6 +338,8 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		//Add movement
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
+
+		UE_LOG(LogTemp, Error, TEXT("%S :: %s"), __FUNCTION__, *_PlayerController->GetMoveInput().ToString());
 	}
 	else
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
