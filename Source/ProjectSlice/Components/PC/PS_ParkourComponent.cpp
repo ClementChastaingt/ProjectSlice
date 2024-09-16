@@ -106,8 +106,16 @@ void UPS_ParkourComponent::WallRunTick()
 	float curveForceAlpha = alphaWallRun;
 	if(IsValid(WallRunGravityCurve))
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
+
 	
-	VelocityWeight = FMath::Lerp(EnterVelocity, EnterVelocity + WallRunForceBoost,curveForceAlpha);
+	//Clamp Max Velocity
+	float wallRunVel = EnterVelocity + WallRunForceBoost;
+	if(EnterVelocity + WallRunForceBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2)
+	{
+		wallRunVel = _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2;
+	}
+	
+	VelocityWeight = FMath::Lerp(EnterVelocity, wallRunVel,curveForceAlpha);
 	
 	//-----Fake Gravity Velocity-----
 	float curveGravityAlpha = alphaWallRun;
@@ -253,8 +261,12 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	OnWallRunStop();
 	const FVector jumpForce = Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
 	if(bDebugWallRunJump) DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
-		
-	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);	
+
+	//TODO :: review wallrun jump velocity
+	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);
+	//_PlayerCharacter->GetCharacterMovement()->AddForce((jumpForce * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+
+
 }
 //------------------
 #pragma endregion WallRun

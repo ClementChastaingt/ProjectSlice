@@ -106,6 +106,14 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
 	
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
+
+	//Clamp Max Velocity
+	if(GetVelocity().Length() > GetDefaultMaxWalkSpeed() * 2)
+	{
+		FVector newVel = GetVelocity();
+		newVel.Normalize();
+		GetCharacterMovement()->Velocity = newVel * GetDefaultMaxWalkSpeed() * 2;
+	}
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -339,7 +347,6 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
 
-		UE_LOG(LogTemp, Error, TEXT("%S :: %s"), __FUNCTION__, *_PlayerController->GetMoveInput().ToString());
 	}
 	else
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
