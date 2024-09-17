@@ -439,7 +439,7 @@ void UPS_ParkourComponent::Stooping()
 		const float enterSpeed = _PlayerCharacter->GetVelocity().Length();
 		
 		bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
-		
+				
 		//Begin Slide if Velocity on enter is enough high
 		if(bIsCrouched && enterSpeed >= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
 			OnStartSlide();
@@ -534,6 +534,8 @@ void UPS_ParkourComponent::SlideTick()
 	{
 		//Clamp Max Velocity
 		FVector slideTargetVel = minSlideVel + SlideSpeedBoost;
+
+		UE_LOG(LogTemp, Error, TEXT("slideTargetVel %f, GetLastUpdateVelocity %f"), slideTargetVel.Length(), _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length());
 		if( minSlideVel.Length() + SlideSpeedBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
 		{
 			FVector playerVel = _PlayerCharacter->GetVelocity();
@@ -552,8 +554,12 @@ void UPS_ParkourComponent::SlideTick()
 		
 
 	//-----Stop Slide-----
-	if(_PlayerCharacter->GetVelocity().Length() < characterMovement->MaxWalkSpeedCrouched)
+	if(_PlayerCharacter->GetVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OnStopSlide01 %f"), _PlayerCharacter->GetVelocity().Size2D());
 		OnStopSlide();
+	}
+	
 }
 
 FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNormal) const
