@@ -118,7 +118,7 @@ public:
 	
 protected:
 	virtual void BeginPlay();
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
 	bool bDebugMovementTrail = false;
 
@@ -136,6 +136,10 @@ private:
 	//------------------
 
 public:
+	// APawn interface
+	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+	// End of APawn interface
+	
 	UFUNCTION()
 	bool IsCrouchInputTrigger() const{return bIsCrouchInputTrigger;}
 	
@@ -143,10 +147,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	bool bIsCrouchInputTrigger = false;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Input")
 	double InputMaxSmoothingWeight = 0.5f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Input")
 	double InputMinSmoothingWeight = 0.06f;
 
 private:
@@ -161,7 +165,7 @@ public:
 	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return DefaultMaxWalkSpeed;}
 	
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
-
+	
 	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
 
 	FORCEINLINE void SetIsCrouchInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
@@ -176,9 +180,7 @@ protected:
 	
 	virtual void Landed(const FHitResult& Hit) override;
 	
-	// APawn interface
-	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-	// End of APawn interface
+	void ClampPlayerVelocity() const;
 
 	/** Called for Jump input */
 	virtual bool CanJumpInternal_Implementation() const override;
@@ -214,16 +216,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	float DefaultMinAnalogSpeed = 0.0f;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	FVector OnJumpLocation = FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement|Status|Coyote", meta=(ToolTip="Coyote timer handler"))
 	FTimerHandle CoyoteTimerHandle;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement|Parameters|Jump|Coyote")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Jump|Coyote")
 	float CoyoteTime = 0.35f;
-	
 
 	//------------------
 #pragma endregion Move

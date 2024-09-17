@@ -10,7 +10,7 @@
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
 #include "Components/ArrowComponent.h"
-#include "Components/BoxComponent.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -108,12 +108,7 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
 
 	//Clamp Max Velocity
-	if(GetVelocity().Length() > GetDefaultMaxWalkSpeed() * 2)
-	{
-		FVector newVel = GetVelocity();
-		newVel.Normalize();
-		GetCharacterMovement()->Velocity = newVel * GetDefaultMaxWalkSpeed() * 2;
-	}
+	// ClampPlayerVelocity();
 }
 
 void AProjectSliceCharacter::BeginPlay()
@@ -144,6 +139,9 @@ void AProjectSliceCharacter::BeginPlay()
 	DefaultMinAnalogSpeed = GetCharacterMovement()->MinAnalogWalkSpeed;
 	
 }
+
+#pragma region Input
+//------------------
 
 void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -179,8 +177,20 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	}
 }
 
+//------------------
+#pragma endregion Input
+
 #pragma region Move
 //------------------
+void AProjectSliceCharacter::ClampPlayerVelocity() const
+{
+	if(GetVelocity().Length() > GetDefaultMaxWalkSpeed() * 1.5f)
+	{
+		FVector newVel = GetVelocity();
+		newVel.Normalize();
+		GetCharacterMovement()->Velocity = newVel * GetDefaultMaxWalkSpeed() * 1.5f;
+	}
+}
 
 #pragma region CharacterMovementComponent
 //------------------
@@ -402,7 +412,6 @@ void AProjectSliceCharacter::Slowmo()
 
 //------------------
 #pragma endregion Slowmo
-
 
 #pragma region Weapon
 //------------------

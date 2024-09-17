@@ -313,7 +313,10 @@ protected:
 	float MinEnterAngle = 8.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
-	float WallRunForceBoost = 200.0f;
+	float WallRunSpeedBoost = 200.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed, use when slide on flat surface"))
+	float MaxWallRunSpeedMultiplicator = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
 	UCurveFloat* WallRunForceCurve = nullptr;
@@ -429,11 +432,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	float DefaulGroundFriction = 8.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Speed multiplicator, use when slide on flat surface"))
-	float SlideSpeedMultiplicator = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Boost Speed, use when slide on flat surface"))
+	float SlideSpeedBoost = 200.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max Clamped Speed multiplicator"))
-	float SlideMaxSpeedFromDefaultMultiplicator = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed, use when slide on flat surface"))
+	float MaxSlideSpeedMultiplicator = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Deceleration", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max braking deceleration "))
 	float MaxBrakingDecelerationSlide = 1000.0f;

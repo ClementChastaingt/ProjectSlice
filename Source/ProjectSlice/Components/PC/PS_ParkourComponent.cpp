@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 
@@ -106,13 +107,15 @@ void UPS_ParkourComponent::WallRunTick()
 	float curveForceAlpha = alphaWallRun;
 	if(IsValid(WallRunGravityCurve))
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
-
 	
 	//Clamp Max Velocity
-	float wallRunVel = EnterVelocity + WallRunForceBoost;
-	if(EnterVelocity + WallRunForceBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2)
+	float wallRunVel = EnterVelocity + WallRunSpeedBoost;
+	if(EnterVelocity + WallRunSpeedBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
 	{
-		wallRunVel = _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2;
+		FVector newVel = _PlayerCharacter->GetVelocity();
+		newVel.Normalize();
+		wallRunVel = (newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator).Length();
+		UE_LOG(LogTemp, Error, TEXT("wallRunVel: %f"), wallRunVel);
 	}
 	
 	VelocityWeight = FMath::Lerp(EnterVelocity, wallRunVel,curveForceAlpha);
@@ -127,7 +130,7 @@ void UPS_ParkourComponent::WallRunTick()
 	customWallDirection.Normalize();
 
 	//-----Velocity Stick to Wall-----
-	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * (_PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : 0.0);
+	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * (_PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : 0.8);
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 	
 	//Stop WallRun if he was too long
@@ -259,11 +262,22 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 
 	OnWallRunStop();
-	const FVector jumpForce = Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
+
+	//TODO :: 
+	const FVector jumpForce = _PlayerCharacter->GetActorForwardVector() + Wall->GetActorRightVector() * WallToPlayerOrientation * JumpOffForceMultiplicator;
 	if(bDebugWallRunJump) DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
 
+	//Clamp Max Velocity
+	FVector slideTargetVel = jumpForce;
+	if(jumpForce.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
+	{
+		FVector playerVel = Wall->GetActorRightVector() * WallToPlayerOrientation;
+		playerVel.Normalize();
+		slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator;
+	}
+
 	//TODO :: review wallrun jump velocity
-	_PlayerCharacter->LaunchCharacter(jumpForce,false,false);
+	_PlayerCharacter->LaunchCharacter(slideTargetVel,false,false);
 	//_PlayerCharacter->GetCharacterMovement()->AddForce((jumpForce * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 
 
@@ -427,7 +441,7 @@ void UPS_ParkourComponent::Stooping()
 		bIsCrouched ? _PlayerCharacter->Crouch() : _PlayerCharacter->UnCrouch();
 		
 		//Begin Slide if Velocity on enter is enough high
-		if(bIsCrouched && enterSpeed > _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
+		if(bIsCrouched && enterSpeed >= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched)
 			OnStartSlide();
 		
 		bIsStooping = false;
@@ -518,18 +532,17 @@ void UPS_ParkourComponent::SlideTick()
 	//Use Velocity
 	else if(SlideAlpha < 1)
 	{
-		//_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity(), SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length(), curveAccAlpha);
-		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, minSlideVel * SlideSpeedMultiplicator, curveAccAlpha);
-		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f, SlideDirection: %s"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length(), *SlideDirection.ToString());
-
-		//Clamp Velocity
-		if(_PlayerCharacter->GetVelocity().Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator)
+		//Clamp Max Velocity
+		FVector slideTargetVel = minSlideVel + SlideSpeedBoost;
+		if( minSlideVel.Length() + SlideSpeedBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
 		{
-			FVector newVel = _PlayerCharacter->GetVelocity();
-			newVel.Normalize();
-	
-			characterMovement->Velocity = newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * SlideSpeedMultiplicator;
+			FVector playerVel = _PlayerCharacter->GetVelocity();
+			playerVel.Normalize();
+			slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
 		}
+		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, slideTargetVel, curveAccAlpha);
+		
+		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f, SlideDirection: %s"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length(), *SlideDirection.ToString());
 	}
 
 	//Change BrakingVel
