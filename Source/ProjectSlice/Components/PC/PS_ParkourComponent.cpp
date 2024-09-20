@@ -32,9 +32,10 @@ void UPS_ParkourComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
-
+	
 	DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
 	DefaultBrakingDeceleration = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+
 	
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
@@ -69,7 +70,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(!bIsResetingCameraTilt && !bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
+	if(!bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
@@ -80,11 +81,6 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	//-----Ledge move -----
 	LedgeTick();
-
-	//-----CameraTilt smooth reset-----
-	CameraTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);
-
-	
 	
 }
 
@@ -125,7 +121,6 @@ void UPS_ParkourComponent::WallRunTick()
 		UE_LOG(LogTemp, Error, TEXT("wallRunVel: %f"), wallRunVel);
 	}
 	
-	
 	VelocityWeight = FMath::Lerp(EnterVelocity, wallRunVel,curveForceAlpha);
 	
 	//-----Fake Gravity Velocity-----
@@ -152,12 +147,12 @@ void UPS_ParkourComponent::WallRunTick()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
-	CameraTilt(WallRunSeconds, StartWallRunTimestamp);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraTilt(WallRunSeconds, StartWallRunTimestamp);
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {	
-	if(bIsWallRunning || bIsCrouched) return;
+	if(bIsCrouched) return;
 	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
@@ -171,14 +166,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	//WallRun Logic activation
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
-	
-	//Check Enter angle
-	// if(FMath::Abs(angleObjectFwdToCamFwd) < MinEnterAngle/10 || bComeFromAir)
-	// {
-	// 	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun abort by WallDotPlayerCam angle %f "), angleObjectFwdToCamFwd * 10);
-	// 	return;
-	// }
-	
+		
 	
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
@@ -188,23 +176,28 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() - _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
-	
-	float playerToWallOrientation;
-	if(outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor)
+
+	if(!bIsWallRunning)
 	{
-		playerToWallOrientation = 1;
-	}else if(outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor)
-	{
-		playerToWallOrientation = -1;
-	}
-	else
-	{
-		playerToWallOrientation = 0;
-		return;
+		float playerToWallOrientation;
+		if(outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor)
+		{
+			playerToWallOrientation = 1;
+		}else if(outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor)
+		{
+			playerToWallOrientation = -1;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("%S :: playerToWallOrientation == 0"), __FUNCTION__);
+			playerToWallOrientation = 0;
+			return;
+		}
+
+		WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
 	}
 	
 	//Determine Orientations
-	WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
 	CameraTiltOrientation = WallToPlayerOrientation * FMath::Sign(angleObjectFwdToCamFwd);
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
 
@@ -220,12 +213,15 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
 
 	//Timer init
-	StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
-	WallRunSeconds = StartWallRunTimestamp;
-	GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
+	if(!bIsWallRunning)
+	{
+		StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
+		WallRunSeconds = StartWallRunTimestamp;
+		GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
+	}
 
 	//--------Camera_Tilt Setup--------
-	SetupCameraTilt(false, CameraTiltOrientation * WallRunCameraAngle);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * WallRunCameraAngle);
 
 	//Setup work var
 	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();	
@@ -251,7 +247,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
-	SetupCameraTilt(true, CameraTiltOrientation * WallRunCameraAngle);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true, CameraTiltOrientation * WallRunCameraAngle);
 	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
@@ -302,62 +298,6 @@ void UPS_ParkourComponent::JumpOffWallRun()
 //------------------
 #pragma endregion WallRun
 
-#pragma region Camera_Tilt
-//------------------
-
-void UPS_ParkourComponent::SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle)
-{
-	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	DefaultCameraRot = StartCameraRot + UKismetMathLibrary::NegateRotator(targetAngle);
-	TargetCameraRot = StartCameraRot + targetAngle;
-
-	if(bDebugCameraTilt)
-		UE_LOG(LogTemp, Warning, TEXT("%S bIsReset %i, StartCameraRot %s, DefaultCameraRot %s, TargetCameraRot %s"),__FUNCTION__, bIsReset, *StartCameraRot.ToString(),*DefaultCameraRot.ToString(),*TargetCameraRot.ToString());
-	
-	//TODO :: Only good for WallRun reset
-	bIsResetingCameraTilt = bIsReset;
-	if(bIsResetingCameraTilt)
-	{
-		DefaultCameraRot.Pitch = 0;
-		DefaultCameraRot.Roll = 0;
-		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();
-		SetComponentTickEnabled(true);
-	}
-
-}
-
-void UPS_ParkourComponent::CameraTilt(float currentSeconds, const float startTime)
-{
-	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
-	
-	//Alpha
-	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + CameraTiltDuration, 0,1);
-	
-	//If Camera tilt already finished stop
-	if(alphaTilt >= 1)
-	{
-		bIsResetingCameraTilt = false;
-		return;
-	}
-
-	//Interp
-	float curveTiltAlpha = alphaTilt;
-	if(IsValid(CameraTiltCurve))
-		curveTiltAlpha = CameraTiltCurve->GetFloatValue(alphaTilt);
-	
-	
-	//Target Rot
-	const FRotator newRotTarget = (TargetCameraRot.IsNearlyZero() || bIsResetingCameraTilt) ? DefaultCameraRot : TargetCameraRot;
-	const FRotator newRot = FMath::Lerp(StartCameraRot,newRotTarget, curveTiltAlpha);
-	
-	//Rotate
-	_PlayerController->SetControlRotation(newRot);
-	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
-}
-
-
-//------------------
-#pragma endregion Camera_Tilt
 
 #pragma region Crouch
 //------------------
@@ -550,8 +490,8 @@ void UPS_ParkourComponent::SlideTick()
 	else if(SlideAlpha < 1)
 	{
 		//Clamp Max Velocity
-		FVector slideTargetVel = minSlideVel + SlideSpeedBoost;
-		if(minSlideVel.Length() + SlideSpeedBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
+		FVector slideTargetVel = minSlideVel * SlideSpeedBoost;
+		if(slideTargetVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
 		{
 			FVector playerVel = _PlayerCharacter->GetVelocity();
 			playerVel.Normalize();
@@ -853,11 +793,12 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetMesh())
 		|| !IsValid(otherActor)) return;
 
-	if(bIsMantling || bIsWallRunning) return;
+	if(bIsMantling) return;
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
 
+	//TODO :: Do this a func in characMovmeent
 	//TODO :: Do this a func in characMovmeent
 	const bool bIsInAir =  _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
 	
@@ -881,7 +822,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 			if(outHit.bBlockingHit) UE_LOG(LogTemp, Log, TEXT("%S :: angle between hit and player forward %f"), __FUNCTION__ , angle);
 	
 		//Choose right parkour logic to execute
-		if(angle > MaxMantleAngle)
+		if(angle > MaxMantleAngle || bIsWallRunning)
 		{
 			OnWallRunStart(otherActor);
 		}
@@ -902,8 +843,12 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 
-	if(bIsWallRunning)UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
+	if(bIsWallRunning && OverlappingComponents.IsEmpty())
+	{
+		if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
 		OnWallRunStop();
+	}
+
 }
 
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode)

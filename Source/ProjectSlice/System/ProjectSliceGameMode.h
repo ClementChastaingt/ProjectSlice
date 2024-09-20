@@ -34,11 +34,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDebugMode = false;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebugGameplayStats = false;
+	
 private:
 	//------------------
 
 #pragma endregion General
-
 
 #pragma region Slice
 	//------------------

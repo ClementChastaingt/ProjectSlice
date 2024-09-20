@@ -31,6 +31,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
 	bool bDebug = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
+	bool bDebugCameraTilt = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
 	bool bDebugPostProcess = false;
@@ -42,7 +45,7 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-#pragma region General
+#pragma region FOV
 	//------------------
 
 public:
@@ -73,15 +76,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	UCurveFloat* FOVIntertpCurve = nullptr;
 	
-	
-	
 	UFUNCTION()
 	void FieldOfViewTick();
 private:
 	//------------------
 
-#pragma endregion General
-
+#pragma endregion FOV
 
 #pragma region Post-Process
 	//------------------
@@ -112,4 +112,48 @@ private:
 	//------------------
 
 #pragma endregion Post-Process
+
+#pragma region Tilt
+	//------------------
+
+public:
+	UFUNCTION()
+	void SetupCameraTilt(const bool bIsReset, const FRotator& targetAngle);
+
+	UFUNCTION()
+	void CameraTilt(float currentSeconds, const float startTime);
+	
+	FORCEINLINE int32 GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
+
+protected:
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraTilt smoothly"))
+	bool bIsResetingCameraTilt = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
+	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
+	FRotator DefaultCameraRot = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot on Start tiliting"))
+	FRotator StartCameraRot = FRotator::ZeroRotator;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=( ToolTip="Camera rot Target tiliting"))
+	FRotator TargetCameraRot = FRotator::ZeroRotator;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
+	int32 CurrentCameraTiltOrientation = 0;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	float CameraTiltDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
+	UCurveFloat* CameraTiltCurve = nullptr;
+
+private:
+	//------------------
+
+#pragma endregion CameraTilt
+	
 };
