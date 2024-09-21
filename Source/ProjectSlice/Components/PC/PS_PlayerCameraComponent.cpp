@@ -107,8 +107,7 @@ void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETil
 	bIsResetingCameraTilt = bIsReset;                                                                                                                                                                                                           
 	if(bIsResetingCameraTilt)                                                                                                                                                                                                                   
 	{                                                                                                                                                                                                                                           
-		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();                                                                                                                                                                           
-		SetComponentTickEnabled(true);                                                                                                                                                                                                          
+		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();                                                                                                                                                                           ;                                                                                                                                                                                                          
 	}                                                                                                                                                                                                                                           
                                                                                                                                                                                                                                                 
 }                                                                                                                                                                                                                                               
@@ -183,12 +182,6 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
 			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
-		}
-		else if(!_PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive()) 
-		{
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
-			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);   
 		}
 	}	
 }

@@ -87,8 +87,13 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		if(alpha >= 1.0f)
 		{
 			bIsSlowmoTransiting = false;
-
-			if(!bSlowmoActive) return;
+			SlowmoAlpha = 0.0f;
+			SlowmoPostProcessAlpha = 0.0f;
+			
+			if(!bSlowmoActive)
+			{
+				return;
+			}
 			
 			FTimerDelegate stopSlowmo_TimerDelegate;
 			stopSlowmo_TimerDelegate.BindUObject(+
