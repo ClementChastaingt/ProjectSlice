@@ -147,6 +147,8 @@ void UPS_WeaponComponent::FireTriggered()
 void UPS_WeaponComponent::Fire()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
 	//Try Slice a Mesh
 	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
@@ -168,8 +170,6 @@ void UPS_WeaponComponent::Fire()
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
 
 	if (!IsValid(currentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
-
-	UProceduralMeshComponent* outHalfComponent;
 	
 	//Setup material
 	ResetSightRackProperties();
@@ -193,27 +193,39 @@ void UPS_WeaponComponent::Fire()
 	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
 
 	//Slice mesh
+	UProceduralMeshComponent* outHalfComponent;
 	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap
+	FVector sliceDir = SightMesh->GetUpVector() * currentProcMeshComponent->GetComponentScale();
+	sliceDir.Normalize();
+	
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
-	                                                  SightMesh->GetUpVector(), true,
+	                                                  sliceDir, true,
 	                                                  outHalfComponent,
 	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  matInst);
-	outHalfComponent->RegisterComponent();
+	if(!IsValid(outHalfComponent)) return;
 	
-	if(IsValid(currentProcMeshComponent->GetOwner()))
+	if(bDebugSlice)
 	{
-		Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
-		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
+		DrawDebugLine(GetWorld(), CurrentFireHitResult.Location,  CurrentFireHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(), SightMesh->GetComponentLocation(),  SightMesh->GetComponentLocation() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
 	}
 
-	
-	//Init Physic Config+
+	//Register and instanciate
+	outHalfComponent->RegisterComponent();
+	if(IsValid(currentProcMeshComponent->GetOwner()))
+	{
+		//Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
+		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
+	}
+		
+	//Init Physic Config
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
 	outHalfComponent->SetGenerateOverlapEvents(true);
-	outHalfComponent->SetCollisionProfileName(Profile_GPE, false);
+	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
 	outHalfComponent->SetSimulatePhysics(true);
+	currentProcMeshComponent->SetSimulatePhysics(true);
 
 
 	//Impulse

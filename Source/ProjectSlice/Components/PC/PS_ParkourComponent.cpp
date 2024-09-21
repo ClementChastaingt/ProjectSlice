@@ -280,19 +280,19 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 
 	//Clamp Max Velocity
-	FVector slideTargetVel = jumpForce;
+	FVector jumpTargetVel = jumpForce;
 	if(jumpForce.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
 	{
 		FVector playerVel = jumpDir;
 		playerVel.Normalize();
-		slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator;
+		jumpTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator;
 
 		if(bDebugWallRunJump)
 			UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
 	}
 	
 	//Launch chara
-	_PlayerCharacter->LaunchCharacter(slideTargetVel,false,false);
+	_PlayerCharacter->LaunchCharacter(jumpTargetVel,false,false);
 	
 }
 //------------------
@@ -478,34 +478,40 @@ void UPS_ParkourComponent::SlideTick()
 		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(SlideAlpha);
 
 	//Use Impulse
-	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
 	FVector minSlideVel = SlideDirection;
 	
+
+	//Impulse on Slope else VelocityCurve
+	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
 	if(slideVel.SquaredLength() > minSlideVel.SquaredLength())
 	{
 		characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+
+		//Clamp Max Velocity
+		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator, FVector::ZeroVector, true);
 	}
 	//Use Velocity
 	else if(SlideAlpha < 1)
 	{
 		//Clamp Max Velocity
-		FVector slideTargetVel = minSlideVel * SlideSpeedBoost;
-		if(slideTargetVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
-		{
-			FVector playerVel = _PlayerCharacter->GetVelocity();
-			playerVel.Normalize();
-			slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
+		// FVector slideTargetVel = minSlideVel * SlideSpeedBoost;
+		// if(slideTargetVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
+		// {
+		// 	FVector playerVel = _PlayerCharacter->GetVelocity();
+		// 	playerVel.Normalize();
+		// 	slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
+		//
+		// 	//Clamp base velocity too
+		// 	if(minSlideVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
+		// 		minSlideVel = slideTargetVel;
+		//
+		// 	if(bDebugSlide)
+		// 		UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
+		// }
+		FVector slideTargetVel = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,minSlideVel,true);
 
-			//Clamp base velocity too
-			if(minSlideVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
-				minSlideVel = slideTargetVel;
-
-			if(bDebugSlide)
-				UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
-		}
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, slideTargetVel, curveAccAlpha);
-		
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
 	}
 

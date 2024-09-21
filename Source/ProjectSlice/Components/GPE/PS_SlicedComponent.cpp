@@ -3,6 +3,7 @@
 
 #include "PS_SlicedComponent.h"
 #include "KismetProceduralMeshLibrary.h"
+#include "Components/BrushComponent.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 
 
@@ -45,25 +46,31 @@ void UPS_SlicedComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_SlicedComponent::InitSliceObject()
 {
+	 // Cast<UBrushComponent>(GetOwner()->GetRootComponent());
 	_RootMesh = Cast<UStaticMeshComponent>(GetOwner()->GetRootComponent());
 
-	if(!IsValid(_RootMesh)) return;
+	if(!IsValid(_RootMesh))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: %s _RootMesh invalid"), __FUNCTION__, *GetNameSafe(GetOwner()));
+		return;
+	}
 
 	//Set Transform
-	SetRelativeLocation(_RootMesh->GetRelativeLocation());
-	SetRelativeRotation(_RootMesh->GetRelativeRotation());
-	
-	//Init StaticMeshCompo Collision and Physic
-	//TODO:: Need Destroy base mesh
-	_RootMesh->SetSimulatePhysics(false);
-	_RootMesh->SetGenerateOverlapEvents(false);
-	_RootMesh->SetCollisionProfileName(Profile_NoCollision, true);
-	_RootMesh->SetVisibility(false);
+	SetRelativeTransform(_RootMesh->GetRelativeTransform());
 	
 	//Copy StaticMesh to ProceduralMesh
 	//TODO :: See LOD index for complex mesh
 	UKismetProceduralMeshLibrary::CopyProceduralMeshFromStaticMeshComponent(_RootMesh,0,this,true);
+	_RootMesh->DestroyComponent(true);
 	
+	//Init Collision and Physic
+	bUseComplexAsSimpleCollision = false;
+	SetGenerateOverlapEvents(true);
+	SetCollisionProfileName(Profile_GPE, true);
+	SetNotifyRigidBodyCollision(true);
+	
+	const bool bFixed = GetOwner()->ActorHasTag(FName("Fixed"));
+	SetSimulatePhysics(!bFixed);
 	
 }
 

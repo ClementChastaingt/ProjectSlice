@@ -179,8 +179,6 @@ protected:
 	virtual void OnMovementModeChanged(EMovementMode previousMovementMode, uint8 previousCustomMode) override;
 	
 	virtual void Landed(const FHitResult& Hit) override;
-	
-	void ClampPlayerVelocity() const;
 
 	/** Called for Jump input */
 	virtual bool CanJumpInternal_Implementation() const override;

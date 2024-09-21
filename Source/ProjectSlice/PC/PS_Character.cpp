@@ -106,10 +106,7 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
 	
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false,10.0f);
-
-	//Clamp Max Velocity
-	// ClampPlayerVelocity();
-}
+	}
 
 void AProjectSliceCharacter::BeginPlay()
 {
@@ -182,15 +179,6 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 #pragma region Move
 //------------------
-void AProjectSliceCharacter::ClampPlayerVelocity() const
-{
-	if(GetVelocity().Length() > GetDefaultMaxWalkSpeed() * 1.5f)
-	{
-		FVector newVel = GetVelocity();
-		newVel.Normalize();
-		GetCharacterMovement()->Velocity = newVel * GetDefaultMaxWalkSpeed() * 1.5f;
-	}
-}
 
 #pragma region CharacterMovementComponent
 //------------------

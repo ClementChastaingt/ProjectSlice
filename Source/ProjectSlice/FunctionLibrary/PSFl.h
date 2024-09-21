@@ -16,6 +16,9 @@ public:
 	//------------------
 
 public:
+	
+	UFUNCTION()
+	static FVector ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, FVector startVelocity =FVector(0, 0, 0), const bool bDebug = false);
 
 #pragma endregion Utilities
 

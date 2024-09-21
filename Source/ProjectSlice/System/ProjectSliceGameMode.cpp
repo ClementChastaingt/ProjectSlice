@@ -47,15 +47,16 @@ void AProjectSliceGameMode::InitSliceableContent()
 
 		//Create and Add SlicedComponent to actors
 		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, true, relativeTransform, false));
-		//newComp->AttachToComponent(outActor->GetRootComponent(),FAttachmentTransformRules::KeepRelativeTransform);
 		outActor->RegisterAllComponents();
+
 		if(IsValid(newComp))
 		{
+			//For display the componenet on actor 
 			outActor->AddInstanceComponent(newComp);
+			
 			newComp->InitSliceObject();
-			newComp->SetupAttachment(outActor->GetRootComponent());
-			newComp->SetCollisionProfileName(Profile_GPE);
-			if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s add %s"), i++, *outActor->GetName(), *newComp->GetName());
+			
+			if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("PS_GameMode :: Sliceable Actor[%i] %s add %s"), i++, *outActor->GetActorNameOrLabel(), *newComp->GetName());
 		}
 		else
 			UE_LOG(LogTemp, Error, TEXT("PS_GameMode :: Sliceable Actor[%i] invalid UPS_SlicedComponent for %s"), i++, *outActor->GetName());
