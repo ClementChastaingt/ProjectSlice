@@ -16,9 +16,27 @@ public:
 	//------------------
 
 public:
-	
-	UFUNCTION()
-	static FVector ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, FVector startVelocity =FVector(0, 0, 0), const bool bDebug = false);
+
+	/*
+	 * @brief Check and Clamp a Velocity Target vector to MaxVelocity
+	 * @param currentVelocity: movement current velocitu to check
+	 * @param targetVelocity: movement target max velocity 
+	 * @param maxVelocity: maximum velocity threshold
+	 * @param bDebug: will log if true.
+	 * @return the Vector velocity Clamped
+	 */
+	static FVector ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
+
+	/*
+	 * @brief Check and Clamp a Velocity Target and Velocity Start vector to MaxVelocity
+	 * @param startVelocity: movement start velocitu
+	 * @param currentVelocity: movement current velocitu to check
+	 * @param targetVelocity: movement target max velocity 
+	 * @param maxVelocity: maximum velocity threshold
+	 * @param bDebug: will log if true.
+	 * @return the Vector velocity Clamped
+	 */
+	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
 
 #pragma endregion Utilities
 

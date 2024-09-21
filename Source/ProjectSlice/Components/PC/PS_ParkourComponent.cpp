@@ -105,23 +105,10 @@ void UPS_ParkourComponent::WallRunTick()
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
 	
 	//Clamp Max Velocity
-	float wallRunVel = EnterVelocity + WallRunSpeedBoost;
-	if(EnterVelocity + WallRunSpeedBoost > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
-	{
-		FVector newVel = _PlayerCharacter->GetVelocity();
-		newVel.Normalize();
-		wallRunVel = (newVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator).Length();
-
-		//Clamp base velocity too
-		if(EnterVelocity > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
-			EnterVelocity = wallRunVel;
-		
-		if(bDebugWallRun)
-			UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
-		UE_LOG(LogTemp, Error, TEXT("wallRunVel: %f"), wallRunVel);
-	}
+	FVector wallRunVel = _WallRunEnterVelocity + WallRunSpeedBoost;
+	wallRunVel = UPSFl::ClampVelocity(_WallRunEnterVelocity, _PlayerCharacter->GetVelocity(),wallRunVel,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator);
 	
-	VelocityWeight = FMath::Lerp(EnterVelocity, wallRunVel,curveForceAlpha);
+	VelocityWeight = FMath::Lerp(_WallRunEnterVelocity.Length(), wallRunVel.Length(),curveForceAlpha);
 	
 	//-----Fake Gravity Velocity-----
 	float curveGravityAlpha = alphaWallRun;
@@ -144,7 +131,7 @@ void UPS_ParkourComponent::WallRunTick()
 	}
 	
 	//Debug
-	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  EnterVelocity %f, VelocityWeight %f"),alphaWallRun, EnterVelocity, VelocityWeight);
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
 	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraTilt(WallRunSeconds, StartWallRunTimestamp);
@@ -224,7 +211,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * WallRunCameraAngle);
 
 	//Setup work var
-	EnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();	
+	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
 	Wall = otherActor;
 	bForceWallRun = false;
 	bIsWallRunning = true;
@@ -281,15 +268,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Clamp Max Velocity
 	FVector jumpTargetVel = jumpForce;
-	if(jumpForce.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator)
-	{
-		FVector playerVel = jumpDir;
-		playerVel.Normalize();
-		jumpTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator;
-
-		if(bDebugWallRunJump)
-			UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
-	}
+	UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator);
 	
 	//Launch chara
 	_PlayerCharacter->LaunchCharacter(jumpTargetVel,false,false);
@@ -489,27 +468,13 @@ void UPS_ParkourComponent::SlideTick()
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
 
 		//Clamp Max Velocity
-		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator, FVector::ZeroVector, true);
+		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator);
 	}
 	//Use Velocity
 	else if(SlideAlpha < 1)
 	{
 		//Clamp Max Velocity
-		// FVector slideTargetVel = minSlideVel * SlideSpeedBoost;
-		// if(slideTargetVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
-		// {
-		// 	FVector playerVel = _PlayerCharacter->GetVelocity();
-		// 	playerVel.Normalize();
-		// 	slideTargetVel = playerVel * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
-		//
-		// 	//Clamp base velocity too
-		// 	if(minSlideVel.Length() > _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator)
-		// 		minSlideVel = slideTargetVel;
-		//
-		// 	if(bDebugSlide)
-		// 		UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
-		// }
-		FVector slideTargetVel = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,minSlideVel,true);
+		FVector slideTargetVel = UPSFl::ClampVelocity(minSlideVel, _PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator);
 
 		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, slideTargetVel, curveAccAlpha);
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());

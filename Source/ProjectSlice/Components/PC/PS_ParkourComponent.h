@@ -244,9 +244,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	int32 CameraTiltOrientation = 0;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Default player gravity scale"))
-	float EnterVelocity  = 0.0f;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun timer handler"))
 	FTimerHandle WallRunTimerHandle;
 
@@ -298,6 +295,9 @@ protected:
 	
 private:
 	//------------------
+
+	UPROPERTY(Transient, meta=(ToolTip="Start WallRun player velocity scale"))
+	FVector _WallRunEnterVelocity;
 
 #pragma endregion WallRun
 

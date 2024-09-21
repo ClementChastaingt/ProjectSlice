@@ -32,7 +32,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
 	bool bDebug = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|CameraTilt")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CameraTilt|Debug")
 	bool bDebugCameraTilt = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
