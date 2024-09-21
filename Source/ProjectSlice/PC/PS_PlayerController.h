@@ -19,66 +19,135 @@ class PROJECTSLICE_API AProjectSlicePlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	UInputMappingContext* GetDefaultMappingContext() const{return DefaultMappingContext;}
+	FORCEINLINE UInputMappingContext* GetDefaultMappingContext() const{return DefaultMappingContext;}
 
-	UInputAction* GetJumpAction() const{return JumpAction;}
-
-	UInputAction* GetCrouchAction() const{return CrouchAction;}
-
-	UInputAction* GetMoveAction() const{return MoveAction;}
-
-	UInputAction* GetLookAction() const{return LookAction;}
-
-	UInputAction* GetSlowmoAction() const{return SlowmoAction;}
+	FORCEINLINE UInputMappingContext* GetFireMappingContext() const{return FireMappingContext;}
 
 protected:
 	/** Input Mapping Context to be used for player input */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action")
 	UInputMappingContext* InputMappingContext;
 
 	/** DefaultMappingContext use in begin play */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action", meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
-		
-	/** Input Actions **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* CrouchAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* MoveAction;
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action", meta=(AllowPrivateAccess = "true"))
+	UInputMappingContext* FireMappingContext;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* LookAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* SlowmoAction;
-
 	// Begin Actor interface
 	virtual void BeginPlay() override;
+
+
+#pragma region Action
+//------------------
+	
+#pragma region Player
+	//------------------
+
+public:
+	FORCEINLINE UInputAction* GetJumpAction() const{return JumpAction;}
+
+	FORCEINLINE UInputAction* GetCrouchAction() const{return CrouchAction;}
+
+	FORCEINLINE UInputAction* GetMoveAction() const{return MoveAction;}
+
+	FORCEINLINE UInputAction* GetLookAction() const{return LookAction;}
+
+	FORCEINLINE UInputAction* GetSlowmoAction() const{return SlowmoAction;}
+
+	FORCEINLINE UInputAction* GetStowAction() const{return StowAction;}
+	
+protected:
+	/** Input Actions **/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* MoveAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
+	UInputAction* SlowmoAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
+	UInputAction* StowAction;
+	
+private:
+	//------------------
+
+	//------------------
+#pragma endregion Player
+
+#pragma region Weapon
+	//------------------
+
+public:
+	FORCEINLINE UInputAction* GetFireAction() const{return FireAction;}
+
+	FORCEINLINE UInputAction* GetTurnRackAction() const{return TurnRackAction;}
+
+	FORCEINLINE UInputAction* GetHookAction() const{return HookAction;}
+
+	FORCEINLINE UInputAction* GetWinderAction() const{return WinderAction;}
+
+protected:
+	/** Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* FireAction;
+
+	/** Sight Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* TurnRackAction;
+
+	/** Hook Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* HookAction;
+
+	/** Winder Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* WinderAction;
+private:
+	//------------------
+
+	//------------------
+#pragma endregion Weapon	
+
+//------------------
+#pragma endregion Action
+
 
 #pragma region Input
 	//------------------
 
 public:
-	FVector2D GetMoveInput() const{return MoveInput;}
+	FORCEINLINE double GetInputMaxSmoothingWeight() const{return InputMaxSmoothingWeight;}
+
+	FORCEINLINE double GetInputMinSmoothingWeight() const{return InputMinSmoothingWeight;}
+
+	FORCEINLINE FVector2D GetMoveInput() const{return MoveInput;}
 	
-	void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
+	FORCEINLINE void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
 
-	bool CanMove() const{return bCanMove;}
+	FORCEINLINE bool CanMove() const{return bCanMove;}
 
-	bool CanLook() const{return bCanLook;}
+	FORCEINLINE bool CanLook() const{return bCanLook;}
 
-	void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
+	FORCEINLINE void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
 
-	void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
+	FORCEINLINE void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
+	
+	FORCEINLINE void SetIsCrouchInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
+	
+	FORCEINLINE bool IsCrouchInputTrigger() const{return bIsCrouchInputTrigger;}
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input)
-	FVector2D MoveInput = FVector2D::ZeroVector;
-
 	/** Bool for force block Move */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	bool bCanMove = true;
@@ -86,11 +155,23 @@ protected:
 	/** Bool for force block Look  */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	bool bCanLook = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	FVector2D MoveInput = FVector2D::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	bool bIsCrouchInputTrigger = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
+	double InputMaxSmoothingWeight = 0.5f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
+	double InputMinSmoothingWeight = 0.06f;
+	
 private:
 	//------------------
 
 #pragma endregion Input
-
 
 #pragma region Misc
 	//------------------

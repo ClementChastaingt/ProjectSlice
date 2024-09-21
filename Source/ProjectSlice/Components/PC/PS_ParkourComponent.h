@@ -289,9 +289,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 90.0f, ClampMin = 90.f, ForceUnits="deg", ToolTip="Jump Off Player forward Direction to Wall right dir threshold angle"))
 	float JumpOffPlayerFwdDirThresholdAngle = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Angle of the camera in relation to the wall when the player is stuck to it"))
-	FRotator WallRunCameraAngle = FRotator(0,0,20.0f);
 	
 private:
 	//------------------

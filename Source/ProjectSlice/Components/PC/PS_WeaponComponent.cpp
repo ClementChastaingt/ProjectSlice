@@ -56,7 +56,7 @@ void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController)) return;
 	
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(_PlayerController->GetLocalPlayer()))
-		Subsystem->RemoveMappingContext(FireMappingContext);
+		Subsystem->RemoveMappingContext(_PlayerController->GetFireMappingContext());
 }
 
 void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
@@ -84,10 +84,11 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	
 }
 
+
 void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
 {
 	_PlayerCharacter = Target_PlayerCharacter;
-	_PlayerController = Cast<APlayerController>(Target_PlayerCharacter->GetController());
+	_PlayerController = Cast<AProjectSlicePlayerController>(Target_PlayerCharacter->GetController());
 	
 	if(!IsValid(_PlayerController)) return;
 		
@@ -97,32 +98,43 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 		_PlayerController->GetLocalPlayer()))
 	{
 		// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-		Subsystem->AddMappingContext(FireMappingContext, 1);
+		Subsystem->AddMappingContext(_PlayerController->GetFireMappingContext(), 1);
 	}
 
-	//BindAction
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(_PlayerController->InputComponent))
-	{
-		// Fire
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::FireTriggered);
-
-		// Rotate Rack
-		EnhancedInputComponent->BindAction(TurnRackAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
-
-		//Hook Launch
-		EnhancedInputComponent->BindAction(HookAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
-
-		//Winder Launch
-		EnhancedInputComponent->BindAction(WinderAction, ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
-		EnhancedInputComponent->BindAction(WinderAction, ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);				
-		
-	}
+	SetupWeaponInputComponent();
 
 	OnWeaponInit.Broadcast();
 }
 
 #pragma region Input
 //__________________________________________________
+
+void UPS_WeaponComponent::SetupWeaponInputComponent()
+{
+	if(!IsValid(_PlayerController))
+	{
+		UE_LOG(LogTemplateCharacter, Error, TEXT("SetupPlayerInputComponent failde PlayerController is invalid"));
+		return;
+	}
+	
+	//BindAction
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(_PlayerController->InputComponent))
+	{
+		// Fire
+		EnhancedInputComponent->BindAction(_PlayerController->GetFireAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::FireTriggered);
+
+		// Rotate Rack
+		EnhancedInputComponent->BindAction(_PlayerController->GetTurnRackAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
+
+		//Hook Launch
+		EnhancedInputComponent->BindAction(_PlayerController->GetHookAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
+
+		//Winder Launch
+		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
+		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);				
+		
+	}
+}
 
 void UPS_WeaponComponent::FireTriggered()
 {

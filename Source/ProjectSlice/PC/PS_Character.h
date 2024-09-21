@@ -140,18 +140,8 @@ public:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 	
-	UFUNCTION()
-	bool IsCrouchInputTrigger() const{return bIsCrouchInputTrigger;}
-	
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
-	bool bIsCrouchInputTrigger = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Input")
-	double InputMaxSmoothingWeight = 0.5f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Input")
-	double InputMinSmoothingWeight = 0.06f;
+	//------------------
 
 private:
 	//------------------
@@ -167,8 +157,6 @@ public:
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
 	
 	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
-
-	FORCEINLINE void SetIsCrouchInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
 
 	/** Called for Crouch input */
 	void Crouching();
@@ -248,20 +236,29 @@ private:
 	//------------------
 
 public:
+
+	UFUNCTION(BlueprintCallable, Category=Weapon)
+	FORCEINLINE bool GetHasRifle() const {return bHasRifle;}
+
+	UFUNCTION(BlueprintCallable, Category=Weapon)
+	FORCEINLINE void SetHasRifle(const bool bhasRifle){this->bHasRifle = bhasRifle;}
+
+	UFUNCTION(BlueprintCallable, Category=Weapon)
+	FORCEINLINE bool IsIsWeaponStow() const{return bIsWeaponStow;}
+
+protected:
+	
+	/** Called for Slowmo input */
+	UFUNCTION()
+	void Stow();
+
 	/** Bool for AnimBP to switch to another animation set */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
 
-	/** Setter to set the bool */
-	UFUNCTION(BlueprintCallable, Category = Weapon)
-	void SetHasRifle(bool bNewHasRifle);
-
-	/** Getter for the bool */
-	UFUNCTION(BlueprintCallable, Category = Weapon)
-	bool GetHasRifle();
-
-protected:
-	//------------------
+	/** Bool for AnimBP to switch to another animation set */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	bool bIsWeaponStow = false;
 private:
 	//------------------
 

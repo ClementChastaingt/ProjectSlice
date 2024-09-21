@@ -1,9 +1,0 @@
-diff a/Source/ProjectSlice/Components/PC/PS_ParkourComponent.cpp b/Source/ProjectSlice/Components/PC/PS_ParkourComponent.cpp	(rejected hunks)
-@@ -507,6 +507,7 @@
- 		characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
- 		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0,MaxBrakingDecelerationSlide, curveDecAlpha);
- 		
-+		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(_PlayerCharacter->GetCharacterMovement()->Velocity, SlideDirection * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length(),curveAccAlpha);
- 		//_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(SlideDirection, SlideDirection + ((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation),curveAccAlpha);
- 		
- 	}

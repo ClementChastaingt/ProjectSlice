@@ -8,6 +8,7 @@
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_WeaponComponent.generated.h"
 
+class AProjectSlicePlayerController;
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
@@ -59,7 +60,7 @@ private:
 	AProjectSliceCharacter* _PlayerCharacter;
 
 	UPROPERTY(Transient)
-	APlayerController* _PlayerController;
+	AProjectSlicePlayerController* _PlayerController;
 
 #pragma region Input
 	//------------------
@@ -67,27 +68,9 @@ private:
 public:
 	//------------------
 	
-protected:	
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FireMappingContext;
-
-	/** Fire Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* FireAction;
-
-	/** Sight Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* TurnRackAction;
-
-	/** Hook Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* HookAction;
-
-	/** Winder Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* WinderAction;
-	
+protected:
+	UFUNCTION()
+	void SetupWeaponInputComponent();
 	
 private:
 	//------------------

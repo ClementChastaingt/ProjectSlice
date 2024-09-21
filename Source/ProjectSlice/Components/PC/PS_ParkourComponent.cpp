@@ -134,7 +134,7 @@ void UPS_ParkourComponent::WallRunTick()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity, VelocityWeight);
 	
 	//----Camera Tilt-----
-	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraTilt(WallRunSeconds, StartWallRunTimestamp);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraRollTilt(WallRunSeconds, StartWallRunTimestamp);
 }
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
@@ -208,7 +208,7 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 	}
 
 	//--------Camera_Tilt Setup--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * WallRunCameraAngle);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, ETiltUsage::WALL_RUN, CameraTiltOrientation);
 
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
@@ -234,7 +234,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true, CameraTiltOrientation * WallRunCameraAngle);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true, ETiltUsage::WALL_RUN);
 	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
@@ -324,7 +324,7 @@ void UPS_ParkourComponent::OnCrouch()
 
 bool UPS_ParkourComponent::CanStand() const
 {
-	if(!IsValid(GetWorld())) return false;
+	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return false;
 
 	const ACharacter* defaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 	
@@ -337,7 +337,7 @@ bool UPS_ParkourComponent::CanStand() const
 	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),start,end,defaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugSlide ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 	const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
-	if(!canStand && !_PlayerCharacter->IsCrouchInputTrigger())
+	if(!canStand && !_PlayerController->IsCrouchInputTrigger())
 		GetWorld()->GetTimerManager().UnPauseTimer(CanStandTimerHandle);
 	else
 		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
@@ -347,9 +347,9 @@ bool UPS_ParkourComponent::CanStand() const
 
 void UPS_ParkourComponent::CanStandTick()
 {
-	if(!IsValid(_PlayerCharacter)) return;
+	if(!IsValid(_PlayerController)) return;
 
-	if(!_PlayerCharacter->IsCrouchInputTrigger())
+	if(!_PlayerController->IsCrouchInputTrigger())
 		OnCrouch();
 }
 
@@ -824,15 +824,15 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode)
 {
-	if (!IsValid(_PlayerCharacter)) return;
+	if (!IsValid(_PlayerController)) return;
 	
 	//TODO :: Replace by CMOVE_Slide // use isInAIr from custom character movement
     const bool bForceUncrouch = prevMovementMode == MOVE_Walking && (character->GetCharacterMovement()->MovementMode == MOVE_Falling ||  character->GetCharacterMovement()->MovementMode == MOVE_Flying);
-	const bool bForceCrouch = character->GetCharacterMovement()->MovementMode == MOVE_Walking && (prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying) && _PlayerCharacter->IsCrouchInputTrigger();
+	const bool bForceCrouch = character->GetCharacterMovement()->MovementMode == MOVE_Walking && (prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying) && _PlayerController->IsCrouchInputTrigger();
 
 	if(bForceUncrouch && bIsCrouched || bForceCrouch && !bIsCrouched)
 	{
-		if(bForceUncrouch && bIsCrouched)_PlayerCharacter->SetIsCrouchInputTrigger(false);
+		if(bForceUncrouch && bIsCrouched) _PlayerController->SetIsCrouchInputTrigger(false);
 		OnCrouch();
 	}
 

@@ -167,6 +167,9 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 		// Slowmotion
 		EnhancedInputComponent->BindAction(_PlayerController->GetSlowmoAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Slowmo);
+		
+		// Stow
+		EnhancedInputComponent->BindAction(_PlayerController->GetStowAction(), ETriggerEvent::Started, this,  &AProjectSliceCharacter::Stow);
 	}
 	else
 	{
@@ -210,14 +213,14 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 
 void AProjectSliceCharacter::Crouching()
 {
-	if(!IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
+	if(!IsValid(_PlayerController) || !IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
 
 	if(GetParkourComponent()->GetIsWallRunning()
 		|| GetParkourComponent()->IsLedging()
 		||  GetParkourComponent()->GetMantlePhase() != EMantlePhase::NONE)
 		return;
 
-	bIsCrouchInputTrigger = !bIsCrouchInputTrigger;
+	_PlayerController->SetIsCrouchInputTrigger(!_PlayerController->IsCrouchInputTrigger());
 	GetParkourComponent()->OnCrouch();
 }
 
@@ -252,11 +255,13 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 
 
 void AProjectSliceCharacter::Jump()
-{	
+{
+	if(!IsValid(_PlayerController)) return;
+	
 	OnJumpLocation = GetActorLocation();
 
 	if(bIsCrouched)
-		bIsCrouchInputTrigger = false;
+		_PlayerController->SetIsCrouchInputTrigger(false);
 	
 	Super::Jump();
 	
@@ -335,7 +340,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{
-		const double inputWeight = UKismetMathLibrary::MapRangeClamped(GetVelocity().Length(), 0, GetCharacterMovement()->GetMaxSpeed(),InputMaxSmoothingWeight, InputMinSmoothingWeight);
+		const double inputWeight = UKismetMathLibrary::MapRangeClamped(GetVelocity().Length(), 0, GetCharacterMovement()->GetMaxSpeed(), _PlayerController->GetInputMaxSmoothingWeight(), _PlayerController->GetInputMinSmoothingWeight());
 		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, inputWeight);
 		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, inputWeight);
 
@@ -404,15 +409,9 @@ void AProjectSliceCharacter::Slowmo()
 #pragma region Weapon
 //------------------
 
-
-void AProjectSliceCharacter::SetHasRifle(bool bNewHasRifle)
+void AProjectSliceCharacter::Stow()
 {
-	bHasRifle = bNewHasRifle;
-}
-
-bool AProjectSliceCharacter::GetHasRifle()
-{
-	return bHasRifle;
+	bIsWeaponStow = !bIsWeaponStow;
 }
 
 //------------------
