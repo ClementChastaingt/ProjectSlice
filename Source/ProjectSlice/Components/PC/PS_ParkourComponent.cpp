@@ -420,6 +420,8 @@ void UPS_ParkourComponent::OnStopSlide()
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	SlideSeconds = 0;
 	SlideAlpha = 0.0f;
+	// bIsSlidingOnSlope = false;
+
 	
 	//--------Configure Movement Behaviour-------
 	
@@ -458,21 +460,40 @@ void UPS_ParkourComponent::SlideTick()
 
 	//Use Impulse
 	FVector minSlideVel = SlideDirection;
-	
+
+	//TODO :: Dash application
+	// FVector slideVel = characterMovement->CurrentFloor.HitResult.Normal * 1500000.0f
+	// characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+		
+	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
 
 	//Impulse on Slope else VelocityCurve
-	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
+	float outSlopePitchDegreeAngle;
+	float outSlopeRollDegreeAngle;
+	//Determine if can use slide on slope
+	UKismetMathLibrary::GetSlopeDegreeAngles(GetRightVector(),characterMovement->CurrentFloor.HitResult.Normal, GetUpVector(),outSlopePitchDegreeAngle,outSlopeRollDegreeAngle);
+	
 	if(slideVel.SquaredLength() > minSlideVel.SquaredLength())
 	{
-		characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+		// if(SlideSeconds <= 0.0f) bIsSlidingOnSlope = true;
+		characterMovement->AddImpulse(slideVel * GetWorld()->DeltaRealTimeSeconds * _PlayerCharacter->CustomTimeDilation);
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
-
+		
 		//Clamp Max Velocity
-		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost * _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator);
+		UKismetMathLibrary::MapRangeClamped(outSlopePitchDegreeAngle,-90,90,1.0,3.0f);
+		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(slideVel, _PlayerCharacter->GetVelocity(),slideVel * SlideSpeedBoost, _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * outSlopePitchDegreeAngle > 0 ? 1.0f : f)  );
+		
 	}
 	//Use Velocity
-	else if(SlideAlpha < 1)
+	else if(SlideAlpha < 1 && outSlopePitchDegreeAngle <= 0)
 	{
+		//Cancel if come from impulse slide
+		// if(bIsSlidingOnSlope && SlideSeconds > 0.0f && SlideAlpha > 0.0f)
+		// {
+		// 	if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("OnStopSlide by slide type change"));
+		// 	OnStopSlide();
+		// } 
+			
 		//Clamp Max Velocity
 		FVector slideTargetVel = UPSFl::ClampVelocity(minSlideVel, _PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator);
 
@@ -489,7 +510,7 @@ void UPS_ParkourComponent::SlideTick()
 	//-----Stop Slide-----
 	if(_PlayerCharacter->GetVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched)
 	{
-		UE_LOG(LogTemp, Error, TEXT("OnStopSlide01 %f"), _PlayerCharacter->GetVelocity().Size2D());
+		if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("OnStopSlide by velocity %f"), _PlayerCharacter->GetVelocity().Size2D());
 		OnStopSlide();
 	}
 	
@@ -502,6 +523,8 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 	FVector out = floorNormal.Cross(floorNormal.Cross(FVector(0,0,1)));
 	out.Normalize();
 
+	DrawDebugDirectionalArrow(GetWorld(), GetComponentLocation(), GetComponentLocation() + out * 500, 5.0f, FColor::Blue, false, 2, 10, 2);
+	
 	return out;
 }
 

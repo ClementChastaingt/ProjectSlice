@@ -126,7 +126,7 @@ private:
 
 public:
 	UFUNCTION()
-	void SetupCameraTilt(const bool& bIsReset, const ETiltUsage& usage, const int32& targetOrientation = 0.0f);
+	void SetupCameraTilt(const bool& bIsReset, const ETiltUsage usage, const int32& targetOrientation = 0.0f);
 
 	UFUNCTION()
 	void CameraRollTilt(float currentSeconds, const float startTime);
@@ -144,14 +144,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
 	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera roll on init"))
-	float DefaultCameraRoll = 0.0f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
+	FRotator DefaultCameraRot = FRotator::ZeroRotator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera roll on Start tiliting"))
-	float StartCameraRoll = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera target roll"))
-	float TargetCameraRoll = 0.0f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot on Start tiliting"))
+	FRotator StartCameraRot = FRotator::ZeroRotator;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=( ToolTip="Camera rot Target tiliting"))
+	FRotator TargetCameraRot = FRotator::ZeroRotator;
 		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	int32 CurrentCameraTiltOrientation = 0;
@@ -160,7 +160,7 @@ protected:
 	float CameraTiltDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation tilt amplitude in degree"))
-	TMap<ETiltUsage, FVector> CameraTiltRollAmplitude;
+	TMap<ETiltUsage, FRotator> CameraTiltRotAmplitude = {{ETiltUsage::NONE,FRotator::ZeroRotator}};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
