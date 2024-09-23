@@ -371,8 +371,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	bool bIsSliding = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
-	bool bIsSlidingOnSlope = false;
+	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
+	// bool bIsSlidingOnSLope = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
 	FTimerHandle SlideTimerHandle;
