@@ -42,6 +42,7 @@ void UPS_ParkourComponent::BeginPlay()
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
 	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);
 	
+	
 	//Custom Tick
 	SetComponentTickEnabled(false);
 	if (IsValid(GetWorld()))

@@ -112,9 +112,12 @@ protected:
 
 	UFUNCTION()
 	void CreatePostProcessMaterial(const UMaterialInterface* material, UMaterialInstanceDynamic*& outMatInst);
-
+	
 	UFUNCTION()
 	void SlowmoTick();
+
+	UFUNCTION()
+	void OnStopSlowmoEventReceiver();
 	
 private:
 	//------------------

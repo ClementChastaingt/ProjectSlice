@@ -46,6 +46,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlowmoEvent;
 	
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnStopSlowmoEvent;
+	
 	UFUNCTION()
 	void OnTriggerSlowmo();
 		

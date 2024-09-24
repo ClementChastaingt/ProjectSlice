@@ -92,6 +92,7 @@ void UPS_SlowmoComponent::SlowmoTransition()
 			
 			if(!bSlowmoActive)
 			{
+				OnStopSlowmoEvent.Broadcast();
 				return;
 			}
 			

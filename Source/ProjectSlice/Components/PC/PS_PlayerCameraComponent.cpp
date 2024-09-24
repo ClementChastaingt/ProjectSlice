@@ -26,6 +26,11 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	DefaultFOV = FieldOfView;
 	DefaultCameraRot = _PlayerController->GetControlRotation().Clamp();
 
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
+	}
+
 	InitPostProcess();
 }
 
@@ -176,16 +181,26 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 
 void UPS_PlayerCameraComponent::SlowmoTick()
 {
-	if(IsValid(_PlayerCharacter) && IsValid(_PlayerCharacter->GetSlowmoComponent()) && IsValid(SlowmoMatInst))
+	const UPS_SlowmoComponent* slowmo = _PlayerCharacter->GetSlowmoComponent();
+	if(IsValid(_PlayerCharacter) && IsValid(slowmo) && IsValid(SlowmoMatInst))
 	{
-		const float alpha = _PlayerCharacter->GetSlowmoComponent()->GetSlowmoAlpha();
-		if(_PlayerCharacter->GetSlowmoComponent()->IsIsSlowmoTransiting())
+		const float alpha = slowmo->GetSlowmoAlpha();
+		if(slowmo->IsIsSlowmoTransiting())
 		{
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
 			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
 			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
 		}
 	}	
+}
+
+void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
+{
+	if(!IsValid(SlowmoMatInst)) return;
+	UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
+	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
+	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    
 }
 
 
