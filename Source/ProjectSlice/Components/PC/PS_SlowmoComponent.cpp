@@ -32,6 +32,14 @@ void UPS_SlowmoComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
 
+	DefaultPlayerTimeDilation = _PlayerCharacter->GetActorTimeDilation();
+	if(IsValid(GetWorld()))
+	{
+		DefaultGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+	}
+
+
+
 }
 
 // Called every frame
@@ -92,7 +100,7 @@ void UPS_SlowmoComponent::SlowmoTransition()
 			
 			if(!bSlowmoActive)
 			{
-				OnStopSlowmoEvent.Broadcast();
+				OnStopSlowmo();
 				return;
 			}
 			
@@ -105,9 +113,16 @@ void UPS_SlowmoComponent::SlowmoTransition()
 
 }
 
+void UPS_SlowmoComponent::OnStopSlowmo()
+{
+	UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+
+	OnStopSlowmoEvent.Broadcast();
+}
+
 void UPS_SlowmoComponent::OnTriggerSlowmo()
 {
-	if(!IsValid(GetWorld()))
+	if(!IsValid(GetWorld()) || bIsSlowmoTransiting)
 		return;
 	
 	StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());

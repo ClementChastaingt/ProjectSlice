@@ -13,6 +13,7 @@
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameSession.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
@@ -151,20 +152,25 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		// Jumping
-		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
-		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
-
-		// Crouching
-		EnhancedInputComponent->BindAction(_PlayerController->GetCrouchAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Crouching);
-
 		// Moving
 		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
 		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::Move);
 		
 		// Looking
 		EnhancedInputComponent->BindAction(_PlayerController->GetLookAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
+		
+		// Jumping
+		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
+		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
 
+		// Dash
+		EnhancedInputComponent->BindAction(_PlayerController->GetDashAction(), ETriggerEvent::Started, this,  &AProjectSliceCharacter::Dash);
+
+
+		// Crouching
+		EnhancedInputComponent->BindAction(_PlayerController->GetCrouchAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Crouching);
+		
+		
 		// Slowmotion
 		EnhancedInputComponent->BindAction(_PlayerController->GetSlowmoAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Slowmo);
 		
@@ -207,6 +213,21 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 
 //------------------
 #pragma endregion CharacterMovementComponent
+
+#pragma region Dash
+//------------------
+
+
+void AProjectSliceCharacter::Dash()
+{
+	if(!IsValid(GetParkourComponent())) return;
+
+	GetParkourComponent()->OnDash();
+}
+
+
+//------------------
+#pragma endregion Dash
 
 #pragma region Crouch
 //------------------
@@ -347,9 +368,8 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
 		//Add movement
-		AddMovementInput(GetActorForwardVector(), _PlayerController->GetMoveInput().Y);
-		AddMovementInput(GetActorRightVector(), _PlayerController->GetMoveInput().X);
-
+		AddMovementInput(GetActorForwardVector() * CustomTimeDilation, _PlayerController->GetMoveInput().Y);
+		AddMovementInput(GetActorRightVector() * CustomTimeDilation, _PlayerController->GetMoveInput().X);
 	}
 	else
 		_PlayerController->SetMoveInput(FVector2D::ZeroVector);

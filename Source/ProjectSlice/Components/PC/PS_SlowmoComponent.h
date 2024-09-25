@@ -66,6 +66,9 @@ public:
 	FORCEINLINE float GetPlayerTimeDilationTarget() const{return PlayerTimeDilationTarget;}
 
 protected:
+
+	UFUNCTION()
+	void OnStopSlowmo();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
 	bool bSlowmoActive = false;
@@ -84,6 +87,12 @@ protected:
 			
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slowmo")
 	FTimerHandle SlowmoTimerHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float DefaultGlobalTimeDilation = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
+	float DefaultPlayerTimeDilation = 0.0f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
 	float StartGlobalTimeDilation = 0.0f;

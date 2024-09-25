@@ -47,14 +47,16 @@ protected:
 	//------------------
 
 public:
-	FORCEINLINE UInputAction* GetJumpAction() const{return JumpAction;}
-
-	FORCEINLINE UInputAction* GetCrouchAction() const{return CrouchAction;}
-
 	FORCEINLINE UInputAction* GetMoveAction() const{return MoveAction;}
 
 	FORCEINLINE UInputAction* GetLookAction() const{return LookAction;}
+	
+	FORCEINLINE UInputAction* GetJumpAction() const{return JumpAction;}
 
+	FORCEINLINE UInputAction* GetCrouchAction() const{return CrouchAction;}
+	
+	FORCEINLINE UInputAction* GetDashAction() const{return DashAction;}
+	
 	FORCEINLINE UInputAction* GetSlowmoAction() const{return SlowmoAction;}
 
 	FORCEINLINE UInputAction* GetStowAction() const{return StowAction;}
@@ -62,16 +64,19 @@ public:
 protected:
 	/** Input Actions **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* CrouchAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* DashAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
+	UInputAction* CrouchAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* SlowmoAction;

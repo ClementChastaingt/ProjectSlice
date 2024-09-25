@@ -464,10 +464,6 @@ void UPS_ParkourComponent::SlideTick()
 	//Use Impulse
 	FVector minSlideVel = SlideDirection;
 
-	//TODO :: Dash application
-	// FVector slideVel = characterMovement->CurrentFloor.HitResult.Normal * 1500000.0f
-	// characterMovement->AddImpulse((slideVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-	
 
 	//Impulse on Slope else VelocityCurve
 	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
@@ -526,8 +522,31 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 }
 
 
+
 //------------------
 #pragma endregion Slide
+
+#pragma region Dash
+//------------------
+
+
+void UPS_ParkourComponent::OnDash()
+{
+	FVector dashVel = UKismetMathLibrary::Conv_Vector2DToVector(_PlayerController->GetMoveInput()) + _PlayerCharacter->GetCharacterMovement()->CurrentFloor.HitResult.Normal * 1500000.0f;
+
+	if(dashVel.IsNearlyZero())
+		dashVel =  UKismetMathLibrary::Conv_Vector2DToVector(_PlayerController->GetMoveInput()) * 1500000.0f;
+
+	_PlayerCharacter->GetCharacterMovement()->AddImpulse((dashVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+
+	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s"), __FUNCTION__, *dashVel.ToString());
+}
+
+	
+
+//------------------
+#pragma endregion Dash
+
 
 #pragma region Mantle
 //------------------
@@ -555,7 +574,7 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	const bool bIsInAir = _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
 		
 	//If try by meet edge check if not too low
-	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() * OnAiMaxCapsHeightMultiplicator;
 	if(bComeFromAirAndTooLowToEdge)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%S :: bComeFromAirAndTooLowToEdge true"), __FUNCTION__);
@@ -777,7 +796,6 @@ void UPS_ParkourComponent::LedgeTick()
 void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
 	AActor* otherActor, UPrimitiveComponent* otherComp, int otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
-	UE_LOG(LogTemp, Error, TEXT("Error"));
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(GetWorld())
 		|| !IsValid(_PlayerCharacter->GetCharacterMovement())

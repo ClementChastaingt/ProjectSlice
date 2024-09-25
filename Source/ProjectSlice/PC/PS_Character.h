@@ -183,6 +183,8 @@ protected:
 
 	void CoyoteTimeStop();
 	
+	void Dash();
+	
 	//Crouch functions override
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
