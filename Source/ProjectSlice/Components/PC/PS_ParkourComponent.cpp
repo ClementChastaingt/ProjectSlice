@@ -776,7 +776,8 @@ void UPS_ParkourComponent::LedgeTick()
 
 void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
 	AActor* otherActor, UPrimitiveComponent* otherComp, int otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
-{	
+{
+	UE_LOG(LogTemp, Error, TEXT("Error"));
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(GetWorld())
 		|| !IsValid(_PlayerCharacter->GetCharacterMovement())
@@ -788,8 +789,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
-
-	//TODO :: Do this a func in characMovmeent
+	
 	//TODO :: Do this a func in characMovmeent
 	const bool bIsInAir =  _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
 	

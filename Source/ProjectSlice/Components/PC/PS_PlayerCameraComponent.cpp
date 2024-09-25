@@ -181,8 +181,11 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 
 void UPS_PlayerCameraComponent::SlowmoTick()
 {
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetSlowmoComponent())) return;
+	
 	const UPS_SlowmoComponent* slowmo = _PlayerCharacter->GetSlowmoComponent();
-	if(IsValid(_PlayerCharacter) && IsValid(slowmo) && IsValid(SlowmoMatInst))
+	
+	if(IsValid(slowmo) && IsValid(SlowmoMatInst))
 	{
 		const float alpha = slowmo->GetSlowmoAlpha();
 		if(slowmo->IsIsSlowmoTransiting())
@@ -197,7 +200,7 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 {
 	if(!IsValid(SlowmoMatInst)) return;
-	UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	
 	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
 	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
 	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    

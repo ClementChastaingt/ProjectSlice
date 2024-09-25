@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "PS_HookComponent.h"
+#include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Analytics/RPCDoSDetectionAnalytics.h"
 #include "Kismet/KismetMaterialLibrary.h"
@@ -242,7 +243,8 @@ void UPS_WeaponComponent::Fire()
 
 	//Impulse
 	//TODO :: Rework Impulse
-	outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
+	//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
+	outHalfComponent->AddImpulse(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() + CurrentFireHitResult.Normal * 500, NAME_None, true);
 	
 	
 	// Try and play the sound if specified
