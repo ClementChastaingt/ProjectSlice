@@ -85,7 +85,7 @@ protected:
 	
 	UFUNCTION()
 	void OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode);
-	
+		
 //------------------
 #pragma endregion General
 
@@ -438,8 +438,18 @@ public:
 	void OnDash();
 	
 protected:
-	//------------------
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Dash Speed"))
+	float DashSpeed = 1500.0f;
 	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(ToolTip="Braking Deceleration Curve"))
+	// UCurveFloat* SlideAccelerationCurve;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed"))
+	float MaxDashSpeedMultiplicator = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed"))
+	float OnGroundDashZOffset = 20.0f;
+
 private:
 	//------------------
 

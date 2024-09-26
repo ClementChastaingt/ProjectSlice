@@ -1,6 +1,7 @@
 #include "PSFl.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
 
@@ -37,5 +38,14 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 			UE_LOG(LogTemp, Warning, TEXT("%S :: Clamp Max Velocity"), __FUNCTION__);
 	}
 	return clampedVel;
+}
+
+
+FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, const FVector2D moveInput)
+{
+	FVector worldInputDirection = cameraInstance->GetRightVector() * moveInput.Y + cameraInstance->GetForwardVector() * moveInput.X;
+	worldInputDirection.Z = 0;
+	worldInputDirection.Normalize();
+	return worldInputDirection;
 }
 

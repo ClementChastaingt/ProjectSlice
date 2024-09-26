@@ -37,6 +37,8 @@ public:
 	 * @return the Vector velocity Clamped
 	 */
 	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
+		
+	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
 #pragma endregion Utilities
 

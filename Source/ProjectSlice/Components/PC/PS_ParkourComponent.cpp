@@ -529,17 +529,33 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 #pragma region Dash
 //------------------
 
-
 void UPS_ParkourComponent::OnDash()
 {
-	FVector dashVel = UKismetMathLibrary::Conv_Vector2DToVector(_PlayerController->GetMoveInput()) + _PlayerCharacter->GetCharacterMovement()->CurrentFloor.HitResult.Normal * 1500000.0f;
+	if(bIsWallRunning || bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;	
 
-	if(dashVel.IsNearlyZero())
-		dashVel =  UKismetMathLibrary::Conv_Vector2DToVector(_PlayerController->GetMoveInput()) * 1500000.0f;
+	//FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
+	FVector dashDir = _PlayerCharacter->GetActorRightVector() * _PlayerController->GetMoveInput().X + _PlayerCharacter->GetActorForwardVector() *  _PlayerController->GetMoveInput().Y;
+	dashDir.Z = 0;
+	dashDir.Normalize();
+	
+	FVector dashVel = dashDir * DashSpeed;
+	if(dashDir.IsNearlyZero()) dashVel = _PlayerCharacter->GetActorForwardVector() * DashSpeed;
 
-	_PlayerCharacter->GetCharacterMovement()->AddImpulse((dashVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+	//Clamp Max Velocity
+	//dashVel = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),dashVel,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxDashSpeedMultiplicator);
+		
+	//Add Offset if on ground
+	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
+	if(bIsOnGround)
+	{
+		const float zLoc = _PlayerCharacter->GetCharacterMovement()->CurrentFloor.GetDistanceToFloor() * OnGroundDashZOffset;
+		_PlayerCharacter->AddActorLocalOffset(FVector(0,0, zLoc));
+	}
 
-	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s"), __FUNCTION__, *dashVel.ToString());
+	//Impulse
+	_PlayerCharacter->GetCharacterMovement()->AddImpulse(_PlayerCharacter->GetActorLocation() + dashVel);
+
+	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s, dashDir %s"), __FUNCTION__, *dashVel.ToString(), *dashDir.ToString());
 }
 
 	
