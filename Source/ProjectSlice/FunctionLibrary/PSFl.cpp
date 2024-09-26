@@ -9,7 +9,7 @@ class AProjectSliceCharacter;
 
 FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
-	FVector clampedVel = targetVelocity;
+	FVector clampedVel = currentVelocity;
 	if(targetVelocity.Length() > maxVelocity)
 	{
 		currentVelocity.Normalize();
@@ -43,7 +43,7 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 
 FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, const FVector2D moveInput)
 {
-	FVector worldInputDirection = cameraInstance->GetRightVector() * moveInput.Y + cameraInstance->GetForwardVector() * moveInput.X;
+	FVector worldInputDirection = cameraInstance->GetRightVector() * moveInput.X + cameraInstance->GetForwardVector() * moveInput.Y;
 	worldInputDirection.Z = 0;
 	worldInputDirection.Normalize();
 	return worldInputDirection;

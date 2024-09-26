@@ -531,31 +531,25 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 void UPS_ParkourComponent::OnDash()
 {
-	if(bIsWallRunning || bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;	
+	if(bIsWallRunning || bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
 
-	//FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
-	FVector dashDir = _PlayerCharacter->GetActorRightVector() * _PlayerController->GetMoveInput().X + _PlayerCharacter->GetActorForwardVector() *  _PlayerController->GetMoveInput().Y;
-	dashDir.Z = 0;
-	dashDir.Normalize();
-	
-	FVector dashVel = dashDir * DashSpeed;
-	if(dashDir.IsNearlyZero()) dashVel = _PlayerCharacter->GetActorForwardVector() * DashSpeed;
+	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
+	if(dashDir.IsNearlyZero()) dashDir = _PlayerCharacter->GetActorForwardVector();
 
 	//Clamp Max Velocity
-	//dashVel = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),dashVel,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxDashSpeedMultiplicator);
-		
-	//Add Offset if on ground
-	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
-	if(bIsOnGround)
-	{
-		const float zLoc = _PlayerCharacter->GetCharacterMovement()->CurrentFloor.GetDistanceToFloor() * OnGroundDashZOffset;
-		_PlayerCharacter->AddActorLocalOffset(FVector(0,0, zLoc));
-	}
-
-	//Impulse
-	_PlayerCharacter->GetCharacterMovement()->AddImpulse(_PlayerCharacter->GetActorLocation() + dashVel);
-
+	FVector dashVel =_PlayerCharacter->GetVelocity() + dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	
+	//And Impulse
+	
+	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
+		_PlayerCharacter->GetCharacterMovement()->Launch(dashVel);
+	
+	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);	
+	
+	
 	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s, dashDir %s"), __FUNCTION__, *dashVel.ToString(), *dashDir.ToString());
+
+	OnDashEvent.Broadcast();
 }
 
 	
