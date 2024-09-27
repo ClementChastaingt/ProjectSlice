@@ -106,6 +106,12 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* SlowmoMaterial = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UMaterialInstanceDynamic* DashMatInst = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UMaterialInterface* DashMaterial = nullptr;
 	
 	UFUNCTION()
 	void InitPostProcess();
@@ -114,7 +120,7 @@ protected:
 	void CreatePostProcessMaterial(const UMaterialInterface* material, UMaterialInstanceDynamic*& outMatInst);
 	
 	UFUNCTION()
-	void SlowmoTick();
+	void SlowmoTick() const;
 
 	UFUNCTION()
 	void OnStopSlowmoEventReceiver();

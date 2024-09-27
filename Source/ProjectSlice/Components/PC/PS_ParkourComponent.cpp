@@ -535,24 +535,24 @@ void UPS_ParkourComponent::OnDash()
 
 	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
 	if(dashDir.IsNearlyZero()) dashDir = _PlayerCharacter->GetActorForwardVector();
-
-	//Clamp Max Velocity
 	FVector dashVel =_PlayerCharacter->GetVelocity() + dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
-	
-	//And Impulse
-	
+
+	//Change braking deceleration
+	// if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking)
+	// 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling;
+	// UE_LOG(LogTemp, Error, TEXT("BrakingFriction %f, MaxBrakingDecel %f"), _PlayerCharacter->GetCharacterMovement()->BrakingFriction, _PlayerCharacter->GetCharacterMovement()->GetMaxBrakingDeceleration());
+
+	//Launch character
 	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
 		_PlayerCharacter->GetCharacterMovement()->Launch(dashVel);
-	
+
+	//Clamp Max Velocity
 	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);	
-	
 	
 	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s, dashDir %s"), __FUNCTION__, *dashVel.ToString(), *dashDir.ToString());
 
 	OnDashEvent.Broadcast();
 }
-
-	
 
 //------------------
 #pragma endregion Dash
@@ -883,8 +883,7 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 		if(bForceUncrouch && bIsCrouched) _PlayerController->SetIsCrouchInputTrigger(false);
 		OnCrouch();
 	}
-
-
+	
 }
 
 
