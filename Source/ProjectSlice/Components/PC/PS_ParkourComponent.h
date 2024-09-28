@@ -392,8 +392,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	FVector SlideDirection = FVector::ZeroVector;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Braking Deceleration"))
-	float DefaultBrakingDeceleration = 2048,f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Walking Braking Deceleration"))
+	float DefaultBrakingDecelerationWalking = 2048.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Falling Braking Deceleration"))
+	float DefaultBrakingDecelerationFalling = 400.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	float DefaulGroundFriction = 8.0f;

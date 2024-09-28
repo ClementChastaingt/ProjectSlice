@@ -34,8 +34,8 @@ void UPS_ParkourComponent::BeginPlay()
 	if(!IsValid(_PlayerController))return;
 	
 	DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
-	DefaultBrakingDeceleration = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
-
+	DefaultBrakingDecelerationWalking = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+	DefaultBrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling;
 	
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
@@ -430,7 +430,7 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerController->SetIgnoreMoveInput(false);
 	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed();
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = DefaultBrakingDeceleration;
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = DefaultBrakingDecelerationFalling;
 
 	bIsSliding = false;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
@@ -534,20 +534,26 @@ void UPS_ParkourComponent::OnDash()
 	if(bIsWallRunning || bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
 
 	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
-	if(dashDir.IsNearlyZero()) dashDir = _PlayerCharacter->GetActorForwardVector();
-	FVector dashVel =_PlayerCharacter->GetVelocity() + dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	if(dashDir.IsNearlyZero())
+	{
+		dashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+		dashDir.Z = 0;
+	};
+	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 
 	//Change braking deceleration
-	// if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking)
-	// 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling;
-	// UE_LOG(LogTemp, Error, TEXT("BrakingFriction %f, MaxBrakingDecel %f"), _PlayerCharacter->GetCharacterMovement()->BrakingFriction, _PlayerCharacter->GetCharacterMovement()->GetMaxBrakingDeceleration());
+	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
+	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
 
 	//Launch character
 	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
 		_PlayerCharacter->GetCharacterMovement()->Launch(dashVel);
 
 	//Clamp Max Velocity
-	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);	
+	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+
+	//Trigger PostProcess Feedback
+	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
 	
 	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s, dashDir %s"), __FUNCTION__, *dashVel.ToString(), *dashDir.ToString());
 

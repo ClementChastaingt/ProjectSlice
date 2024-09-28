@@ -150,55 +150,19 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 //------------------                                                                                                                                                                                                                            
 #pragma endregion Camera_Tilt                                                                                                                                                                                                                   
 
-#pragma region Slowmo
-//------------------
-
-void UPS_PlayerCameraComponent::SlowmoTick() const
-{
-	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetSlowmoComponent())) return;
-	
-	const UPS_SlowmoComponent* slowmo = _PlayerCharacter->GetSlowmoComponent();
-	
-	if(IsValid(slowmo) && IsValid(SlowmoMatInst))
-	{
-		const float alpha = slowmo->GetSlowmoAlpha();
-		if(slowmo->IsIsSlowmoTransiting())
-		{
-			if(WeightedBlendableArray.IsValidIndex(0) && WeightedBlendableArray[0].Weight != 1.0f) WeightedBlendableArray[0].Weight = 1.0f; 
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
-			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
-		}
-	}	
-}
-
-void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
-{
-	if(!IsValid(SlowmoMatInst)) return;
-
-	if(WeightedBlendableArray.IsValidIndex(0)) WeightedBlendableArray[0].Weight = 0.0f;
-	
-	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
-	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
-	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    
-}
-
-//------------------
-#pragma endregion Slowmo
-
 #pragma region Post-Process
 //------------------
 
-void UPS_PlayerCameraComponent::CreatePostProcessMaterial(const UMaterialInterface* material, UPARAM(Ref) UMaterialInstanceDynamic*& outMatInst)
+void UPS_PlayerCameraComponent::CreatePostProcessMaterial(UMaterialInterface* const material, UPARAM(Ref) UMaterialInstanceDynamic*& outMatInst)
 {
 	if(IsValid(material))
 	{		
-		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), SlowmoMaterial);
+		UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), material);
 		if(!IsValid(matInst)) return;
 
 		outMatInst = matInst;
 		
-		FWeightedBlendable outWeightedBlendable = FWeightedBlendable(WeightedBlendableArray.Num() > 0 ?  0.0f: 1.0f, matInst);
+		FWeightedBlendable outWeightedBlendable = FWeightedBlendable(0.0f, matInst);
 		WeightedBlendableArray.Add(outWeightedBlendable);
 
 		if(bDebugPostProcess) UE_LOG(LogTemp, Warning, TEXT("%S :: outMatInst %s, BlendableArray %i"), __FUNCTION__, *outMatInst->GetName(), WeightedBlendableArray.Num());
@@ -211,10 +175,86 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 	
 	CreatePostProcessMaterial(SlowmoMaterial, SlowmoMatInst);
 	CreatePostProcessMaterial(DashMaterial, DashMatInst);
-	
+
+	UpdateWeightedBlendPostProcess();
+}
+
+void UPS_PlayerCameraComponent::UpdateWeightedBlendPostProcess()
+{
 	const FWeightedBlendables currentWeightedBlendables = FWeightedBlendables(WeightedBlendableArray);
 	PostProcessSettings.WeightedBlendables = currentWeightedBlendables;
 }
+
+#pragma region Slowmo
+//------------------
+
+void UPS_PlayerCameraComponent::SlowmoTick()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetSlowmoComponent())) return;
+	
+	const UPS_SlowmoComponent* slowmo = _PlayerCharacter->GetSlowmoComponent();
+	
+	if(IsValid(slowmo) && IsValid(SlowmoMatInst))
+	{
+		const float alpha = slowmo->GetSlowmoAlpha();
+		if(slowmo->IsIsSlowmoTransiting())
+		{
+			if(WeightedBlendableArray.IsValidIndex(0) && WeightedBlendableArray[0].Weight != 1.0f)
+			{
+				WeightedBlendableArray[0].Weight = 1.0f;
+				UpdateWeightedBlendPostProcess();
+			}
+			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
+			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
+			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
+		}
+	}	
+}
+
+void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
+{
+	if(!IsValid(SlowmoMatInst)) return;
+
+	if(WeightedBlendableArray.IsValidIndex(0))
+	{
+		WeightedBlendableArray[0].Weight = 0.0f;
+		UpdateWeightedBlendPostProcess();
+	}
+	
+	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
+	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
+	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    
+}
+
+//------------------
+#pragma endregion Slowmo
+
+#pragma region Dash
+//------------------
+
+void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
+{
+	if(!IsValid(DashMatInst) || !IsValid(GetWorld())) return;
+
+	//Blend PostProcess
+	if(WeightedBlendableArray.IsValidIndex(1)) WeightedBlendableArray[1].Weight = bActivate ? 1.0f : 0.0f;
+	UpdateWeightedBlendPostProcess();
+
+	//Desactivation
+	if(!GetWorld()->GetTimerManager().IsTimerActive(DashTimerHandle))
+	{
+		FTimerDelegate dash_TimerDelegate;
+		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::OnTriggerDash, false);
+		GetWorld()->GetTimerManager().SetTimer(DashTimerHandle, dash_TimerDelegate, DashDuration, false);
+	}
+
+	//Set mat params
+	DashMatInst->SetScalarParameterValue(FName("StartTime"),GetWorld()->GetAudioTimeSeconds());
+
+}
+
+//------------------
+#pragma endregion Dash
 
 //------------------
 #pragma endregion Post-Process

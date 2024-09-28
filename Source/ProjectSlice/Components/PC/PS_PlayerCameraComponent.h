@@ -95,7 +95,9 @@ private:
 	//------------------
 
 public:
-	//------------------
+	UFUNCTION()
+	void OnTriggerDash(const bool bActivate);
+	
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
@@ -109,22 +111,29 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
 	UMaterialInstanceDynamic* DashMatInst = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	FTimerHandle DashTimerHandle;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* DashMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	float DashDuration = 0.1f;
 	
 	UFUNCTION()
 	void InitPostProcess();
 
 	UFUNCTION()
-	void CreatePostProcessMaterial(const UMaterialInterface* material, UMaterialInstanceDynamic*& outMatInst);
+	void CreatePostProcessMaterial(UMaterialInterface* const material, UMaterialInstanceDynamic*& outMatInst);
 	
 	UFUNCTION()
-	void SlowmoTick() const;
+	void SlowmoTick();
 
 	UFUNCTION()
 	void OnStopSlowmoEventReceiver();
-	
+	void UpdateWeightedBlendPostProcess();
+
 private:
 	//------------------
 
