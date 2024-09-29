@@ -3,6 +3,7 @@
 
 #include "PS_PlayerCameraComponent.h"
 
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/PC/PS_Character.h"
@@ -40,7 +41,9 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	//-----Post-Process-----//                    
 	SlowmoTick();
+	DashTick();
 	
 	FieldOfViewTick();
 	
@@ -226,6 +229,15 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    
 }
 
+void UPS_PlayerCameraComponent::DashTick() const
+{
+	if(DashTimerHandle.IsValid() && IsValid(DashMatInst))
+	{
+		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
+		DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
+	}
+}
+
 //------------------
 #pragma endregion Slowmo
 
@@ -247,10 +259,14 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::OnTriggerDash, false);
 		GetWorld()->GetTimerManager().SetTimer(DashTimerHandle, dash_TimerDelegate, DashDuration, false);
 	}
+	else
+	{
+		GetWorld()->GetTimerManager().ClearTimer(DashTimerHandle);
+		return;
+	}
 
 	//Set mat params
-	DashMatInst->SetScalarParameterValue(FName("StartTime"),GetWorld()->GetAudioTimeSeconds());
-
+	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 }
 
 //------------------

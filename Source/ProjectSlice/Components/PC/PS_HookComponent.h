@@ -83,17 +83,23 @@ public:
 	
 	UFUNCTION()
 	void HookObject();
-
+	
 	UFUNCTION()
 	void WindeHook();
 	
 	UFUNCTION()
 	void StopWindeHook();
-
+	
 	UFUNCTION()
 	void DettachHook();
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsObjectHooked() const{return bObjectHook;}
 	
 	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsCableWinderPull() const{return bCableWinderPull;}
 
 protected:
 	//Status
@@ -106,6 +112,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook",  meta=(ForceUnits="cm",ToolTip="Distance between player and object grappled on attaching"))
 	double DistanceOnAttach = 0.0f;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently hook an object"))
+	bool bObjectHook = false;
+	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Tens"))
 	bool bCablePowerPull = false;
 
@@ -125,6 +134,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
 	float HookingMaxDistance = 1000.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
+	FVector CableHookOffset = FVector(10,0,0);
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;
 	

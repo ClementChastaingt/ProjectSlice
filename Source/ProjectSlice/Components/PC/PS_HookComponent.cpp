@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PhysicsVolume.h"
 #include "Image/ImageBuilder.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
@@ -52,7 +53,7 @@ void UPS_HookComponent::BeginPlay()
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
-
+	
 }
 
 // Called every frame
@@ -60,7 +61,7 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
+	
 	CableWraping();
 	PowerCablePull();
 }
@@ -79,8 +80,7 @@ void UPS_HookComponent::OnAttachWeapon()
 	CableListArray.AddUnique(FirstCable);
 
 	CableCapArray.Add(nullptr);
-	
-	
+			
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
 	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));	
@@ -363,7 +363,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	else
 	{
 		//Reset to HookAttach default set
-		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+		firstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(HookThrower, AttachmentRule);
 	}
 }
@@ -505,7 +505,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	UCableComponent* firstCable = CableListArray[cableListLastIndex];
 
 	//Reset to HookAttach default set
-	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	firstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 	firstCable->AttachToComponent(HookThrower, AttachmentRule);
 
 	// }
@@ -641,6 +641,9 @@ void UPS_HookComponent::HookObject()
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
+	//Hook Move Feedback
+	bObjectHook = true;
+
 	//Define new attached component
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
 	//Attach First cable to it
@@ -683,6 +686,7 @@ void UPS_HookComponent::StopWindeHook()
 	bCableWinderPull = false;
 }
 
+
 void UPS_HookComponent::DettachHook()
 {
 	//If FirstCable is not in CableList return
@@ -691,7 +695,10 @@ void UPS_HookComponent::DettachHook()
 	//----Stop Cable Warping---
 	bCableWinderPull = false;
 	AttachedMesh = nullptr;
-	
+
+	//----Hook Move Feedback---
+	bObjectHook = false;
+		
 	//----Clear Cable Warp ---
 	int i = 1;
 	for (auto cable : CableAttachedArray)
@@ -738,7 +745,7 @@ void UPS_HookComponent::DettachHook()
 	//----Setup First Cable---
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
 
-	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 	FirstCable->AttachToComponent(HookThrower, AttachmentRule);
 	FirstCable->bAttachEnd = false;
 	FirstCable->AttachEndTo = FComponentReference();
@@ -789,7 +796,18 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+	const bool playerIsPulled =_PlayerCharacter->GetCharacterMovement()->IsFalling();
+	UE_LOG(LogTemp, Error, TEXT("playerIsPulled %i"), playerIsPulled);
+	if(playerIsPulled)
+	{
+		//TODO :: Do with constraint
+		_PlayerCharacter->LaunchCharacter(-rotMeshCable.Vector() * _PlayerCharacter->GetMesh()->GetMass(), false, false);
+	}
+	else
+	{
+		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+	}
+
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
 }

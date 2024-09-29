@@ -539,7 +539,10 @@ void UPS_ParkourComponent::OnDash()
 		dashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		dashDir.Z = 0;
 	};
+
+	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
 	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	dashVel = bIsOnGround ? dashVel * 2 : dashVel;
 
 	//Change braking deceleration
 	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)

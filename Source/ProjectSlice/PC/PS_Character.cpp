@@ -59,7 +59,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	CameraSkeletalMeshComponent->SetupAttachment(CamRoot);
 	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UPS_PlayerCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Camera"));
+	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Root"));
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
 	//Setup Mesh
@@ -88,6 +88,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 
 	//Create HookComponent
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
+	HookComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Hook"));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);
@@ -113,6 +114,8 @@ void AProjectSliceCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+	
+	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
 
 	// Add Input Mapping Context
 	if(IsValid(_PlayerController))

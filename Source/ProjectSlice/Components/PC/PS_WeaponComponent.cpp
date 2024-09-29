@@ -44,7 +44,7 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
+	
 	//TODO :: Made custom tick for that
 	SightShaderTick();
 
@@ -61,7 +61,8 @@ void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
-{	
+{
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
 	if (!IsValid(Target_PlayerCharacter)
 		|| Target_PlayerCharacter->GetHasRifle()
@@ -73,16 +74,14 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 	// Attach Sight to Weapon
 	SightMesh->SetupAttachment(this,FName("Muzzle"));
-
-	// Attach Hook to Weapon
-	_HookComponent = Target_PlayerCharacter->GetHookComponent();
-	_HookComponent->SetupAttachment(this,FName("HookAttach"));
-	
+		
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Target_PlayerCharacter->SetHasRifle(true);
-	
+
+	// Link Hook to Weapon
+	_HookComponent = Target_PlayerCharacter->GetHookComponent();
+	// _HookComponent->SetupAttachment(this,FName("HookAttach"));
 	_HookComponent->OnAttachWeapon();
-	
 }
 
 
@@ -282,6 +281,7 @@ void UPS_WeaponComponent::HookObject()
 	
 	_HookComponent->HookObject();
 }
+
 
 void UPS_WeaponComponent::WindeHook()
 {

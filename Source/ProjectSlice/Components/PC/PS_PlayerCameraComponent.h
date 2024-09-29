@@ -118,7 +118,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* DashMaterial = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
 	
 	UFUNCTION()
@@ -132,10 +132,17 @@ protected:
 
 	UFUNCTION()
 	void OnStopSlowmoEventReceiver();
+
+	UFUNCTION()
+	void DashTick() const;
+
+	UFUNCTION()
 	void UpdateWeightedBlendPostProcess();
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	float _DashStartTimestamp;
+
 
 #pragma endregion Post-Process
 
