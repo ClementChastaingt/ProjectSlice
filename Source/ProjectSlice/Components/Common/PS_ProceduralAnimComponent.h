@@ -153,14 +153,12 @@ private:
 
 #pragma endregion Aerial
 
-
 #pragma region Sway
 	//------------------
 
 public:
-	UFUNCTION(BlueprintCallable)
-	FRotator GetCurrentCamRot() const{return CurrentCamRot;}
 
+	
 protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyLookSwayAndOffset(const FRotator& camRotPrev);
@@ -174,14 +172,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Current Camera rotation"))
 	FRotator CurrentCamRot = FRotator::ZeroRotator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation rate"))
-	FRotator CamRotRate = FRotator::ZeroRotator;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera Gun rotation rate"))
+	FRotator CamRotRateGun = FRotator::ZeroRotator;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera Hook rotation rate"))
+	FRotator CamRotRateHook = FRotator::ZeroRotator;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin="0", ClampMin="0", ToolTip="Max pitch Offset modifier for look input "))
 	FVector MaxPitchOffset = FVector(35.0f ,3.0f, 2.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Sway rotation lag interpolation"))
-	float SwayLagSmoothingSpeed = 6.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Gun Sway rotation lag interpolation"))
+	float SwayLagSmoothingSpeedGun = 6.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Hook Sway rotation lag interpolation"))
+	float SwayLagSmoothingSpeedHook = 6.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Look", meta=(UIMin="0", ClampMin="0", ToolTip="Max sway Offset modifier for look input "))
 	FVector MaxCamRotOffset = FVector(6.0f ,0.0f, 10.0f);
@@ -189,4 +193,21 @@ private:
 	//------------------
 
 #pragma endregion Sway
+
+#pragma region Hook
+	//------------------
+
+public:
+	//------------------
+protected:
+	UFUNCTION(BlueprintCallable)
+	void ApplyWindingVibration();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Hook", meta=(ToolTip="Winde Hook location"))
+	FVector HookLocOffset = FVector::ZeroVector;
+	
+private:
+	//------------------
+
+#pragma endregion Hook
 };

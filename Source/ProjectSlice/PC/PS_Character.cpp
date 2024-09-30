@@ -59,7 +59,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	CameraSkeletalMeshComponent->SetupAttachment(CamRoot);
 	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UPS_PlayerCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Root"));
+	FirstPersonCameraComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Camera"));
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
 	//Setup Mesh
@@ -88,7 +88,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 
 	//Create HookComponent
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
-	HookComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("Hook"));
+	HookComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("HookAttach"));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);

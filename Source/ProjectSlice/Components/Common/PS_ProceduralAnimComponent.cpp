@@ -199,14 +199,28 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 	const float deltaTime = GetWorld()->GetDeltaSeconds();
 
 	//TODO :: Temp fix camRotRateSpeed
-	const float camRotRateSpeed = FMath::Lerp(SwayLagSmoothingSpeed, SwayLagSmoothingSpeed * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
-	CamRotRate = (FMath::RInterpTo(CamRotRate, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeed));
+	const float camRotRateSpeedGun = FMath::Lerp(SwayLagSmoothingSpeedGun, SwayLagSmoothingSpeedGun * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
+	CamRotRateGun = (FMath::RInterpTo(CamRotRateGun, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeedGun));
+
+	const float camRotRateSpeedHook = FMath::Lerp(SwayLagSmoothingSpeedHook, SwayLagSmoothingSpeedHook * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
+	CamRotRateHook = (FMath::RInterpTo(CamRotRateHook, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeedHook));
 
 	//Counteract weapon sway rotation
-	CamRotOffset.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRate.Yaw, -5.0f,5.0f));
+	CamRotOffset.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Yaw, -5.0f,5.0f));
 	CamRotOffset.Y = 0.0f;
-	CamRotOffset.Z = FMath::Lerp(-MaxCamRotOffset.Z, MaxCamRotOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRate.Roll, -5.0f,5.0f));
+	CamRotOffset.Z = FMath::Lerp(-MaxCamRotOffset.Z, MaxCamRotOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Roll, -5.0f,5.0f));
 	
+}
+
+void UPS_ProceduralAnimComponent::ApplyWindingVibration()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
+		return;
+
+	float currentForce = _PlayerCharacter->GetHookComponent()->GetForceWeight();
+	const float alphaHookOffset = UKismetMathLibrary::MapRangeClamped(currentForce, 0.0f,_PlayerCharacter->GetHookComponent()->GetMaxForceWeight(), 0.0, 3.0);
+	
+	HookLocOffset = FMath::VRandCone(_PlayerCharacter->GetHookComponent()->GetComponentLocation(), alphaHookOffset);
 }
 
 //------------------

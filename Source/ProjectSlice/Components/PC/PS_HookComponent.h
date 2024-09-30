@@ -93,6 +93,13 @@ public:
 	UFUNCTION()
 	void DettachHook();
 
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetForceWeight() const{return ForceWeight;}
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetMaxForceWeight() const{return MaxForceWeight;}
+
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsObjectHooked() const{return bObjectHook;}
 	
