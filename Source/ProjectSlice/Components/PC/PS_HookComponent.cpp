@@ -10,6 +10,7 @@
 #include "Image/ImageBuilder.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 class UCableComponent;
 
@@ -796,16 +797,18 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	const bool playerIsPulled = _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > 2000.0f;
-	UE_LOG(LogTemp, Error, TEXT("playerIsPulled %i, playerMass %f, Object Mass %f"), playerIsPulled, _PlayerCharacter->GetMesh()->GetMass(), AttachedMesh->GetMass());
+	const bool playerIsPulled = (_PlayerCharacter->GetCharacterMovement()->IsFalling()) && AttachedMesh->GetMass() > 2000.0f;
+	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S ::playerMass %f, Object Mass %f, test : %f"),__FUNCTION__,  _PlayerCharacter->GetMesh()->GetMass(), AttachedMesh->GetMass(), (_PlayerCharacter->GetGravityDirection() * _PlayerCharacter->GetMesh()->GetMass()).Length());
 	if(playerIsPulled)
-	{
+	{		
 		FVector dist = _PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation();
 		dist.Normalize();
-		FVector velDir = dist * _PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-		_PlayerCharacter->GetCharacterMovement()->AddImpulse(((velDir * -(500/*ForceWeight/2*/))  * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 		
-		//_PlayerCharacter->GetCharacterMovement(-rotMeshCable.Vector() * _PlayerCharacter->GetMesh()->GetMass(), false, false);
+		FVector velDir = dist * _PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+		FVector velocity = velDir * -UKismetMathLibrary::MapRangeClamped(ForceWeight, 0.0f, MaxForceWeight, MinSwingForceWeight, MaxSwingForceWeight);
+		
+		_PlayerCharacter->GetCharacterMovement()->AddImpulse((velocity * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),velocity, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
 	}
 	else
 	{
