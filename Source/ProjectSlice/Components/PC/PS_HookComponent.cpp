@@ -796,12 +796,16 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	const bool playerIsPulled =_PlayerCharacter->GetCharacterMovement()->IsFalling();
-	UE_LOG(LogTemp, Error, TEXT("playerIsPulled %i"), playerIsPulled);
+	const bool playerIsPulled = _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > 2000.0f;
+	UE_LOG(LogTemp, Error, TEXT("playerIsPulled %i, playerMass %f, Object Mass %f"), playerIsPulled, _PlayerCharacter->GetMesh()->GetMass(), AttachedMesh->GetMass());
 	if(playerIsPulled)
 	{
-		//TODO :: Do with constraint
-		_PlayerCharacter->LaunchCharacter(-rotMeshCable.Vector() * _PlayerCharacter->GetMesh()->GetMass(), false, false);
+		FVector dist = _PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation();
+		dist.Normalize();
+		FVector velDir = dist * _PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+		_PlayerCharacter->GetCharacterMovement()->AddImpulse(((velDir * -(500/*ForceWeight/2*/))  * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+		
+		//_PlayerCharacter->GetCharacterMovement(-rotMeshCable.Vector() * _PlayerCharacter->GetMesh()->GetMass(), false, false);
 	}
 	else
 	{
