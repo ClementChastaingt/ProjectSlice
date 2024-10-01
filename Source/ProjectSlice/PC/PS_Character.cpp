@@ -280,12 +280,16 @@ bool AProjectSliceCharacter::CanJumpInternal_Implementation() const
 
 void AProjectSliceCharacter::Jump()
 {
-	if(!IsValid(_PlayerController)) return;
+	if(!IsValid(_PlayerController) || !IsValid(GetHookComponent()) || !IsValid(GetCharacterMovement())) return;
 	
 	OnJumpLocation = GetActorLocation();
 
 	if(bIsCrouched)
 		_PlayerController->SetIsCrouchInputTrigger(false);
+
+	//Dettach rope if try jump on swing
+	if(GetHookComponent()->IsObjectHooked() && GetCharacterMovement()->IsFalling())
+		GetHookComponent()->DettachHook();
 	
 	Super::Jump();
 	
