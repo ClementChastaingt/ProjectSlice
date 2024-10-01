@@ -798,17 +798,19 @@ void UPS_HookComponent::PowerCablePull()
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
 	const bool playerIsPulled = (_PlayerCharacter->GetCharacterMovement()->IsFalling()) && AttachedMesh->GetMass() > 2000.0f;
-	if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S ::playerMass %f, Object Mass %f, test : %f"),__FUNCTION__,  _PlayerCharacter->GetMesh()->GetMass(), AttachedMesh->GetMass(), (_PlayerCharacter->GetGravityDirection() * _PlayerCharacter->GetMesh()->GetMass()).Length());
+
 	if(playerIsPulled)
 	{		
 		FVector dist = _PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation();
 		dist.Normalize();
 		
 		FVector velDir = dist * _PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-		FVector velocity = velDir * -UKismetMathLibrary::MapRangeClamped(ForceWeight, 0.0f, MaxForceWeight, MinSwingForceWeight, MaxSwingForceWeight);
+		FVector velocity = dist * -UKismetMathLibrary::MapRangeClamped(ForceWeight, 0.0f, MaxForceWeight, MinSwingForceWeight, MaxSwingForceWeight);
 		
 		_PlayerCharacter->GetCharacterMovement()->AddImpulse((velocity * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),velocity, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
+		
+		if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S ::velDir %f, dist %s"),__FUNCTION__, velDir.Length(), *dist.ToString());
 	}
 	else
 	{
