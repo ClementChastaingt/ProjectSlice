@@ -2,6 +2,8 @@
 
 
 #include "PS_HookComponent.h"
+
+#include "PS_PlayerCameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
@@ -783,7 +785,9 @@ void UPS_HookComponent::PowerCablePull()
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
 
-	if(!bCablePowerPull && !bCableWinderPull) return;
+	bPlayerIsPulled = _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass() * 100;
+
+	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsPulled)  return;
 	
 	//Pull Attached Object
 	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
@@ -797,28 +801,32 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Use Force
 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	const bool playerIsPulled = (_PlayerCharacter->GetCharacterMovement()->IsFalling()) && AttachedMesh->GetMass() > 2000.0f;
-
-	if(playerIsPulled)
+	UE_LOG(LogTemp, Error, TEXT("MeshMass : %f, PlayerMass: %f"), AttachedMesh->GetMass(), _PlayerCharacter->GetMesh()->GetMass());
+	if(bPlayerIsPulled)
 	{		
-		FVector dist = _PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation();
-		dist.Normalize();
+		//DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + -rotMeshCable.Vector() *600, 20.0f, FColor::Blue, false, 0, 10, 3);
 		
-		FVector velDir = dist * _PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-		FVector velocity = dist * -UKismetMathLibrary::MapRangeClamped(ForceWeight, 0.0f, MaxForceWeight, MinSwingForceWeight, MaxSwingForceWeight);
+		//TODO :: WORK BUT JITER
+		// FVector velocity = rotMeshCable.Vector() * _PlayerCharacter->GetCharacterMovement()->Mass * ForceWeight * -1;
+
+		//TODO :: TUTO SWING vel
+		FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+		dir.Normalize();
+
+		FVector swingVelocity = -2 * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
+		FVector fwdVelocity = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * 50000;
 		
-		_PlayerCharacter->GetCharacterMovement()->AddImpulse((velocity * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),velocity, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
-		
-		if(bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S ::velDir %f, dist %s"),__FUNCTION__, velDir.Length(), *dist.ToString());
+		_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
+		_PlayerCharacter->GetCharacterMovement()->AddForce((fwdVelocity) * _PlayerCharacter->CustomTimeDilation);
+
+		UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, fwdVelocity %f"), __FUNCTION__, swingVelocity.Length(), fwdVelocity.Length());
+		// _PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),velocity, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
 	}
 	else
 	{
 		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 	}
-
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.01f, FColor::Yellow, FString::Printf(TEXT("ForceWeight: %f"), AttachedMesh->GetPhysicsLinearVelocity().Length()));
+	
 }
 
 //------------------

@@ -127,6 +127,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
 	bool bCableWinderPull = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull player"))
+	bool bPlayerIsPulled = false;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
 	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
@@ -155,14 +158,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="s",ToolTip="Max Force Winde Weight curve"))
 	UCurveFloat* WindePullingCurve;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Min Force Weight for swing Player with object"))
-	float MinSwingForceWeight = 2.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Weight for swing Player with object"))
-	float MaxSwingForceWeight = 8.0f;
 	
-
 	UFUNCTION()
 	void PowerCablePull();	
 	
