@@ -7,6 +7,7 @@
 #include "PS_HookComponent.generated.h"
 
 
+class AProjectSlicePlayerController;
 class UCableComponent;
 class AProjectSliceCharacter;
 
@@ -66,7 +67,7 @@ private:
 	AProjectSliceCharacter* _PlayerCharacter;
 	
 	UPROPERTY(Transient)
-	APlayerController* _PlayerController;
+	AProjectSlicePlayerController* _PlayerController;
 
 #pragma region Grapple
 	//------------------
@@ -133,9 +134,6 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
 	bool bCableWinderPull = false;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull player"))
-	bool bPlayerIsPulled = false;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
 	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
@@ -172,6 +170,35 @@ private:
 	//------------------
 
 #pragma endregion Grapple
+
+#pragma region Swing
+	//------------------
+
+public:
+	UFUNCTION()
+	void OnTriggerSwing(const bool bActivate);
+
+	UFUNCTION()
+	void OnSwing(const float forceWeightAlpha);
+
+	FORCEINLINE bool IsPlayerIsPulled() const{return bPlayerIsPulled;}
+
+protected:
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hoo|Swingk",  meta=(ToolTip="Is currently pull player"))
+	bool bPlayerIsPulled = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingVelocityMultiplicator = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingAirControl = 2.0f;
+
+private:
+	//------------------
+
+#pragma endregion Swing
+
 
 #pragma region Rope
 	//------------------

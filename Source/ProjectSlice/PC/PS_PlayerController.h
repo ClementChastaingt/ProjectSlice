@@ -127,7 +127,6 @@ private:
 //------------------
 #pragma endregion Action
 
-
 #pragma region Input
 	//------------------
 

@@ -545,7 +545,7 @@ void UPS_ParkourComponent::OnDash()
 	dashVel = bIsOnGround ? dashVel * 2 : dashVel;
 
 	//Change braking deceleration
-	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
+	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling && !_PlayerCharacter->GetHookComponent()->IsPlayerIsPulled())
 	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
 
 	//Launch character
@@ -892,7 +892,11 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 		if(bForceUncrouch && bIsCrouched) _PlayerController->SetIsCrouchInputTrigger(false);
 		OnCrouch();
 	}
-	
+
+	if(previousCustomMode == MOVE_Falling &&  character->GetCharacterMovement()->MovementMode == MOVE_Walking)
+	{
+		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = DefaultBrakingDecelerationFalling;
+	}
 }
 
 

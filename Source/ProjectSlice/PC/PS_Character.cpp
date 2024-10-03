@@ -288,7 +288,7 @@ void AProjectSliceCharacter::Jump()
 		_PlayerController->SetIsCrouchInputTrigger(false);
 
 	//Dettach rope if try jump on swing
-	if(GetHookComponent()->IsObjectHooked() && GetCharacterMovement()->IsFalling())
+	if(GetHookComponent()->IsObjectHooked() && GetHookComponent()->IsPlayerIsPulled())
 		GetHookComponent()->DettachHook();
 	
 	Super::Jump();
@@ -364,7 +364,7 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 #pragma endregion Jump
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
-{
+{	
 	//0.2 is the Deadzone min threshold for Gamepad
 	if (IsValid(_PlayerController) && _PlayerController->CanMove() && Value.Get<FVector2D>().Size() > 0.2)
 	{

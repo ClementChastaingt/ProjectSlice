@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
+#include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PhysicsVolume.h"
 #include "Image/ImageBuilder.h"
@@ -44,7 +45,7 @@ void UPS_HookComponent::BeginPlay()
 	_PlayerCharacter = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	if(!IsValid(_PlayerCharacter)) return;
 	
-	_PlayerController = Cast<APlayerController>(_PlayerCharacter->GetController());
+	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
 	
 	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
@@ -704,9 +705,8 @@ void UPS_HookComponent::DettachHook()
 	bCableWinderPull = false;
 	AttachedMesh = nullptr;
 
-	//----Reset Air Control---
-	_PlayerCharacter->GetCharacterMovement()->AirControl = DefaultAirControl;
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = DefaultGravityScale;
+	//----Reset Swing---
+	OnTriggerSwing(false);
 
 	//----Hook Move Feedback---
 	bObjectHook = false;
@@ -771,6 +771,9 @@ void UPS_HookComponent::DettachHook()
 void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
+	
+	//Activate or desactivate Swing
+	OnTriggerSwing(_PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass() * 100);
 
 	//Activate Pull if Winde
 	float alpha;
@@ -782,9 +785,20 @@ void UPS_HookComponent::PowerCablePull()
 		{
 			alpha = WindePullingCurve->GetFloatValue(windeAlpha);
 		}
+
+		if(bPlayerIsPulled)
+		{
+			FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+			dir.Normalize();
+			
+			const FVector velocity = dir * FMath::Lerp(0.0f,MaxForceWeight,alpha);
+			UE_LOG(LogTemp, Warning, TEXT("Winde Player velocity %f"), velocity.Length());
+			_PlayerCharacter->GetCharacterMovement()->AddForce(velocity * _PlayerCharacter->CustomTimeDilation);
+		}
+
 	}
 	//Activate Pull On reach Max Distance
-	else
+	else/* if(!bPlayerIsPulled)*/
 	{
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
@@ -794,8 +808,6 @@ void UPS_HookComponent::PowerCablePull()
 		UE_LOG(LogTemp, Warning, TEXT("alpha %f"), alpha);
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
-
-	bPlayerIsPulled = _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass() * 100;
 
 	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsPulled)  return;
 	
@@ -812,33 +824,58 @@ void UPS_HookComponent::PowerCablePull()
 	//Use Force
 	if(bPlayerIsPulled)
 	{
-		_PlayerCharacter->GetCharacterMovement()->GravityScale = 1.0f;
-		
-		//TODO :: WORK BUT JITER
-		// FVector velocity = rotMeshCable.Vector() * _PlayerCharacter->GetCharacterMovement()->Mass * ForceWeight * -1;
-
-		//TODO :: TUTO SWING VEL
-		FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-		dir.Normalize();
-
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0, 10, 3);
-
-		FVector swingVelocity = -2 * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
-		FVector fwdVelocity = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * 50000;
-
-		//_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(DefaultAirControl, 0.0f, alpha);
-		_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
-		_PlayerCharacter->GetCharacterMovement()->AddForce((fwdVelocity) * _PlayerCharacter->CustomTimeDilation);
-
-		UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, fwdVelocity %f, AirControl %f"), __FUNCTION__, swingVelocity.Length(), fwdVelocity.Length(), _PlayerCharacter->GetCharacterMovement()->AirControl);
-		// _PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(),velocity, _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
+		OnSwing(alpha);
 	}
-	else
-	{
-		FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-	}
+	// else
+	// {
+	// 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+	// 	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+	// }
+	//
+	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 	
+}
+
+void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
+{
+	bPlayerIsPulled = bActivate;
+	_PlayerController->SetCanMove(!bActivate);
+	_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 1.0f : DefaultGravityScale;
+	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? 2.0f : DefaultAirControl;
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
+}
+
+
+void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
+{
+	//TODO :: WORK BUT JITER
+	// FVector velocity = rotMeshCable.Vector() * _PlayerCharacter->GetCharacterMovement()->Mass * ForceWeight * -1;
+
+	//TODO :: TUTO SWING VEL
+	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+	dir.Normalize();
+
+	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0.2, 10, 3);
+	
+	FVector swingVelocity = -SwingVelocityMultiplicator * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
+	swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
+
+	//Air Control
+	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
+	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, SwingAirControl, airControlAlpha);
+
+	//Add Force
+	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
+
+	//Add movement
+	const float velocityToAbsFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector().Dot(_PlayerCharacter->GetVelocity());
+	const float velocityToAbsUp = _PlayerCharacter->GetArrowComponent()->GetUpVector().Dot(_PlayerCharacter->GetVelocity());
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, (1 - forceWeightAlpha) * FMath::Sign(velocityToAbsFwd));
+	_PlayerCharacter->AddMovementInput(_PlayerCharacter->GetFirstPersonCameraComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (1 - forceWeightAlpha));
+
+	UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, AirControl %f, forceWeightAlpha %f, velocityToAbsFwd %f, velocityToAbsUp %f"), __FUNCTION__, swingVelocity.Length(),  _PlayerCharacter->GetCharacterMovement()->AirControl, forceWeightAlpha, velocityToAbsFwd, velocityToAbsUp);
+
 }
 
 //------------------

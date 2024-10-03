@@ -157,7 +157,7 @@ public:
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
 	
 	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
-
+	
 	/** Called for Crouch input */
 	void Crouching();
 

@@ -439,7 +439,9 @@ private:
 public:
 	UFUNCTION()
 	void OnDash();
-	
+
+	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
+
 protected:
 
 	UPROPERTY(BlueprintAssignable)
