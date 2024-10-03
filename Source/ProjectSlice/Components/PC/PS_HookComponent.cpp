@@ -863,7 +863,7 @@ void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 
 	//Air Control
 	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
-	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, SwingAirControl, airControlAlpha);
+	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, SwingMaxAirControl, airControlAlpha);
 
 	//Add Force
 	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);

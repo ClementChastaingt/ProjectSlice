@@ -189,10 +189,10 @@ protected:
 	bool bPlayerIsPulled = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingVelocityMultiplicator = 5.0f;
+	float SwingVelocityMultiplicator = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingAirControl = 2.0f;
+	float SwingMaxAirControl = 2.0f;
 
 private:
 	//------------------
