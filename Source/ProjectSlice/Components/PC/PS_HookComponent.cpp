@@ -804,8 +804,7 @@ void UPS_HookComponent::PowerCablePull()
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-
-		UE_LOG(LogTemp, Warning, TEXT("alpha %f"), alpha);
+		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
 
@@ -839,10 +838,15 @@ void UPS_HookComponent::PowerCablePull()
 
 void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 {
+	if(bPlayerIsPulled == bActivate) return;
+	
+	if(!IsValid(GetWorld()) || 	!IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_PlayerCharacter)) return;
+		
 	bPlayerIsPulled = bActivate;
+	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	_PlayerController->SetCanMove(!bActivate);
 	_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 1.0f : DefaultGravityScale;
-	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? 2.0f : DefaultAirControl;
+	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
 }
 
@@ -862,19 +866,29 @@ void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 	swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
 
 	//Air Control
+	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
+	const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
+	
 	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
-	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, SwingMaxAirControl, airControlAlpha);
+	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, targetAirControl, airControlAlpha);
+
+	//Braking Deceleration Falling
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, timeWeightAlpha);
 
 	//Add Force
 	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
 
 	//Add movement
 	const float velocityToAbsFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector().Dot(_PlayerCharacter->GetVelocity());
-	const float velocityToAbsUp = _PlayerCharacter->GetArrowComponent()->GetUpVector().Dot(_PlayerCharacter->GetVelocity());
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, (1 - forceWeightAlpha) * FMath::Sign(velocityToAbsFwd));
+	float fakeInputWeight = FMath::Sign(velocityToAbsFwd);
+	
+	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->GetVelocity() , 20.0f, FColor::Cyan, false, 0.2, 10, 3);
+
+	//(1 - forceWeightAlpha * fakeInputWeight )
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, (1 - forceWeightAlpha) * fakeInputWeight);
 	_PlayerCharacter->AddMovementInput(_PlayerCharacter->GetFirstPersonCameraComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (1 - forceWeightAlpha));
 
-	UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, AirControl %f, forceWeightAlpha %f, velocityToAbsFwd %f, velocityToAbsUp %f"), __FUNCTION__, swingVelocity.Length(),  _PlayerCharacter->GetCharacterMovement()->AirControl, forceWeightAlpha, velocityToAbsFwd, velocityToAbsUp);
+	UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, AirControl %f, forceWeightAlpha %f, velocityToAbsFwd %f, fwdInput %f"), __FUNCTION__, swingVelocity.Length(),  _PlayerCharacter->GetCharacterMovement()->AirControl, forceWeightAlpha, velocityToAbsFwd, (1 - forceWeightAlpha) * FMath::Sign(velocityToAbsFwd));
 
 }
 

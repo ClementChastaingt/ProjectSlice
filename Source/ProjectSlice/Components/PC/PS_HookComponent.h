@@ -185,11 +185,17 @@ public:
 
 protected:
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hoo|Swingk",  meta=(ToolTip="Is currently pull player"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swingk",  meta=(ToolTip="Is currently pull player"))
 	bool bPlayerIsPulled = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingStartTimestamp = TNumericLimits<float>::Min();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingVelocityMultiplicator = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
+	float SwingMaxDuration = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingMaxAirControl = 2.0f;
