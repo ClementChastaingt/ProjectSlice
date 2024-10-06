@@ -848,6 +848,16 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 1.0f : DefaultGravityScale;
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
+
+	if(bActivate)
+	{
+		 _SwingStartLoc = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+		_SwingStartFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector();
+	}
+	else
+	{
+		
+	}
 }
 
 
@@ -858,37 +868,53 @@ void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 
 	//TODO :: TUTO SWING VEL
 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-	dir.Normalize();
+	UE_LOG(LogTemp, Warning, TEXT("_SwingStartDir %f, CurrentSwingDir %f"),_SwingStartLoc.Z, dir.Z);
+	//const float alphaCurve = UKismetMathLibrary::MapRangeClamped(FMath::Abs(dir.Z), 0.0f,FMath::Abs(_SwingStartLoc.Z), 0.0f, 1.0f);
 
+	// float angle = Vector3.Angle(initialDirection, targetDirection);
+	// // Factor will be 0 - 1 if angle > maxAngle
+	// // Otherwise factor will be > 1 but Slerp clamps it to 1 anyway
+	// float factor = maxAngle / angle;
+	// return Vector3.Slerp(initialDirection, targetDirection, factor);
+	
+	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
+	const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, 0.0f, _SwingStartLoc.Z * (1 - timeWeightAlpha), 0.0f, (1 - timeWeightAlpha));
+	dir.Normalize();
 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0.2, 10, 3);
 	
 	FVector swingVelocity = -SwingVelocityMultiplicator * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
 	swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
 
-	//Air Control
-	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
-	const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
-	
+	//Air Control:
+	// const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
 	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
-	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(0.0f, targetAirControl, airControlAlpha);
+	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(DefaultAirControl, SwingMaxAirControl, airControlAlpha);
 
 	//Braking Deceleration Falling
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, timeWeightAlpha);
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking / 2, alphaCurve);
 
 	//Add Force
 	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
+	//_PlayerCharacter->GetCharacterMovement()->AddForce(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() *  * _PlayerCharacter->CustomTimeDilation);
 
 	//Add movement
-	const float velocityToAbsFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector().Dot(_PlayerCharacter->GetVelocity());
-	float fakeInputWeight = FMath::Sign(velocityToAbsFwd);
+	float velocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
+	const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(velocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
+	//velocityToAbsFwd = velocityToAbsFwd + 200 * (velocityToAbsFwd > 0 ?  -1.0f : 1.0f);
+	float fakeInputAlpha = FMath::Sign(velocityToAbsFwd) * alphaWeight;
+	// _SwingStartLoc.Z = _SwingStartLoc.Z + FMath::Lerp(0.0, SwingCurveMaxOffset, timeWeightAlpha) * (velocityToAbsFwd > 0 ?  -1.0f : 1.0f);
 	
-	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->GetVelocity() , 20.0f, FColor::Cyan, false, 0.2, 10, 3);
+	
+	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * 400 , 20.0f, FColor::Cyan, false, 0.1, 10, 3);
+	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);
+	
+	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, alphaCurve / fakeInputAlpha);
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetMoveInput().Y * alphaCurve);
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetMoveInput().X * alphaCurve);
+	
+	UE_LOG(LogTemp, Log, TEXT("timeWeightAlpha %f"), timeWeightAlpha);
 
-	//(1 - forceWeightAlpha * fakeInputWeight )
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, (1 - forceWeightAlpha) * fakeInputWeight);
-	_PlayerCharacter->AddMovementInput(_PlayerCharacter->GetFirstPersonCameraComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (1 - forceWeightAlpha));
-
-	UE_LOG(LogTemp, Error, TEXT("%S :: swingVelocity %f, AirControl %f, forceWeightAlpha %f, velocityToAbsFwd %f, fwdInput %f"), __FUNCTION__, swingVelocity.Length(),  _PlayerCharacter->GetCharacterMovement()->AirControl, forceWeightAlpha, velocityToAbsFwd, (1 - forceWeightAlpha) * FMath::Sign(velocityToAbsFwd));
+	UE_LOG(LogTemp, Error, TEXT("%S \n :: __ System Parameters __ :: \n fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n velocityToAbsFwd %f"), __FUNCTION__, fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling,  velocityToAbsFwd);
 
 }
 

@@ -194,6 +194,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingVelocityMultiplicator = 1.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingCurveMaxOffset = 200.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
 	float SwingMaxDuration = 60.0f;
 
@@ -201,7 +204,12 @@ protected:
 	float SwingMaxAirControl = 2.0f;
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	FVector _SwingStartLoc;
+
+	UPROPERTY(Transient)
+	FVector _SwingStartFwd;
+	
 
 #pragma endregion Swing
 
