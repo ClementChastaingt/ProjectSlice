@@ -212,15 +212,13 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 	
 }
 
-void UPS_ProceduralAnimComponent::ApplyWindingVibration()
+void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
 		return;
-
-	float currentForce = _PlayerCharacter->GetHookComponent()->GetForceWeight();
-	const float alphaHookOffset = UKismetMathLibrary::MapRangeClamped(currentForce, 0.0f,_PlayerCharacter->GetHookComponent()->GetMaxForceWeight(), 0.0, 3.0);
-	
-	HookLocOffset = FMath::VRandCone(_PlayerCharacter->GetHookComponent()->GetComponentLocation(), alphaHookOffset);
+		
+	const float maxHookOffset = UKismetMathLibrary::MapRangeClamped(alpha, 0.0f, 1.0f, 0.0, HookLocMaxOffset);
+	HookLocOffset = FVector(0.0f, FMath::RandRange(-maxHookOffset, maxHookOffset), FMath::RandRange(-maxHookOffset, maxHookOffset));
 }
 
 //------------------

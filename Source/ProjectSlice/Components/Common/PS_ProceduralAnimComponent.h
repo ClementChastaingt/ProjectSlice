@@ -198,13 +198,19 @@ private:
 	//------------------
 
 public:
-	//------------------
+	UFUNCTION()
+	void ApplyWindingVibration(const float alpha);
+	
 protected:
-	UFUNCTION(BlueprintCallable)
-	void ApplyWindingVibration();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Hook", meta=(ToolTip="Winde Hook location"))
 	FVector HookLocOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hook", meta=(ToolTip="Winde Hook max offset"))
+	float HookLocMaxOffset = 3.0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hook", meta=(ToolTip="Winde Hook offset progression curve"))
+	UCurveFloat* HookLocOffsetCurve;
 	
 private:
 	//------------------

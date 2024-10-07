@@ -84,7 +84,7 @@ void UPS_HookComponent::OnAttachWeapon()
 	HookThrower->SetupAttachment(this);
 	
 	//Setup Cable
-	FirstCable->SetupAttachment(this);
+	FirstCable->SetupAttachment(HookThrower);
 	FirstCable->SetVisibility(false);
 	CableListArray.AddUnique(FirstCable);
 
@@ -215,13 +215,14 @@ void UPS_HookComponent::WrapCable()
 	//Attach New Cable to Hitted Object && Set his position to it
 	if(bIsAddByFirst && CablePointLocations.IsValidIndex(1) && CablePointComponents.IsValidIndex(1))
 	{
-		newCable->SetWorldLocation(CablePointLocations[1]);
 		newCable->AttachToComponent(CablePointComponents[1], AttachmentRule);
+		newCable->SetWorldLocation(CablePointLocations[1]);
 	}
 	else
 	{
-		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
 		newCable->AttachToComponent(HookThrower, AttachmentRule);
+		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
+		AdaptFirstCableLocByAngle(newCable);
 	}
 	
 	//Attach End to Last Cable
@@ -366,14 +367,15 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	if(CablePointLocations.IsValidIndex(0))
 	{
 		//Set the latest oldest point as cable active point && attach cable to the latest component point
-		firstCable->SetWorldLocation(CablePointLocations[0], false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(CablePointComponents[0], AttachmentRule);
+		firstCable->SetWorldLocation(CablePointLocations[0], false,nullptr, ETeleportType::TeleportPhysics);
 	}
 	else
 	{
 		//Reset to HookAttach default set
-		firstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(HookThrower, AttachmentRule);
+		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+		AdaptFirstCableLocByAngle(firstCable);
 	}
 }
 
@@ -514,9 +516,11 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	UCableComponent* firstCable = CableListArray[cableListLastIndex];
 
 	//Reset to HookAttach default set
-	firstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 	firstCable->AttachToComponent(HookThrower, AttachmentRule);
+	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
 
+
+	
 	// }
 	
 }
@@ -616,6 +620,15 @@ void UPS_HookComponent::AdaptCableTens()
 		curveAlpha = CableTensCurve->GetFloatValue(alpha);
 	
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
+}
+
+void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const firstCable)
+{
+	
+	// const float alpha = UKismetMathLibrary::MapRangeClamped(,,,0.0f,1.0f);
+	const float alpha = 0.0f;
+	const FVector hookOffset= UKismetMathLibrary::VLerp(MinCableHookOffset,MaxCableHookOffset,alpha);
+	firstCable->SetRelativeLocation(hookOffset, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 
@@ -757,8 +770,10 @@ void UPS_HookComponent::DettachHook()
 	//----Setup First Cable---
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
 
-	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation() + CableHookOffset, false,nullptr, ETeleportType::TeleportPhysics);
 	FirstCable->AttachToComponent(HookThrower, AttachmentRule);
+	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	AdaptFirstCableLocByAngle(FirstCable);
+
 	FirstCable->bAttachEnd = false;
 	FirstCable->AttachEndTo = FComponentReference();
 	FirstCable->SetVisibility(false);
@@ -781,6 +796,7 @@ void UPS_HookComponent::PowerCablePull()
 	{
 		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
 		alpha = windeAlpha;
+		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alpha);
 		if(IsValid(WindePullingCurve))
 		{
 			alpha = WindePullingCurve->GetFloatValue(windeAlpha);
@@ -863,26 +879,17 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 
 void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 {
-	//TODO :: WORK BUT JITER
-	// FVector velocity = rotMeshCable.Vector() * _PlayerCharacter->GetCharacterMovement()->Mass * ForceWeight * -1;
-
 	//TODO :: TUTO SWING VEL
 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
 	UE_LOG(LogTemp, Warning, TEXT("_SwingStartDir %f, CurrentSwingDir %f"),_SwingStartLoc.Z, dir.Z);
-	//const float alphaCurve = UKismetMathLibrary::MapRangeClamped(FMath::Abs(dir.Z), 0.0f,FMath::Abs(_SwingStartLoc.Z), 0.0f, 1.0f);
-
-	// float angle = Vector3.Angle(initialDirection, targetDirection);
-	// // Factor will be 0 - 1 if angle > maxAngle
-	// // Otherwise factor will be > 1 but Slerp clamps it to 1 anyway
-	// float factor = maxAngle / angle;
-	// return Vector3.Slerp(initialDirection, targetDirection, factor);
+	
 	
 	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 	const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, 0.0f, _SwingStartLoc.Z * (1 - timeWeightAlpha), 0.0f, (1 - timeWeightAlpha));
 	dir.Normalize();
 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0.2, 10, 3);
 	
-	FVector swingVelocity = -SwingVelocityMultiplicator * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
+	FVector swingVelocity = -1 * dir * (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
 	swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
 
 	//Air Control:
@@ -900,10 +907,7 @@ void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 	//Add movement
 	float velocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
 	const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(velocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
-	//velocityToAbsFwd = velocityToAbsFwd + 200 * (velocityToAbsFwd > 0 ?  -1.0f : 1.0f);
-	float fakeInputAlpha = FMath::Sign(velocityToAbsFwd) * alphaWeight;
-	// _SwingStartLoc.Z = _SwingStartLoc.Z + FMath::Lerp(0.0, SwingCurveMaxOffset, timeWeightAlpha) * (velocityToAbsFwd > 0 ?  -1.0f : 1.0f);
-	
+	float fakeInputAlpha = FMath::Sign(velocityToAbsFwd) * alphaWeight;	
 	
 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * 400 , 20.0f, FColor::Cyan, false, 0.1, 10, 3);
 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);

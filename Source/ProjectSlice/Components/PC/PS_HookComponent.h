@@ -69,151 +69,6 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-#pragma region Grapple
-	//------------------
-
-public:
-	UFUNCTION()
-	void OnSlowmoTriggerEventReceived(const bool bIsSlowed);
-	
-	UFUNCTION()
-	void OnAttachWeapon();
-
-	UFUNCTION()
-	void OnInitWeaponEventReceived();
-	
-	UFUNCTION()
-	void HookObject();
-	
-	UFUNCTION()
-	void WindeHook();
-	
-	UFUNCTION()
-	void StopWindeHook();
-	
-	UFUNCTION()
-	void DettachHook();
-
-	
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE float GetForceWeight() const{return ForceWeight;}
-	
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE float GetMaxForceWeight() const{return MaxForceWeight;}
-
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE bool IsObjectHooked() const{return bObjectHook;}
-	
-	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
-
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE bool IsCableWinderPull() const{return bCableWinderPull;}
-
-protected:
-	//Status
-	UPROPERTY()
-	UMeshComponent* AttachedMesh = nullptr;
-	
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
-	FHitResult CurrentHookHitResult;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	float DefaultGravityScale = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	float DefaultAirControl = 0.0f;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook",  meta=(ForceUnits="cm",ToolTip="Distance between player and object grappled on attaching"))
-	double DistanceOnAttach = 0.0f;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently hook an object"))
-	bool bObjectHook = false;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Tens"))
-	bool bCablePowerPull = false;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
-	bool bCableWinderPull = false;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
-	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(ToolTip="Is currently pull Spherical Object"))
-	float bIsPullingSphericalObject = false;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Current Pull Force"))
-	float ForceWeight = 1.0f;
-
-	//Parameters
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
-	float HookingMaxDistance = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
-	FVector CableHookOffset = FVector(10,0,0);
-		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
-	float MaxForceWeight = 10000.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Distance for reach Max Force Weight by distance to object"))
-	float MaxForcePullingDistance = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="s",ToolTip="Duration for reach Max Force Winde Weight by winde holding"))
-	float MaxWindePullingDuration = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="s",ToolTip="Max Force Winde Weight curve"))
-	UCurveFloat* WindePullingCurve;
-	
-	UFUNCTION()
-	void PowerCablePull();	
-	
-private:
-	//------------------
-
-#pragma endregion Grapple
-
-#pragma region Swing
-	//------------------
-
-public:
-	UFUNCTION()
-	void OnTriggerSwing(const bool bActivate);
-
-	UFUNCTION()
-	void OnSwing(const float forceWeightAlpha);
-
-	FORCEINLINE bool IsPlayerIsPulled() const{return bPlayerIsPulled;}
-
-protected:
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swingk",  meta=(ToolTip="Is currently pull player"))
-	bool bPlayerIsPulled = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingStartTimestamp = TNumericLimits<float>::Min();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingVelocityMultiplicator = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingCurveMaxOffset = 200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
-	float SwingMaxDuration = 60.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
-	float SwingMaxAirControl = 2.0f;
-
-private:
-	UPROPERTY(Transient)
-	FVector _SwingStartLoc;
-
-	UPROPERTY(Transient)
-	FVector _SwingStartFwd;
-	
-
-#pragma endregion Swing
-
-
 #pragma region Rope
 	//------------------
 
@@ -315,8 +170,151 @@ protected:
 	void AdaptCableTens();
 	
 private:
-	//------------------
+	
+	UFUNCTION()
+	void AdaptFirstCableLocByAngle(UCableComponent* const firstCable);
 
 #pragma endregion Rope
+
+#pragma region Grapple
+	//------------------
+
+public:
+	UFUNCTION()
+	void OnSlowmoTriggerEventReceived(const bool bIsSlowed);
+	
+	UFUNCTION()
+	void OnAttachWeapon();
+
+	UFUNCTION()
+	void OnInitWeaponEventReceived();
+	
+	UFUNCTION()
+	void HookObject();
+	
+	UFUNCTION()
+	void WindeHook();
+	
+	UFUNCTION()
+	void StopWindeHook();
+	
+	UFUNCTION()
+	void DettachHook();
+
+	
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE float GetForceWeight() const{return ForceWeight;}
+	
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE float GetMaxForceWeight() const{return MaxForceWeight;}
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool IsObjectHooked() const{return bObjectHook;}
+	
+	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool IsCableWinderPull() const{return bCableWinderPull;}
+
+protected:
+	//Status
+	UPROPERTY()
+	UMeshComponent* AttachedMesh = nullptr;
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
+	FHitResult CurrentHookHitResult;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	float DefaultGravityScale = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
+	float DefaultAirControl = 0.0f;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook",  meta=(ForceUnits="cm",ToolTip="Distance between player and object grappled on attaching"))
+	double DistanceOnAttach = 0.0f;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently hook an object"))
+	bool bObjectHook = false;
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Tens"))
+	bool bCablePowerPull = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
+	bool bCableWinderPull = false;
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
+	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(ToolTip="Is currently pull Spherical Object"))
+	float bIsPullingSphericalObject = false;
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Current Pull Force"))
+	float ForceWeight = 1.0f;
+
+	//Parameters
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
+	float HookingMaxDistance = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Min Offset apply to fistcable attahce dot Hookthrower mesh"))
+	FVector MinCableHookOffset = FVector(1,0,0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Offset apply to fistcable attahce dot Hookthrower mesh (cable angle from thrower >"))
+	FVector MaxCableHookOffset = FVector(4,0,0);
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
+	float MaxForceWeight = 10000.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Distance for reach Max Force Weight by distance to object"))
+	float MaxForcePullingDistance = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="s",ToolTip="Duration for reach Max Force Winde Weight by winde holding"))
+	float MaxWindePullingDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="s",ToolTip="Max Force Winde Weight curve"))
+	UCurveFloat* WindePullingCurve;
+	
+	UFUNCTION()
+	void PowerCablePull();	
+	
+private:
+	//------------------
+
+#pragma endregion Grapple
+
+#pragma region Swing
+	//------------------
+
+public:
+	UFUNCTION()
+	void OnTriggerSwing(const bool bActivate);
+
+	UFUNCTION()
+	void OnSwing(const float forceWeightAlpha);
+
+	FORCEINLINE bool IsPlayerIsPulled() const{return bPlayerIsPulled;}
+
+protected:
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swingk",  meta=(ToolTip="Is currently pull player"))
+	bool bPlayerIsPulled = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingStartTimestamp = TNumericLimits<float>::Min();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
+	float SwingMaxDuration = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingMaxAirControl = 2.0f;
+
+private:
+	UPROPERTY(Transient)
+	FVector _SwingStartLoc;
+
+	UPROPERTY(Transient)
+	FVector _SwingStartFwd;
+	
+
+#pragma endregion Swing	
 };
 
