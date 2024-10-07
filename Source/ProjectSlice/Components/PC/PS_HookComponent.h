@@ -172,7 +172,7 @@ protected:
 private:
 	
 	UFUNCTION()
-	void AdaptFirstCableLocByAngle(UCableComponent* const firstCable);
+	void AdaptFirstCableLocByAngle(UCableComponent* const attachCable);
 
 #pragma endregion Rope
 

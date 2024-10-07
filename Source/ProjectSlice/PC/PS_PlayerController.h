@@ -139,6 +139,10 @@ public:
 	
 	FORCEINLINE void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
 
+	FORCEINLINE FVector2D GetRealMoveInput() const{return MoveInput;}
+	
+	FORCEINLINE void SetRealMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
+
 	FORCEINLINE bool CanMove() const{return bCanMove;}
 
 	FORCEINLINE bool CanLook() const{return bCanLook;}
@@ -162,6 +166,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	FVector2D MoveInput = FVector2D::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	FVector2D RealMoveInput = FVector2D::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	bool bIsCrouchInputTrigger = false;

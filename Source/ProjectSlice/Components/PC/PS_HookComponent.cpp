@@ -622,13 +622,13 @@ void UPS_HookComponent::AdaptCableTens()
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
 }
 
-void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const firstCable)
+void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const attachCable)
 {
 	
 	// const float alpha = UKismetMathLibrary::MapRangeClamped(,,,0.0f,1.0f);
 	const float alpha = 0.0f;
 	const FVector hookOffset= UKismetMathLibrary::VLerp(MinCableHookOffset,MaxCableHookOffset,alpha);
-	firstCable->SetRelativeLocation(hookOffset, false, nullptr, ETeleportType::TeleportPhysics);
+	attachCable->SetRelativeLocation(hookOffset, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 
@@ -913,8 +913,8 @@ void UPS_HookComponent::OnSwing(const float forceWeightAlpha)
 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);
 	
 	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, alphaCurve / fakeInputAlpha);
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetMoveInput().Y * alphaCurve);
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetMoveInput().X * alphaCurve);
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().Y * (alphaCurve / 3));
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().X * (alphaCurve / 3));
 	
 	UE_LOG(LogTemp, Log, TEXT("timeWeightAlpha %f"), timeWeightAlpha);
 
