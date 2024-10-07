@@ -73,6 +73,9 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	
 	CableWraping();
 	PowerCablePull();
+
+	if(bObjectHook)
+		AdaptFirstCableLocByAngle(FirstCable);
 }
 
 #pragma region Weapon_Event_Receiver
@@ -193,7 +196,7 @@ void UPS_HookComponent::WrapCable()
 	latestCable->CableLength = 1;
 	latestCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	latestCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
-	
+
 	//----New Cable---
 	//Add new cable component 
 	UCableComponent* newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
@@ -222,7 +225,6 @@ void UPS_HookComponent::WrapCable()
 	{
 		newCable->AttachToComponent(HookThrower, AttachmentRule);
 		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
-		AdaptFirstCableLocByAngle(newCable);
 	}
 	
 	//Attach End to Last Cable
@@ -375,7 +377,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 		//Reset to HookAttach default set
 		firstCable->AttachToComponent(HookThrower, AttachmentRule);
 		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
-		AdaptFirstCableLocByAngle(firstCable);
 	}
 }
 
@@ -518,8 +519,6 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	//Reset to HookAttach default set
 	firstCable->AttachToComponent(HookThrower, AttachmentRule);
 	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
-
-
 	
 	// }
 	
@@ -624,9 +623,31 @@ void UPS_HookComponent::AdaptCableTens()
 
 void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const attachCable)
 {
+	FVector currentCableEndLocation;
+	if(CableAttachedArray.IsValidIndex(CableAttachedArray.Num() - 1))
+	{
+		currentCableEndLocation = CableAttachedArray[CableAttachedArray.Num() -  1]->GetSocketLocation(FName("CableStart"));
+	}
+	else
+	{
+		if(!IsValid(attachCable)) return;
+		currentCableEndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(attachCable->EndLocation);
+	}
 	
-	// const float alpha = UKismetMathLibrary::MapRangeClamped(,,,0.0f,1.0f);
-	const float alpha = 0.0f;
+	FRotator rotAngle = UKismetMathLibrary::FindLookAtRotation(HookThrower->GetComponentLocation(),currentCableEndLocation);
+	
+	const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(rotAngle.Vector()));
+	const float alpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(angle),0,MaxAngleHookOffset,0.0f,1.0f);
+
+	if(bDebugTick)
+	{
+		if(bDebugDrawLine)
+		{
+			DrawDebugPoint(GetWorld(), currentCableEndLocation, 30.f, FColor::Magenta, false);
+			DrawDebugLine(GetWorld(), HookThrower->GetComponentLocation(), HookThrower->GetComponentLocation() + rotAngle.Vector() * 600, FColor::Magenta, false, 0.1, 10, 3);
+		}
+		UE_LOG(LogTemp, Log, TEXT("%S :: angle %f , alpha %f"), __FUNCTION__, angle, alpha);
+	}
 	const FVector hookOffset= UKismetMathLibrary::VLerp(MinCableHookOffset,MaxCableHookOffset,alpha);
 	attachCable->SetRelativeLocation(hookOffset, false, nullptr, ETeleportType::TeleportPhysics);
 }
@@ -670,7 +691,7 @@ void UPS_HookComponent::HookObject()
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
 	//Attach First cable to it
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
-	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(bIsPullingSphericalObject ? CurrentHookHitResult.Location : CurrentHookHitResult.GetComponent()->GetComponentLocation());
+	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
 	FirstCable->SetVisibility(true);
@@ -679,6 +700,7 @@ void UPS_HookComponent::HookObject()
 	AttachedMesh->SetGenerateOverlapEvents(true);
 	AttachedMesh->SetCollisionProfileName(Profile_GPE);
 	AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//TODO :: HookedObject rope wraping
 	AttachedMesh->SetCollisionResponseToChannel(ECC_Rope, ECollisionResponse::ECR_Ignore);
 	//TODO :: Need to define inertia conditioning to false;
 	AttachedMesh->SetLinearDamping(1.0f);
@@ -772,7 +794,6 @@ void UPS_HookComponent::DettachHook()
 
 	FirstCable->AttachToComponent(HookThrower, AttachmentRule);
 	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
-	AdaptFirstCableLocByAngle(FirstCable);
 
 	FirstCable->bAttachEnd = false;
 	FirstCable->AttachEndTo = FComponentReference();

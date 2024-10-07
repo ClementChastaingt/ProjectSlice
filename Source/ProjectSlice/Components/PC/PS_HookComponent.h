@@ -56,11 +56,14 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugTick = false;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugDrawLine = false;
 	
 private:
 	UPROPERTY(Transient)
@@ -245,9 +248,6 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
 	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(ToolTip="Is currently pull Spherical Object"))
-	float bIsPullingSphericalObject = false;
-	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Current Pull Force"))
 	float ForceWeight = 1.0f;
 
@@ -258,9 +258,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Min Offset apply to fistcable attahce dot Hookthrower mesh"))
 	FVector MinCableHookOffset = FVector(1,0,0);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Offset apply to fistcable attahce dot Hookthrower mesh (cable angle from thrower >"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Offset apply to RealFirstCable attahce dot Hookthrower mesh (cable angle from thrower > MaxAngleHookOffset"))
 	FVector MaxCableHookOffset = FVector(4,0,0);
-		
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="deg",ToolTip="Max Offset angle apply to RealFirstCable attahce dot Hookthrower mesh"))
+	float MaxAngleHookOffset = 90.0;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;
 	
