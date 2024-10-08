@@ -288,7 +288,7 @@ void AProjectSliceCharacter::Jump()
 		_PlayerController->SetIsCrouchInputTrigger(false);
 
 	//Dettach rope if try jump on swing
-	if(GetHookComponent()->IsObjectHooked() && GetHookComponent()->IsPlayerIsPulled())
+	if(GetHookComponent()->IsObjectHooked() && GetHookComponent()->IsPlayerSwinging())
 		GetHookComponent()->DettachHook();
 	
 	Super::Jump();

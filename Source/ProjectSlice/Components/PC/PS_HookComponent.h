@@ -294,12 +294,19 @@ public:
 	UFUNCTION()
 	void OnSwing();
 
-	FORCEINLINE bool IsPlayerIsPulled() const{return bPlayerIsPulled;}
+	UFUNCTION()
+	void ForceInvertSwingDirection() {_VelocityToAbsFwd = _VelocityToAbsFwd * -1;};
+
+	FORCEINLINE bool IsPlayerSwinging() const{return bPlayerIsSwinging;}
+	
+	UFUNCTION()
+	void OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool
+		bFromSweep, const FHitResult& sweepResult);
 
 protected:
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swingk",  meta=(ToolTip="Is currently pull player"))
-	bool bPlayerIsPulled = false;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",  meta=(ToolTip="Is player currently swinging"))
+	bool bPlayerIsSwinging = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingStartTimestamp = TNumericLimits<float>::Min();
@@ -326,6 +333,11 @@ private:
 	UPROPERTY(Transient)
 	FVector _SwingStartFwd;
 	
+	UPROPERTY(Transient)
+	bool _OrientationIsReset;
+
+	UPROPERTY(Transient)
+	float _VelocityToAbsFwd;
 
 #pragma endregion Swing	
 };

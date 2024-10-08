@@ -545,7 +545,7 @@ void UPS_ParkourComponent::OnDash()
 	dashVel = bIsOnGround ? dashVel * 2 : dashVel;
 
 	//Change braking deceleration
-	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling && !_PlayerCharacter->GetHookComponent()->IsPlayerIsPulled())
+	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling && !_PlayerCharacter->GetHookComponent()->IsPlayerSwinging())
 	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
 
 	//Launch character

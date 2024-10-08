@@ -57,6 +57,12 @@ void UPS_HookComponent::BeginPlay()
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
+
+	if(IsValid(_PlayerCharacter->GetCapsuleComponent()))
+	{
+		_PlayerCharacter->GetCapsuleComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnCapsuletBeginOverlapEventReceived);
+	
+	}
 	
 	if(IsValid(_PlayerCharacter->GetCharacterMovement()))
 	{
@@ -813,7 +819,7 @@ void UPS_HookComponent::PowerCablePull()
 
 	//Activate Pull if Winde
 	float alpha;
-	if(bCableWinderPull && !bPlayerIsPulled)
+	if(bCableWinderPull && !bPlayerIsSwinging)
 	{
 		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
 		alpha = windeAlpha;
@@ -824,7 +830,7 @@ void UPS_HookComponent::PowerCablePull()
 		}
 
 		//Winde on swing
-		// if(bPlayerIsPulled)
+		// if(bPlayerIsSwinging)
 		// {
 		// 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
 		// 	dir.Normalize();
@@ -836,7 +842,7 @@ void UPS_HookComponent::PowerCablePull()
 
 	}
 	//Activate Pull On reach Max Distance
-	else/* if(!bPlayerIsPulled)*/
+	else/* if(!bPlayerIsSwinging)*/
 	{
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
@@ -846,7 +852,7 @@ void UPS_HookComponent::PowerCablePull()
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
 
-	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsPulled)  return;
+	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsSwinging)  return;
 	
 	//Pull Attached Object
 	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
@@ -859,7 +865,7 @@ void UPS_HookComponent::PowerCablePull()
 	if(bDebugTick) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
 	
 	//Use Force
-	if(bPlayerIsPulled)
+	if(bPlayerIsSwinging)
 	{
 		OnSwing();
 	}
@@ -874,13 +880,16 @@ void UPS_HookComponent::PowerCablePull()
 	
 }
 
+#pragma region Swing
+//------------------
+
 void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 {
-	if(bPlayerIsPulled == bActivate) return;
+	if(bPlayerIsSwinging == bActivate) return;
 	
 	if(!IsValid(GetWorld()) || 	!IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_PlayerCharacter)) return;
 		
-	bPlayerIsPulled = bActivate;
+	bPlayerIsSwinging = bActivate;
 	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	_PlayerController->SetCanMove(!bActivate);
 	_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 1.0f : DefaultGravityScale;
@@ -904,6 +913,17 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 
 void UPS_HookComponent::OnSwing()
 {
+	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
+	/*|| _PlayerCharacter->GetVelocity().Length() <= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched*/)
+	{
+		OnTriggerSwing(false);
+
+		//----Auto break hook if velocity too low----
+		// if(bCablePowerPull &&  _PlayerCharacter->GetVelocity().Length() <= _SwingStartVelocity.Length())
+		// 	DettachHook();
+		return;
+	}
+	
 	//IInit alpha
 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
 	UE_LOG(LogTemp, Warning, TEXT("dir.Z, %f, _SwingStartLoc %f,  _SwingTargetLoc %f"),dir.Z,_SwingStartLoc.Z, _SwingStartLoc.Z - SwingMaxDistance);
@@ -937,25 +957,56 @@ void UPS_HookComponent::OnSwing()
 	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
 	//_PlayerCharacter->GetCharacterMovement()->AddForce(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() *  * _PlayerCharacter->CustomTimeDilation);
 
-	//Add movement
-	float velocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
-	const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(velocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
-	float fakeInputAlpha = FMath::Sign(velocityToAbsFwd) * alphaWeight;	
+
+	_VelocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
+	//Force reset swing vel orientation
+	if(alphaCurve < 0.2 && !_OrientationIsReset)
+	{
+		_VelocityToAbsFwd = _VelocityToAbsFwd * -1;
+		_OrientationIsReset = true;
+	}
+	else
+	{
+		_OrientationIsReset = false;
+	}
+	const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_VelocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
+	float fakeInputAlpha = FMath::Sign(_VelocityToAbsFwd) * alphaWeight;	
 
 	if(bDebugDrawLine)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * 400 , 20.0f, FColor::Cyan, false, 0.1, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);
 	}
-
+	
+	//Add movement
 	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, UKismetMathLibrary::SafeDivide(alphaCurve,fakeInputAlpha));
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().Y * (alphaCurve / 3));
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().X * (alphaCurve / 3));
 
 	if(bDebugTick)
-		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, velocityToAbsFwd);
+		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
 
+	//Stop by time
+	if(timeWeightAlpha >= 1)
+	{
+		OnTriggerSwing(false);
+		DettachHook();
+		return;
+	}
 }
+//------------------
+#pragma endregion Swing
+
+void UPS_HookComponent::OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
+{
+	if(bPlayerIsSwinging)
+	{
+		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+		ForceInvertSwingDirection();
+	}
+	
+}
+
 
 //------------------
 #pragma endregion Grapple_Logic
