@@ -292,7 +292,7 @@ public:
 	void OnTriggerSwing(const bool bActivate);
 
 	UFUNCTION()
-	void OnSwing(const float forceWeightAlpha);
+	void OnSwing();
 
 	FORCEINLINE bool IsPlayerIsPulled() const{return bPlayerIsPulled;}
 
@@ -303,12 +303,21 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingStartTimestamp = TNumericLimits<float>::Min();
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing input force alpha"))
+    float SwingAlpha = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="cm",ToolTip="Swing distance on the lower position of the trajectory"))
+	float SwingMaxDistance = 1500.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
 	float SwingMaxDuration = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingMaxAirControl = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing braking deceleratrion curve"))
+	UCurveFloat* SwingBrakingDecelerationCurve;
 
 private:
 	UPROPERTY(Transient)
