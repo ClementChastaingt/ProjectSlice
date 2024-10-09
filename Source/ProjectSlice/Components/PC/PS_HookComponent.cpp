@@ -914,6 +914,9 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 void UPS_HookComponent::OnSwing()
 {
 	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
+	  || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
+	  || _PlayerCharacter->GetParkourComponent()->IsLedging()
+	  || _PlayerCharacter->GetParkourComponent()->IsMantling()
 	/*|| _PlayerCharacter->GetVelocity().Length() <= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched*/)
 	{
 		OnTriggerSwing(false);
@@ -947,10 +950,6 @@ void UPS_HookComponent::OnSwing()
 
 	//Braking Deceleration Falling
 	float brakingDecAlpha = bIsGoingDown ? alphaCurve : 1 - alphaCurve;
-	if(IsValid(SwingBrakingDecelerationCurve))
-	{
-		brakingDecAlpha = SwingBrakingDecelerationCurve->GetFloatValue(brakingDecAlpha);
-	}
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking / 2, brakingDecAlpha);
 
 	//Add Force
@@ -980,8 +979,8 @@ void UPS_HookComponent::OnSwing()
 	
 	//Add movement
 	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, UKismetMathLibrary::SafeDivide(alphaCurve,fakeInputAlpha));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().Y * (alphaCurve / 3));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation,  _PlayerController->GetRealMoveInput().X * (alphaCurve / 3));
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().X * (alphaCurve / SwingInputScaleDivider));
 
 	if(bDebugTick)
 		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);

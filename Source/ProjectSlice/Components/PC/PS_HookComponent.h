@@ -323,8 +323,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingMaxAirControl = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing braking deceleratrion curve"))
-	UCurveFloat* SwingBrakingDecelerationCurve;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing input weight divider"))
+	float SwingInputScaleDivider = 2.0f;
+
+
 
 private:
 	UPROPERTY(Transient)

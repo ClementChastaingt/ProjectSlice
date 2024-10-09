@@ -139,9 +139,9 @@ public:
 	
 	FORCEINLINE void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
 
-	FORCEINLINE FVector2D GetRealMoveInput() const{return MoveInput;}
+	FORCEINLINE FVector2D GetRealMoveInput() const{return RealMoveInput;}
 	
-	FORCEINLINE void SetRealMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
+	FORCEINLINE void SetRealMoveInput(const FVector2D& moveInput){this->RealMoveInput = moveInput;}
 
 	FORCEINLINE bool CanMove() const{return bCanMove;}
 

@@ -127,7 +127,7 @@ void UPS_ProceduralAnimComponent::SetLagPositionAndAirTilt()
 	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), deltaTime, (1 / deltaTime) / VelocityLagSmoothingSpeed);
 
 	//In Air Animation
-	if(!_PlayerCharacter->GetParkourComponent()->GetIsWallRunning())
+	if(!_PlayerCharacter->GetParkourComponent()->IsWallRunning())
 	{
 		InAirTilt = UKismetMathLibrary::RInterpTo(InAirTilt, FRotator(0.0f, LocationLagPosition.Z * -2.0f,0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
 		InAirOffset = UKismetMathLibrary::VInterpTo(InAirOffset,FVector(LocationLagPosition.Z * 0.5f, 0.0f, 0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
@@ -154,7 +154,7 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
 	//TODO :: Do a var when custom mode in place for tweak in BP the proc walk move forbidden state 
-	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_PlayerCharacter->GetParkourComponent()->GetIsWallRunning())
+	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_PlayerCharacter->GetParkourComponent()->IsWallRunning())
 	|| playerMovementComp->IsCrouching()
 	|| playerMovementComp->MovementMode == MOVE_None;
 		

@@ -239,7 +239,7 @@ void AProjectSliceCharacter::Crouching()
 {
 	if(!IsValid(_PlayerController) || !IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
 
-	if(GetParkourComponent()->GetIsWallRunning()
+	if(GetParkourComponent()->IsWallRunning()
 		|| GetParkourComponent()->IsLedging()
 		||  GetParkourComponent()->GetMantlePhase() != EMantlePhase::NONE)
 		return;
@@ -296,7 +296,7 @@ void AProjectSliceCharacter::Jump()
 	//If in WallRunning 
 	if(IsValid(GetParkourComponent()))
 	{
-		if(!GetParkourComponent()->GetIsWallRunning())
+		if(!GetParkourComponent()->IsWallRunning())
 		{
 			if(GetParkourComponent()->GetOverlapInfos().IsEmpty()) return;
 			

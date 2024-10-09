@@ -96,6 +96,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE EMantlePhase GetMantlePhase() const{return _MantlePhase;}
 
+	FORCEINLINE bool IsMantling() const{return bIsMantling;}
+
 	//------------------
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
@@ -230,7 +232,7 @@ public:
 	void JumpOffWallRun();
 
 	//Getters && Setters
-	FORCEINLINE bool GetIsWallRunning() const  {return bIsWallRunning;}
+	FORCEINLINE bool IsWallRunning() const  {return bIsWallRunning;}
 
 	void SetForceWallRun(bool bforceWallRun){this->bForceWallRun = bforceWallRun;}
 
@@ -360,6 +362,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
+
+	FORCEINLINE bool IsSliding() const{return bIsSliding;}
 
 protected:
 	UFUNCTION()
