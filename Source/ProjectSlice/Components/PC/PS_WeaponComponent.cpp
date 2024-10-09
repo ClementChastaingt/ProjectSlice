@@ -162,18 +162,13 @@ void UPS_WeaponComponent::Fire()
 
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
-	//Try Slice a Mesh
-	const FRotator SpawnRotation = _PlayerController->PlayerCameraManager->GetCameraRotation();
-	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the _PlayerCharacter location to find the final muzzle position
-	//const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-
 	
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
 	                                      SightMesh->GetComponentLocation() + SightMesh->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-	                                        false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
+	                                        true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 	
@@ -185,7 +180,8 @@ void UPS_WeaponComponent::Fire()
 	
 	//Setup material
 	ResetSightRackProperties();
-	
+
+	//--Melting mat--
 	// UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
 	// if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
 	//
@@ -206,21 +202,28 @@ void UPS_WeaponComponent::Fire()
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
-	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap
-	FVector sliceDir = SightMesh->GetUpVector() * currentProcMeshComponent->GetComponentScale();
-	sliceDir.Normalize();
+
+	FVector sliceLocation =  CurrentFireHitResult.Location; 
 	
-	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, CurrentFireHitResult.Location,
+	FVector sliceDir =  (CurrentFireHitResult.Location - SightMesh->GetComponentLocation()) * SightMesh->GetForwardVector();
+	//sliceDir.Normalize();
+	
+	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
+	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, sliceLocation,
 	                                                  sliceDir, true,
 	                                                  outHalfComponent,
 	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  matInst);
 	if(!IsValid(outHalfComponent)) return;
+
+	currentProcMeshComponent->UpdateBounds();
+	outHalfComponent->UpdateBounds();
 	
 	if(bDebugSlice)
 	{
 		DrawDebugLine(GetWorld(), CurrentFireHitResult.Location,  CurrentFireHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
 		DrawDebugLine(GetWorld(), SightMesh->GetComponentLocation(),  SightMesh->GetComponentLocation() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(), SightMesh->GetComponentLocation() + SightMesh->GetUpVector() * 500 , CurrentFireHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
 	}
 
 	//Register and instanciate
@@ -241,10 +244,12 @@ void UPS_WeaponComponent::Fire()
 
 
 	//Impulse
-	//TODO :: Rework Impulse
-	//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
-	outHalfComponent->AddImpulse(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() + CurrentFireHitResult.Normal * 500, NAME_None, true);
-	
+	if(ActivateImpulseOnSlice)
+	{
+		//TODO :: Rework Impulse
+		//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
+		outHalfComponent->AddImpulse(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() + CurrentFireHitResult.Normal * 500, NAME_None, true);
+	}
 	
 	// Try and play the sound if specified
 	if (IsValid(FireSound))
@@ -329,7 +334,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
 
 	const FVector start = GetSightMeshComponent()->GetComponentLocation();
-	const FVector target =  GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	const FVector target = GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 		
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -341,15 +346,16 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	//On shoot Bump tick logic 
 	SliceBump();
-	
+
+	UMeshComponent* sliceTarget = Cast<UMeshComponent>(outHit.GetComponent());
 	if(outHit.bBlockingHit && IsValid(outHit.GetActor()))
 	{
-		if(!IsValid(outHit.GetComponent())) return;
+		if(!IsValid(sliceTarget)) return;
 		
 		if(bDebugSightShader)
 		{
-			UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *outHit.GetComponent()->GetName(), *outHit.GetComponent()->GetLocalBounds().Origin.ToString(), *outHit.GetComponent()->GetLocalBounds().BoxExtent.ToString());
-			DrawDebugBox(GetWorld(),outHit.GetComponent()->GetComponentLocation() + outHit.GetComponent()->GetLocalBounds().Origin, outHit.GetComponent()->GetLocalBounds().BoxExtent, FColor::Yellow, false,-1 , 1 ,2);
+			UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *sliceTarget->GetName(), *sliceTarget->GetLocalBounds().Origin.ToString(), *sliceTarget->GetLocalBounds().BoxExtent.ToString());
+			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 		
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == outHit.GetComponent())
@@ -357,7 +363,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		//Reset last material properties
 		ResetSightRackProperties();
-		if(!IsValid(outHit.GetComponent()->GetMaterial(0)) /*|| !outHit.GetActor()->ActorHasTag(FName("Sliceable"))*/) return;
+		if(!IsValid(sliceTarget->GetMaterial(0)) /*|| !outHit.GetActor()->ActorHasTag(FName("Sliceable"))*/) return;
 		_CurrentSightedComponent = outHit.GetComponent();
 				
 		//Set new Object Mat instance

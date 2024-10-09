@@ -60,7 +60,7 @@ void UPS_HookComponent::BeginPlay()
 
 	if(IsValid(_PlayerCharacter->GetCapsuleComponent()))
 	{
-		_PlayerCharacter->GetCapsuleComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnCapsuletBeginOverlapEventReceived);
+		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnCapsuletBeginOverlapEventReceived);
 	
 	}
 	
@@ -929,7 +929,6 @@ void UPS_HookComponent::OnSwing()
 	
 	//IInit alpha
 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-	UE_LOG(LogTemp, Warning, TEXT("dir.Z, %f, _SwingStartLoc %f,  _SwingTargetLoc %f"),dir.Z,_SwingStartLoc.Z, _SwingStartLoc.Z - SwingMaxDistance);
 	
 	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 	//const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, 0.0f, _SwingStartLoc.Z * (1 - timeWeightAlpha), 0.0f, (1 - timeWeightAlpha));
@@ -998,10 +997,12 @@ void UPS_HookComponent::OnSwing()
 
 void UPS_HookComponent::OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	ForceInvertSwingDirection();
+	
 	if(bPlayerIsSwinging)
 	{
-		if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-		ForceInvertSwingDirection();
+		
 	}
 	
 }

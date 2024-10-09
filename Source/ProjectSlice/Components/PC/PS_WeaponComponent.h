@@ -119,6 +119,8 @@ public:
 	//__________________________________________________
 
 protected:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Slice")
+	bool ActivateImpulseOnSlice = true;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* HalfSectionMaterial = nullptr;

@@ -140,7 +140,7 @@ void UPS_ParkourComponent::WallRunTick()
 
 void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 {	
-	if(bIsCrouched) return;
+	if(bIsCrouched || _PlayerCharacter->GetHookComponent()->IsPlayerSwinging()) return;
 	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
