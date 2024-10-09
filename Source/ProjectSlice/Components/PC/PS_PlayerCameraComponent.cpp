@@ -226,7 +226,7 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 	
 	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
 	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
-	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);    
+	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);
 }
 
 void UPS_PlayerCameraComponent::DashTick() const

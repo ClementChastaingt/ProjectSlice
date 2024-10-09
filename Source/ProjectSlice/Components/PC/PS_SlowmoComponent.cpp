@@ -91,22 +91,20 @@ void UPS_SlowmoComponent::SlowmoTransition()
 
 		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
 
-		//Exit
+		//Exit or trigger Slowmo timer
 		if(alpha >= 1.0f)
 		{
-			bIsSlowmoTransiting = false;
-			SlowmoAlpha = 0.0f;
-			SlowmoPostProcessAlpha = 0.0f;
-			
+			//Exit
 			if(!bSlowmoActive)
 			{
 				OnStopSlowmo();
 				return;
 			}
 			
+			bIsSlowmoTransiting = false;
+			
 			FTimerDelegate stopSlowmo_TimerDelegate;
-			stopSlowmo_TimerDelegate.BindUObject(+
-				this, &UPS_SlowmoComponent::OnTriggerSlowmo);
+			stopSlowmo_TimerDelegate.BindUObject(this, &UPS_SlowmoComponent::OnTriggerSlowmo);
 			GetWorld()->GetTimerManager().SetTimer(SlowmoTimerHandle, stopSlowmo_TimerDelegate, SlowmoDuration, false);
 		}
 	}
@@ -116,8 +114,15 @@ void UPS_SlowmoComponent::SlowmoTransition()
 void UPS_SlowmoComponent::OnStopSlowmo()
 {
 	UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-
+	
+	//Desactivate slowmo PP layer
 	OnStopSlowmoEvent.Broadcast();
+
+	//Reset next Tick for avoid blink effect
+	FTimerDelegate resetSlowmo;
+	resetSlowmo.BindUFunction(this, FName("SetIsSlowmoTransiting"), false);
+	GetWorld()->GetTimerManager().SetTimerForNextTick(resetSlowmo);
+	
 }
 
 void UPS_SlowmoComponent::OnTriggerSlowmo()
