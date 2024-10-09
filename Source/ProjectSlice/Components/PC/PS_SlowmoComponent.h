@@ -70,6 +70,7 @@ protected:
 	UFUNCTION()
 	void OnStopSlowmo();
 
+	UFUNCTION()
 	FORCEINLINE float SetIsSlowmoTransiting (const bool bisSlowmoTransiting) {return bIsSlowmoTransiting = bisSlowmoTransiting;}
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
