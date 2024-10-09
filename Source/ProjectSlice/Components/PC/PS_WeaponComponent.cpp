@@ -203,10 +203,8 @@ void UPS_WeaponComponent::Fire()
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
 
-	FVector sliceLocation =  CurrentFireHitResult.Location; 
-	
-	FVector sliceDir =  (CurrentFireHitResult.Location - SightMesh->GetComponentLocation()) * SightMesh->GetForwardVector();
-	//sliceDir.Normalize();
+	FVector sliceLocation = CurrentFireHitResult.Location; 
+	FVector sliceDir = SightMesh->GetUpVector() / CurrentFireHitResult.GetComponent()->GetComponentScale();
 	
 	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, sliceLocation,
