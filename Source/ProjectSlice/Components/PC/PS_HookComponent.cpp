@@ -13,6 +13,7 @@
 #include "Image/ImageBuilder.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 class UCableComponent;
@@ -307,9 +308,9 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	//----Unwrap Test-----
 	const TArray<AActor*> actorsToIgnore;
 
-	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(FName("CableStart"));
-	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(FName("CableEnd"));
-	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(FName("CableEnd"));
+	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(TAG_CABLESTART);
+	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(TAG_CABLEEND);
+	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(TAG_CABLEEND);
 
 	const FVector currentCableDirection = UKismetMathLibrary::FindLookAtRotation(currentCableEndSocketLoc, pastCableStartSocketLoc).Vector();
 	const float  currentCableDirectionDistance = UKismetMathLibrary::Vector_Distance(currentCableEndSocketLoc, pastCableStartSocketLoc);
@@ -420,10 +421,10 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//----Unwrap Test-----
 	const TArray<AActor*> actorsToIgnore;
 
-	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(FName("CableStart"));
-	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(FName("CableEnd"));
-	const FVector currentCableStartSocketLoc = currentCable->GetSocketLocation(FName("CableStart"));
-	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(FName("CableEnd"));
+	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(TAG_CABLESTART);
+	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(TAG_CABLEEND);
+	const FVector currentCableStartSocketLoc = currentCable->GetSocketLocation(TAG_CABLESTART);
+	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(TAG_CABLEEND);
 
 	const FVector currentCableDirection = UKismetMathLibrary::FindLookAtRotation(currentCableStartSocketLoc, pastCableEndSocketLoc).Vector();
 	const float  currentCableDirectionDistance = UKismetMathLibrary::Vector_Distance(currentCableStartSocketLoc, pastCableEndSocketLoc);
@@ -536,8 +537,8 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const USceneComponent* cable
 	{
 		FSCableWarpParams out;
 		
-		FVector start = cable->GetSocketLocation(FName("CableStart"));
-		FVector end = cable->GetSocketLocation(FName("CableEnd"));
+		FVector start = cable->GetSocketLocation(TAG_CABLESTART);
+		FVector end = cable->GetSocketLocation(TAG_CABLEEND);
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
@@ -632,7 +633,7 @@ void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const attachC
 	FVector currentCableEndLocation;
 	if(CableAttachedArray.IsValidIndex(CableAttachedArray.Num() - 1))
 	{
-		currentCableEndLocation = CableAttachedArray[CableAttachedArray.Num() -  1]->GetSocketLocation(FName("CableStart"));
+		currentCableEndLocation = CableAttachedArray[CableAttachedArray.Num() -  1]->GetSocketLocation(TAG_CABLESTART);
 	}
 	else
 	{

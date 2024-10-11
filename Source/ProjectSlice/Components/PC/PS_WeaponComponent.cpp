@@ -190,8 +190,7 @@ void UPS_WeaponComponent::Fire()
 	// FLinearColor baseMaterialColor;
 	// currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
 	// matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
-
-
+	
 	if(!IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
 	
 	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), currentProcMeshComponent->GetMaterial(0));
@@ -202,9 +201,11 @@ void UPS_WeaponComponent::Fire()
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
-
-	FVector sliceLocation = CurrentFireHitResult.Location; 
-	FVector sliceDir = SightMesh->GetUpVector() / CurrentFireHitResult.GetComponent()->GetComponentScale();
+	FVector sliceLocation = CurrentFireHitResult.Location;
+	FVector sliceDir = SightMesh->GetUpVector();
+	// UMeshComponent* sliceTarget = Cast<UMeshComponent>(CurrentFireHitResult.GetComponent());
+	// FVector sliceDir = SightMesh->GetUpVector() / (sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale());
+	sliceDir.Normalize();
 	
 	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, sliceLocation,
@@ -239,8 +240,7 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
 	outHalfComponent->SetSimulatePhysics(true);
 	currentProcMeshComponent->SetSimulatePhysics(true);
-
-
+	
 	//Impulse
 	if(ActivateImpulseOnSlice)
 	{
@@ -352,7 +352,6 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		if(bDebugSightShader)
 		{
-			UE_LOG(LogTemp, Log, TEXT("%S :: %s , origin %s, extent %s"), __FUNCTION__, *sliceTarget->GetName(), *sliceTarget->GetLocalBounds().Origin.ToString(), *sliceTarget->GetLocalBounds().BoxExtent.ToString());
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 		

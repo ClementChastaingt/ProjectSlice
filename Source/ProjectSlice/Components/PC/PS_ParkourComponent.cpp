@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
@@ -603,10 +604,8 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	//If come from Jump who can pass without Mantle
 	const bool bPlayerUpperThanTarget = bIsInAir && _PlayerCharacter->GetMesh()->GetComponentLocation().Z < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
 
-	DrawDebugPoint(GetWorld(), _PlayerCharacter->GetMesh()->GetComponentLocation(), 20.f, FColor::Green, true);
-
-	UE_LOG(LogTemp, Error, TEXT("bIsInAir %i, bPlayerUpperThanTarget %i"), bIsInAir, outHitHgt.Location.Z < _PlayerCharacter->GetMesh()->GetComponentLocation().Z);
-	
+	if(bDebugMantle) DrawDebugPoint(GetWorld(), _PlayerCharacter->GetMesh()->GetComponentLocation(), 20.f, FColor::Green, true);
+		
 	//Force Landing by Ledge
 	if(bPlayerUpperThanTarget && !_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff)
 	{
@@ -822,6 +821,12 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetMesh())
 		|| !IsValid(otherActor)) return;
 
+	//Block physic if try to parkour on hit 
+	if(otherActor->ActorHasTag(TAG_SLICEABLE) && IsValid(Cast<UMeshComponent>(otherActor)))
+	{
+		Cast<UMeshComponent>(otherActor)->SetSimulatePhysics(false);
+	}
+
 	if(bIsMantling) return;
 
 	FHitResult outHit;
@@ -870,6 +875,10 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	
+	//Unblock physic if try to parkour on hit 
+	if(otherActor->ActorHasTag(TAG_SLICEABLE) && IsValid(Cast<UMeshComponent>(otherActor)))
+		Cast<UMeshComponent>(otherActor)->SetSimulatePhysics(true);
 
 	if(bIsWallRunning && OverlappingComponents.IsEmpty())
 	{

@@ -4,6 +4,7 @@
 #include "PS_SlicedComponent.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "Components/BrushComponent.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 
 
@@ -69,7 +70,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetCollisionProfileName(Profile_GPE, true);
 	SetNotifyRigidBodyCollision(true);
 	
-	const bool bFixed = GetOwner()->ActorHasTag(FName("Fixed"));
+	const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
 	SetSimulatePhysics(!bFixed);
 	
 }
