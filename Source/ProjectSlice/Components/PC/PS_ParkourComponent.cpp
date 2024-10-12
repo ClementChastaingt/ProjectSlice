@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Data/PS_Constants.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "ProjectSlice/PC/PS_Character.h"
 
@@ -41,8 +42,7 @@ void UPS_ParkourComponent::BeginPlay()
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
-	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);
-	
+	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);	
 	
 	//Custom Tick
 	SetComponentTickEnabled(false);
@@ -86,6 +86,24 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	
 }
 
+
+void UPS_ParkourComponent::TogglePlayerPhysic(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
+	const bool bActivate) const
+{
+	if(otherActor->ActorHasTag(TAG_SLICEABLE))
+	{
+		const UMeshComponent* objectOverlap = Cast<UMeshComponent>(otherComp);
+		if(!IsValid(objectOverlap))
+		{
+			UE_LOG(LogTemp, Error, TEXT("%S :: objectOverlap invalid"), __FUNCTION__);
+			return;
+		}
+		
+		_PlayerCharacter->GetCapsuleComponent()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics :  ECollisionEnabled::QueryOnly);
+		_PlayerCharacter->GetMesh()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
+	}
+	return;
+}
 
 #pragma region WallRun
 //------------------
@@ -133,7 +151,7 @@ void UPS_ParkourComponent::WallRunTick()
 	}
 	
 	//Debug
-	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity, VelocityWeight);
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity.Length(), VelocityWeight);
 	
 	//----Camera Tilt-----
 	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraRollTilt(WallRunSeconds, StartWallRunTimestamp);
@@ -185,6 +203,17 @@ void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
 
 		WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
 	}
+	//else
+	///{
+		//TODO : Make impossible to continue wallRun if wall was on the opposite sens of player direction
+		// FHitResult testingHitDir = WallToPlayerOrientation > 0 ? outHitLeft : outHitRight;
+		// const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(testingHitDir.Location));
+		// if(angle > MaxWallRunAngle)
+		// {
+		// 	OnWallRunStop();
+		// 	return;
+		// }
+	//}
 	
 	//Determine Orientations
 	CameraTiltOrientation = WallToPlayerOrientation * FMath::Sign(angleObjectFwdToCamFwd);
@@ -232,14 +261,15 @@ void UPS_ParkourComponent::OnWallRunStop()
 
 	//-----Reset Variables-----
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
-	
 	VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
 	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true, ETiltUsage::WALL_RUN);
-	
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
+
+	//--------Reset Collision--------
+	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
 }
 
 void UPS_ParkourComponent::JumpOffWallRun()
@@ -278,7 +308,6 @@ void UPS_ParkourComponent::JumpOffWallRun()
 }
 //------------------
 #pragma endregion WallRun
-
 
 #pragma region Crouch
 //------------------
@@ -567,7 +596,6 @@ void UPS_ParkourComponent::OnDash()
 //------------------
 #pragma endregion Dash
 
-
 #pragma region Mantle
 //------------------
 
@@ -671,6 +699,9 @@ void UPS_ParkourComponent::OnStoptMantle()
 
 	SetGenerateOverlapEvents(true);
 	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	//--------Reset Collision--------
+	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
 	
 }
 
@@ -777,6 +808,9 @@ void UPS_ParkourComponent::OnStopLedge()
 	SetGenerateOverlapEvents(true);
 	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
+	//--------Reset Collision--------
+	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+
 	bIsLedging = false;
 
 }
@@ -810,7 +844,6 @@ void UPS_ParkourComponent::LedgeTick()
 #pragma region Event_Receiver
 //------------------
 
-
 void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
 	AActor* otherActor, UPrimitiveComponent* otherComp, int otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
@@ -819,15 +852,13 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetCharacterMovement())
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
 		|| !IsValid(_PlayerCharacter->GetMesh())
-		|| !IsValid(otherActor)) return;
-
-	//Block physic if try to parkour on hit 
-	if(otherActor->ActorHasTag(TAG_SLICEABLE) && IsValid(Cast<UMeshComponent>(otherActor)))
-	{
-		Cast<UMeshComponent>(otherActor)->SetSimulatePhysics(false);
-	}
+		|| !IsValid(otherActor)
+		|| otherActor->ActorHasTag(TAG_UNPARKOURABLE)) return;
 
 	if(bIsMantling) return;
+
+	_ActorOverlap = otherActor;
+	_ComponentOverlap = otherComp;
 
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
@@ -849,6 +880,9 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	{
 		//Check angle if use LineTrace
 		const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
+		
+		//Block collision with GPE if try to parkour on hit 
+		TogglePlayerPhysic(otherActor, otherComp, false);
 
 		//Debug
 		if(bDebug)
@@ -857,7 +891,9 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		//Choose right parkour logic to execute
 		if(angle > MaxMantleAngle || bIsWallRunning)
 		{
-			OnWallRunStart(otherActor);
+			//TODO : Make impossible to continue wallRun if wall was on the opposite sens of player direction => take a wall in face
+			// if(angle < MaxWallRunAngle && (_PrevMovementMode != MOVE_Falling || _PrevMovementMode != MOVE_Flying))
+				OnWallRunStart(otherActor);
 		}
 		else if(CanMantle(outHit))
 		{
@@ -869,6 +905,13 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		OnWallRunStart(otherActor);
 	}
 
+	//If can't parkour reactivate physic
+	if(!bIsWallRunning && !bIsLedging && !bIsMantling)
+	{
+		TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+	}
+
+
 }
 
 void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveComponent* overlappedComponent,
@@ -876,10 +919,6 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
-	//Unblock physic if try to parkour on hit 
-	if(otherActor->ActorHasTag(TAG_SLICEABLE) && IsValid(Cast<UMeshComponent>(otherActor)))
-		Cast<UMeshComponent>(otherActor)->SetSimulatePhysics(true);
-
 	if(bIsWallRunning && OverlappingComponents.IsEmpty())
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
@@ -891,6 +930,8 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode)
 {
 	if (!IsValid(_PlayerController)) return;
+
+	_PrevMovementMode = prevMovementMode;
 	
 	//TODO :: Replace by CMOVE_Slide // use isInAIr from custom character movement
     const bool bForceUncrouch = prevMovementMode == MOVE_Walking && (character->GetCharacterMovement()->MovementMode == MOVE_Falling ||  character->GetCharacterMovement()->MovementMode == MOVE_Flying);

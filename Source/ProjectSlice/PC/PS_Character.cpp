@@ -237,7 +237,7 @@ void AProjectSliceCharacter::Dash()
 
 void AProjectSliceCharacter::Crouching()
 {
-	if(!IsValid(_PlayerController) || !IsValid(GetParkourComponent()) || !IsValid(GetWorld())) return;
+	if(!IsValid(_PlayerController) || !IsValid(GetParkourComponent()) || !IsValid(GetWorld()) || !_PlayerController->CanCrouch()) return;
 
 	if(GetParkourComponent()->IsWallRunning()
 		|| GetParkourComponent()->IsLedging()
@@ -448,6 +448,9 @@ void AProjectSliceCharacter::Slowmo()
 void AProjectSliceCharacter::Stow()
 {
 	bIsWeaponStow = !bIsWeaponStow;
+
+	_PlayerController->SetCanFire(!bIsWeaponStow);
+	
 }
 
 //------------------

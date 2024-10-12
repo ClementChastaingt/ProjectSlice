@@ -85,7 +85,22 @@ protected:
 	
 	UFUNCTION()
 	void OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode);
-		
+
+	UFUNCTION()
+	void TogglePlayerPhysic(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
+		const bool bActivate) const;
+
+private:
+	
+	UPROPERTY(Transient)
+	AActor* _ActorOverlap;
+
+	UPROPERTY(Transient)
+	UPrimitiveComponent* _ComponentOverlap;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Ledge")
+	EMovementMode _PrevMovementMode;
+	
 //------------------
 #pragma endregion General
 
@@ -269,7 +284,10 @@ protected:
 	int32 WallToPlayerOrientation = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
-	float VelocityWeight = 1.0f;	
+	float VelocityWeight = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="WallRun max enter angle"))
+	float MaxWallRunAngle = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;

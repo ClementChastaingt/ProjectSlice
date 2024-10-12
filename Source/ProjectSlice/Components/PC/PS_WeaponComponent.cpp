@@ -138,6 +138,8 @@ void UPS_WeaponComponent::SetupWeaponInputComponent()
 
 void UPS_WeaponComponent::FireTriggered()
 {
+	if(!IsValid(_PlayerController) ||!_PlayerController->CanFire()) return;
+	
 	//Update Holding Fire
 	bIsHoldingFire = !bIsHoldingFire;
 
@@ -329,7 +331,7 @@ void UPS_WeaponComponent::SightMeshRotation()
 
 void UPS_WeaponComponent::SightShaderTick()
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || _PlayerCharacter->IsIsWeaponStow()) return;
 
 	const FVector start = GetSightMeshComponent()->GetComponentLocation();
 	const FVector target = GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;

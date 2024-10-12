@@ -47,6 +47,7 @@
 #define TAG_HITBOX "Hitbox"
 #define TAG_CABLESTART "CableStart"
 #define TAG_CABLEEND "CableEnd"
+#define TAG_UNPARKOURABLE "Unparkourable"
 // === //
 #pragma endregion 3C
 

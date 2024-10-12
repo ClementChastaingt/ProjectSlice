@@ -2,6 +2,8 @@
 
 
 #include "PS_PlayerController.h"
+
+#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "PS_Character.h"
 #include "Kismet/GameplayStatics.h"
@@ -23,4 +25,5 @@ void AProjectSlicePlayerController::BeginPlay()
 	if(!IsValid(GetWorld())) return;
 	CurrentPossessingPawn = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 }
+
 

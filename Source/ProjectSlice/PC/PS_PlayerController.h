@@ -40,6 +40,7 @@ protected:
 	virtual void BeginPlay() override;
 
 
+
 #pragma region Action
 //------------------
 	
@@ -147,9 +148,17 @@ public:
 
 	FORCEINLINE bool CanLook() const{return bCanLook;}
 
+	FORCEINLINE bool CanCrouch() const{return bCanCrouch;}
+
+	FORCEINLINE bool CanFire() const{return bCanFire;}
+
 	FORCEINLINE void SetCanMove(bool bcanMove){this->bCanMove = bcanMove;}
 
 	FORCEINLINE void SetCanLook(bool bcanLook){this->bCanLook = bcanLook;}
+
+	FORCEINLINE void SetCanCrouch(bool bcanCrouch){this->bCanCrouch = bcanCrouch;}
+
+	FORCEINLINE void SetCanFire(bool bcanFire){this->bCanFire = bcanFire;}
 	
 	FORCEINLINE void SetIsCrouchInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
 	
@@ -163,6 +172,14 @@ protected:
 	/** Bool for force block Look  */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	bool bCanLook = true;
+
+	/** Bool for force block Crouch  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
+	bool bCanCrouch = true;
+	
+	/** Bool for force block Fire  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
+	bool bCanFire = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
 	FVector2D MoveInput = FVector2D::ZeroVector;
