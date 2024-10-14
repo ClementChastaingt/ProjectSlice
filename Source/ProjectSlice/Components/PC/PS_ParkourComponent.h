@@ -258,6 +258,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently force WallRunning"))
 	bool bForceWallRun = false;
 
+	//-1:Left, 0:Forward, 1:Right
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is on the left or the right from Wall"))
+	int32 WallToPlayerOrientation = 0;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	int32 CameraTiltOrientation = 0;
 	
@@ -275,16 +279,12 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun move direction"))
 	FVector WallRunDirection = FVector::ZeroVector;
-	
-	//-1:Left, 0:Forward, 1:Right
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is to left or right from Wall"))
-	int32 WallToPlayerOrientation = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="WallRun max enter angle"))
-	float MaxWallRunAngle = 60.0f;
+	float MaxWallRunAngle = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
