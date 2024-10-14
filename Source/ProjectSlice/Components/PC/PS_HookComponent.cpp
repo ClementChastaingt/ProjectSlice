@@ -82,7 +82,15 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	PowerCablePull();
 
 	if(bObjectHook)
-		AdaptFirstCableLocByAngle(FirstCable);
+	{
+		UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
+		if(IsValid(cableToAdapt))
+		{
+			AdaptFirstCableLocByAngle(cableToAdapt);
+		}
+
+	}
+
 }
 
 #pragma region Weapon_Event_Receiver
@@ -740,6 +748,8 @@ void UPS_HookComponent::StopWindeHook()
 
 void UPS_HookComponent::DettachHook()
 {
+	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;
 
@@ -999,11 +1009,10 @@ void UPS_HookComponent::OnSwing()
 void UPS_HookComponent::OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-	ForceInvertSwingDirection();
 	
 	if(bPlayerIsSwinging)
 	{
-		
+		ForceInvertSwingDirection();
 	}
 	
 }

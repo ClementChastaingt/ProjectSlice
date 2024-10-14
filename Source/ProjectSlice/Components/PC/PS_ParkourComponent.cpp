@@ -99,8 +99,28 @@ void UPS_ParkourComponent::TogglePlayerPhysic(const AActor* const otherActor, UP
 			return;
 		}
 		
+		//Trigger or not player physic
 		_PlayerCharacter->GetCapsuleComponent()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics :  ECollisionEnabled::QueryOnly);
 		_PlayerCharacter->GetMesh()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
+
+		//Unhook if currently used
+		if(IsValid(_PlayerCharacter->GetHookComponent()))
+		{
+			if(_PlayerCharacter->GetHookComponent()->IsObjectHooked() && !bActivate)
+			{
+				_PlayerCharacter->GetHookComponent()->DettachHook();
+			}
+		}
+		
+		//Reset overlap actor 
+		if(IsValid(_ComponentOverlap))
+		{
+			if(!bActivate)
+			{
+				_ComponentOverlap->SetPhysicsLinearVelocity(FVector::ZeroVector);
+			}
+		}
+
 	}
 	return;
 }
@@ -930,9 +950,7 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode)
 {
 	if (!IsValid(_PlayerController)) return;
-
-	_PrevMovementMode = prevMovementMode;
-	
+		
 	//TODO :: Replace by CMOVE_Slide // use isInAIr from custom character movement
     const bool bForceUncrouch = prevMovementMode == MOVE_Walking && (character->GetCharacterMovement()->MovementMode == MOVE_Falling ||  character->GetCharacterMovement()->MovementMode == MOVE_Flying);
 	const bool bForceCrouch = character->GetCharacterMovement()->MovementMode == MOVE_Walking && (prevMovementMode == MOVE_Falling || prevMovementMode == MOVE_Flying) && _PlayerController->IsCrouchInputTrigger();

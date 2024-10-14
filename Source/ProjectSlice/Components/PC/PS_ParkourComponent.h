@@ -97,10 +97,7 @@ private:
 
 	UPROPERTY(Transient)
 	UPrimitiveComponent* _ComponentOverlap;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Ledge")
-	EMovementMode _PrevMovementMode;
-	
+		
 //------------------
 #pragma endregion General
 
