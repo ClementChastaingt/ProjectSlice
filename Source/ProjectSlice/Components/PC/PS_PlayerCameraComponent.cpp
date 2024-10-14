@@ -127,14 +127,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 	                                                                                                                                                                                                                                            
 	//Alpha                                                                                                                                                                                                                                     
 	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + CameraTiltDuration, 0,1);                                                                                                                
-	                                                                                                                                                                                                                                            
-	//If Camera tilt already finished stop                                                                                                                                                                                                      
-	if(alphaTilt >= 1)                                                                                                                                                                                                                          
-	{                                                                                                                                                                                                                                           
-		bIsResetingCameraTilt = false;                                                                                                                                                                                                         
-		return;                                                                                                                                                                                                                                 
-	}                                                                                                                                                                                                                                           
-                                                                                                                                                                                                                                                
+	
 	//Interp                                                                                                                                                                                                                                    
 	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                           
 	if(IsValid(CameraTiltCurve))                                                                                                                                                                                                                
@@ -147,7 +140,16 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 	//Rotate             
 	const FRotator currentRot = _PlayerController->GetControlRotation();                                                                                                                                                                                                                       
 	_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, newRot.Roll));                                                                                                                                                                                              
-	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);                                                                                
+	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: CurrentRoll: %f, alphaTilt %f"), _PlayerController->GetControlRotation().Roll, alphaTilt);
+
+	//If Camera tilt already finished stop                                                                                                                                                                                                      
+	if(alphaTilt > 1)                                                                                                                                                                                                                          
+	{
+		if(bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("Stop CameraTilt Movement"));
+		bIsResetingCameraTilt = false;                                                                                                                                                                                                         
+		return;                                                                                                                                                                                                                                 
+	}                                                                                                                                                                                                                                           
+              
 }                                                                                                                                                                                                                                               
                                                                                                                                                                                                                                                 
 //------------------                                                                                                                                                                                                                            

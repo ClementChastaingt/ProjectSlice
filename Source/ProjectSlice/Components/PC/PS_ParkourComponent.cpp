@@ -177,66 +177,85 @@ void UPS_ParkourComponent::WallRunTick()
 	_PlayerCharacter->GetFirstPersonCameraComponent()->CameraRollTilt(WallRunSeconds, StartWallRunTimestamp);
 }
 
-void UPS_ParkourComponent::OnWallRunStart(AActor* otherActor)
+void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 {	
-	if(bIsCrouched || _PlayerCharacter->GetHookComponent()->IsPlayerSwinging()) return;
+	if(bIsCrouched
+		|| bIsLedging
+		|| bIsMantling
+		|| _PlayerCharacter->GetHookComponent()->IsPlayerSwinging()) return;
 	
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
 
-	if(bDebugWallRun)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("%S :: StartWallRun"),__FUNCTION__));
-	}
+	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
 	//WallRun Logic activation
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
-		
-	
+
+	DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(),  otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 1100, 12.0f, FColor::Cyan, true, 2, 10, 6);
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true, FColor::Blue);
+										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() - _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Green);
+									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true, FColor::Green);
 
 	//Determine player to/from WallOrientation
-	int32 playerToWallOrientation;
-	if (outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor)
+	int32 playerToWallOrientation = 0;
+	bool hitRight = outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor;
+	bool hitLeft = outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor;
+
+	//If hit left && right choose the nearest
+	if(hitRight && hitLeft)
+	{
+		hitRight = outHitRight.Distance < outHitLeft.Distance;
+		hitLeft = !hitRight;
+	}
+	
+	if (hitRight && !hitLeft)
 	{
 		playerToWallOrientation = 1;
 	}
-	else if (outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor)
+	else if (hitLeft && !hitRight)
 	{
 		playerToWallOrientation = -1;
 	}
-	else if(!bIsWallRunning)
+	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: playerToWallOrientation == 0"), __FUNCTION__);
-		playerToWallOrientation = 0;
+		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the new wall, stop"), __FUNCTION__);
+		OnWallRunStop();
 		return;
 	}
 
-	//Update only if don't come from WallRun
+	//Update only if don't come from WallRun && Check if player is facing the wall
 	if(!bIsWallRunning)
-		WallToPlayerOrientation = FMath::Sign(angleObjectFwdToCamFwd * playerToWallOrientation);
+	{
+		WallToPlayerOrientation = FMath::Sign(playerToWallOrientation);
+	}
+	else if(WallToPlayerOrientation != playerToWallOrientation)
+	{
+		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the last wall, stop"), __FUNCTION__);
+		OnWallRunStop();
+		return;
+	}
 
 	
 	//TODO : Make impossible to continue wallRun if wall was on the opposite sens of player direction // playerToWallOrientation always zero !!!
-	FHitResult testingHitDir = playerToWallOrientation < 0 ? outHitLeft : outHitRight;
-	const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(testingHitDir.Location));
-
-	UE_LOG(LogTemp, Error, TEXT("angle %f, playerToWallOrientation %f"), angle, playerToWallOrientation);
-	if(angle > MaxWallRunAngle)
-		return;
-	
+	// FHitResult testingHitDir = WallToPlayerOrientation * -1 < 0 ? outHitLeft : outHitRight;
+	// const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(testingHitDir.Location));
+	//
+	 UE_LOG(LogTemp, Error, TEXT("bIsWallRunning %i, playerToWallOrientation %i,angleObjectFwdToCamFwd %f, angleObjectFwdToCamFwdDeg  %f, WallToPlayerOrientation %i"),bIsWallRunning, playerToWallOrientation,angleObjectFwdToCamFwd,  UKismetMathLibrary::DegAcos(angleObjectFwdToCamFwd), WallToPlayerOrientation);
+	// if(angle > MaxWallRunAngle && !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle()))
+	// {
+	// 	UE_LOG(LogTemp, Error, TEXT("%S :: Cancel Start"), __FUNCTION__);
+	// 	return;
+	// }
 
 	//Determine Orientations
-	CameraTiltOrientation = WallToPlayerOrientation * FMath::Sign(angleObjectFwdToCamFwd);
+	CameraTiltOrientation = WallToPlayerOrientation * -1/* * FMath::Sign(angleObjectFwdToCamFwd)*/;
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
 
 	if(bDebugWallRun)
@@ -301,7 +320,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	if(bDebugWallRunJump)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun jump off"));
+		UE_LOG(LogTemp, Warning, TEXT("%S:: WallRun jump off"), __FUNCTION__);
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("WallRun Jump Off")));
 	}
 
@@ -309,14 +328,14 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Determine direction && force
 	const float playerFwdToWallRightAngle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(Wall->GetActorRightVector() * WallToPlayerOrientation));
-	const FVector jumpDir = playerFwdToWallRightAngle < JumpOffPlayerFwdDirThresholdAngle ? _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() : Wall->GetActorRightVector() * WallToPlayerOrientation;
+	const FVector jumpDir = playerFwdToWallRightAngle < JumpOffPlayerFwdDirThresholdAngle ? _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() : Wall->GetActorRightVector() * -WallToPlayerOrientation;
 
 	const FVector jumpForce = jumpDir * JumpOffForceMultiplicator;
 	
 	if(bDebugWallRunJump)
 	{
 		UE_LOG(LogTemp, Log, TEXT("%S :: jumpDir use %s (%f°)"),__FUNCTION__, playerFwdToWallRightAngle < JumpOffPlayerFwdDirThresholdAngle ? TEXT("Weapon Forward") : TEXT("Wall Right"), playerFwdToWallRightAngle);
-		DrawDebugDirectionalArrow(GetWorld(), Wall->GetActorLocation(), Wall->GetActorLocation() + Wall->GetActorRightVector() * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + jumpDir * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
 	}
 
 	//Clamp Max Velocity
@@ -582,7 +601,9 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 void UPS_ParkourComponent::OnDash()
 {
-	if(bIsWallRunning || bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
+	if( bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
+
+	if(bIsWallRunning) OnWallRunStop();
 
 	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
 	if(dashDir.IsNearlyZero())
@@ -912,20 +933,17 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		}
 	
 		//Choose right parkour logic to execute
-		if(angle <= MaxMantleAngle && !bIsWallRunning)
+		if(angle <= MaxMantleAngle && !bIsWallRunning && !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle()))
 		{
 			if(CanMantle(outHit))
 				OnStartMantle();
 		}
-		else
-		{
-			OnWallRunStart(otherActor);
-		}
+	
 	}
-	else
-	{
-		OnWallRunStart(otherActor);
-	}
+
+	//Try WallRun
+	TryStartWallRun(otherActor);
+	
 
 	//If can't parkour reactivate physic
 	if(!bIsWallRunning && !bIsLedging && !bIsMantling)

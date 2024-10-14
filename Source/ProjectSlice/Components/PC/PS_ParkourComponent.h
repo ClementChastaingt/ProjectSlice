@@ -235,7 +235,7 @@ private:
 
 public:
 	UFUNCTION()
-	void OnWallRunStart(AActor* otherActor);
+	void TryStartWallRun(AActor* otherActor);
 
 	UFUNCTION()
 	void OnWallRunStop();
@@ -282,10 +282,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
 	float VelocityWeight = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="WallRun max enter angle"))
-	float MaxWallRunAngle = 90.0f;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
 
