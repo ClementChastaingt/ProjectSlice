@@ -31,6 +31,9 @@ UPS_HookComponent::UPS_HookComponent()
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
+
+	HookPhysicConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HookConstraint"));
+	HookPhysicConstraint->SetDisableCollision(true);
 	
 	// HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	// HookMesh->SetSimulatePhysics(false);
@@ -88,7 +91,6 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			AdaptFirstCableLocByAngle(cableToAdapt);
 		}
-
 	}
 
 }
@@ -107,6 +109,9 @@ void UPS_HookComponent::OnAttachWeapon()
 	CableListArray.AddUnique(FirstCable);
 
 	CableCapArray.Add(nullptr);
+
+	//Setup 
+	HookPhysicConstraint->SetupAttachment(this);
 			
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
@@ -878,7 +883,10 @@ void UPS_HookComponent::PowerCablePull()
 	//Use Force
 	if(bPlayerIsSwinging)
 	{
-		OnSwing();
+		if(!bSwingIsPhysical)
+			OnSwingForce();
+		else
+			OnSwingPhysic();
 	}
 	// else
 	// {
@@ -886,8 +894,12 @@ void UPS_HookComponent::PowerCablePull()
 	// 	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
 	// }
 	//
-	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+
+	if(IsValid(AttachedMesh) &&  IsValid(GetWorld()))
+	{
+		FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
+		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+	}
 	
 }
 
@@ -907,22 +919,65 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
 
-	if(bDebug)
+	if(bDebugSwing)
 		UE_LOG(LogTemp, Warning, TEXT("%S \n :: __ System Parameters __ :: \n "), __FUNCTION__);
 	
 	if(bActivate)
 	{
-		 _SwingStartLoc = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
-		_SwingStartFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector();
+		if(!bSwingIsPhysical)
+		{
+			_SwingStartLoc = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
+			_SwingStartFwd = _PlayerCharacter->GetArrowComponent()->GetForwardVector();
+		}
+		else
+		{
+			UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
+			UActorComponent* cableEndAttach = cableToAdapt->GetAttachedComponent();
+			
+			if(IsValid(cableToAdapt) && IsValid(cableEndAttach))
+			{
+				//Setup Component constrainted
+				HookPhysicConstraint->ConstraintActor1 = _PlayerCharacter;
+				HookPhysicConstraint->ConstraintActor2 = cableToAdapt->GetAttachedComponent()->GetOwner();
+				
+				HookPhysicConstraint->ComponentName1.ComponentName = FName(_PlayerCharacter->GetRootComponent()->GetName());
+				//HookPhysicConstraint->ComponentName1.ComponentName = FName(this->GetName());
+				//HookPhysicConstraint->ComponentName1.ComponentName = FName(this->HookThrower->GetName());
+				HookPhysicConstraint->ComponentName2.ComponentName = FName(cableEndAttach->GetName());
+				
+				HookPhysicConstraint->InitComponentConstraint();
+
+				//this->HookThrower->SetSimulatePhysics(true);
+				_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(true);
+			}
+		}
 	}
 	else
 	{
-		
+		if(!bSwingIsPhysical)
+		{
+			_SwingStartLoc = FVector::ZeroVector;
+			_SwingStartFwd = FVector::ZeroVector;
+		}
+		else
+		{
+			//this->HookThrower->SetSimulatePhysics(false);
+			_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(false);
+			
+			HookPhysicConstraint->ConstraintActor2 = nullptr;
+			HookPhysicConstraint->ConstraintActor2 = nullptr;
+			
+			HookPhysicConstraint->ComponentName1.ComponentName = FName("None");
+			HookPhysicConstraint->ComponentName2.ComponentName = FName("None");
+
+			HookPhysicConstraint->InitComponentConstraint();
+		}
+
 	}
 }
 
 
-void UPS_HookComponent::OnSwing()
+void UPS_HookComponent::OnSwingForce()
 {
 	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
 	  || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
@@ -938,7 +993,7 @@ void UPS_HookComponent::OnSwing()
 		return;
 	}
 	
-	//IInit alpha
+	//Init alpha
 	FVector dir = (_PlayerCharacter->GetActorLocation() - AttachedMesh->GetComponentLocation());
 	
 	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
@@ -992,7 +1047,7 @@ void UPS_HookComponent::OnSwing()
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().X * (alphaCurve / SwingInputScaleDivider));
 
-	if(bDebugTick)
+	if(bDebugTick && bDebugSwing)
 		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
 
 	//Stop by time
@@ -1003,6 +1058,31 @@ void UPS_HookComponent::OnSwing()
 		return;
 	}
 }
+
+void UPS_HookComponent::OnSwingPhysic()
+{
+	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
+	  || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
+	  || _PlayerCharacter->GetParkourComponent()->IsLedging()
+	  || _PlayerCharacter->GetParkourComponent()->IsMantling()
+	  /*|| _PlayerCharacter->GetVelocity().Length() <= (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched / 2) */)
+	{
+		OnTriggerSwing(false);
+		DettachHook();
+		//----Auto break hook if velocity too low----
+		// if(bCablePowerPull &&  _PlayerCharacter->GetVelocity().Length() <= _SwingStartVelocity.Length())
+		// 	DettachHook();
+		return;
+	}
+
+	//Move physic constraint to match player position (attached element)
+	HookPhysicConstraint->SetWorldLocation(_PlayerCharacter->GetActorLocation(), false);
+	HookPhysicConstraint->UpdateConstraintFrames();
+	
+	DrawDebugPoint(GetWorld(), HookPhysicConstraint->GetComponentLocation(), 20.f, FColor::Magenta, false, 0.1);
+		
+}
+
 //------------------
 #pragma endregion Swing
 

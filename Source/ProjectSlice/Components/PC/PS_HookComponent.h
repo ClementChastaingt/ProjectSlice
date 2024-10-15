@@ -42,6 +42,9 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UPROPERTY(VisibleAnywhere,  Category="Component", meta = (AllowPrivateAccess = "true"))
 	UCableComponent* FirstCable= nullptr;
 	
+	UPROPERTY(VisibleInstanceOnly, Category="Component", meta = (AllowPrivateAccess = "true"))
+	UPhysicsConstraintComponent* HookPhysicConstraint = nullptr;
+	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	// UStaticMeshComponent* HookMesh = nullptr;
 
@@ -64,6 +67,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugDrawLine = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugSwing = false;
 	
 private:
 	UPROPERTY(Transient)
@@ -292,7 +298,10 @@ public:
 	void OnTriggerSwing(const bool bActivate);
 
 	UFUNCTION()
-	void OnSwing();
+	void OnSwingForce();
+
+	UFUNCTION()
+	void OnSwingPhysic();
 
 	UFUNCTION()
 	void ForceInvertSwingDirection() {_VelocityToAbsFwd = _VelocityToAbsFwd * -1;};
@@ -313,6 +322,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing input force alpha"))
     float SwingAlpha = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Use physic constraint swing or force"))
+	bool bSwingIsPhysical = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="cm",ToolTip="Swing distance on the lower position of the trajectory"))
 	float SwingMaxDistance = 1500.0f;
