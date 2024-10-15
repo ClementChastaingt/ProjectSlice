@@ -941,14 +941,18 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				HookPhysicConstraint->ConstraintActor2 = cableToAdapt->GetAttachedComponent()->GetOwner();
 				
 				HookPhysicConstraint->ComponentName1.ComponentName = FName(_PlayerCharacter->GetRootComponent()->GetName());
-				//HookPhysicConstraint->ComponentName1.ComponentName = FName(this->GetName());
-				//HookPhysicConstraint->ComponentName1.ComponentName = FName(this->HookThrower->GetName());
 				HookPhysicConstraint->ComponentName2.ComponentName = FName(cableEndAttach->GetName());
 				
 				HookPhysicConstraint->InitComponentConstraint();
-
-				//this->HookThrower->SetSimulatePhysics(true);
+				
+				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic ,ECR_Ignore);
+				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldDynamic ,ECR_Ignore);
+				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_PhysicsBody ,ECR_Ignore);
 				_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(true);
+
+				//_PlayerCharacter->GetCapsuleComponent()->AddImpulse((_PlayerCharacter->GetVelocity() * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+				//HookPhysicConstraint->UpdateConstraintFrames();
+
 			}
 		}
 	}
@@ -961,16 +965,18 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		}
 		else
 		{
-			//this->HookThrower->SetSimulatePhysics(false);
 			_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(false);
+			_PlayerCharacter->GetCapsuleComponent()->SetCollisionProfileName(Profile_CharacterMesh);
 			
-			HookPhysicConstraint->ConstraintActor2 = nullptr;
+			HookPhysicConstraint->ConstraintActor1 = nullptr;
 			HookPhysicConstraint->ConstraintActor2 = nullptr;
 			
 			HookPhysicConstraint->ComponentName1.ComponentName = FName("None");
 			HookPhysicConstraint->ComponentName2.ComponentName = FName("None");
 
 			HookPhysicConstraint->InitComponentConstraint();
+			HookPhysicConstraint->UpdateConstraintFrames();
+			
 		}
 
 	}

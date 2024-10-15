@@ -38,7 +38,7 @@
 #define Profile_OverlapAll "OverlapAll"
 #define Profile_PhysicActor "PhysicsActor"
 #define Profile_Trigger "Trigger"
-#define Profile_PlayerCapsule "PlayerCapsule"
+#define Profile_CharacterMesh "CharacterMesh"
 #define Profile_EnemyCapsule "EnemyCapsule"
 #define Profile_Hitbox "Hitbox"
 #define Profile_Hurtbox "Hurtbox"
