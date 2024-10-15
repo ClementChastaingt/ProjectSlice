@@ -32,7 +32,7 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 
-	// Create a RootCompônents
+	// Create a RootComponents	
 	FirstPersonRoot = CreateDefaultSubobject<USceneComponent>(TEXT("FP_Root"));
 	FirstPersonRoot->SetupAttachment(GetCapsuleComponent());
 
@@ -53,6 +53,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	CamRoot->bInheritPitch = true;
 	CamRoot->bInheritYaw = true;
 	CamRoot->bInheritRoll = false;
+
+	ConstraintAttach = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttach"));
+	ConstraintAttach->SetupAttachment(RootComponent);
 	
 	// Create a CameraComponent
 	CameraSkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Cam_Skel"));
@@ -313,6 +316,8 @@ void AProjectSliceCharacter::Jump()
 		else
 			GetParkourComponent()->JumpOffWallRun();
 	}
+
+	OnJumpEvent.Broadcast();
 
 }
 

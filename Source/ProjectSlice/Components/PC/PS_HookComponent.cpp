@@ -915,7 +915,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	bPlayerIsSwinging = bActivate;
 	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	_PlayerController->SetCanMove(!bActivate);
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 1.0f : DefaultGravityScale;
+	// _PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? 0.0f : DefaultGravityScale;
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
 
@@ -940,18 +940,15 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				HookPhysicConstraint->ConstraintActor1 = _PlayerCharacter;
 				HookPhysicConstraint->ConstraintActor2 = cableToAdapt->GetAttachedComponent()->GetOwner();
 				
-				HookPhysicConstraint->ComponentName1.ComponentName = FName(_PlayerCharacter->GetRootComponent()->GetName());
+				HookPhysicConstraint->ComponentName1.ComponentName = FName(_PlayerCharacter->GetConstraintAttach()->GetName());
 				HookPhysicConstraint->ComponentName2.ComponentName = FName(cableEndAttach->GetName());
+								
+				_PlayerCharacter->GetConstraintAttach()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+				_PlayerCharacter->GetConstraintAttach()->SetSimulatePhysics(true);
 				
 				HookPhysicConstraint->InitComponentConstraint();
-				
-				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldStatic ,ECR_Ignore);
-				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldDynamic ,ECR_Ignore);
-				_PlayerCharacter->GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_PhysicsBody ,ECR_Ignore);
-				_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(true);
 
-				//_PlayerCharacter->GetCapsuleComponent()->AddImpulse((_PlayerCharacter->GetVelocity() * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-				//HookPhysicConstraint->UpdateConstraintFrames();
+				_PlayerCharacter->GetConstraintAttach()->AddImpulse(_PlayerCharacter->GetVelocity() * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
 
 			}
 		}
@@ -965,8 +962,10 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		}
 		else
 		{
-			_PlayerCharacter->GetCapsuleComponent()->SetSimulatePhysics(false);
-			_PlayerCharacter->GetCapsuleComponent()->SetCollisionProfileName(Profile_CharacterMesh);
+
+			_PlayerCharacter->GetConstraintAttach()->SetSimulatePhysics(false);
+			_PlayerCharacter->GetConstraintAttach()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			_PlayerCharacter->GetConstraintAttach()->AttachToComponent(_PlayerCharacter->GetFirstPersonRoot(), FAttachmentTransformRules::KeepWorldTransform);
 			
 			HookPhysicConstraint->ConstraintActor1 = nullptr;
 			HookPhysicConstraint->ConstraintActor2 = nullptr;
@@ -975,8 +974,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			HookPhysicConstraint->ComponentName2.ComponentName = FName("None");
 
 			HookPhysicConstraint->InitComponentConstraint();
-			HookPhysicConstraint->UpdateConstraintFrames();
-			
+			HookPhysicConstraint->UpdateConstraintFrames();			
 		}
 
 	}
@@ -1081,9 +1079,14 @@ void UPS_HookComponent::OnSwingPhysic()
 		return;
 	}
 
-	//Move physic constraint to match player position (attached element)
+	//Set actor location to ConstraintAttach
+	_PlayerCharacter->SetActorLocation(_PlayerCharacter->GetConstraintAttach()->GetComponentLocation());
+	
+	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	HookPhysicConstraint->SetWorldLocation(_PlayerCharacter->GetActorLocation(), false);
 	HookPhysicConstraint->UpdateConstraintFrames();
+
+
 	
 	DrawDebugPoint(GetWorld(), HookPhysicConstraint->GetComponentLocation(), 20.f, FColor::Magenta, false, 0.1);
 		

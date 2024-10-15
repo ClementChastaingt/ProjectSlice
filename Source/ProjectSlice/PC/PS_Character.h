@@ -29,7 +29,10 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
-	/** FirstPerson RootComponent */
+	/** FirstPerson ConstraintAttach */
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	UStaticMeshComponent* ConstraintAttach;
+	
 	UPROPERTY(VisibleDefaultsOnly, Category=Root)
 	USceneComponent* FirstPersonRoot;
 
@@ -77,17 +80,20 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	AProjectSlicePlayerController* GetPlayerController() const{return _PlayerController;}
-	
+
 	/** Returns FirstPersonCameraComponent subobject **/
+	UStaticMeshComponent* GetConstraintAttach() const { return ConstraintAttach; }
+	
+	/** Returns FirstPersonRoot subobject **/
 	USceneComponent* GetFirstPersonRoot() const { return FirstPersonRoot; }
 	
-	/** Returns FirstPersonCameraComponent subobject **/
+	/** Returns MeshRoot subobject **/
 	USpringArmComponent* GetMeshRoot() const { return MeshRoot; }
 
-	/** Returns FirstPersonCameraComponent subobject **/
+	/** Returns CamRoot subobject **/
 	USpringArmComponent* GetCamRoot() const { return CamRoot; }
 
-	/** Returns FirstPersonCameraComponent subobject **/
+	/** Returns CameraSkeletalMeshComponent subobject **/
 	USkeletalMeshComponent* GetCameraSkeletalMeshComponent() const { return CameraSkeletalMeshComponent; }
 	
 	/** Returns FirstPersonCameraComponent subobject **/
@@ -152,6 +158,10 @@ private:
 	//------------------
 
 public:
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnJumpEvent;
+	
 	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return DefaultMaxWalkSpeed;}
 	
 	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
