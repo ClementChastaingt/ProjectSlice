@@ -858,7 +858,7 @@ void UPS_HookComponent::PowerCablePull()
 
 	}
 	//Activate Pull On reach Max Distance
-	else/* if(!bPlayerIsSwinging)*/
+	else if(!bPlayerIsSwinging)
 	{
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
@@ -948,7 +948,10 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				
 				HookPhysicConstraint->InitComponentConstraint();
 
-				_PlayerCharacter->GetConstraintAttach()->AddImpulse(_PlayerCharacter->GetVelocity() * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
+				FVector dir = _PlayerCharacter->GetVelocity();
+				dir.Normalize();
+				
+				_PlayerCharacter->GetConstraintAttach()->AddImpulse(dir * 10000 * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
 
 			}
 		}
@@ -1080,12 +1083,11 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Set actor location to ConstraintAttach
-	_PlayerCharacter->SetActorLocation(_PlayerCharacter->GetConstraintAttach()->GetComponentLocation());
+	_PlayerCharacter->GetRootComponent()->SetWorldLocation(_PlayerCharacter->GetConstraintAttach()->GetComponentLocation());
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	HookPhysicConstraint->SetWorldLocation(_PlayerCharacter->GetActorLocation(), false);
 	HookPhysicConstraint->UpdateConstraintFrames();
-
 
 	
 	DrawDebugPoint(GetWorld(), HookPhysicConstraint->GetComponentLocation(), 20.f, FColor::Magenta, false, 0.1);
