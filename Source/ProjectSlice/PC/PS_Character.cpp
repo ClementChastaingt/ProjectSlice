@@ -53,9 +53,6 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	CamRoot->bInheritPitch = true;
 	CamRoot->bInheritYaw = true;
 	CamRoot->bInheritRoll = false;
-
-	ConstraintAttach = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttach"));
-	ConstraintAttach->SetupAttachment(RootComponent);
 	
 	// Create a CameraComponent
 	CameraSkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Cam_Skel"));
@@ -321,7 +318,9 @@ void AProjectSliceCharacter::Jump()
 
 }
 
-void AProjectSliceCharacter::OnJumped_Implementation()
+void AProjectSliceCharacter::
+
+OnJumped_Implementation()
 {
 	Super::OnJumped_Implementation();
 

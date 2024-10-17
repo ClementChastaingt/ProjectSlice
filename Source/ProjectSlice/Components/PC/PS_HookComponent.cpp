@@ -34,6 +34,14 @@ UPS_HookComponent::UPS_HookComponent()
 
 	HookPhysicConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("HookConstraint"));
 	HookPhysicConstraint->SetDisableCollision(true);
+
+	ConstraintAttachSlave = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttachSlave"));
+	ConstraintAttachSlave->SetupAttachment(this);
+
+
+	ConstraintAttachMaster = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttachMaster"));
+	ConstraintAttachMaster->SetupAttachment(this);
+	
 	
 	// HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	// HookMesh->SetSimulatePhysics(false);
@@ -62,9 +70,9 @@ void UPS_HookComponent::BeginPlay()
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
 
-	if(IsValid(_PlayerCharacter->GetCapsuleComponent()))
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
 	{
-		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnCapsuletBeginOverlapEventReceived);
+		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
 	
 	}
 	
@@ -858,7 +866,7 @@ void UPS_HookComponent::PowerCablePull()
 
 	}
 	//Activate Pull On reach Max Distance
-	else if(!bPlayerIsSwinging)
+	else /*if(!bPlayerIsSwinging)*/
 	{
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
@@ -933,26 +941,40 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		{
 			UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
 			UActorComponent* cableEndAttach = cableToAdapt->GetAttachedComponent();
+
+			if(CablePointLocations.IsValidIndex(0))
+			{
+				DrawDebugPoint(GetWorld(), CablePointLocations[0], 20.f, FColor::Black, false);
+				GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations[0]);
+			}
+			else if(IsValid(cableToAdapt))
+			{
+				FVector endLocWorld = cableToAdapt->GetComponentTransform().InverseTransformPosition(cableToAdapt->EndLocation);
+				GetConstraintAttachMaster()->SetWorldLocation(endLocWorld);
+				DrawDebugPoint(GetWorld(), endLocWorld, 20.f, FColor::Black, false);
+			}
 			
 			if(IsValid(cableToAdapt) && IsValid(cableEndAttach))
 			{
 				//Setup Component constrainted
-				HookPhysicConstraint->ConstraintActor1 = _PlayerCharacter;
-				HookPhysicConstraint->ConstraintActor2 = cableToAdapt->GetAttachedComponent()->GetOwner();
+				// HookPhysicConstraint->ConstraintActor1 = _PlayerCharacter;
+				// HookPhysicConstraint->ConstraintActor2 = cableToAdapt->GetAttachedComponent()->GetOwner();
 				
-				HookPhysicConstraint->ComponentName1.ComponentName = FName(_PlayerCharacter->GetConstraintAttach()->GetName());
-				HookPhysicConstraint->ComponentName2.ComponentName = FName(cableEndAttach->GetName());
-								
-				_PlayerCharacter->GetConstraintAttach()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-				_PlayerCharacter->GetConstraintAttach()->SetSimulatePhysics(true);
+				HookPhysicConstraint->ComponentName1.ComponentName = FName(GetConstraintAttachSlave()->GetName());
+				HookPhysicConstraint->ComponentName2.ComponentName = FName(GetConstraintAttachMaster()->GetName());
+				// HookPhysicConstraint->ComponentName2.ComponentName = FName(cableEndAttach->GetName());
+
+				GetConstraintAttachMaster()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+				
+				GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+				GetConstraintAttachSlave()->SetSimulatePhysics(true);
 				
 				HookPhysicConstraint->InitComponentConstraint();
-
-				FVector dir = _PlayerCharacter->GetVelocity();
-				dir.Normalize();
 				
-				_PlayerCharacter->GetConstraintAttach()->AddImpulse(dir * 10000 * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
-
+				FTimerDelegate triggerSwing;
+				triggerSwing.BindUFunction(this, FName("ImpulseConstraintAttach"));
+				GetWorld()->GetTimerManager().SetTimerForNextTick(triggerSwing);
+				
 			}
 		}
 	}
@@ -965,10 +987,11 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		}
 		else
 		{
+			GetConstraintAttachMaster()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-			_PlayerCharacter->GetConstraintAttach()->SetSimulatePhysics(false);
-			_PlayerCharacter->GetConstraintAttach()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			_PlayerCharacter->GetConstraintAttach()->AttachToComponent(_PlayerCharacter->GetFirstPersonRoot(), FAttachmentTransformRules::KeepWorldTransform);
+			GetConstraintAttachSlave()->SetSimulatePhysics(false);
+			GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			GetConstraintAttachSlave()->AttachToComponent(_PlayerCharacter->GetFirstPersonRoot(), FAttachmentTransformRules::KeepWorldTransform);
 			
 			HookPhysicConstraint->ConstraintActor1 = nullptr;
 			HookPhysicConstraint->ConstraintActor2 = nullptr;
@@ -1083,7 +1106,7 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Set actor location to ConstraintAttach
-	_PlayerCharacter->GetRootComponent()->SetWorldLocation(_PlayerCharacter->GetConstraintAttach()->GetComponentLocation());
+	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	HookPhysicConstraint->SetWorldLocation(_PlayerCharacter->GetActorLocation(), false);
@@ -1094,10 +1117,21 @@ void UPS_HookComponent::OnSwingPhysic()
 		
 }
 
+void UPS_HookComponent::ImpulseConstraintAttach() const
+{
+	if(!IsValid(_PlayerCharacter)) return;
+	
+	FVector dir = _PlayerCharacter->GetVelocity();
+	dir.Normalize();
+	GetConstraintAttachSlave()->AddImpulse(dir * 1000 * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
+
+	if(bDebugSwing) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+}
+
 //------------------
 #pragma endregion Swing
 
-void UPS_HookComponent::OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
+void UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	

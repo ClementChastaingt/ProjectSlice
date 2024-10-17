@@ -28,10 +28,6 @@ UCLASS(config=Game)
 class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
-	/** FirstPerson ConstraintAttach */
-	UPROPERTY(VisibleDefaultsOnly, Category=Root)
-	UStaticMeshComponent* ConstraintAttach;
 	
 	UPROPERTY(VisibleDefaultsOnly, Category=Root)
 	USceneComponent* FirstPersonRoot;
@@ -80,9 +76,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	AProjectSlicePlayerController* GetPlayerController() const{return _PlayerController;}
-
-	/** Returns FirstPersonCameraComponent subobject **/
-	UStaticMeshComponent* GetConstraintAttach() const { return ConstraintAttach; }
 	
 	/** Returns FirstPersonRoot subobject **/
 	USceneComponent* GetFirstPersonRoot() const { return FirstPersonRoot; }

@@ -44,6 +44,15 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Component", meta = (AllowPrivateAccess = "true"))
 	UPhysicsConstraintComponent* HookPhysicConstraint = nullptr;
+
+	/** FirstPerson ConstraintAttach */
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	UStaticMeshComponent* ConstraintAttachSlave;
+	
+	/** FirstPerson ConstraintAttach */
+	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	UStaticMeshComponent* ConstraintAttachMaster;
+	
 	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	// UStaticMeshComponent* HookMesh = nullptr;
@@ -54,6 +63,13 @@ public:
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	/** Returns FirstPersonCameraComponent subobject **/
+	UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
+
+	/** Returns FirstPersonCameraComponent subobject **/
+	UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
+
 
 protected:
 	// Called when the game starts
@@ -304,12 +320,15 @@ public:
 	void OnSwingPhysic();
 
 	UFUNCTION()
+	void ImpulseConstraintAttach() const;
+
+	UFUNCTION()
 	void ForceInvertSwingDirection() {_VelocityToAbsFwd = _VelocityToAbsFwd * -1;};
 
 	FORCEINLINE bool IsPlayerSwinging() const{return bPlayerIsSwinging;}
 	
 	UFUNCTION()
-	void OnCapsuletBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool
+	void OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool
 		bFromSweep, const FHitResult& sweepResult);
 
 protected:
