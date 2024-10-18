@@ -36,12 +36,7 @@ UPS_HookComponent::UPS_HookComponent()
 	HookPhysicConstraint->SetDisableCollision(true);
 
 	ConstraintAttachSlave = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttachSlave"));
-	ConstraintAttachSlave->SetupAttachment(this);
-
-
 	ConstraintAttachMaster = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConstraintAttachMaster"));
-	ConstraintAttachMaster->SetupAttachment(this);
-	
 	
 	// HookMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookMesh"));
 	// HookMesh->SetSimulatePhysics(false);
@@ -118,9 +113,11 @@ void UPS_HookComponent::OnAttachWeapon()
 
 	CableCapArray.Add(nullptr);
 
-	//Setup 
+	//Setup Physic contraint
 	HookPhysicConstraint->SetupAttachment(this);
-			
+	ConstraintAttachMaster->SetupAttachment(this);
+	ConstraintAttachSlave->SetupAttachment(this);
+				
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
 	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));	
@@ -939,20 +936,28 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		}
 		else
 		{
+			ConstraintAttachSlave->SetMassOverrideInKg(NAME_None,_PlayerCharacter->GetCharacterMovement()->Mass);
+			GetConstraintAttachMaster()->SetMassOverrideInKg(NAME_None, AttachedMesh->GetMass());
+			GetConstraintAttachMaster()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+			
 			UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
 			UActorComponent* cableEndAttach = cableToAdapt->GetAttachedComponent();
 
 			if(CablePointLocations.IsValidIndex(0))
 			{
-				DrawDebugPoint(GetWorld(), CablePointLocations[0], 20.f, FColor::Black, false);
 				GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations[0]);
+				DrawDebugPoint(GetWorld(), CablePointLocations[0], 30.f, FColor::Emerald, false, 2.0f);
+				UE_LOG(LogTemp, Error, TEXT("TEXT0"));
 			}
-			else if(IsValid(cableToAdapt))
+			else if(IsValid(CurrentHookHitResult.GetActor()))
 			{
-				FVector endLocWorld = cableToAdapt->GetComponentTransform().InverseTransformPosition(cableToAdapt->EndLocation);
+				// FVector endLocWorld = cableToAdapt->GetComponentTransform().InverseTransformPosition(cableToAdapt->EndLocation);
+				FVector endLocWorld = CurrentHookHitResult.Location;
 				GetConstraintAttachMaster()->SetWorldLocation(endLocWorld);
-				DrawDebugPoint(GetWorld(), endLocWorld, 20.f, FColor::Black, false);
+				DrawDebugPoint(GetWorld(), endLocWorld, 30.f, FColor::Green, false, 2.0f);
+				UE_LOG(LogTemp, Error, TEXT("TEXT1"));
 			}
+			
 			
 			if(IsValid(cableToAdapt) && IsValid(cableEndAttach))
 			{
@@ -1106,10 +1111,10 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Set actor location to ConstraintAttach
-	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
+	//_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
-	HookPhysicConstraint->SetWorldLocation(_PlayerCharacter->GetActorLocation(), false);
+	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
 	HookPhysicConstraint->UpdateConstraintFrames();
 
 	
