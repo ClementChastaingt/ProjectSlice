@@ -49,10 +49,6 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UPROPERTY(VisibleDefaultsOnly, Category=Root)
 	UStaticMeshComponent* ConstraintAttachSlave;
 	
-	/** FirstPerson ConstraintAttach */
-	UPROPERTY(VisibleDefaultsOnly, Category=Root)
-	UStaticMeshComponent* ConstraintAttachMaster;
-	
 	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	// UStaticMeshComponent* HookMesh = nullptr;
@@ -66,9 +62,6 @@ public:
 
 	/** Returns FirstPersonCameraComponent subobject **/
 	UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
-
-	/** Returns FirstPersonCameraComponent subobject **/
-	UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
 
 
 protected:
@@ -336,10 +329,10 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",  meta=(ToolTip="Is player currently swinging"))
 	bool bPlayerIsSwinging = false;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingStartTimestamp = TNumericLimits<float>::Min();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status|Hook|Swing",  meta=(ToolTip="Swing input force alpha"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",  meta=(ToolTip="Swing input force alpha"))
     float SwingAlpha = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Use physic constraint swing or force"))
@@ -348,14 +341,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="cm",ToolTip="Swing distance on the lower position of the trajectory"))
 	float SwingMaxDistance = 1500.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="sec",ToolTip="Swing force multiplicator"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ForceUnits="s",ToolTip="Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
 	float SwingMaxDuration = 60.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator", EditCondition="!bSwingIsPhysical", EditConditionHides))
 	float SwingMaxAirControl = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing input weight divider"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing input weight divider", EditCondition="!bSwingIsPhysical", EditConditionHides))
 	float SwingInputScaleDivider = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Use physic constraint swing or force", EditCondition="bSwingIsPhysical", EditConditionHides))
+	float MinLinearLimitZ = 500.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Physic constraint swing enter impusle force", ForceUnits="cm/s", EditCondition="bSwingIsPhysical", EditConditionHides))
+	float EnterSwingImpulseForce = 1000.0f;
 
 
 
