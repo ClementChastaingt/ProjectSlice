@@ -874,7 +874,14 @@ void UPS_HookComponent::PowerCablePull()
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
-		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
+		float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
+		
+		float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
+		
+		UE_LOG(LogTemp, Error, TEXT("%S :: massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
+		alpha = massAlpha * distAlpha;
 		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
