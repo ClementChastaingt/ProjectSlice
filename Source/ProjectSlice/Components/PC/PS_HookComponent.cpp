@@ -1132,8 +1132,8 @@ void UPS_HookComponent::OnSwingPhysic()
 	float lineartDistByPoint;
 	if(CablePointComponents.IsValidIndex(0) && IsValid(FirstCable))
 	{
-		const FVector currentCableEndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
-		lineartDistByPoint = FMath::Max(DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CablePointLocations[0], currentCableEndLocation), SwingMinDistanceAttach);
+		const FVector firstCableEndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
+		lineartDistByPoint = FMath::Max(DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CablePointLocations[0], firstCableEndLocation), SwingMinDistanceAttach);
 
 		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, lineartDistByPoint);
 		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, lineartDistByPoint);
