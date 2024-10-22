@@ -845,7 +845,6 @@ void UPS_HookComponent::PowerCablePull()
 	//Activate Swing if not active
 	if(!IsPlayerSwinging())
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: trystart swing"), __FUNCTION__);
 		OnTriggerSwing(_PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass());
 	}
 	
@@ -920,7 +919,7 @@ void UPS_HookComponent::PowerCablePull()
 
 void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFromJump)
 {
-	UE_LOG(LogTemp, Error, TEXT("%S :: bPlayerIsSwinging %i, bActivate %i"), __FUNCTION__, bPlayerIsSwinging, bActivate);
+	UE_LOG(LogTemp, Warning, TEXT("%S :: bActivate %i"), __FUNCTION__,bActivate);
 
 	if(bPlayerIsSwinging == bActivate) return;
 	
@@ -933,7 +932,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : DefaultGravityScale;
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
-
+	
 	if(bDebugSwing)
 		UE_LOG(LogTemp, Warning, TEXT("%S bPlayerIsSwinging: %i \n :: __ System Parameters __ :: \n "), __FUNCTION__, bPlayerIsSwinging);
 	
@@ -1014,7 +1013,6 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 			//Launch if Stop swing by jump
 			if(bComeFromJump)
 			{
-				UE_LOG(LogTemp, Error, TEXT("Launch on Jump during Swing"));
 				_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * ExitSwingImpulseForce, false, true);
 			}
 			

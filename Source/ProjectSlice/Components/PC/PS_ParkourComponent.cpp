@@ -633,7 +633,6 @@ void UPS_ParkourComponent::OnDash()
 
 	if(_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() && _PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->GetComponentVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Dash swing"));
 		dashType = false,
 		_PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->AddImpulse(dashVel,NAME_None, true);
 	}
