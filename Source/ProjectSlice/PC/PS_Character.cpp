@@ -289,7 +289,10 @@ void AProjectSliceCharacter::Jump()
 
 	//Dettach rope if try jump on swing
 	if(GetHookComponent()->IsObjectHooked() && GetHookComponent()->IsPlayerSwinging())
-		GetHookComponent()->DettachHook();
+	{
+		GetHookComponent()->DettachHook(true);
+	}
+	
 	
 	Super::Jump();
 	

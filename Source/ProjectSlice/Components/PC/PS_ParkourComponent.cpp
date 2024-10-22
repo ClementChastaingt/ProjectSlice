@@ -617,12 +617,12 @@ void UPS_ParkourComponent::OnDash()
 	dashVel = bIsOnGround ? dashVel * 2 : dashVel;
 
 	//Change braking deceleration
-	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling && !_PlayerCharacter->GetHookComponent()->IsPlayerSwinging())
+	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
 	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
 
 	//Launch character
 	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
-		_PlayerCharacter->GetCharacterMovement()->Launch(dashVel);
+		_PlayerCharacter->LaunchCharacter(dashVel, false, false);
 
 	//Clamp Max Velocity
 	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
