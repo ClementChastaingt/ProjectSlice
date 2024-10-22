@@ -601,6 +601,8 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 
 void UPS_ParkourComponent::OnDash()
 {
+	if(!IsValid(_PlayerCharacter->GetHookComponent())) return;
+	
 	if( bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
 
 	if(bIsWallRunning) OnWallRunStop();
@@ -611,26 +613,39 @@ void UPS_ParkourComponent::OnDash()
 		dashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		dashDir.Z = 0;
 	};
+	dashDir.Normalize();
 
 	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
 	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
-	dashVel = bIsOnGround ? dashVel * 2 : dashVel;
+	dashVel = bIsOnGround ? dashVel * 2 : _PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? dashVel / 2 : dashVel;
 
 	//Change braking deceleration
 	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
 	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
 
 	//Launch character
+	bool dashType = true;
 	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
+	{
+		dashType = true;
 		_PlayerCharacter->LaunchCharacter(dashVel, false, false);
+	}
 
+	if(_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() && _PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->GetComponentVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Dash swing"));
+		dashType = false,
+		_PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->AddImpulse(dashVel,NAME_None, true);
+	}
+
+	
 	//Clamp Max Velocity
 	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
 	
-	UE_LOG(LogTemp, Warning, TEXT("%S :: dashVel %s, dashDir %s"), __FUNCTION__, *dashVel.ToString(), *dashDir.ToString());
+	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *(dashType == true ? FString("Ground/Aerial Dash ") : FString("Swing Dash")), *dashVel.ToString(), *dashDir.ToString());
 
 	OnDashEvent.Broadcast();
 }

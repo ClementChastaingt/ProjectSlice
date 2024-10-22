@@ -47,6 +47,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Crouch")
 	bool bDebugSlide = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Crouch")
+	bool bDebugDash = false;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Mantle")
 	bool bDebugMantle = false;

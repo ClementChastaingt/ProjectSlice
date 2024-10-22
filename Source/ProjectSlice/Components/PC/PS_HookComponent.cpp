@@ -770,12 +770,12 @@ void UPS_HookComponent::DettachHook(const bool bComeFromJump)
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;
 
+	//----Reset Swing---
+	OnTriggerSwing(false, bComeFromJump);
+
 	//----Stop Cable Warping---
 	bCableWinderPull = false;
 	AttachedMesh = nullptr;
-
-	//----Reset Swing---
-	OnTriggerSwing(false, bComeFromJump);
 
 	//----Hook Move Feedback---
 	bObjectHook = false;
@@ -842,8 +842,12 @@ void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 	
-	//Activate or desactivate Swing
-	OnTriggerSwing(_PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass(), false);
+	//Activate Swing if not active
+	if(!IsPlayerSwinging())
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: trystart swing"), __FUNCTION__);
+		OnTriggerSwing(_PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass());
+	}
 	
 	//Activate Pull if Winde
 	float alpha;
@@ -916,6 +920,8 @@ void UPS_HookComponent::PowerCablePull()
 
 void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFromJump)
 {
+	UE_LOG(LogTemp, Error, TEXT("%S :: bPlayerIsSwinging %i, bActivate %i"), __FUNCTION__, bPlayerIsSwinging, bActivate);
+
 	if(bPlayerIsSwinging == bActivate) return;
 	
 	if(!IsValid(GetWorld()) || 	!IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_PlayerCharacter) || !IsValid(AttachedMesh)) return;
@@ -929,7 +935,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
 
 	if(bDebugSwing)
-		UE_LOG(LogTemp, Warning, TEXT("%S \n :: __ System Parameters __ :: \n "), __FUNCTION__);
+		UE_LOG(LogTemp, Warning, TEXT("%S bPlayerIsSwinging: %i \n :: __ System Parameters __ :: \n "), __FUNCTION__, bPlayerIsSwinging);
 	
 	if(bActivate)
 	{
@@ -1094,7 +1100,6 @@ void UPS_HookComponent::OnSwingForce()
 	//Stop by time
 	if(timeWeightAlpha >= 1)
 	{
-		OnTriggerSwing(false);
 		DettachHook();
 		return;
 	}
@@ -1108,7 +1113,6 @@ void UPS_HookComponent::OnSwingPhysic()
 	  || _PlayerCharacter->GetParkourComponent()->IsMantling()
 	  /*|| _PlayerCharacter->GetVelocity().Length() <= (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched / 2) */)
 	{
-		OnTriggerSwing(false);
 		DettachHook();
 		
 		//----Auto break hook if velocity too low----
@@ -1149,7 +1153,6 @@ void UPS_HookComponent::OnSwingPhysic()
 	//Stop by time
 	if(timeWeightAlpha >= 1)
 	{
-		OnTriggerSwing(false);
 		DettachHook();
 		return;
 	}
