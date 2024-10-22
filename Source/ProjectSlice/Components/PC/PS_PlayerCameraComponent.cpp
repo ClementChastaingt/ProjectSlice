@@ -104,6 +104,8 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
                                                                                                                                                                                                                                                 
 void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETiltUsage usage, const int32& targetOrientation)                                                                                                                                                    
 {
+	if(bIsReset == bIsResetingCameraTilt || (!bIsReset && _bIsCameraTilted)) return;
+	
 	bIsResetingCameraTilt = bIsReset;
 	CurrentCameraTiltOrientation = targetOrientation;
 	CurrentUsageType = usage;
@@ -146,7 +148,8 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 	if(alphaTilt > 1)                                                                                                                                                                                                                          
 	{
 		if(bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("Stop CameraTilt Movement"));
-		bIsResetingCameraTilt = false;                                                                                                                                                                                                         
+		_bIsCameraTilted = !bIsResetingCameraTilt;
+		bIsResetingCameraTilt = false;    
 		return;                                                                                                                                                                                                                                 
 	}                                                                                                                                                                                                                                           
               

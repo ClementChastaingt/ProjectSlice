@@ -293,7 +293,6 @@ void AProjectSliceCharacter::Jump()
 		GetHookComponent()->DettachHook(true);
 	}
 	
-	
 	Super::Jump();
 	
 	//If in WallRunning 
@@ -308,7 +307,7 @@ void AProjectSliceCharacter::Jump()
 			{
 				if (!IsValid(currentOverlapInfo.OverlapInfo.Component.Get()) || !IsValid(currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner()) ||
 					currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner() == this) continue;
-				GetParkourComponent()->SetForceWallRun(true);
+				UE_LOG(LogTemp, Warning, TEXT("** FORCE OnParkourComponentBeginOverlap **"));
 				GetParkourComponent()->OnComponentBeginOverlap.Broadcast(GetParkourComponent(), currentOverlapInfo.OverlapInfo.Component.Get()->GetOwner(), currentOverlapInfo.OverlapInfo.Component.Get(), currentOverlapInfo.GetBodyIndex(), currentOverlapInfo.bFromSweep, currentOverlapInfo.OverlapInfo);
 				break;
 			}

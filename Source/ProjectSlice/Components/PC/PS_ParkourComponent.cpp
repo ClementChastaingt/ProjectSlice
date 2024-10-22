@@ -185,7 +185,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 		|| _PlayerCharacter->GetHookComponent()->IsPlayerSwinging()) return;
 	
 	//Activate Only if in Air
-	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !bForceWallRun) return;
+	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !_PlayerCharacter->bWasJumping) return;
 
 	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
@@ -284,7 +284,6 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
 	Wall = otherActor;
-	bForceWallRun = false;
 	bIsWallRunning = true;
 	
 }
@@ -328,9 +327,9 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Determine direction && force
 	const float playerFwdToWallRightAngle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(Wall->GetActorRightVector() * WallToPlayerOrientation));
-	const FVector jumpDir = playerFwdToWallRightAngle < JumpOffPlayerFwdDirThresholdAngle ? _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() : Wall->GetActorRightVector() * -WallToPlayerOrientation;
-
-	const FVector jumpForce = jumpDir * JumpOffForceMultiplicator;
+	FVector jumpDir = playerFwdToWallRightAngle < JumpOffPlayerFwdDirThresholdAngle ? _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() : Wall->GetActorRightVector() * -WallToPlayerOrientation;
+	jumpDir.Normalize();
+	const FVector jumpForce = jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + JumpOffForceSpeed) ;
 	
 	if(bDebugWallRunJump)
 	{
@@ -340,7 +339,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Clamp Max Velocity
 	FVector jumpTargetVel = jumpForce;
-	UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator);
+	UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
 	
 	//Launch chara
 	_PlayerCharacter->LaunchCharacter(jumpTargetVel,false,false);
@@ -617,7 +616,8 @@ void UPS_ParkourComponent::OnDash()
 
 	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
 	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
-	dashVel = bIsOnGround ? dashVel * 2 : _PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? dashVel / 2 : dashVel;
+	
+	dashVel = bIsOnGround ? dashVel * 3 : (_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? (dashVel / 2) : dashVel);
 
 	//Change braking deceleration
 	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
@@ -910,9 +910,9 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(_PlayerCharacter->GetMesh())
 		|| !IsValid(otherActor)
 		|| otherActor->ActorHasTag(TAG_UNPARKOURABLE)) return;
-
-	if(bIsMantling) return;
-
+	
+	if(bIsMantling || (!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying()))  return;
+	
 	_ActorOverlap = otherActor;
 	_ComponentOverlap = otherComp;
 
@@ -929,7 +929,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 
-	if(bDebug)UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if(bDebug)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	//Force WallRun if lineTrace don't hit
 	if(outHit.bBlockingHit)

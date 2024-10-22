@@ -249,17 +249,12 @@ public:
 	//Getters && Setters
 	FORCEINLINE bool IsWallRunning() const  {return bIsWallRunning;}
 
-	void SetForceWallRun(bool bforceWallRun){this->bForceWallRun = bforceWallRun;}
-
 protected:
 	UFUNCTION()
 	void WallRunTick();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
 	bool bIsWallRunning = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently force WallRunning"))
-	bool bForceWallRun = false;
 
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is on the left or the right from Wall"))
@@ -305,7 +300,7 @@ protected:
 	UCurveFloat* WallRunGravityCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
-	float JumpOffForceMultiplicator = 1500.0f;
+	float JumpOffForceSpeed = 1500.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 90.0f, ClampMin = 90.f, ForceUnits="deg", ToolTip="Jump Off Player forward Direction to Wall right dir threshold angle"))
 	float JumpOffPlayerFwdDirThresholdAngle = 100.0f;

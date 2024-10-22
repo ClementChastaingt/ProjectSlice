@@ -191,7 +191,9 @@ protected:
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
-	//------------------
+	
+	UPROPERTY(Transient)
+	bool _bIsCameraTilted = false;
 
 #pragma endregion CameraTilt
 	
