@@ -48,7 +48,7 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	FieldOfViewTick();
 	
 	//-----CameraRollTilt smooth reset-----                                                                
-	if(bIsResetingCameraTilt)
+	if(_bIsResetingCameraTilt)
 		CameraRollTilt(GetWorld()->GetTimeSeconds(), StartCameraTiltResetTimestamp);                           
 }
 
@@ -101,32 +101,31 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 
 #pragma region Camera_Tilt                                                                                                                                                                                                                      
 //------------------                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                
-void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETiltUsage usage, const int32& targetOrientation)                                                                                                                                                    
-{
-	if(bIsReset == bIsResetingCameraTilt || (!bIsReset && _bIsCameraTilted)) return;
-	
-	bIsResetingCameraTilt = bIsReset;
+
+void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETiltUsage usage,
+	const int32& targetOrientation)                                                                                                                                                    
+{		
 	CurrentCameraTiltOrientation = targetOrientation;
 	CurrentUsageType = usage;
 	
-	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	TargetCameraRot =  bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : StartCameraRot + (/*CameraTiltRotAmplitude.FindRef(usage))*/ FRotator(0.0,0.0,20.0) * CurrentCameraTiltOrientation);
+	if(!_bIsCameraTilting) StartCameraRot = _PlayerController->GetControlRotation().Clamp();
+	TargetCameraRot =  _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : StartCameraRot + (/*CameraTiltRotAmplitude.FindRef(usage))*/ FRotator(0.0,0.0,20.0) * CurrentCameraTiltOrientation);
 	
-	if(bIsResetingCameraTilt)                                                                                                                                                                                                                   
+	if(_bIsResetingCameraTilt)                                                                                                                                                                                                                   
 		StartCameraTiltResetTimestamp = GetWorld()->GetTimeSeconds();      
                                                                                                                                                                                                                                                 
 	if(bDebugCameraTilt)                                                                                                                                                                                                                        
 		UE_LOG(LogTemp, Warning, TEXT("%S bIsReset %i, CameraTiltRotAmplitude %s,  StartCameraRot %s, TargetCameraRot %s"), __FUNCTION__, bIsReset, *CameraTiltRotAmplitude.FindRef(usage).ToString(), *StartCameraRot.ToString(),*TargetCameraRot.ToString());               
-	
-                                                                                                                                                                     ;                                                                                                                                                                                                          
-                                                                                                                                                                                                                                        
+
+	_bIsResetingCameraTilt = bIsReset;
 }                                                                                                                                                                                                                                               
                                                                                                                                                                                                                                                 
 void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float startTime)                                                                                                                                                              
 {                                                                                                                                                                                                                                               
-	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;                                                                                                                                                                             
-	                                                                                                                                                                                                                                            
+	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+	
+	_bIsCameraTilting = true;
+	
 	//Alpha                                                                                                                                                                                                                                     
 	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(currentSeconds, startTime, startTime + CameraTiltDuration, 0,1);                                                                                                                
 	
@@ -147,14 +146,20 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 	//If Camera tilt already finished stop                                                                                                                                                                                                      
 	if(alphaTilt > 1)                                                                                                                                                                                                                          
 	{
-		if(bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("Stop CameraTilt Movement"));
-		_bIsCameraTilted = !bIsResetingCameraTilt;
-		bIsResetingCameraTilt = false;    
+		OnCameraTiltStop();
 		return;                                                                                                                                                                                                                                 
 	}                                                                                                                                                                                                                                           
               
-}                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                
+}
+
+void UPS_PlayerCameraComponent::OnCameraTiltStop()
+{
+	if(bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+
+	_bIsResetingCameraTilt = false;
+	_bIsCameraTilting = false;
+}
+
 //------------------                                                                                                                                                                                                                            
 #pragma endregion Camera_Tilt                                                                                                                                                                                                                   
 

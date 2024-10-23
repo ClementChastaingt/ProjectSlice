@@ -35,9 +35,9 @@ void UPS_ParkourComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
 	
-	DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
-	DefaultBrakingDecelerationWalking = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
-	DefaultBrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling;
+	_DefaulGroundFriction = _PlayerCharacter->GetCharacterMovement()->GroundFriction;
+	_DefaultBrakingDecelerationWalking = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+	_DefaultBrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling;
 	
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
@@ -87,12 +87,12 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 }
 
 
-void UPS_ParkourComponent::TogglePlayerPhysic(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
+void UPS_ParkourComponent::ToggleObstacleLockConstraint(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
 	const bool bActivate) const
 {
 	if(otherActor->ActorHasTag(TAG_SLICEABLE))
 	{
-		const UMeshComponent* objectOverlap = Cast<UMeshComponent>(otherComp);
+		UMeshComponent* objectOverlap = Cast<UMeshComponent>(otherComp);
 		if(!IsValid(objectOverlap))
 		{
 			UE_LOG(LogTemp, Error, TEXT("%S :: objectOverlap invalid"), __FUNCTION__);
@@ -102,6 +102,15 @@ void UPS_ParkourComponent::TogglePlayerPhysic(const AActor* const otherActor, UP
 		//Trigger or not player physic
 		_PlayerCharacter->GetCapsuleComponent()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics :  ECollisionEnabled::QueryOnly);
 		_PlayerCharacter->GetMesh()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
+
+		if(objectOverlap->IsSimulatingPhysics())
+		{
+			objectOverlap->BodyInstance.bLockRotation = !bActivate;
+			objectOverlap->BodyInstance.bLockTranslation = !bActivate;
+		
+			UE_LOG(LogTemp, Error, TEXT("LockConst, %s: bLockTranslation %i, bLockRotation "), *GetNameSafe(objectOverlap), objectOverlap->BodyInstance.bLockTranslation);
+			
+		}
 
 		//Unhook if currently used
 		if(IsValid(_PlayerCharacter->GetHookComponent()))
@@ -279,7 +288,10 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 
 	//--------Camera_Tilt Setup--------
 	if(!bIsWallRunning)
+	{
 		_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, ETiltUsage::WALL_RUN, CameraTiltOrientation);
+	}
+
 
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
@@ -308,7 +320,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	bIsWallRunning = false;
 
 	//--------Reset Collision--------
-	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 }
 
 void UPS_ParkourComponent::JumpOffWallRun()
@@ -498,8 +510,8 @@ void UPS_ParkourComponent::OnStopSlide()
 	
 	_PlayerController->SetIgnoreMoveInput(false);
 	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed();
-	_PlayerCharacter->GetCharacterMovement()->GroundFriction = DefaulGroundFriction;
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = DefaultBrakingDecelerationFalling;
+	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
+	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;
 
 	bIsSliding = false;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
@@ -604,7 +616,12 @@ void UPS_ParkourComponent::OnDash()
 	
 	if( bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
 
-	if(bIsWallRunning) OnWallRunStop();
+	if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle)) return;
+
+	if(bIsWallRunning)
+	{
+		OnWallRunStop();
+	}
 
 	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
 	if(dashDir.IsNearlyZero())
@@ -613,30 +630,36 @@ void UPS_ParkourComponent::OnDash()
 		dashDir.Z = 0;
 	};
 	dashDir.Normalize();
-
-	const bool bIsOnGround = _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking;
-	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 	
-	dashVel = bIsOnGround ? dashVel * 3 : (_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? (dashVel / 2) : dashVel);
+	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	// dashVel = bIsOnGround ? dashVel * 3 : (_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? (dashVel / 2) : dashVel);
 
-	//Change braking deceleration
-	 if(_PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Falling)
-	 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+	//Change chara movement params
+	switch (_PlayerCharacter->GetCharacterMovement()->MovementMode)
+	{
+		case MOVE_Walking:
+			_PlayerCharacter->GetCharacterMovement()->GroundFriction = DashGroundFriction;
+			break;
+		case MOVE_Falling:
+			_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking;
+			break;
+		default:
+			break;
+	}
 
 	//Launch character
-	bool dashType = true;
+	EDashType DashType = EDashType::STANDARD;
 	if(_PlayerCharacter->GetVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
 	{
-		dashType = true;
+		DashType = EDashType::STANDARD;
 		_PlayerCharacter->LaunchCharacter(dashVel, false, false);
 	}
 
 	if(_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() && _PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->GetComponentVelocity().Length() < _PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed)
 	{
-		dashType = false,
+		DashType = EDashType::SWING;
 		_PlayerCharacter->GetHookComponent()->GetConstraintAttachSlave()->AddImpulse(dashVel,NAME_None, true);
 	}
-
 	
 	//Clamp Max Velocity
 	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
@@ -644,9 +667,22 @@ void UPS_ParkourComponent::OnDash()
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
 	
-	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *(dashType == true ? FString("Ground/Aerial Dash ") : FString("Swing Dash")), *dashVel.ToString(), *dashDir.ToString());
+	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
+	
+	FTimerDelegate dashReset_TimerDelegate;
+	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
+	GetWorld()->GetTimerManager().SetTimer(_DashResetTimerHandle, dashReset_TimerDelegate, DashDuration, false);
 
+	// FTimerDelegate dashCooldown_TimerDelegate;
+	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
+	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
+	
 	OnDashEvent.Broadcast();
+}
+
+void UPS_ParkourComponent::ResetDash() const
+{
+	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 }
 
 //------------------
@@ -757,7 +793,7 @@ void UPS_ParkourComponent::OnStoptMantle()
 	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 	//--------Reset Collision--------
-	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 	
 }
 
@@ -865,7 +901,7 @@ void UPS_ParkourComponent::OnStopLedge()
 	SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 	//--------Reset Collision--------
-	TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 
 	bIsLedging = false;
 
@@ -938,7 +974,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(outHit.Normal * -1));
 		
 		//Block collision with GPE if try to parkour on hit 
-		TogglePlayerPhysic(otherActor, otherComp, false);
+		ToggleObstacleLockConstraint(otherActor, otherComp, false);
 
 		//Debug
 		if(bDebug)
@@ -962,7 +998,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	//If can't parkour reactivate physic
 	if(!bIsWallRunning && !bIsLedging && !bIsMantling)
 	{
-		TogglePlayerPhysic(_ActorOverlap, _ComponentOverlap, true);
+		ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 	}
 
 
@@ -995,10 +1031,19 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 		OnCrouch();
 	}
 
-	if(previousCustomMode == MOVE_Falling &&  character->GetCharacterMovement()->MovementMode == MOVE_Walking)
+	if(previousCustomMode == MOVE_Falling && character->GetCharacterMovement()->MovementMode == MOVE_Walking)
 	{
-		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = DefaultBrakingDecelerationFalling;
+		if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle))
+			_PlayerCharacter->GetCharacterMovement()->GroundFriction = DashGroundFriction;
+		
+		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;
 	}
+	if(previousCustomMode == MOVE_Walking && character->GetCharacterMovement()->MovementMode == MOVE_Falling)
+	{
+		_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
+	}
+
+
 }
 
 

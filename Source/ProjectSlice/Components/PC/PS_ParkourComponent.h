@@ -20,6 +20,14 @@ enum class EMantlePhase : uint8
 	PULL_UP = 2 UMETA(DisplayName ="Pull up"),
 };
 
+UENUM()
+enum class EDashType : uint8
+{
+	STANDARD = 0 UMETA(DisplayName ="Standard"),
+	SWING = 1 UMETA(DisplayName ="Swing"),
+};
+
+
 UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
 {
@@ -75,6 +83,15 @@ private:
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+	
+	UPROPERTY(Transient)
+	float _DefaultBrakingDecelerationWalking = 2048.0f;
+
+	UPROPERTY(Transient)
+	float _DefaultBrakingDecelerationFalling = 400.0f;
+
+	UPROPERTY(Transient)
+	float _DefaulGroundFriction = 8.0f;
 
 #pragma region General
 	//------------------
@@ -90,7 +107,7 @@ protected:
 	void OnMovementModeChangedEventReceived(ACharacter* character, EMovementMode prevMovementMode, uint8 previousCustomMode);
 
 	UFUNCTION()
-	void TogglePlayerPhysic(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
+	void ToggleObstacleLockConstraint(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
 		const bool bActivate) const;
 
 private:
@@ -405,15 +422,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	FVector SlideDirection = FVector::ZeroVector;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Walking Braking Deceleration"))
-	float DefaultBrakingDecelerationWalking = 2048.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Falling Braking Deceleration"))
-	float DefaultBrakingDecelerationFalling = 400.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
-	float DefaulGroundFriction = 8.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Floor Slope degree angle Pitch"))
 	float OutSlopePitchDegreeAngle = 0.0f;
@@ -454,7 +462,10 @@ public:
 	UFUNCTION()
 	void OnDash();
 
-	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
+	UFUNCTION()
+	void ResetDash() const;
+
+	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}	
 
 protected:
 
@@ -464,8 +475,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Dash Speed"))
 	float DashSpeed = 1500.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f ,ForceUnits="s",ToolTip="Dash duration"))
+	float DashDuration = 0.3f;
+
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f ,ForceUnits="s",ToolTip="Dash duration"))
+	// float DashCooldown= 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Dash ground friction"))
+	float DashGroundFriction = 10.0f;
+
 private:
-	//------------------
+	UPROPERTY(Transient)
+	FTimerHandle _DashResetTimerHandle;
+
+	// UPROPERTY(Transient)
+	// FTimerHandle _DashCooldownTimerHandle;
 
 #pragma endregion Dash
 };
