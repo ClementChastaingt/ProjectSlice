@@ -163,11 +163,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="CameraTilt usage"))
 	ETiltUsage CurrentUsageType;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraRollTilt smoothly"))
-	bool bIsResetingCameraTilt = false;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
-	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
+	float StartCameraTiltTimestamp = TNumericLimits<float>().Lowest();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
 	FRotator DefaultCameraRot = FRotator::ZeroRotator;
@@ -191,10 +188,15 @@ protected:
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
+	UPROPERTY(Transient)
+	bool _bIsCameraTilting = false;
 	
 	UPROPERTY(Transient)
 	bool _bIsCameraTilted = false;
 
+	UPROPERTY(Transient)
+	bool _bIsResetingCameraTilt = false;
+	
 #pragma endregion CameraTilt
 	
 };
