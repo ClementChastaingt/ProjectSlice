@@ -70,9 +70,6 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	GetMesh()->CastShadow = false;
 
 	//Create WeaponComponent
-	ComponentsManager = CreateDefaultSubobject<UPS_ComponentsManager>(TEXT("ComponentManager"));
-
-	//Create WeaponComponent
 	ProceduralAnimComponent = CreateDefaultSubobject<UPS_ProceduralAnimComponent>(TEXT("ProceduralAnimComponent"));
 
 	//Create SlowmoComponent

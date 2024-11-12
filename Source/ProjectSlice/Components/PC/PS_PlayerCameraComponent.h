@@ -155,19 +155,17 @@ public:
 
 	UFUNCTION()
 	void CameraRollTilt(float currentSeconds, const float startTime);
-
-	UFUNCTION()
-	void OnCameraTiltStop();
-
-	FORCEINLINE bool IsCameraTilting() const{return _bIsCameraTilting;}
-
+	
 	FORCEINLINE int32 GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
 
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="CameraTilt usage"))
 	ETiltUsage CurrentUsageType;
-		
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Is currently resetting CameraRollTilt smoothly"))
+	bool bIsResetingCameraTilt = false;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
 	float StartCameraTiltResetTimestamp = TNumericLimits<float>().Lowest();
 
@@ -193,11 +191,9 @@ protected:
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
-	UPROPERTY(Transient)
-	bool _bIsResetingCameraTilt = false;
 	
 	UPROPERTY(Transient)
-	bool _bIsCameraTilting;
+	bool _bIsCameraTilted = false;
 
 #pragma endregion CameraTilt
 	

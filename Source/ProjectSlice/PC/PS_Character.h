@@ -8,7 +8,6 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Logging/LogMacros.h"
 #include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
-#include "ProjectSlice/Components/Common/PS_ComponentsManager.h"
 #include "ProjectSlice/Components/Common/PS_ProceduralAnimComponent.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "ProjectSlice/Components/PC/PS_SlowmoComponent.h"
@@ -44,10 +43,6 @@ class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UPS_PlayerCameraComponent* FirstPersonCameraComponent;
-	
-	/** ComponentsManager */
-	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
-	UPS_ComponentsManager* ComponentsManager;
 
 	/** ProceduralAnimComponent */
 	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
@@ -91,10 +86,7 @@ public:
 	
 	/** Returns FirstPersonCameraComponent subobject **/
 	UPS_PlayerCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
-
-	/** Returns ComponentsManager **/
-	UPS_ComponentsManager* GetComponentsManager() const {return ComponentsManager; }
-
+	
 	/** Returns ComponentsManager **/
 	UFUNCTION(BlueprintCallable)
 	UPS_ProceduralAnimComponent* GetProceduralAnimComponent() const {return ProceduralAnimComponent; }
