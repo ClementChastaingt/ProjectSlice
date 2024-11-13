@@ -103,14 +103,14 @@ void UPS_ParkourComponent::ToggleObstacleLockConstraint(const AActor* const othe
 		_PlayerCharacter->GetCapsuleComponent()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics :  ECollisionEnabled::QueryOnly);
 		_PlayerCharacter->GetMesh()->SetCollisionEnabled(bActivate ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
 
-		if(objectOverlap->IsSimulatingPhysics())
-		{
-			objectOverlap->BodyInstance.bLockRotation = !bActivate;
-			objectOverlap->BodyInstance.bLockTranslation = !bActivate;
-		
-			UE_LOG(LogTemp, Error, TEXT("LockConst, %s: bLockTranslation %i, bLockRotation "), *GetNameSafe(objectOverlap), objectOverlap->BodyInstance.bLockTranslation);
-			
-		}
+		// if(objectOverlap->IsSimulatingPhysics())
+		// {
+		// 	objectOverlap->BodyInstance.bLockRotation = !bActivate;
+		// 	objectOverlap->BodyInstance.bLockTranslation = !bActivate;
+		//
+		// 	UE_LOG(LogTemp, Error, TEXT("LockConst, %s: bLockTranslation %i, bLockRotation "), *GetNameSafe(objectOverlap), objectOverlap->BodyInstance.bLockTranslation);
+		// 	
+		// }
 
 		//Unhook if currently used
 		if(IsValid(_PlayerCharacter->GetHookComponent()))
@@ -261,9 +261,9 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 	// 	return;
 	// }
 
-	//Determine Orientations
-	CameraTiltOrientation = WallToPlayerOrientation * -1/* * FMath::Sign(angleObjectFwdToCamFwd)*/;
+	//Determine Orientation
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
+	CameraTiltOrientation = WallToPlayerOrientation;
 
 	if(bDebugWallRun)
 	{

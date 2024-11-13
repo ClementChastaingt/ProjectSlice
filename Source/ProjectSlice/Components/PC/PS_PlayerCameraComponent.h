@@ -171,15 +171,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot on Start tiliting"))
 	FRotator StartCameraRot = FRotator::ZeroRotator;
-		
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=( ToolTip="Camera rot Target tiliting"))
-	FRotator TargetCameraRot = FRotator::ZeroRotator;
-		
+			
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	int32 CurrentCameraTiltOrientation = 0;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	float CameraOrientationTiltSpeed = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation tilt amplitude in degree"))
 	TMap<ETiltUsage, FRotator> CameraTiltRotAmplitude = {{ETiltUsage::NONE,FRotator::ZeroRotator}};
@@ -196,6 +196,9 @@ private:
 
 	UPROPERTY(Transient)
 	bool _bIsResetingCameraTilt = false;
+
+	UPROPERTY(Transient)
+	float _lastAngleCamToWall;
 	
 #pragma endregion CameraTilt
 	

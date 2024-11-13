@@ -266,6 +266,8 @@ public:
 	//Getters && Setters
 	FORCEINLINE bool IsWallRunning() const  {return bIsWallRunning;}
 
+	FORCEINLINE FVector GetWallRunDirection() const{return WallRunDirection;}
+
 protected:
 	UFUNCTION()
 	void WallRunTick();

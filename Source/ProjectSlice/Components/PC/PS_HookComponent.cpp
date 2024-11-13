@@ -935,7 +935,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 	bPlayerIsSwinging = bActivate;
 	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	//_PlayerController->SetCanMove(!bActivate);
-	//_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : DefaultGravityScale;
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
