@@ -121,16 +121,17 @@ void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETil
                                                                                                                                                                                                                                                 
 void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float startTime)                                                                                                                                                              
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent()) || !IsValid(_PlayerCharacter->GetParkourComponent())) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent()) || !IsValid(_PlayerCharacter->GetParkourComponent()) || !IsValid(GetWorld()) ) return;
 	
 	//Start and Target Roll
 	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
 	UE_LOG(LogTemp, Warning, TEXT("angleCamToWall %f, _lastAngleCamToWall %f, CurrentCameraTiltOrientation %i"), angleCamToWall, _lastAngleCamToWall, CurrentCameraTiltOrientation);
-
-	// if(FMath::Sign(angleCamToWall) > 0 && FMath::Sign(angleCamToWall) != FMath::Sign(_lastAngleCamToWall)) CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * -1;
-	// _lastAngleCamToWall = angleCamToWall;
-
-	if(FMath::Sign(angleCamToWall) > 0) CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * -1;
+	
+	if(FMath::Sign(angleCamToWall) != FMath::Sign(_lastAngleCamToWall))
+	{
+		const int32 camOrientationModifier =  (FMath::Sign(angleCamToWall) < 0 ? -1 : 1);
+		CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * camOrientationModifier;
+	}
 	_lastAngleCamToWall = angleCamToWall;
 	
 	const FRotator currentRot = _PlayerController->GetControlRotation();
@@ -142,7 +143,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt(float currentSeconds, const float
 		if(CurrentCameraTiltOrientation != 0.0f && _PlayerController->GetControlRotation().Roll != newRotTarget.Roll)
 		{
 			UE_LOG(LogTemp, Error, TEXT("Try reach new orientation, CurrentCameraTiltOrientation %i"), CurrentCameraTiltOrientation);
-			const FRotator newRot = FMath::Lerp(_PlayerController->GetControlRotation(),newRotTarget, CameraOrientationTiltSpeed);
+			const FRotator newRot = UKismetMathLibrary::RInterpTo(DefaultCameraRot + FRotator(0.0,0.0,20.0) * (FMath::Sign(_lastAngleCamToWall)  < 0 ? -1 : 1), newRotTarget, GetWorld()->GetTimeSeconds(), 0.1f);
 			_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, newRot.Roll));                 
 		}
 		return;

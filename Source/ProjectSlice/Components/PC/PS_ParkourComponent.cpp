@@ -285,7 +285,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 	}
 
 	//--------Camera_Tilt Setup--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, ETiltUsage::WALL_RUN, CameraTiltOrientation);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, ETiltUsage::WALL_RUN, CameraTiltOrientation * -1);
 	
 
 
