@@ -254,7 +254,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 	// FHitResult testingHitDir = WallToPlayerOrientation * -1 < 0 ? outHitLeft : outHitRight;
 	// const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(testingHitDir.Location));
 	//
-	 UE_LOG(LogTemp, Error, TEXT("bIsWallRunning %i, playerToWallOrientation %i,angleObjectFwdToCamFwd %f, angleObjectFwdToCamFwdDeg  %f, WallToPlayerOrientation %i"),bIsWallRunning, playerToWallOrientation,angleObjectFwdToCamFwd,  UKismetMathLibrary::DegAcos(angleObjectFwdToCamFwd), WallToPlayerOrientation);
+	// UE_LOG(LogTemp, Error, TEXT("bIsWallRunning %i, playerToWallOrientation %i,angleObjectFwdToCamFwd %f, angleObjectFwdToCamFwdDeg  %f, WallToPlayerOrientation %i"),bIsWallRunning, playerToWallOrientation,angleObjectFwdToCamFwd,  UKismetMathLibrary::DegAcos(angleObjectFwdToCamFwd), WallToPlayerOrientation);
 	// if(angle > MaxWallRunAngle && !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle()))
 	// {
 	// 	UE_LOG(LogTemp, Error, TEXT("%S :: Cancel Start"), __FUNCTION__);
@@ -285,7 +285,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* otherActor)
 	}
 
 	//--------Camera_Tilt Setup--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, ETiltUsage::WALL_RUN, CameraTiltOrientation * -1);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * -1);
 	
 
 
@@ -311,7 +311,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true, ETiltUsage::WALL_RUN);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true);
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	bIsWallRunning = false;
 

@@ -12,13 +12,6 @@ class AProjectSliceCharacter;
  * 
  */
 
-UENUM()
-enum class ETiltUsage : uint8
-{
-	NONE = 0	UMETA(DisplayName ="None"),
-	WALL_RUN = 1 UMETA(DisplayName ="Wall_Run"),
-};
-
 UCLASS(Blueprintable, ClassGroup=(Player), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_PlayerCameraComponent : public UCameraComponent
 {
@@ -151,18 +144,18 @@ private:
 
 public:
 	UFUNCTION()
-	void SetupCameraTilt(const bool& bIsReset, const ETiltUsage usage, const int32& targetOrientation = 0.0f);
+	void SetupCameraTilt(const bool& bIsReset, const int32& targetOrientation = 0.0f);
 
 	UFUNCTION()
-	void CameraRollTilt(float currentSeconds, const float startTime);
+	void ForceUpdateTargetTilt(float angleCamToWall);
+
+	UFUNCTION()
+	void CameraRollTilt();
 	
-	FORCEINLINE int32 GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
+	FORCEINLINE float GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
 
 protected:
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="CameraTilt usage"))
-	ETiltUsage CurrentUsageType;
-	
+		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
 	float StartCameraTiltTimestamp = TNumericLimits<float>().Lowest();
 
@@ -173,23 +166,17 @@ protected:
 	FRotator StartCameraRot = FRotator::ZeroRotator;
 			
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
-	int32 CurrentCameraTiltOrientation = 0;
+	float CurrentCameraTiltOrientation = 0.0f;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
-	float CameraOrientationTiltSpeed = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation tilt amplitude in degree"))
-	TMap<ETiltUsage, FRotator> CameraTiltRotAmplitude = {{ETiltUsage::NONE,FRotator::ZeroRotator}};
-
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
 	UPROPERTY(Transient)
-	bool _bIsCameraTilting = false;
+	bool _bIsCameraTiltingByInterp = false;
 	
 	UPROPERTY(Transient)
 	bool _bIsCameraTilted = false;
