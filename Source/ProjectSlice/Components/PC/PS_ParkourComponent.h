@@ -465,9 +465,11 @@ public:
 	void OnDash();
 
 	UFUNCTION()
-	void ResetDash() const;
+	void ResetDash();
 
-	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}	
+	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
+
+	FORCEINLINE bool IsDashing() const{return _bIsDashing;}
 
 protected:
 
@@ -489,6 +491,9 @@ protected:
 private:
 	UPROPERTY(Transient)
 	FTimerHandle _DashResetTimerHandle;
+
+	UPROPERTY(Transient)
+	bool _bIsDashing;
 
 	// UPROPERTY(Transient)
 	// FTimerHandle _DashCooldownTimerHandle;

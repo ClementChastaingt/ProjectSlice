@@ -156,6 +156,7 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	//TODO :: Do a var when custom mode in place for tweak in BP the proc walk move forbidden state 
 	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_PlayerCharacter->GetParkourComponent()->IsWallRunning())
 	|| playerMovementComp->IsCrouching()
+	|| _PlayerCharacter->GetParkourComponent()->IsDashing()
 	|| playerMovementComp->MovementMode == MOVE_None;
 		
 	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));

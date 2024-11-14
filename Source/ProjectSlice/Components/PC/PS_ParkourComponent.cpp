@@ -672,13 +672,17 @@ void UPS_ParkourComponent::OnDash()
 	// FTimerDelegate dashCooldown_TimerDelegate;
 	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
 	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
+
+	_bIsDashing = true;
 	
 	OnDashEvent.Broadcast();
 }
 
-void UPS_ParkourComponent::ResetDash() const
+void UPS_ParkourComponent::ResetDash()
 {
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
+
+	_bIsDashing = false;
 }
 
 //------------------
