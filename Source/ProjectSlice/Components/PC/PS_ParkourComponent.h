@@ -147,7 +147,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max Height for try Mantle"))
 	float MaxMantleHeight = 200.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max Height for try Mantle"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(UIMin="0", ClampMin="0", ToolTip="Max Height for try Mantle"))
 	float OnAiMaxCapsHeightMultiplicator = 1.5f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Mantle", meta=(ToolTip="Offset between capsule test and height test (for surface with asperities)"))

@@ -35,6 +35,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CameraRollTilt|Debug")
 	bool bDebugCameraTilt = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CameraRollTilt|Debug")
+	bool bDebugCameraTiltTick = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
 	bool bDebugPostProcess = false;
@@ -167,6 +170,10 @@ protected:
 			
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
 	float CurrentCameraTiltOrientation = 0.0f;
+
+	//Init an impossible value for a dot product
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera")
+	float LastAngleCamToWall = 0.0f;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
@@ -183,9 +190,6 @@ private:
 
 	UPROPERTY(Transient)
 	bool _bIsResetingCameraTilt = false;
-
-	UPROPERTY(Transient)
-	float _lastAngleCamToWall;
 	
 #pragma endregion CameraTilt
 	

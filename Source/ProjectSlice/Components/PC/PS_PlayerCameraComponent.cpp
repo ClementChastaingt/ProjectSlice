@@ -108,11 +108,11 @@ void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const int3
 	StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
 	
 	_bIsResetingCameraTilt = bIsReset;
+	LastAngleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
 	_bIsCameraTiltingByInterp = true;
 	
 	if(bDebugCameraTilt)                                                                                                                                                                                                                        
-		UE_LOG(LogTemp, Warning, TEXT("%S bIsReset %i,  StartCameraRot %s, CurrentCameraTiltOrientation %f"), __FUNCTION__, bIsReset, *StartCameraRot.ToString(), CurrentCameraTiltOrientation);               
-	
+		UE_LOG(LogTemp, Warning, TEXT("%S :: bIsReset %i,  StartCameraRot %s, CurrentCameraTiltOrientation %f"), __FUNCTION__, bIsReset, *StartCameraRot.ToString(), CurrentCameraTiltOrientation);               
                                                                                                                                                                                                                                         
 }
 
@@ -128,11 +128,11 @@ void UPS_PlayerCameraComponent::ForceUpdateTargetTilt(const float angleCamToWall
 
 	_bIsCameraTiltingByInterp = false;
 
-	_lastAngleCamToWall = angleCamToWall;
 }
 
 void UPS_PlayerCameraComponent::CameraRollTilt()                                                                                                                                                              
 {
+		
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
 		|| !IsValid(_PlayerCharacter->GetParkourComponent())
@@ -143,16 +143,18 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	//Determine start
 	const FRotator currentRot = _PlayerController->GetControlRotation();
 	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
-	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToWall) != FMath::Sign(_lastAngleCamToWall);
+	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToWall) != FMath::Sign(LastAngleCamToWall);
 	
 	//Determine Target Roll
-	if(bHaveToUpdateTiltOrientation && _lastAngleCamToWall != 0.0f)
+	if(bHaveToUpdateTiltOrientation)
 		ForceUpdateTargetTilt(angleCamToWall);
 	
+	LastAngleCamToWall = angleCamToWall;
+
 	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToWall);
 	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw, 20.0 * orientation);
 
-	UE_LOG(LogTemp, Error, TEXT("angleCamToWall %f, CurrentCameraTiltOrientation %f, orientation %f"), angleCamToWall, CurrentCameraTiltOrientation, orientation);
+	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("angleCamToWall %f, LastAngleCamToWall %f, CurrentCameraTiltOrientation %f, orientation %f"), angleCamToWall,LastAngleCamToWall, CurrentCameraTiltOrientation, orientation);
 	
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	                                                                                                                                                                                                                                            
@@ -170,12 +172,11 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	                                                                                                                                                                                                                                            
 	//Rotate             
 	_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, newRot.Roll));                                                                                                                                                                                              
-	if(bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newRot: %f, alphaTilt %f, CurrentCameraTiltOrientation %"),newRot.Roll, alphaTilt);
+	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newRot: %f, alphaTilt %f, CurrentCameraTiltOrientation %"),newRot.Roll, alphaTilt);
 
 	//If Camera tilt already finished stop                                                                                                                                                                                                      
 	if(alphaTilt >= 1)                                                                                                                                                                                                                          
 	{
-		if(bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("Stop CameraTilt Movement"));
 		_bIsCameraTilted = !_bIsResetingCameraTilt;
 		_bIsCameraTiltingByInterp = false;
 	}                                                                                                                                                                                                                                           

@@ -699,7 +699,7 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	
 	FHitResult outHitHgt, outCapsHit;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
-	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	const float capsuleOffset = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2;
 
 	//Height Trace
 	FVector startHgt = inFwdHit.Location + inFwdHit.Normal * -1 * capsuleOffset;
@@ -721,8 +721,8 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 		return false;
 	}
 	
-	//If come from Jump who can pass without Mantle
-	const bool bPlayerUpperThanTarget = bIsInAir && _PlayerCharacter->GetMesh()->GetComponentLocation().Z < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
+	//If come from Jump who can pass without Mantle OR pull up on a stair step
+	const bool bPlayerUpperThanTarget = _PlayerCharacter->GetMesh()->GetComponentLocation().Z < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
 
 	if(bDebugMantle) DrawDebugPoint(GetWorld(), _PlayerCharacter->GetMesh()->GetComponentLocation(), 20.f, FColor::Green, true);
 		
@@ -732,6 +732,9 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 		OnStartLedge(outHitHgt.Location);
 		return false;
 	}
+
+	//Can't Mantle if not in air
+	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying()) return false;
 	
 	//Capsule trace for check if have enough place for player
 	FVector capsLoc = outHitHgt.Location;
@@ -879,7 +882,7 @@ void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 	_StartLedgeLoc = _PlayerCharacter->GetActorLocation();
 	_TargetLedgeLoc = targetLoc;
 	//FVector landLoc = _PlayerCharacter->GetActorLocation();
-	_TargetLedgeLoc.Z = targetLoc.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + MantleCapsuletHeightTestOffset;
+	_TargetLedgeLoc.Z = targetLoc.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	
 	bIsLedging = true;
 	StartLedgeTimestamp = GetWorld()->GetTimeSeconds();
@@ -947,7 +950,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| !IsValid(otherActor)
 		|| otherActor->ActorHasTag(TAG_UNPARKOURABLE)) return;
 	
-	if(bIsMantling || (!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying()))  return;
+	if(bIsMantling || bIsLedging)  return;
 	
 	_ActorOverlap = otherActor;
 	_ComponentOverlap = otherComp;
