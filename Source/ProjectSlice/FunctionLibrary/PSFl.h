@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "ProjectSlice/PC/PS_Character.h"
 #include "PSFl.generated.h"
 
@@ -39,6 +40,22 @@ public:
 	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
 		
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
+
+	//TODO :: Move this func in ACharcter when NME was create 
+	/*
+	 * @brief Get the input character foot placement
+	 * @param character: tested character reference
+	 * @return Foot placement location
+	 */
+	static FVector GetFootPlacementLoc(const ACharacter* const character);
+
+	//TODO :: Move this func in ACharcter when NME was create 
+	/*
+	 * @brief Get the input character foot placement
+	 * @param character: tested character reference
+	 * @return Foot placement location
+	*/
+	static bool IsInAir(const ACharacter* const character);
 
 #pragma endregion Utilities
 

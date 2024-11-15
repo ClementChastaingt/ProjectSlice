@@ -49,3 +49,20 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 	return worldInputDirection;
 }
 
+//TODO :: Move this func in ACharcter when NME was create
+FVector UPSFl::GetFootPlacementLoc(const ACharacter* const character)
+{
+	FVector footPlacement = character->GetCapsuleComponent()->GetComponentLocation();
+	footPlacement.Z = footPlacement.Z - character->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
+	return footPlacement;
+}
+
+
+
+bool UPSFl::IsInAir(const ACharacter* const character)
+{
+	const bool bIsInAir = character->GetCharacterMovement()->IsFalling() || character->GetCharacterMovement()->IsFlying();
+	return bIsInAir;
+}
+

@@ -169,7 +169,8 @@ void UPS_ParkourComponent::WallRunTick()
 	customWallDirection.Normalize();
 
 	//-----Velocity Stick to Wall-----
-	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * (_PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity);
+	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(GetWallRunDirection());
+	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * (_PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity) * FMath::Clamp(angleCamToWall,0.01,1.0);
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 	
 	//Stop WallRun if he was too long
@@ -709,10 +710,9 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(),startHgt,endHgt,UEngineTypes::ConvertToTraceType(ECC_Visibility), false,actorsToIgnore, bDebugMantle ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitHgt, true, FColor::Orange);
 	
 	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating) return false;
-		
-	//TODO :: Do this a func in characMovmeent
-	const bool bIsInAir = _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
-		
+	
+	const bool bIsInAir = UPSFl::IsInAir(_PlayerCharacter);
+	
 	//If try by meet edge check if not too low
 	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() * OnAiMaxCapsHeightMultiplicator;
 	if(bComeFromAirAndTooLowToEdge)
@@ -722,9 +722,10 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	}
 	
 	//If come from Jump who can pass without Mantle OR pull up on a stair step
-	const bool bPlayerUpperThanTarget = _PlayerCharacter->GetMesh()->GetComponentLocation().Z < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
-
-	if(bDebugMantle) DrawDebugPoint(GetWorld(), _PlayerCharacter->GetMesh()->GetComponentLocation(), 20.f, FColor::Green, true);
+	const FVector footPlacement = UPSFl::GetFootPlacementLoc(_PlayerCharacter);
+	const bool bPlayerUpperThanTarget = footPlacement.Z + (bIsInAir ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight) < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
+	
+	if(bDebugMantle) DrawDebugPoint(GetWorld(), footPlacement, 20.f, FColor::Green, true);
 		
 	//Force Landing by Ledge
 	if(bPlayerUpperThanTarget && !_PlayerCharacter->GetCharacterMovement()->bPerformingJumpOff)
@@ -732,7 +733,7 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 		OnStartLedge(outHitHgt.Location);
 		return false;
 	}
-
+	
 	//Can't Mantle if not in air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying()) return false;
 	
@@ -958,11 +959,8 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
 	
-	//TODO :: Do this a func in characMovmeent
-	const bool bIsInAir =  _PlayerCharacter->GetCharacterMovement()->IsFalling() || _PlayerCharacter->GetCharacterMovement()->IsFlying();
-	
 	FVector starLoc = _PlayerCharacter->GetActorLocation();
-	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (bIsInAir ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
+	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (UPSFl::IsInAir(_PlayerCharacter) ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
 	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + GetForwardVector() * GetUnscaledCapsuleRadius() * 2, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
@@ -986,7 +984,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		}
 	
 		//Choose right parkour logic to execute
-		if(angle <= MaxMantleAngle && !bIsWallRunning && !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle()))
+		if(angle <= MaxMantleAngle && !bIsWallRunning /*&& !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle())*/)
 		{
 			if(CanMantle(outHit))
 				OnStartMantle();
