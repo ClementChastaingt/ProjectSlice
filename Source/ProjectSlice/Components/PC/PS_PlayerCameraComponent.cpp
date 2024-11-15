@@ -119,10 +119,9 @@ void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const int3
 void UPS_PlayerCameraComponent::ForceUpdateTargetTilt(const float angleCamToWall)
 {
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-
-	const int32 camOrientationModifier = (FMath::Sign(angleCamToWall) < 0 ? -1 : 1);
-	CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * camOrientationModifier;
-
+	
+	CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * -1;
+	
 	StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
 	StartCameraRot = _PlayerController->GetControlRotation();
 
@@ -132,7 +131,6 @@ void UPS_PlayerCameraComponent::ForceUpdateTargetTilt(const float angleCamToWall
 
 void UPS_PlayerCameraComponent::CameraRollTilt()                                                                                                                                                              
 {
-		
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
 		|| !IsValid(_PlayerCharacter->GetParkourComponent())
@@ -149,12 +147,12 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	if(bHaveToUpdateTiltOrientation)
 		ForceUpdateTargetTilt(angleCamToWall);
 	
-	LastAngleCamToWall = angleCamToWall;
-
 	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToWall);
 	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw, 20.0 * orientation);
 
 	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("angleCamToWall %f, LastAngleCamToWall %f, CurrentCameraTiltOrientation %f, orientation %f"), angleCamToWall,LastAngleCamToWall, CurrentCameraTiltOrientation, orientation);
+
+	LastAngleCamToWall = angleCamToWall;
 	
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	                                                                                                                                                                                                                                            

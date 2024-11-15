@@ -6,7 +6,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
+#include "Field/FieldSystemObjects.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/PC/PS_PlayerController.h"
 #include "PS_ParkourComponent.generated.h"
 
@@ -255,7 +257,7 @@ private:
 
 public:
 	UFUNCTION()
-	void TryStartWallRun(AActor* otherActor);
+	void TryStartWallRun(AActor* const otherActor);
 
 	UFUNCTION()
 	void OnWallRunStop();
@@ -308,10 +310,13 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed"))
 	float MaxWallRunSpeedMultiplicator = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(ToolTip="Min velocity threshold to maintain WallRunning"))
+	float MinWallRunVelocityThreshold = 0.01f;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Fake input push force when input was not pressed"))
 	float WallRunNoInputVelocity = 0.8f;
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
 		
@@ -321,14 +326,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
 	float JumpOffForceSpeed = 1500.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun", meta=(UIMin = 90.0f, ClampMin = 90.f, ForceUnits="deg", ToolTip="Jump Off Player forward Direction to Wall right dir threshold angle"))
-	float JumpOffPlayerFwdDirThresholdAngle = 100.0f;
-	
 private:
 	//------------------
 
 	UPROPERTY(Transient, meta=(ToolTip="Start WallRun player velocity scale"))
-	FVector _WallRunEnterVelocity;
+	FVector _WallRunEnterVelocity;	
 
 #pragma endregion WallRun
 
