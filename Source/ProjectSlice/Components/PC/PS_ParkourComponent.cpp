@@ -359,9 +359,11 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	bool bIsARightDirJumpOff = outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall;
 	
 	//Determine Target Roll
-	FVector jumpDir = bIsARightDirJumpOff ? _PlayerCharacter->GetActorRightVector() * -WallToPlayerOrientation : _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection);
+	
+	FVector jumpDir = bIsARightDirJumpOff ? _PlayerCharacter->GetActorRightVector() * -WallToPlayerOrientation * FMath::Sign(angleCamToWall) : _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 	jumpDir.Normalize();
-	const FVector jumpForce = jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + JumpOffForceSpeed) ;
+	const FVector jumpForce = jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + JumpOffForceSpeed);
 
 	//Debug
 	if(bDebugWallRunJump)
@@ -371,11 +373,10 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 	
 	//Clamp Max Velocity
-	FVector jumpTargetVel = jumpForce;
-	UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
-	
+	FVector jumpTargetVel = UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
+
 	//Launch chara
-	_PlayerCharacter->LaunchCharacter(jumpTargetVel,false,false);
+	_PlayerCharacter->LaunchCharacter(jumpTargetVel,true,true);
 	
 }
 //------------------

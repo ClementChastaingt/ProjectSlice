@@ -150,7 +150,7 @@ public:
 	void SetupCameraTilt(const bool& bIsReset, const int32& targetOrientation = 0.0f);
 
 	UFUNCTION()
-	void ForceUpdateTargetTilt(float angleCamToWall);
+	void ForceUpdateTargetTilt();
 
 	UFUNCTION()
 	void CameraRollTilt();

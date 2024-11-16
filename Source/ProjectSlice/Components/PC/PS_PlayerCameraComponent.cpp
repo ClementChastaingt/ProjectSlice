@@ -116,7 +116,7 @@ void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const int3
                                                                                                                                                                                                                                         
 }
 
-void UPS_PlayerCameraComponent::ForceUpdateTargetTilt(const float angleCamToWall)
+void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
 {
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
@@ -145,7 +145,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	
 	//Determine Target Roll
 	if(bHaveToUpdateTiltOrientation)
-		ForceUpdateTargetTilt(angleCamToWall);
+		ForceUpdateTargetTilt();
 	
 	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToWall);
 	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw, 20.0 * orientation);
