@@ -154,12 +154,21 @@ void UPS_ParkourComponent::WallRunTick()
 		curveForceAlpha = WallRunForceCurve->GetFloatValue(alphaWallRun);
 	
 	//Clamp Max Velocity
-	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(GetWallRunDirection());
-	
-	FVector wallRunVel = _WallRunEnterVelocity + (WallRunSpeedBoost - UKismetMathLibrary::MapRangeClamped(FMath::Abs(angleCamToWall), 0.0f,1.0f, WallRunSpeedBoost * 2, 0.0f));
+	FVector wallRunVel = _WallRunEnterVelocity + WallRunSpeedBoost;
 	wallRunVel = UPSFl::ClampVelocity(_WallRunEnterVelocity, _PlayerCharacter->GetVelocity(),wallRunVel,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator);
+
+	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection);
+	const float cameraOrientationWeight = FMath::Clamp(FMath::Abs(angleCamToWall), 0.0f, 1.0f);
 	
-	VelocityWeight = FMath::Lerp(_WallRunEnterVelocity.Length(), wallRunVel.Length(),curveForceAlpha);
+	float targetWallRunVel = FMath::Lerp(_WallRunEnterVelocity.Length() / 2.0, wallRunVel.Length(),cameraOrientationWeight);
+
+	//WallRunning on look backward with more than 
+	if(WallRunMaxCamOrientationAngle < UKismetMathLibrary::DegAcos(angleCamToWall) && angleCamToWall < 0)
+	{
+		targetWallRunVel -= FMath::Lerp(0.0f, wallRunVel.Length(),cameraOrientationWeight);
+	};
+	
+	VelocityWeight = FMath::Lerp(_WallRunEnterVelocity.Length(), targetWallRunVel,curveForceAlpha);
 	
 	//-----Fake Gravity Velocity-----
 	float curveGravityAlpha = alphaWallRun;
@@ -171,7 +180,9 @@ void UPS_ParkourComponent::WallRunTick()
 	customWallDirection.Normalize();
 
 	//-----Velocity Stick to Wall-----
-	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * (_PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity);
+	const float inputWeight = _PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity;
+		
+	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * inputWeight;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 	
 	//Stop WallRun if he was too long
@@ -180,7 +191,7 @@ void UPS_ParkourComponent::WallRunTick()
 		if(bDebugWallRun)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
 		OnWallRunStop();
 	}
-	
+		
 	//Debug
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity.Length(), VelocityWeight);
 	

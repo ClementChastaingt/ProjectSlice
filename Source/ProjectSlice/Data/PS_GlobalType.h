@@ -21,6 +21,23 @@ enum class ETransitPhase : uint8
 };
 
 
+USTRUCT(BlueprintType)
+struct FSRangeFloat
+{
+	GENERATED_BODY()
+
+	FSRangeFloat(){};
+	FSRangeFloat(const float max, const float min){ Max = max; Min = min;}
+
+	UPROPERTY()
+	float Max = 0.0f;
+	
+	UPROPERTY()
+	float Min = 0.0f;
+	
+};
+
+
 //__________________________________________________
 #pragma endregion GlobalEnum
 
