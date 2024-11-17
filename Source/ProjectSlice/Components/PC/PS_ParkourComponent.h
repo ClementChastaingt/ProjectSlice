@@ -474,12 +474,13 @@ public:
 
 	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
 
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsDashing() const{return _bIsDashing;}
-
-protected:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnDashEvent;
+
+protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Dash Speed"))
 	float DashSpeed = 1500.0f;

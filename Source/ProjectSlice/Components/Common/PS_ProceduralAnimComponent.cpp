@@ -35,7 +35,12 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
+
 	
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	{
+		_PlayerCharacter->GetParkourComponent()->OnDashEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
+	}
 	
 }
 
@@ -77,6 +82,12 @@ void UPS_ProceduralAnimComponent::LandingDip()
 	StartDip(3.0f, dipStrenght);
 }
 
+void UPS_ProceduralAnimComponent::DashDip()
+{
+	if(!IsValid(_PlayerCharacter)) return;
+	
+}
+
 void UPS_ProceduralAnimComponent::Dip()
 {
 	if(!bIsDipping || !IsValid(_PlayerCharacter)) return;
@@ -92,12 +103,12 @@ void UPS_ProceduralAnimComponent::Dip()
 	if(bDebugDip) UE_LOG(LogTemp, Log, TEXT("%S :: dipAlpha %f, alpha %f"), __FUNCTION__, DipAlpha, alpha);
 
 	//Move player loc
-	USceneComponent* playerRoot = _PlayerCharacter->GetFirstPersonRoot();
-
+	USceneComponent* playerRoot = _PlayerCharacter->GetFirstPersonRoot();	
 	FVector newCamLoc = playerRoot->GetRelativeLocation();
+	
 	newCamLoc.Z = FMath::Lerp(0,-10, DipAlpha);
 	playerRoot->SetRelativeLocation(newCamLoc);
-
+	
 	//Stop dip
 	if(alpha >= 1.0f)
 	{

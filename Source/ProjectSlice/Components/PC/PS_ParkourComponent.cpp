@@ -42,7 +42,7 @@ void UPS_ParkourComponent::BeginPlay()
 	//Link Event Receiver
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
-	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);	
+	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);
 	
 	//Custom Tick
 	SetComponentTickEnabled(false);
@@ -377,6 +377,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Launch chara
 	_PlayerCharacter->LaunchCharacter(jumpTargetVel,true,true);
+	_PlayerCharacter->OnJumped();
 	
 }
 //------------------

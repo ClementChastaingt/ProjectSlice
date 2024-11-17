@@ -52,7 +52,10 @@ public:
 
 	UFUNCTION()
 	void LandingDip();
-	
+
+	UFUNCTION()
+	void DashDip();
+
 protected:
 	
 	UFUNCTION()

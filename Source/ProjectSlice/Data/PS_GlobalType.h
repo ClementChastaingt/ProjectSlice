@@ -34,7 +34,6 @@ struct FSRangeFloat
 	
 	UPROPERTY()
 	float Min = 0.0f;
-	
 };
 
 
