@@ -199,9 +199,7 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 
 	//Rotation rate and smoothing for Camera Sway
 	CurrentCamRot =_PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentRotation();
-
-	//TODO ::  Bug come from newCamRotNorm.Yaw who jump from -5.0 to 5.0, clamp newCamRotNorm fix it bug break feature
-	//FRotator newCamRotNorm = UKismetMathLibrary::NormalizedDeltaRotator(GetCurrentCamRot(), camRotPrev).Clamp();
+	
 	FRotator newCamRotNorm = UKismetMathLibrary::NormalizedDeltaRotator(CurrentCamRot, camRotPrev);
 	FRotator targetCamRotRate;
 	targetCamRotRate.Roll = FMath::Clamp(newCamRotNorm.Pitch * -1, -5.0f,5.0f);
@@ -209,19 +207,26 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 	targetCamRotRate.Yaw = FMath::Clamp(newCamRotNorm.Yaw, -5.0f,5.0f);
 
 	const float deltaTime = GetWorld()->GetDeltaSeconds();
-
-	//TODO :: Temp fix camRotRateSpeed
-	const float camRotRateSpeedGun = FMath::Lerp(SwayLagSmoothingSpeedGun, SwayLagSmoothingSpeedGun * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
-	CamRotRateGun = (FMath::RInterpTo(CamRotRateGun, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeedGun));
-
-	const float camRotRateSpeedHook = FMath::Lerp(SwayLagSmoothingSpeedHook, SwayLagSmoothingSpeedHook * 2, FMath::Clamp(_PlayerController->GetMoveInput().Y * -1, 0.0f, 1.0f));
-	CamRotRateHook = (FMath::RInterpTo(CamRotRateHook, targetCamRotRate, deltaTime, (1.0/deltaTime) / camRotRateSpeedHook));
+	
+	const float alpha = FMath::Clamp(FMath::Abs(_PlayerController->GetMoveInput().Y * -1), 0.0f, 1.0f);
+	const float camRotRateSpeedGun = FMath::Lerp(SwayLagSmoothingSpeedGun, SwayLagSmoothingSpeedGun * 2, alpha);
+	const float camRotRateSpeedHook = FMath::Lerp(SwayLagSmoothingSpeedHook, SwayLagSmoothingSpeedHook * 2, alpha);
+	
+	const float rotAlphaGun = (1.0/deltaTime) / camRotRateSpeedGun;
+	CamRotRateGun = (FMath::RInterpTo(CamRotRateGun, targetCamRotRate, deltaTime, rotAlphaGun));
+	
+	const float rotAlphaHook = (1.0/deltaTime) / camRotRateSpeedHook;
+	CamRotRateHook = (FMath::RInterpTo(CamRotRateHook, targetCamRotRate, deltaTime, rotAlphaHook));
 
 	//Counteract weapon sway rotation
-	CamRotOffset.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Yaw, -5.0f,5.0f));
-	CamRotOffset.Y = 0.0f;
-	CamRotOffset.Z = FMath::Lerp(-MaxCamRotOffset.Z, MaxCamRotOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Roll, -5.0f,5.0f));
-	
+	CamRotOffsetGun.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Yaw, -5.0f,5.0f));
+	CamRotOffsetGun.Y = 0.0f;
+	CamRotOffsetGun.Z = FMath::Lerp(-MaxCamRotOffset.Z, MaxCamRotOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRateGun.Roll, -5.0f,5.0f));
+
+	CamRotOffsetHook.X =  FMath::Lerp(-MaxCamRotOffset.X, MaxCamRotOffset.X,UKismetMathLibrary::NormalizeToRange(CamRotRateHook.Yaw, -5.0f,5.0f));
+	CamRotOffsetHook.Y = 0.0f;
+	CamRotOffsetHook.Z = FMath::Lerp(-MaxCamRotOffset.Z, MaxCamRotOffset.Z,UKismetMathLibrary::NormalizeToRange(CamRotRateHook.Roll, -5.0f,5.0f));
+		
 }
 
 void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)

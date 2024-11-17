@@ -161,16 +161,25 @@ private:
 
 public:
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FRotator GetCurrentCamRot() const{return CurrentCamRot;}
+
+	
 	
 protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyLookSwayAndOffset(const FRotator& camRotPrev);
-	
+
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Pitch Offset position"))
 	FVector PitchOffsetPos = FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation Offset position"))
-	FVector CamRotOffset = FVector::ZeroVector;
+	FVector CamRotOffsetGun = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Camera rotation Offset position"))
+	FVector CamRotOffsetHook= FVector::ZeroVector;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Sway", meta=(ToolTip="Current Camera rotation"))
 	FRotator CurrentCamRot = FRotator::ZeroRotator;
