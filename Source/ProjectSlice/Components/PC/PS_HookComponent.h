@@ -85,6 +85,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSwing = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugPull= false;
 	
 private:
 	UPROPERTY(Transient)

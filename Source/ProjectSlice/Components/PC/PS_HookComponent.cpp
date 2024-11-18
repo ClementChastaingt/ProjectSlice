@@ -752,6 +752,7 @@ void UPS_HookComponent::WindeHook()
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
 	{
+		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 		bCableWinderPull = true;
 		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
 	}
@@ -760,6 +761,7 @@ void UPS_HookComponent::WindeHook()
 
 void UPS_HookComponent::StopWindeHook()
 {
+	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	bCableWinderPull = false;
 }
 
@@ -775,7 +777,7 @@ void UPS_HookComponent::DettachHook(const bool bComeFromJump)
 	OnTriggerSwing(false, bComeFromJump);
 
 	//----Stop Cable Warping---
-	bCableWinderPull = false;
+	StopWindeHook();
 	AttachedMesh = nullptr;
 
 	//----Hook Move Feedback---
@@ -881,7 +883,7 @@ void UPS_HookComponent::PowerCablePull()
 		float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
 		
-		UE_LOG(LogTemp, Error, TEXT("%S :: massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
+		if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		alpha = massAlpha * distAlpha;
 		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
@@ -897,7 +899,7 @@ void UPS_HookComponent::PowerCablePull()
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(FName("CableStart")));
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 
-	if(bDebugTick) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
+	if(bDebugTick && bDebugPull) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
 	
 	//Use Force
 	if(bPlayerIsSwinging)
@@ -927,9 +929,9 @@ void UPS_HookComponent::PowerCablePull()
 
 void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFromJump)
 {
-	UE_LOG(LogTemp, Warning, TEXT("%S :: bActivate %i"), __FUNCTION__,bActivate);
-
 	if(bPlayerIsSwinging == bActivate) return;
+
+	if(bDebugSwing) UE_LOG(LogTemp, Warning, TEXT("%S :: bActivate %i"), __FUNCTION__,bActivate);
 	
 	if(!IsValid(GetWorld()) || 	!IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_PlayerCharacter) || !IsValid(AttachedMesh)) return;
 		
