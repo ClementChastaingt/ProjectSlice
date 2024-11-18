@@ -877,14 +877,15 @@ void UPS_HookComponent::PowerCablePull()
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
-		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
-		
-		float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-		float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
-		
-		if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
-		alpha = massAlpha * distAlpha;
+		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
+		// float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
+		//
+		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
+		//
+		// if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
+		// alpha = massAlpha * distAlpha;
 		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
@@ -938,7 +939,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 	bPlayerIsSwinging = bActivate;
 	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	//_PlayerController->SetCanMove(!bActivate);
-	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	//_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : DefaultGravityScale;
 	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
@@ -956,7 +957,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 		else
 		{
 			ConstraintAttachSlave->SetMassOverrideInKg(NAME_None,_PlayerCharacter->GetCharacterMovement()->Mass);
-			//ConstraintAttachMaster->SetMassOverrideInKg(NAME_None,AttachedMesh->GetMass());
+			ConstraintAttachMaster->SetMassOverrideInKg(NAME_None,AttachedMesh->GetMass());
 			
 			UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
 			AActor* masterAttachActor = CablePointComponents.IsValidIndex(0) ? CablePointComponents[0]->GetOwner() : _PlayerCharacter;
@@ -987,9 +988,9 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 				
 				HookPhysicConstraint->InitComponentConstraint();
 				
-				FTimerDelegate triggerSwing;
-				triggerSwing.BindUFunction(this, FName("ImpulseConstraintAttach"));
-				GetWorld()->GetTimerManager().SetTimerForNextTick(triggerSwing);
+				// FTimerDelegate triggerSwing;
+				// triggerSwing.BindUFunction(this, FName("ImpulseConstraintAttach"));
+				// GetWorld()->GetTimerManager().SetTimerForNextTick(triggerSwing);
 				
 			}
 		}
@@ -1021,10 +1022,10 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 			HookPhysicConstraint->UpdateConstraintFrames();
 
 			//Launch if Stop swing by jump
-			if(bComeFromJump)
-			{
-				_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * ExitSwingImpulseForce, false, true);
-			}
+			// if(bComeFromJump && _PlayerCharacter->GetCharacterMovement()->IsFalling())
+			// {
+			// 	_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * ExitSwingImpulseForce, false, true);
+			// }
 			
 		}
 
