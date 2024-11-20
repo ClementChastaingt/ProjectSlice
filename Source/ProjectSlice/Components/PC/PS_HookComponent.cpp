@@ -846,9 +846,9 @@ void UPS_HookComponent::PowerCablePull()
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 	
 	//Activate Swing if not active
-	if(!IsPlayerSwinging())
+	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
-		OnTriggerSwing(_PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass());
+		OnTriggerSwing(true);
 	}
 	
 	//Activate Pull if Winde
@@ -958,7 +958,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 		{
 			ConstraintAttachSlave->SetMassOverrideInKg(NAME_None,_PlayerCharacter->GetCharacterMovement()->Mass);
 			ConstraintAttachMaster->SetMassOverrideInKg(NAME_None,AttachedMesh->GetMass());
-			
+						
 			UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
 			AActor* masterAttachActor = CablePointComponents.IsValidIndex(0) ? CablePointComponents[0]->GetOwner() : _PlayerCharacter;
 			GetConstraintAttachMaster()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
@@ -971,8 +971,8 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 				
 				HookPhysicConstraint->ComponentName1.ComponentName = FName(GetConstraintAttachSlave()->GetName());
 				HookPhysicConstraint->ComponentName2.ComponentName = CablePointComponents.IsValidIndex(0) ? FName(CablePointComponents[0]->GetName()) :  FName(GetConstraintAttachMaster()->GetName());
-
-				//Set Linear Limit				
+				
+				//Set Linear Limit
 				HookPhysicConstraint->SetLinearXLimit(LCM_Limited, DistanceOnAttach);
 				HookPhysicConstraint->SetLinearYLimit(LCM_Limited, DistanceOnAttach);
 				HookPhysicConstraint->SetLinearZLimit(LCM_Limited, DistanceOnAttach);
@@ -984,14 +984,13 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 				GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 				GetConstraintAttachSlave()->SetSimulatePhysics(true);
 				GetConstraintAttachSlave()->SetWorldLocation(HookThrower->GetComponentLocation());
-
 				
 				HookPhysicConstraint->InitComponentConstraint();
-				
-				// FTimerDelegate triggerSwing;
-				// triggerSwing.BindUFunction(this, FName("ImpulseConstraintAttach"));
-				// GetWorld()->GetTimerManager().SetTimerForNextTick(triggerSwing);
-				
+					
+				//Impulse Slave for preserve player enter velocity
+				_SwingImpulseForce = _PlayerCharacter->GetVelocity().Length();
+				ImpulseConstraintAttach();
+								
 			}
 		}
 	}
@@ -1021,11 +1020,21 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 			HookPhysicConstraint->InitComponentConstraint();
 			HookPhysicConstraint->UpdateConstraintFrames();
 
+			//Set Player velocity to slave velocity
+			_PlayerCharacter->GetCharacterMovement()->Velocity = ConstraintAttachSlave->GetComponentVelocity();
+			
 			//Launch if Stop swing by jump
-			// if(bComeFromJump && _PlayerCharacter->GetCharacterMovement()->IsFalling())
-			// {
-			// 	_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * ExitSwingImpulseForce, false, true);
-			// }
+			_SwingImpulseForce = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+			
+			if(_PlayerCharacter->GetCharacterMovement()->IsFalling())
+			{
+				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _SwingImpulseForce, true, true);
+				_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * _SwingImpulseForce, true, true);
+
+				if(bDebugSwing)
+					DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
+				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * _SwingImpulseForce, false, true);
+			}
 			
 		}
 
@@ -1122,7 +1131,7 @@ void UPS_HookComponent::OnSwingPhysic()
 	  || _PlayerCharacter->GetParkourComponent()->IsMantling()
 	  /*|| _PlayerCharacter->GetVelocity().Length() <= (_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched / 2) */)
 	{
-		DettachHook();
+		OnTriggerSwing(false);
 		
 		//----Auto break hook if velocity too low----
 		// if(bCablePowerPull &&  _PlayerCharacter->GetVelocity().Length() <= _SwingStartVelocity.Length())
@@ -1177,7 +1186,7 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 	
 	FVector dir = _PlayerCharacter->GetVelocity();
 	dir.Normalize();
-	GetConstraintAttachSlave()->AddImpulse(dir * EnterSwingImpulseForce * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
+	GetConstraintAttachSlave()->AddImpulse(dir * _SwingImpulseForce * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
 
 	if(bDebugSwing) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 }
