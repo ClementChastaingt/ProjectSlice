@@ -363,13 +363,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Use physic constraint swing or force", EditCondition="bSwingIsPhysical", EditConditionHides))
 	float MinLinearLimitZ = 500.0f;
-
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Physic constraint swing enter impusle force", ForceUnits="cm/s", EditCondition="bSwingIsPhysical", EditConditionHides))
-	float EnterSwingImpulseForce = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Physic constraint swing exit impusle force", ForceUnits="cm/s", EditCondition="bSwingIsPhysical", EditConditionHides))
-	float ExitSwingImpulseForce = 1000.0f;
-	*/
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Physic constraint swing chara movement gravity scale"))
 	float SwingMinDistanceAttach= 100.0f;

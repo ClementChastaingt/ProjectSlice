@@ -1003,12 +1003,16 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 		}
 		else
 		{
+			FVector directionToCenterMass = GetConstraintAttachMaster()->GetComponentLocation() - GetConstraintAttachSlave()->GetComponentLocation();
+			directionToCenterMass.Normalize();
+			_SwingImpulseForce = GetConstraintAttachSlave()->GetComponentVelocity().Length();
+			
 			GetConstraintAttachMaster()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			GetConstraintAttachMaster()->AttachToComponent(HookThrower, FAttachmentTransformRules::KeepWorldTransform);
+			GetConstraintAttachMaster()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 			
 			GetConstraintAttachSlave()->SetSimulatePhysics(false);
 			GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			GetConstraintAttachSlave()->AttachToComponent(HookThrower, FAttachmentTransformRules::KeepWorldTransform);
+			GetConstraintAttachSlave()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 			
 			HookPhysicConstraint->ConstraintActor1 = nullptr;
@@ -1024,15 +1028,21 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 			_PlayerCharacter->GetCharacterMovement()->Velocity = ConstraintAttachSlave->GetComponentVelocity();
 			
 			//Launch if Stop swing by jump
-			_SwingImpulseForce = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+			//_SwingImpulseForce = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
 			
-			if(_PlayerCharacter->GetCharacterMovement()->IsFalling())
+			if(_PlayerCharacter->GetCharacterMovement()->IsFalling() && CableListArray.IsValidIndex(0))
 			{
 				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _SwingImpulseForce, true, true);
-				_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * _SwingImpulseForce, true, true);
-
+				//FVector direction = UKismetMathLibrary::TransformLocation(CableListArray[0]->GetSocketTransform(TAG_CABLEEND), CableListArray[0]->EndLocation) - _PlayerCharacter->GetActorLocation();
+				FVector impulseDirection = directionToCenterMass.ForwardVector;
+				impulseDirection.Normalize();
+				_PlayerCharacter->LaunchCharacter(impulseDirection * _SwingImpulseForce, true, true);
+				
 				if(bDebugSwing)
-					DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
+				{
+					DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + impulseDirection * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
+				}
+
 				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * _SwingImpulseForce, false, true);
 			}
 			
