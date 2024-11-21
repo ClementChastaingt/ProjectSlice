@@ -480,6 +480,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnDashEvent;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnResetDashEvent;
+
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Dash", meta=(UIMin = 0.f, ClampMin = 0.f,ToolTip="Dash Speed"))

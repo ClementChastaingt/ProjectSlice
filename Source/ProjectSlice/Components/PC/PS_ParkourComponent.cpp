@@ -710,6 +710,8 @@ void UPS_ParkourComponent::ResetDash()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 
 	_bIsDashing = false;
+
+	OnResetDashEvent.Broadcast();
 }
 
 //------------------
