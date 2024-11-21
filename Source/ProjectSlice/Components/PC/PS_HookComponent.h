@@ -228,7 +228,7 @@ public:
 	void StopWindeHook();
 	
 	UFUNCTION()
-	void DettachHook(const bool bComeFromJump = false);
+	void DettachHook();
 
 	
 	UFUNCTION(BlueprintPure)
@@ -315,7 +315,7 @@ private:
 
 public:
 	UFUNCTION()
-	void OnTriggerSwing(const bool bActivate, const bool bComeFromJump = false);
+	void OnTriggerSwing(const bool bActivate);
 
 	UFUNCTION()
 	void OnSwingForce();
@@ -334,6 +334,9 @@ public:
 	UFUNCTION()
 	void OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool
 		bFromSweep, const FHitResult& sweepResult);
+
+	UFUNCTION()
+	void SetSwingPlayerLastLoc(const FVector& swingPlayerLastLoc){_SwingPlayerLastLoc = swingPlayerLastLoc;}
 
 protected:
 
@@ -383,6 +386,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _SwingImpulseForce;
+
+	UPROPERTY(Transient)
+	FVector _SwingPlayerLastLoc;
 	
 
 #pragma endregion Swing	

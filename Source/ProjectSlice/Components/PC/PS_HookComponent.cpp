@@ -766,7 +766,7 @@ void UPS_HookComponent::StopWindeHook()
 }
 
 
-void UPS_HookComponent::DettachHook(const bool bComeFromJump)
+void UPS_HookComponent::DettachHook()
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
@@ -774,7 +774,7 @@ void UPS_HookComponent::DettachHook(const bool bComeFromJump)
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;
 
 	//----Reset Swing---
-	OnTriggerSwing(false, bComeFromJump);
+	OnTriggerSwing(false);
 
 	//----Stop Cable Warping---
 	StopWindeHook();
@@ -928,7 +928,7 @@ void UPS_HookComponent::PowerCablePull()
 #pragma region Swing
 //------------------
 
-void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFromJump)
+void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 {
 	if(bPlayerIsSwinging == bActivate) return;
 
@@ -1027,23 +1027,14 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate, const bool bComeFro
 			//Set Player velocity to slave velocity
 			_PlayerCharacter->GetCharacterMovement()->Velocity = ConstraintAttachSlave->GetComponentVelocity();
 			
-			//Launch if Stop swing by jump
-			//_SwingImpulseForce = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
-			
-			if(_PlayerCharacter->GetCharacterMovement()->IsFalling() && CableListArray.IsValidIndex(0))
+			//Launch if Stop swing by jump			
+			if(_PlayerCharacter->GetCharacterMovement()->IsFalling())
 			{
-				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * _SwingImpulseForce, true, true);
-				//FVector direction = UKismetMathLibrary::TransformLocation(CableListArray[0]->GetSocketTransform(TAG_CABLEEND), CableListArray[0]->EndLocation) - _PlayerCharacter->GetActorLocation();
-				FVector impulseDirection = directionToCenterMass.ForwardVector;
-				impulseDirection.Normalize();
+				FVector impulseDirection = 	UKismetMathLibrary::GetDirectionUnitVector(_SwingPlayerLastLoc, _PlayerCharacter->GetActorLocation());
 				_PlayerCharacter->LaunchCharacter(impulseDirection * _SwingImpulseForce, true, true);
 				
 				if(bDebugSwing)
-				{
 					DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + impulseDirection * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
-				}
-
-				//_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetActorForwardVector() * _SwingImpulseForce, false, true);
 			}
 			
 		}
@@ -1150,7 +1141,14 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Set actor location to ConstraintAttach
+	FTimerDelegate setLastLocDel;
+	FTimerHandle setLastLocHandle;
+	setLastLocDel.BindUFunction(this,FName("SetSwingPlayerLastLoc"), GetConstraintAttachSlave()->GetComponentLocation());
+	GetWorld()->GetTimerManager().SetTimer(setLastLocHandle,setLastLocDel,0.1,false);
+
+	//Set player position to constraintSlave loc
 	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
+
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations.IsValidIndex(0) ? CablePointLocations[0] : CurrentHookHitResult.Location);
@@ -1177,7 +1175,7 @@ void UPS_HookComponent::OnSwingPhysic()
 		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, DistanceOnAttach);
 		/*if(!bCableWinderPull)*/ HookPhysicConstraint->SetLinearZLimit(LCM_Limited, DistanceOnAttach);
 	}
-
+	
 	//Stop by time
 	if(timeWeightAlpha >= 1)
 	{
