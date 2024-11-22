@@ -1148,13 +1148,11 @@ void UPS_HookComponent::OnSwingPhysic()
 
 	//Set player position to constraintSlave loc
 	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
-
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations.IsValidIndex(0) ? CablePointLocations[0] : CurrentHookHitResult.Location);
 	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
 	HookPhysicConstraint->UpdateConstraintFrames();
-
 	
 	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 
