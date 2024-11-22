@@ -1,11 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ProjectSliceGameMode.h"
-
-#include "../PC/PS_Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
-#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "UObject/ConstructorHelpers.h"
 
 AProjectSliceGameMode::AProjectSliceGameMode()

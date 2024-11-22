@@ -5,15 +5,12 @@
 
 #include "PS_PlayerCameraComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "ProjectSlice/PC/PS_Character.h"
-//#include "../../../../Runtime/CableComponent/Source/CableComponent/Classes/CableComponent.h"
 #include "CableComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/PhysicsVolume.h"
-#include "Image/ImageBuilder.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 

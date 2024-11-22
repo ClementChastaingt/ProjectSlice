@@ -7,10 +7,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
-#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
-#include "ProjectSlice/PC/PS_Character.h"
 
 
 // Sets default values for this component's properties
@@ -584,7 +583,6 @@ void UPS_ParkourComponent::SlideTick()
 		
 		//Clamp Max Velocity
 		const float rangedPitchMultiplicator = UKismetMathLibrary::MapRangeClamped(OutSlopePitchDegreeAngle,90,characterMovement->GetWalkableFloorAngle(),1.0,SlopeForceDecelerationWeight);
-		UE_LOG(LogTemp, Error, TEXT("rangedPitchMultiplicator %f, OutSlopePitchDegreeAngle %f, OutSlopeRollDegreeAngle %f"), rangedPitchMultiplicator, OutSlopePitchDegreeAngle, OutSlopeRollDegreeAngle);
 		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(slideVel, _PlayerCharacter->GetVelocity(),slideVel * SlideSpeedBoost, _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * (OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator)));
 		
 	}
@@ -739,18 +737,18 @@ bool UPS_ParkourComponent::CanMantle(const FHitResult& inFwdHit)
 	
 	if(!outHitHgt.bBlockingHit || outHitHgt.bStartPenetrating) return false;
 	
-	const bool bIsInAir = UPSFl::IsInAir(_PlayerCharacter);
+	const bool bIsInAir = _PlayerCharacter->IsInAir();
 	
 	//If try by meet edge check if not too low
 	const bool bComeFromAirAndTooLowToEdge = bIsInAir && outHitHgt.Location.Z - _PlayerCharacter->GetActorLocation().Z > _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() * OnAiMaxCapsHeightMultiplicator;
 	if(bComeFromAirAndTooLowToEdge)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%S :: bComeFromAirAndTooLowToEdge true"), __FUNCTION__);
+		if(bDebugMantle) UE_LOG(LogTemp, Warning, TEXT("%S :: bComeFromAirAndTooLowToEdge true"), __FUNCTION__);
 		return false;
 	}
 	
 	//If come from Jump who can pass without Mantle OR pull up on a stair step
-	const FVector footPlacement = UPSFl::GetFootPlacementLoc(_PlayerCharacter);
+	const FVector footPlacement = _PlayerCharacter->GetFootPlacementLoc();
 	const bool bPlayerUpperThanTarget = footPlacement.Z + (bIsInAir ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight) < outHitHgt.Location.Z  && outHitHgt.Location.Z  < _PlayerCharacter->GetActorLocation().Z;
 	
 	if(bDebugMantle) DrawDebugPoint(GetWorld(), footPlacement, 20.f, FColor::Green, true);
@@ -988,7 +986,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	const TArray<AActor*> actorsToIgnore;
 	
 	FVector starLoc = _PlayerCharacter->GetActorLocation();
-	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (UPSFl::IsInAir(_PlayerCharacter) ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
+	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (_PlayerCharacter->IsInAir() ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
 	
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + GetForwardVector() * GetUnscaledCapsuleRadius() * 2, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);

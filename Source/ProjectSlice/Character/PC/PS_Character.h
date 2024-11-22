@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "PS_PlayerController.h"
-#include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Logging/LogMacros.h"
+#include "ProjectSlice/Character/PS_CharacterBase.h"
 #include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "ProjectSlice/Components/Common/PS_ProceduralAnimComponent.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
@@ -24,7 +24,7 @@ struct FInputActionValue;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
-class PROJECTSLICE_API AProjectSliceCharacter : public ACharacter
+class PROJECTSLICE_API AProjectSliceCharacter : public APS_CharacterBase
 {
 	GENERATED_BODY()
 	

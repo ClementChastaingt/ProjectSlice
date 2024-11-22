@@ -3,7 +3,6 @@
 
 #include "PS_WeaponComponent.h"
 
-#include "..\..\PC\PS_Character.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
@@ -13,9 +12,9 @@
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
-#include "Analytics/RPCDoSDetectionAnalytics.h"
 #include "Kismet/KismetMaterialLibrary.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 
 // Sets default values for this component's properties
@@ -163,7 +162,6 @@ void UPS_WeaponComponent::Fire()
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-	
 	
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};

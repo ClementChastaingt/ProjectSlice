@@ -2,11 +2,9 @@
 
 
 #include "PS_PlayerCameraComponent.h"
-
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "ProjectSlice/PC/PS_Character.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {

@@ -2,6 +2,8 @@
 
 #include "TP_PickUpComponent.h"
 
+#include "ProjectSlice/Character/PC/PS_Character.h"
+
 UTP_PickUpComponent::UTP_PickUpComponent()
 {
 	// Setup the Sphere Collision

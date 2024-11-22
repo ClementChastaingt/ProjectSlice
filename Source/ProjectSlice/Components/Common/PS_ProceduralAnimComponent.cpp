@@ -6,9 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
-#include "ProjectSlice/PC/PS_Character.h"
-#include "ProjectSlice/PC/PS_PlayerController.h"
 
 
 // Sets default values for this component's properties

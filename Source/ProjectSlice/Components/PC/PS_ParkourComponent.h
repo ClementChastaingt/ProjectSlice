@@ -3,13 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SceneComponent.h"
-#include "Field/FieldSystemObjects.h"
+#include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
-#include "ProjectSlice/Data/PS_GlobalType.h"
-#include "ProjectSlice/PC/PS_PlayerController.h"
 #include "PS_ParkourComponent.generated.h"
 
 class AProjectSliceCharacter;

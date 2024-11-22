@@ -6,7 +6,7 @@
 #include "PS_PlayerCameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "ProjectSlice/PC/PS_Character.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 
 // Sets default values for this component's properties
 UPS_SlowmoComponent::UPS_SlowmoComponent()
