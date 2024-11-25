@@ -418,7 +418,7 @@ void UPS_ParkourComponent::OnCrouch()
 		//Activate interp
 		bIsCrouched = false;
 		bIsStooping = true;
-		if(bIsSliding) OnStopSlide();
+		if(_bIsSliding) OnStopSlide();
 
 		if(bDebugCrouch) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
 	}
@@ -501,7 +501,7 @@ void UPS_ParkourComponent::OnStartSlide()
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter)) return;
 	
-	bIsSliding = true;
+	_bIsSliding = true;
 	StartSlideTimestamp = GetWorld()->GetTimeSeconds();
 	SlideSeconds = StartSlideTimestamp;
 	
@@ -512,7 +512,7 @@ void UPS_ParkourComponent::OnStartSlide()
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 
-	OnSlideEvent.Broadcast(bIsSliding);
+	OnSlideEvent.Broadcast(_bIsSliding);
 }
 
 void UPS_ParkourComponent::OnStopSlide()
@@ -535,10 +535,10 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;
 
-	bIsSliding = false;
+	_bIsSliding = false;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
 
-	OnSlideEvent.Broadcast(bIsSliding);
+	OnSlideEvent.Broadcast(_bIsSliding);
 	
 }
 
@@ -546,7 +546,7 @@ void UPS_ParkourComponent::SlideTick()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 	
-	if(!bIsSliding) return;
+	if(!_bIsSliding) return;
 
 	SlideSeconds = SlideSeconds + CustomTickRate;
 	UCharacterMovementComponent* characterMovement = _PlayerCharacter->GetCharacterMovement();
@@ -635,24 +635,25 @@ void UPS_ParkourComponent::OnDash()
 {
 	if(!IsValid(_PlayerCharacter->GetHookComponent())) return;
 	
-	if( bIsSliding || bIsLedging || bIsMantling || bIsStooping) return;
+	if( bIsLedging || bIsMantling || bIsCrouched) return;
 
 	if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle)) return;
 
 	if(bIsWallRunning)
-	{
 		OnWallRunStop();
-	}
 
-	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
-	if(dashDir.IsNearlyZero())
+	if(_bIsSliding)
+		OnStopSlide();
+
+	_DashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
+	if(_DashDir.IsNearlyZero())
 	{
-		dashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
-		dashDir.Z = 0;
+		_DashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+		_DashDir.Z = 0;
 	};
-	dashDir.Normalize();
+	_DashDir.Normalize();
 	
-	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	FVector dashVel = _DashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 	// dashVel = bIsOnGround ? dashVel * 3 : (_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? (dashVel / 2) : dashVel);
 
 	//Change chara movement params
@@ -683,12 +684,12 @@ void UPS_ParkourComponent::OnDash()
 	}
 	
 	//Clamp Max Velocity
-	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), _DashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
 	
-	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
+	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *_DashDir.ToString());
 	
 	FTimerDelegate dashReset_TimerDelegate;
 	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);

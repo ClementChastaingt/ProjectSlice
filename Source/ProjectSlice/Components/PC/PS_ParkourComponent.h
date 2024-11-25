@@ -390,11 +390,12 @@ private:
 public:
 	UFUNCTION()
 	void OnStartSlide();
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsSliding() const{return _bIsSliding;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
-
-	FORCEINLINE bool IsSliding() const{return bIsSliding;}
 
 protected:
 	UFUNCTION()
@@ -405,9 +406,6 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
-	bool bIsSliding = false;
 
 	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
 	// bool bIsSlidingOnSLope = false;
@@ -455,7 +453,8 @@ protected:
 	UCurveFloat* SlideBrakingDecelerationCurve;
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	bool _bIsSliding;
 
 #pragma endregion Slide
 
@@ -470,6 +469,9 @@ public:
 	void ResetDash();
 
 	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetDashDirection() const{ return _DashDir;}
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsDashing() const{return _bIsDashing;}
@@ -500,6 +502,9 @@ private:
 
 	UPROPERTY(Transient)
 	bool _bIsDashing;
+
+	UPROPERTY(Transient)
+	FVector _DashDir;
 
 	// UPROPERTY(Transient)
 	// FTimerHandle _DashCooldownTimerHandle;
