@@ -645,15 +645,18 @@ void UPS_ParkourComponent::OnDash()
 	if(_bIsSliding)
 		OnStopSlide();
 
-	_DashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
-	if(_DashDir.IsNearlyZero())
-	{
-		_DashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
-		_DashDir.Z = 0;
-	};
-	_DashDir.Normalize();
 	
-	FVector dashVel = _DashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
+	_DashFeedbackDir = _PlayerController->GetMoveInput();
+	if(dashDir.IsNearlyZero())
+	{
+		_DashFeedbackDir = FVector2D(0.0f,1.0f);
+		dashDir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+		dashDir.Z = 0;
+	};
+	dashDir.Normalize();
+	
+	FVector dashVel = dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 	// dashVel = bIsOnGround ? dashVel * 3 : (_PlayerCharacter->GetHookComponent()->IsPlayerSwinging() ? (dashVel / 2) : dashVel);
 
 	//Change chara movement params
@@ -684,12 +687,12 @@ void UPS_ParkourComponent::OnDash()
 	}
 	
 	//Clamp Max Velocity
-	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), _DashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
+	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
 	
-	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *_DashDir.ToString());
+	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
 	
 	FTimerDelegate dashReset_TimerDelegate;
 	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);

@@ -471,7 +471,7 @@ public:
 	FORCEINLINE float GetDashSpeed() const{ return DashSpeed;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetDashDirection() const{ return _DashDir;}
+	FORCEINLINE FVector2D GetDashFeedbackDirection() const{ return _DashFeedbackDir;}
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsDashing() const{return _bIsDashing;}
@@ -504,7 +504,7 @@ private:
 	bool _bIsDashing;
 
 	UPROPERTY(Transient)
-	FVector _DashDir;
+	FVector2D _DashFeedbackDir;
 
 	// UPROPERTY(Transient)
 	// FTimerHandle _DashCooldownTimerHandle;
