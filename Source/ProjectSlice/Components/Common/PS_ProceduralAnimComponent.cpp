@@ -43,6 +43,17 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	
 }
 
+void UPS_ProceduralAnimComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	
+	//Unbind delegate
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	{
+		_PlayerCharacter->GetParkourComponent()->OnDashEvent.RemoveDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
+	}
+}
+
 // Called every frame
 void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -50,8 +61,6 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	Dip();
-
-	
 }
 
 #pragma region Dip

@@ -387,6 +387,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 		//Add movement
 		AddMovementInput(GetActorForwardVector() * CustomTimeDilation, _PlayerController->GetMoveInput().Y);
 		AddMovementInput(GetActorRightVector() * CustomTimeDilation, _PlayerController->GetMoveInput().X);
+		
 	}
 	else
 	{
