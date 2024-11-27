@@ -159,6 +159,14 @@ void UPS_ProceduralAnimComponent::StartWalkingAnim()
 	OnStartWalkFeedbackEvent.Broadcast();
 }
 
+void UPS_ProceduralAnimComponent::StartWalkingAnimWithDelay(const float delay)
+{
+	FTimerHandle startWalkingAnimHandler;
+	FTimerDelegate startWalkingAnim_TimerDelegate;
+	startWalkingAnim_TimerDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::StartWalkingAnim);
+	GetWorld()->GetTimerManager().SetTimer(startWalkingAnimHandler, startWalkingAnim_TimerDelegate, delay, false);
+}
+
 void UPS_ProceduralAnimComponent::StopWalkingAnim()
 {
 	OnStopWalkFeedbackEvent.Broadcast();

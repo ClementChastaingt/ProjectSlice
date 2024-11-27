@@ -708,6 +708,10 @@ void UPS_ParkourComponent::ResetDash()
 
 	_bIsDashing = false;
 
+	//Restart walk 
+	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+		_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnimWithDelay(0.2);
+	
 	OnResetDashEvent.Broadcast();
 }
 

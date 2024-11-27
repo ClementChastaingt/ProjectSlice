@@ -201,15 +201,6 @@ void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovemen
 		|| !IsValid(GetParkourComponent())) return;
 	
 	CoyoteTimeStart();
-
-	UE_LOG(LogTemp, Error, TEXT("%s er"), *UEnum::GetValueAsString(GetCharacterMovement()->MovementMode));
-
-	//Anim
-	if(GetCharacterMovement()->MovementMode == MOVE_Walking)
-		GetProceduralAnimComponent()->StartWalkingAnim();
-	else
-		GetProceduralAnimComponent()->StopWalkingAnim();
-	
 }
 
 void AProjectSliceCharacter::Landed(const FHitResult& Hit)
@@ -415,10 +406,6 @@ void AProjectSliceCharacter::StopMoving() const
 {
 	_PlayerController->SetMoveInput(FVector2D::ZeroVector);
 	_PlayerController->SetRealMoveInput(FVector2D::ZeroVector);
-
-	//Stop Feedback  
-	if(IsValid(GetProceduralAnimComponent()))
-		GetProceduralAnimComponent()->StopWalkingAnim();
 }
 
 //------------------

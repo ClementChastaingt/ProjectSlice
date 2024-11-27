@@ -99,6 +99,9 @@ public:
 	UFUNCTION()
 	void StartWalkingAnim();
 
+	UFUNCTION(BlueprintCallable)
+	void StartWalkingAnimWithDelay(const float delay);
+
 	UFUNCTION()
 	void StopWalkingAnim();
 	
