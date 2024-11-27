@@ -260,18 +260,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 		OnWallRunStop();
 		return;
 	}
-
 	
-	//TODO : Make impossible to continue wallRun if wall was on the opposite sens of player direction // playerToWallOrientation always zero !!!
-	// FHitResult testingHitDir = WallToPlayerOrientation * -1 < 0 ? outHitLeft : outHitRight;
-	// const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetActorForwardVector().Dot(testingHitDir.Location));
-	//
-	// UE_LOG(LogTemp, Error, TEXT("bIsWallRunning %i, playerToWallOrientation %i,angleObjectFwdToCamFwd %f, angleObjectFwdToCamFwdDeg  %f, WallToPlayerOrientation %i"),bIsWallRunning, playerToWallOrientation,angleObjectFwdToCamFwd,  UKismetMathLibrary::DegAcos(angleObjectFwdToCamFwd), WallToPlayerOrientation);
-	// if(angle > MaxWallRunAngle && !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle()))
-	// {
-	// 	UE_LOG(LogTemp, Error, TEXT("%S :: Cancel Start"), __FUNCTION__);
-	// 	return;
-	// }
 
 	//Determine Orientation
 	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
@@ -298,13 +287,15 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 
 	//--------Camera_Tilt Setup--------
 	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * -1);
-	
-
 
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
 	Wall = otherActor;
 	bIsWallRunning = true;
+
+	//Feedback 
+	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+		_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnim();
 	
 }
 
@@ -702,8 +693,12 @@ void UPS_ParkourComponent::OnDash()
 	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
 	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
 
+	//Stop Walk feedback on dash
+	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+		_PlayerCharacter->GetProceduralAnimComponent()->StopWalkingAnim();
+
+	//Activate dash and broadcast del
 	_bIsDashing = true;
-	
 	OnDashEvent.Broadcast();
 }
 

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Components/TimelineComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_ProceduralAnimComponent.generated.h"
 
 
@@ -92,9 +93,21 @@ private:
 	//------------------
 
 public:
-	
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void Walking(const float& leftRightAlpha, const float& upDownAlpha, const float& rollAlpha);
+	void Walking(const float& leftRightAlpha, const float& upDownAlpha, const float& rollAlpha);
+	
+	UFUNCTION()
+	void StartWalkingAnim();
+
+	UFUNCTION()
+	void StopWalkingAnim();
+	
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnStartWalkFeedbackEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnStopWalkFeedbackEvent;
 
 protected:
 

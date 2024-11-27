@@ -196,7 +196,20 @@ void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovemen
 {
 	Super::OnMovementModeChanged(previousMovementMode, previousCustomMode);
 
-	CoyoteTimeStart();	
+	if(!IsValid(GetCharacterMovement())
+		|| !IsValid(GetProceduralAnimComponent())
+		|| !IsValid(GetParkourComponent())) return;
+	
+	CoyoteTimeStart();
+
+	UE_LOG(LogTemp, Error, TEXT("%s er"), *UEnum::GetValueAsString(GetCharacterMovement()->MovementMode));
+
+	//Anim
+	if(GetCharacterMovement()->MovementMode == MOVE_Walking)
+		GetProceduralAnimComponent()->StartWalkingAnim();
+	else
+		GetProceduralAnimComponent()->StopWalkingAnim();
+	
 }
 
 void AProjectSliceCharacter::Landed(const FHitResult& Hit)
@@ -366,9 +379,11 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 #pragma endregion Jump
 
 void AProjectSliceCharacter::Move(const FInputActionValue& Value)
-{	
+{
+	if(!IsValid(_PlayerController)) return;
+		
 	//0.2 is the Deadzone min threshold for Gamepad
-	if (IsValid(_PlayerController) && Value.Get<FVector2D>().Size() > 0.2)
+	if (Value.Get<FVector2D>().Size() > 0.2)
 	{
 		const double inputWeight = UKismetMathLibrary::MapRangeClamped(GetVelocity().Length(), 0, GetCharacterMovement()->GetMaxSpeed(), _PlayerController->GetInputMaxSmoothingWeight(), _PlayerController->GetInputMinSmoothingWeight());
 		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, inputWeight);
@@ -380,7 +395,7 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 			_PlayerController->SetMoveInput(FVector2D::ZeroVector);
 			return;
 		}
-
+		
 		_PlayerController->SetRealMoveInput(FVector2D(moveX, moveY));
 		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
@@ -391,17 +406,19 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 	}
 	else
 	{
-		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-		_PlayerController->SetRealMoveInput(FVector2D::ZeroVector);
+		StopMoving();
 	}
 	
 }
 
-void AProjectSliceCharacter::StopMoving()
+void AProjectSliceCharacter::StopMoving() const
 {
-	if(IsValid(_PlayerController))
-	
-		_PlayerController->SetMoveInput(FVector2D::ZeroVector);
+	_PlayerController->SetMoveInput(FVector2D::ZeroVector);
+	_PlayerController->SetRealMoveInput(FVector2D::ZeroVector);
+
+	//Stop Feedback  
+	if(IsValid(GetProceduralAnimComponent()))
+		GetProceduralAnimComponent()->StopWalkingAnim();
 }
 
 //------------------

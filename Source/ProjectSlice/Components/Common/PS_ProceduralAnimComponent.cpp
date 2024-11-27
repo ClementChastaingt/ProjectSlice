@@ -154,6 +154,16 @@ void UPS_ProceduralAnimComponent::SetLagPositionAndAirTilt()
 	
 }
 
+void UPS_ProceduralAnimComponent::StartWalkingAnim()
+{
+	OnStartWalkFeedbackEvent.Broadcast();
+}
+
+void UPS_ProceduralAnimComponent::StopWalkingAnim()
+{
+	OnStopWalkFeedbackEvent.Broadcast();
+}
+
 void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const float& upDownAlpha,  const float& rollAlpha)
 {
 	if(!IsValid(_PlayerCharacter)) return;
