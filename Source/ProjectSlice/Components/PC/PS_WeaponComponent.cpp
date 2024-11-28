@@ -12,7 +12,9 @@
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
+#include "Engine/DamageEvents.h"
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
@@ -182,18 +184,18 @@ void UPS_WeaponComponent::Fire()
 	ResetSightRackProperties();
 
 	//--Melting mat--
-	// UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
-	// if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
-	//
-	// matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
-	//
-	// FLinearColor baseMaterialColor;
-	// currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
-	// matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
+	
+	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+	
+	FLinearColor baseMaterialColor;
+	currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
+	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
 	
 	if(!IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
 	
-	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), currentProcMeshComponent->GetMaterial(0));
+	//UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), currentProcMeshComponent->GetMaterial(0));
 	if(!IsValid(matInst)) return;
 	
 	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
@@ -238,15 +240,20 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetGenerateOverlapEvents(true);
 	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
+	outHalfComponent->SetMassScale(NAME_None,1000);
 	outHalfComponent->SetSimulatePhysics(true);
+	
 	currentProcMeshComponent->SetSimulatePhysics(true);
 	
 	//Impulse
 	if(ActivateImpulseOnSlice)
 	{
+		FDamageEvent damageEvent = FDamageEvent();
+		outHalfComponent->ReceiveComponentDamage(100,damageEvent,_PlayerController,_PlayerCharacter);
+		
 		//TODO :: Rework Impulse
 		//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);
-		outHalfComponent->AddImpulse(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() + CurrentFireHitResult.Normal * 500, NAME_None, true);
+		//outHalfComponent->AddImpulse(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() + CurrentFireHitResult.Normal * 500, NAME_None, true);
 	}
 	
 	// Try and play the sound if specified
