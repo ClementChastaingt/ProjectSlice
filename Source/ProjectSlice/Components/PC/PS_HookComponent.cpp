@@ -875,22 +875,33 @@ void UPS_HookComponent::PowerCablePull()
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		// float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
+		
+		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
+	}
+
+	float forceWeight = MaxForceWeight;
+	//MaxForceWeight impacted by object pulled mass
+	if(bCableWinderPull || bCablePowerPull)
+	{
+		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
+		float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
 		//
 		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
 		//
+
+		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 100, 0.0f, 1.0f);
+		forceWeight = FMath::Lerp(0.0f, MaxForceWeight * 1.5, alphaMass);
+		
+		UE_LOG(LogTemp, Error, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass);
 		// if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
-		
-		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 	}
 
 	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsSwinging)  return;
 	
 	//Pull Attached Object
-	ForceWeight = FMath::Lerp(0,MaxForceWeight, alpha);
+	ForceWeight = FMath::Lerp(0,forceWeight, alpha);
 	
 	UCableComponent* firstCable = CableListArray[0];
 	

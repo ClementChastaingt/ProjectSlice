@@ -359,14 +359,14 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	if(bDebugWallRunJump)
 	{
 		UE_LOG(LogTemp, Log, TEXT("%S :: jumpDir use %s"),__FUNCTION__, !bIsARightDirJumpOff ? TEXT("Weapon Forward") : TEXT("Wall Right"))
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + jumpDir * 200, 10.0f, FColor::Orange, false, 2, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + JumpOffForceSpeed), 10.0f, FColor::Orange, false, 2, 10, 3);
 	}
 	
 	//Clamp Max Velocity
-	FVector jumpTargetVel = UPSFl::ClampVelocity(jumpDir,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
+	//FVector jumpTargetVel = UPSFl::ClampVelocity(jumpForce,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
 
 	//Launch chara
-	_PlayerCharacter->LaunchCharacter(jumpTargetVel,true,true);
+	_PlayerCharacter->LaunchCharacter(jumpForce,true,true);
 	_PlayerCharacter->OnJumped();
 	
 }
