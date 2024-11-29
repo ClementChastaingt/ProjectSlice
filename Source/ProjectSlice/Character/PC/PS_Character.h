@@ -143,14 +143,20 @@ private:
 	//------------------
 
 public:
-
+	
+	//Delegates
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnJumpEvent;
+
+	//Getters && Setters
+	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return _DefaultMaxWalkSpeed;}
 	
-	FORCEINLINE float GetDefaultMaxWalkSpeed() const{return DefaultMaxWalkSpeed;}
-	
-	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return DefaultMinAnalogSpeed;}
-	
+	FORCEINLINE float GetDefaultMinAnalogSpeed() const{return _DefaultMinAnalogSpeed;}
+
+	FORCEINLINE float GetDefaultGravityScale() const{return _DefaultGravityScale;}
+
+	FORCEINLINE float GetDefaultAirControl() const{return _DefaultAirControl;}
+
 	FORCEINLINE FVector GetOnJumpLocation() const{return OnJumpLocation;}
 
 	FORCEINLINE FTimerHandle GetCoyoteTimerHandle() const{ return CoyoteTimerHandle;}
@@ -195,13 +201,7 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
-	float DefaultMaxWalkSpeed = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
-	float DefaultMinAnalogSpeed = 0.0f;
-	
+		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	FVector OnJumpLocation = FVector::ZeroVector;
 
@@ -211,7 +211,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Jump|Coyote")
 	float CoyoteTime = 0.35f;
 
-	//------------------
+private:
+	UPROPERTY(Transient)
+	float _DefaultMaxWalkSpeed;
+
+	UPROPERTY(Transient)
+	float _DefaultMinAnalogSpeed;
+	
+	UPROPERTY(Transient)
+	float _DefaultGravityScale;
+
+	UPROPERTY(Transient)
+	float _DefaultAirControl;
+	
 #pragma endregion Move
 
 #pragma region Slowmo

@@ -240,7 +240,6 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetGenerateOverlapEvents(true);
 	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
-	outHalfComponent->SetMassScale(NAME_None,1000);
 	outHalfComponent->SetSimulatePhysics(true);
 	
 	currentProcMeshComponent->SetSimulatePhysics(true);
@@ -249,7 +248,8 @@ void UPS_WeaponComponent::Fire()
 	if(ActivateImpulseOnSlice)
 	{
 		FDamageEvent damageEvent = FDamageEvent();
-		outHalfComponent->ReceiveComponentDamage(100,damageEvent,_PlayerController,_PlayerCharacter);
+		outHalfComponent->ReceiveComponentDamage(10000,damageEvent,_PlayerController,_PlayerCharacter);
+		outHalfComponent->AddImpulse((outHalfComponent->GetUpVector() * -1) * outHalfComponent->GetMass() , NAME_None, false);
 		
 		//TODO :: Rework Impulse
 		//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);

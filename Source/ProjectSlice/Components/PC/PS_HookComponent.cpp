@@ -68,13 +68,6 @@ void UPS_HookComponent::BeginPlay()
 		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
 	
 	}
-	
-	if(IsValid(_PlayerCharacter->GetCharacterMovement()))
-	{
-		DefaultAirControl = _PlayerCharacter->GetCharacterMovement()->AirControl;
-		DefaultGravityScale = _PlayerCharacter->GetCharacterMovement()->GravityScale;
-		
-	}
 
 	GetConstraintAttachMaster()->SetVisibility(bDebugSwing);
 	GetConstraintAttachSlave()->SetVisibility(bDebugSwing);
@@ -890,10 +883,10 @@ void UPS_HookComponent::PowerCablePull()
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
 		//
 
-		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 100, 0.0f, 1.0f);
-		forceWeight = FMath::Lerp(0.0f, MaxForceWeight * 1.5, alphaMass);
+		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 100, 1.0f, 0.0f);
+		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 		
-		UE_LOG(LogTemp, Error, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass);
+		UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
 		// if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
 	}
@@ -917,14 +910,11 @@ void UPS_HookComponent::PowerCablePull()
 			OnSwingForce();
 		else
 			OnSwingPhysic();
-	}
-	// else
-	// {
-	// 	FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-	// 	AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
-	// }
-	//
 
+		 return;
+	}
+
+	//Pull Force
 	if(IsValid(AttachedMesh) &&  IsValid(GetWorld()))
 	{
 		FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
@@ -948,8 +938,8 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	//_PlayerController->SetCanMove(!bActivate);
 	//_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : DefaultGravityScale;
-	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : DefaultAirControl;
+	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : _DefaultGravityScale;
+	_PlayerCharacter->GetCharacterMovement()->AirControl = bActivate ? SwingMaxAirControl : _PlayerCharacter->GetDefaultAirControl();
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = 400.0f;
 	
 	if(bDebugSwing)
@@ -1085,7 +1075,7 @@ void UPS_HookComponent::OnSwingForce()
 	//Air Control:
 	// const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
 	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
-	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(DefaultAirControl, SwingMaxAirControl, airControlAlpha);
+	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(_PlayerCharacter->GetDefaultAirControl(), SwingMaxAirControl, airControlAlpha);
 
 	//Braking Deceleration Falling
 	float brakingDecAlpha = bIsGoingDown ? alphaCurve : 1 - alphaCurve;

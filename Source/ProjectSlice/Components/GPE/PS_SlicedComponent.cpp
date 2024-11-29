@@ -69,7 +69,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetGenerateOverlapEvents(true);
 	SetCollisionProfileName(Profile_GPE, true);
 	SetNotifyRigidBodyCollision(true);
-	SetMassScale(NAME_None, 1000.0f);
+
 	
 	const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
 	SetSimulatePhysics(!bFixed);

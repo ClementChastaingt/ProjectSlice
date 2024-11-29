@@ -366,7 +366,8 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	//FVector jumpTargetVel = UPSFl::ClampVelocity(jumpForce,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
 
 	//Launch chara
-	_PlayerCharacter->LaunchCharacter(jumpForce,true,true);
+	_PlayerCharacter->GetCharacterMovement()->GravityScale = JumpOffGravityScale;
+	_PlayerCharacter->LaunchCharacter(jumpForce,true,false);
 	_PlayerCharacter->OnJumped();
 	
 }

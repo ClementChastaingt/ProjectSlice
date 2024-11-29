@@ -253,12 +253,6 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Hook")
 	FHitResult CurrentHookHitResult;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	float DefaultGravityScale = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook")
-	float DefaultAirControl = 0.0f;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Hook",  meta=(ForceUnits="cm",ToolTip="Distance between player and object grappled on attaching"))
 	double DistanceOnAttach = 0.0f;
 

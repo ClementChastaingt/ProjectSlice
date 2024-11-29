@@ -132,9 +132,14 @@ void AProjectSliceCharacter::BeginPlay()
 	if(IsValid(GetArrowComponent()))
 		GetArrowComponent()->SetHiddenInGame(!bDebugArrow);
 
-	//Setup default speed 
-	DefaultMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-	DefaultMinAnalogSpeed = GetCharacterMovement()->MinAnalogWalkSpeed;
+	//Setup default speed
+	if(IsValid(GetCharacterMovement()))
+	{
+		_DefaultMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+		_DefaultMinAnalogSpeed = GetCharacterMovement()->MinAnalogWalkSpeed;
+		_DefaultAirControl = GetCharacterMovement()->AirControl;
+		_DefaultGravityScale = GetCharacterMovement()->GravityScale;
+	}
 	
 }
 
@@ -210,6 +215,9 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 	//Dip on Landing
 	 if(IsValid(GetProceduralAnimComponent()))
 	 	GetProceduralAnimComponent()->LandingDip();
+
+	//Reset gravity scale (use for WallRunJumpOff)
+	GetCharacterMovement()->GravityScale = _DefaultGravityScale;
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
