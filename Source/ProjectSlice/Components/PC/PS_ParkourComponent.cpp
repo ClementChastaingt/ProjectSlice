@@ -353,7 +353,16 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	
 	FVector jumpDir = bIsARightDirJumpOff ? _PlayerCharacter->GetActorRightVector() * -WallToPlayerOrientation * FMath::Sign(angleCamToWall) : _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 	jumpDir.Normalize();
-	const FVector jumpForce = jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + JumpOffForceSpeed);
+
+	//Weight Force when sight is up
+	const float angleCamToWallUp = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection.UpVector);
+
+	float jumpOffSpeed = JumpOffForceSpeed;
+	if(angleCamToWallUp >= 0)
+		jumpOffSpeed = UKismetMathLibrary::MapRangeClamped(angleCamToWallUp,0.0f,1.0f,JumpOffForceSpeed,0.0f);
+	
+	//Calc jumpForce
+	const FVector jumpForce = jumpDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + jumpOffSpeed);
 
 	//Debug
 	if(bDebugWallRunJump)
@@ -366,8 +375,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	//FVector jumpTargetVel = UPSFl::ClampVelocity(jumpForce,jumpForce,_PlayerCharacter->GetDefaultMaxWalkSpeed() + MaxWallRunSpeedMultiplicator);
 
 	//Launch chara
-	_PlayerCharacter->GetCharacterMovement()->GravityScale = JumpOffGravityScale;
-	_PlayerCharacter->LaunchCharacter(jumpForce,true,false);
+	_PlayerCharacter->LaunchCharacter(jumpForce,true,true);
 	_PlayerCharacter->OnJumped();
 	
 }
