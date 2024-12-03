@@ -112,6 +112,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
 	bool bDebugMovementTrail = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display debug location gizmo"))
+	float MovementTrailDuration = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Debug, meta=(ToolTip="Display Player current velocity"))
 	bool bDebugVelocity = false;
