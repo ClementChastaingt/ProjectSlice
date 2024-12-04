@@ -217,9 +217,22 @@ void UPS_WeaponComponent::Fire()
 	                                                  matInst);
 	if(!IsValid(outHalfComponent)) return;
 
-	currentProcMeshComponent->UpdateBounds();
-	outHalfComponent->UpdateBounds();
+	// Ensure collision is generated for both meshes
+	outHalfComponent->bUseComplexAsSimpleCollision = false;
 	
+	for (int32 newProcMeshSection = 0; newProcMeshSection < outHalfComponent->GetNumSections(); newProcMeshSection++)
+	{
+		UpdateMeshTangents(outHalfComponent, newProcMeshSection);
+	}
+
+	for (int32 currentProcMeshSection = 0; currentProcMeshSection < currentProcMeshComponent->GetNumSections(); currentProcMeshSection++)
+	{
+		UpdateMeshTangents(currentProcMeshComponent, currentProcMeshSection);
+	}
+	
+	outHalfComponent->UpdateBounds();
+
+	//Debug trace
 	if(bDebugSlice)
 	{
 		DrawDebugLine(GetWorld(), CurrentFireHitResult.Location,  CurrentFireHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
@@ -235,8 +248,7 @@ void UPS_WeaponComponent::Fire()
 		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
 	}
 		
-	//Init Physic Config
-	outHalfComponent->bUseComplexAsSimpleCollision = false;
+	//Init Physic Config;
 	outHalfComponent->SetGenerateOverlapEvents(true);
 	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
@@ -283,6 +295,21 @@ void UPS_WeaponComponent::TurnRack()
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
+}
+
+void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
+{
+	TArray<FVector> outVerticles;
+	TArray<int32> outTriangles;
+	TArray<FVector> outNormals;
+	TArray<FVector2D> outUV;
+	TArray<FColor> vertexColors;
+	TArray<FProcMeshTangent> outTangent;
+	
+	UKismetProceduralMeshLibrary::GetSectionFromProceduralMesh(procMesh,sectionIndex, outVerticles, outTriangles, outNormals, outUV, outTangent);
+	UKismetProceduralMeshLibrary::CalculateTangentsForMesh(outVerticles,outTriangles, outUV, outNormals, outTangent);
+	
+	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
 }
 
 void UPS_WeaponComponent::HookObject()

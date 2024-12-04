@@ -85,7 +85,7 @@ public:
 
 	UFUNCTION()
 	void FireTriggered();
-	
+
 	/** Make the weapon Fire a Slice */
 	UFUNCTION()
 	void Fire();
@@ -124,6 +124,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* HalfSectionMaterial = nullptr;
+
+	UFUNCTION()
+	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
 
 private:
 	//__________________________________________________
