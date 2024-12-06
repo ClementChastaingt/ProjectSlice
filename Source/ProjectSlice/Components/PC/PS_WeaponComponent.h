@@ -126,7 +126,13 @@ protected:
 	UMaterialInterface* HalfSectionMaterial = nullptr;
 
 	UFUNCTION()
+	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
+
+	UFUNCTION()
 	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
+	
+	UFUNCTION()
+	void ResetSlicedSectionMat();
 
 private:
 	//__________________________________________________

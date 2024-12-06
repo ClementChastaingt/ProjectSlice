@@ -182,24 +182,7 @@ void UPS_WeaponComponent::Fire()
 	
 	//Setup material
 	ResetSightRackProperties();
-
-	//--Melting mat--
-	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
-	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
-	
-	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
-	
-	FLinearColor baseMaterialColor;
-	currentProcMeshComponent->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
-	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
-	
-	if(!IsValid(GetWorld()) || !IsValid(currentProcMeshComponent->GetMaterial(0))) return;
-	
-	//UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), currentProcMeshComponent->GetMaterial(0));
-	if(!IsValid(matInst)) return;
-	
-	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
-	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
+	UMaterialInstanceDynamic* matInst = SetupMeltingMat(currentProcMeshComponent);
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
@@ -213,7 +196,7 @@ void UPS_WeaponComponent::Fire()
 	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, sliceLocation,
 	                                                  sliceDir, true,
 	                                                  outHalfComponent,
-	                                                  EProcMeshSliceCapOption::UseLastSectionForCap,
+	                                                  IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  matInst);
 	if(!IsValid(outHalfComponent)) return;
 
@@ -297,28 +280,12 @@ void UPS_WeaponComponent::TurnRack()
 	
 }
 
-void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
-{
-	TArray<FVector> outVerticles;
-	TArray<int32> outTriangles;
-	TArray<FVector> outNormals;
-	TArray<FVector2D> outUV;
-	TArray<FColor> vertexColors;
-	TArray<FProcMeshTangent> outTangent;
-	
-	UKismetProceduralMeshLibrary::GetSectionFromProceduralMesh(procMesh,sectionIndex, outVerticles, outTriangles, outNormals, outUV, outTangent);
-	UKismetProceduralMeshLibrary::CalculateTangentsForMesh(outVerticles,outTriangles, outUV, outNormals, outTangent);
-	
-	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
-}
-
 void UPS_WeaponComponent::HookObject()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
 	
 	_HookComponent->HookObject();
 }
-
 
 void UPS_WeaponComponent::WindeHook()
 {
@@ -479,6 +446,60 @@ void UPS_WeaponComponent::SliceBump()
 
 //------------------
 #pragma endregion Sight
+
+#pragma region Slice
+//------------------
+
+UMaterialInstanceDynamic* UPS_WeaponComponent::SetupMeltingMat(const UProceduralMeshComponent* const procMesh)
+{
+	//--Melting mat--
+	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(procMesh->GetMaterial(0))) return nullptr;
+	
+	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+		
+	FLinearColor baseMaterialColor;
+	procMesh->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
+	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+	
+	if(!IsValid(GetWorld()) || !IsValid(procMesh->GetMaterial(0))) return nullptr;
+	
+	if(!IsValid(matInst)) return nullptr;
+	
+	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
+
+	//Start reset timer
+	FTimerHandle TimerHandle;
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindUObject(this, &UPS_WeaponComponent::ResetSlicedSectionMat);
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, 20.0, false);
+
+	return matInst;
+}
+
+void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
+{
+	TArray<FVector> outVerticles;
+	TArray<int32> outTriangles;
+	TArray<FVector> outNormals;
+	TArray<FVector2D> outUV;
+	TArray<FColor> vertexColors;
+	TArray<FProcMeshTangent> outTangent;
+	
+	UKismetProceduralMeshLibrary::GetSectionFromProceduralMesh(procMesh,sectionIndex, outVerticles, outTriangles, outNormals, outUV, outTangent);
+	UKismetProceduralMeshLibrary::CalculateTangentsForMesh(outVerticles,outTriangles, outUV, outNormals, outTangent);
+	
+	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
+}
+
+void UPS_WeaponComponent::ResetSlicedSectionMat()
+{
+	
+}
+
+//------------------
+#pragma endregion Slice
 	
 
 
