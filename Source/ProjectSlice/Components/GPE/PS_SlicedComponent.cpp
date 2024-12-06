@@ -63,7 +63,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	//TODO :: See LOD index for complex mesh
 	UKismetProceduralMeshLibrary::CopyProceduralMeshFromStaticMeshComponent(_RootMesh,0,this,true);
 	_RootMesh->DestroyComponent(true);
-	
+
 	//Init Collision and Physic
 	bUseComplexAsSimpleCollision = false;
 	SetGenerateOverlapEvents(true);

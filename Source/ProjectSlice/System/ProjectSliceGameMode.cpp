@@ -27,7 +27,6 @@ void AProjectSliceGameMode::InitSliceableContent()
 {
 	//Add SliceComponent to sliceable actors
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
-	const FTransform relativeTransform = FTransform();
 
 	int i = 0;
 	if(bDebugMode) UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
@@ -43,7 +42,7 @@ void AProjectSliceGameMode::InitSliceableContent()
 		}
 
 		//Create and Add SlicedComponent to actors
-		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, true, relativeTransform, false));
+		UPS_SlicedComponent* newComp = Cast<UPS_SlicedComponent>(outActor->AddComponentByClass(SliceComponent, false, FTransform(), false));
 		outActor->RegisterAllComponents();
 
 		if(IsValid(newComp))

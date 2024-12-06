@@ -219,16 +219,16 @@ void UPS_WeaponComponent::Fire()
 
 	// Ensure collision is generated for both meshes
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
-	
-	for (int32 newProcMeshSection = 0; newProcMeshSection < outHalfComponent->GetNumSections(); newProcMeshSection++)
-	{
-		UpdateMeshTangents(outHalfComponent, newProcMeshSection);
-	}
 
-	for (int32 currentProcMeshSection = 0; currentProcMeshSection < currentProcMeshComponent->GetNumSections(); currentProcMeshSection++)
-	{
-		UpdateMeshTangents(currentProcMeshComponent, currentProcMeshSection);
-	}
+	// for (int32 newProcMeshSection = 0; newProcMeshSection < outHalfComponent->GetNumSections(); newProcMeshSection++)
+	// {
+	// 	UpdateMeshTangents(outHalfComponent, newProcMeshSection);
+	// }
+	//
+	// for (int32 currentProcMeshSection = 0; currentProcMeshSection < currentProcMeshComponent->GetNumSections(); currentProcMeshSection++)
+	// {
+	// 	UpdateMeshTangents(currentProcMeshComponent, currentProcMeshSection);
+	// }
 	
 	outHalfComponent->UpdateBounds();
 
