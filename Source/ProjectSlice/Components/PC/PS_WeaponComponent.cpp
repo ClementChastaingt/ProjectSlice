@@ -18,6 +18,7 @@
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
+#include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -175,14 +176,14 @@ void UPS_WeaponComponent::Fire()
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 	
 	//Cut ProceduralMesh
-	UProceduralMeshComponent* currentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
+	UProceduralMeshComponent* parentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
 
-	if (!IsValid(currentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
+	if (!IsValid(parentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 	
 	//Setup material
 	ResetSightRackProperties();
-	UMaterialInstanceDynamic* matInst = SetupMeltingMat(currentProcMeshComponent);
+	UMaterialInstanceDynamic* matInst = SetupMeltingMat(parentProcMeshComponent);
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
@@ -193,24 +194,31 @@ void UPS_WeaponComponent::Fire()
 	sliceDir.Normalize();
 	
 	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
-	UKismetProceduralMeshLibrary::SliceProceduralMesh(currentProcMeshComponent, sliceLocation,
+	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
 	                                                  sliceDir, true,
-	                                                  outHalfComponent,
+	                                                  outHalfComponent, _sliceOutput,
 	                                                  IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
 	                                                  matInst);
 	if(!IsValid(outHalfComponent)) return;
 
+	//Launch melting reset timer
+	FTimerHandle currentMeltingHandle;
+	FTimerDelegate  currentMeltingTimerDelegate;
+	
+	currentMeltingTimerDelegate.BindUFunction(this, FName("ResetMeltingMat"), parentProcMeshComponent, outHalfComponent, _sliceOutput);
+	GetWorld()->GetTimerManager().SetTimer(currentMeltingHandle, currentMeltingTimerDelegate, MeltingLifeTime, false);
+
 	// Ensure collision is generated for both meshes
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
-
+	
 	// for (int32 newProcMeshSection = 0; newProcMeshSection < outHalfComponent->GetNumSections(); newProcMeshSection++)
 	// {
 	// 	UpdateMeshTangents(outHalfComponent, newProcMeshSection);
 	// }
 	//
-	// for (int32 currentProcMeshSection = 0; currentProcMeshSection < currentProcMeshComponent->GetNumSections(); currentProcMeshSection++)
+	// for (int32 currentProcMeshSection = 0; currentProcMeshSection < parentProcMeshComponent->GetNumSections(); currentProcMeshSection++)
 	// {
-	// 	UpdateMeshTangents(currentProcMeshComponent, currentProcMeshSection);
+	// 	UpdateMeshTangents(parentProcMeshComponent, currentProcMeshSection);
 	// }
 	
 	outHalfComponent->UpdateBounds();
@@ -225,10 +233,10 @@ void UPS_WeaponComponent::Fire()
 
 	//Register and instanciate
 	outHalfComponent->RegisterComponent();
-	if(IsValid(currentProcMeshComponent->GetOwner()))
+	if(IsValid(parentProcMeshComponent->GetOwner()))
 	{
 		//Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
-		currentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
+		parentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
 	}
 		
 	//Init Physic Config;
@@ -237,7 +245,7 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
 	outHalfComponent->SetSimulatePhysics(true);
 	
-	currentProcMeshComponent->SetSimulatePhysics(true);
+	parentProcMeshComponent->SetSimulatePhysics(true);
 	
 	//Impulse
 	if(ActivateImpulseOnSlice)
@@ -452,30 +460,26 @@ void UPS_WeaponComponent::SliceBump()
 
 UMaterialInstanceDynamic* UPS_WeaponComponent::SetupMeltingMat(const UProceduralMeshComponent* const procMesh)
 {
-	//--Melting mat--
 	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	
 	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(procMesh->GetMaterial(0))) return nullptr;
 	
 	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
+	matInst->SetScalarParameterValue(FName("Duration"), MeltingLifeTime);
 		
 	FLinearColor baseMaterialColor;
 	procMesh->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
 	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
 	
-	if(!IsValid(GetWorld()) || !IsValid(procMesh->GetMaterial(0))) return nullptr;
-	
-	if(!IsValid(matInst)) return nullptr;
-	
-	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
 	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
-
-	//Start reset timer
-	FTimerHandle TimerHandle;
-	FTimerDelegate TimerDelegate;
-	TimerDelegate.BindUObject(this, &UPS_WeaponComponent::ResetSlicedSectionMat);
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, 20.0, false);
-
+	
 	return matInst;
+}
+
+void UPS_WeaponComponent::ResetMeltingMat(UProceduralMeshComponent* const parentProcComp, UProceduralMeshComponent* const halfChildComponent, const FSCustomSliceOutput& slicingDatas)
+{
+	parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,slicingDatas.InProcMeshDefaultMat);
+	halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,slicingDatas.InProcMeshDefaultMat);
 }
 
 void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
@@ -493,10 +497,7 @@ void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const pro
 	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
 }
 
-void UPS_WeaponComponent::ResetSlicedSectionMat()
-{
-	
-}
+
 
 //------------------
 #pragma endregion Slice

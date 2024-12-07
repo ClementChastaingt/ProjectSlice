@@ -6,6 +6,7 @@
 #include "PS_HookComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "PS_WeaponComponent.generated.h"
 
 class AProjectSlicePlayerController;
@@ -121,6 +122,9 @@ public:
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Slice")
 	bool ActivateImpulseOnSlice = true;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
+	float MeltingLifeTime = 20.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* HalfSectionMaterial = nullptr;
@@ -129,13 +133,14 @@ protected:
 	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
 
 	UFUNCTION()
-	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
-	
+	void ResetMeltingMat(UProceduralMeshComponent* parentProcComp, UProceduralMeshComponent* halfChildComponent, const FSCustomSliceOutput& slicingDatas);
+
 	UFUNCTION()
-	void ResetSlicedSectionMat();
+	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
 
 private:
-	//__________________________________________________
+	UPROPERTY(Transient)
+	FSCustomSliceOutput _sliceOutput;
 
 #pragma endregion Slice
 
