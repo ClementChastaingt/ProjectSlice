@@ -127,7 +127,7 @@ protected:
 	float MeltingLifeTime = 20.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
-	UMaterialInterface* HalfSectionMaterial = nullptr;
+	UMaterialInterface* SliceableMaterial = nullptr;
 
 	UFUNCTION()
 	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
@@ -141,6 +141,10 @@ protected:
 private:
 	UPROPERTY(Transient)
 	FSCustomSliceOutput _sliceOutput;
+
+	UPROPERTY(Transient)
+	TArray<UMaterialInstanceDynamic*> _HalfSectionMatInst;
+
 
 #pragma endregion Slice
 
@@ -246,10 +250,10 @@ private:
 	UPrimitiveComponent* _CurrentSightedComponent;
 	
 	UPROPERTY(Transient)
-	UMaterialInterface* _CurrentSightedBaseMat;
+	TArray<UMaterialInterface*> _CurrentSightedBaseMats;
 
 	UPROPERTY(Transient)
-	UMaterialInstanceDynamic* _CurrentSightedMatInst;
+	TArray<UMaterialInstanceDynamic*> _CurrentSightedMatInst;
 
 
 #pragma endregion SightRack

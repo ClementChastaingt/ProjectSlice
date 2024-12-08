@@ -534,12 +534,13 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 			// If creating new section for cap, assign cap material to it
 			if (CapOption == EProcMeshSliceCapOption::CreateNewSectionForCap)
 			{
-				outSlicingData.InProcMeshDefaultMat = InProcMesh->GetMaterial(0);
-				UE_LOG(LogTemp, Error, TEXT("index %i ,mat %s"), CapSectionIndex, *GetNameSafe(outSlicingData.InProcMeshDefaultMat));
 				InProcMesh->SetMaterial(CapSectionIndex, CapMaterial);
-
+				
 				//Storage InProc modified material for differed usage
 				outSlicingData.InProcMeshCapIndex = CapSectionIndex;
+				outSlicingData.InProcMeshDefaultMat = InProcMesh->OverrideMaterials[CapSectionIndex];
+
+				//UE_LOG(LogTemp, Error, TEXT("index %i ,mat %s"), CapSectionIndex, *GetNameSafe(outSlicingData.InProcMeshDefaultMat));
 			}
 
 			// If creating the other half, copy cap geom into other half sections

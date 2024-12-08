@@ -148,10 +148,13 @@ void UPS_WeaponComponent::FireTriggered()
 	//Slice when release
 	if(!bIsHoldingFire)
 	{
-		if( _CurrentSightedMatInst->IsValidLowLevel())
+		for (UMaterialInstanceDynamic* currentSightedMatElement : _CurrentSightedMatInst)
 		{
-			_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
-			_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), 0.0f);
+			if(IsValid(currentSightedMatElement))
+			{
+				currentSightedMatElement->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+				currentSightedMatElement->SetScalarParameterValue(FName("SliceBumpAlpha"), 0.0f);
+			}
 		}
 		Fire();
 	}
@@ -369,17 +372,49 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		//Reset last material properties
 		ResetSightRackProperties();
-		if(!IsValid(sliceTarget->GetMaterial(0)) /*|| !outHit.GetActor()->ActorHasTag(FName("Sliceable"))*/) return;
+		if(!outHit.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
 		_CurrentSightedComponent = outHit.GetComponent();
-				
-		//Set new Object Mat instance
-		UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), _CurrentSightedComponent->GetMaterial(0));
-		if(!IsValid(matInstObject)) return;
-		matInstObject->SetScalarParameterValue(FName("bIsInUse"), true);
 
-		_CurrentSightedMatInst = matInstObject;
-		_CurrentSightedBaseMat = _CurrentSightedComponent->GetMaterial(0);
-		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedMatInst);
+		UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
+		{
+			//Setup slice rack shader material inst
+			UMaterialInterface* newMaterialMaster;
+			
+			UMaterialInstanceDynamic* sightedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
+			const bool bUseADynMatAsMasterMat = IsValid(sightedMatInst);
+
+			//TODO :: When use more complex material reuse that
+			// newMaterialMaster = bUseADynMatAsMasterMat ? sightedMatInst->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
+			//newMaterialMaster = bUseADynMatAsMasterMat ? _HalfSectionMatInst[i]->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
+			//newMaterialMaster = bUseADynMatAsMasterMat ? SliceableMaterial : _CurrentSightedComponent->GetMaterial(i);
+			
+			//
+			// if(!IsValid(newMaterialMaster))
+			// {
+			// 	newMaterialMaster = SliceableMaterial;
+			// 	UE_LOG(LogTemp, Error, TEXT("Invalid newMaterialMaster use SliceableMaterial"));
+			// }
+			//
+			newMaterialMaster = SliceableMaterial;
+			
+			//Set new Object Mat instance
+			UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),newMaterialMaster);
+			
+			if(!IsValid(matInstObject)) continue;
+			UE_LOG(LogTemp, Log, TEXT("bUseADynMatAsMasterMat %i, Material %i :  %s, newMaterialMaster %s"), bUseADynMatAsMasterMat, i, *GetNameSafe(matInstObject), *GetNameSafe(newMaterialMaster));
+			
+			//Start display Slice Rack Ray
+			matInstObject->SetScalarParameterValue(FName("bIsInUse"), true);
+			//If display in a currently melting face
+			if(bUseADynMatAsMasterMat)
+				matInstObject->SetScalarParameterValue(FName("bIsMelting"), true);
+			
+			//Add in queue
+			_CurrentSightedMatInst.Insert(matInstObject,i);
+			_CurrentSightedBaseMats.Insert(newMaterialMaster, i);
+			_CurrentSightedComponent->SetMaterial(i, matInstObject);
+		}
 
 		//Setup Bump to Old params if effective
 		ForceInitSliceBump();
@@ -394,44 +429,97 @@ void UPS_WeaponComponent::SightShaderTick()
 
 void UPS_WeaponComponent::ResetSightRackProperties()
 {
-	if(IsValid(_CurrentSightedComponent) && _CurrentSightedMatInst->IsValidLowLevel())
+	if(IsValid(_CurrentSightedComponent))
 	{
-		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *_CurrentSightedBaseMat->GetName());
+		int i = 0;
+		//Reset sighted material by their base
+		for (UMaterialInterface* material : _CurrentSightedBaseMats)
+		{
+			UMaterialInstanceDynamic* currentUsedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
+			float bIsMelting = 0.0f;
+			if(IsValid(currentUsedMatInst))
+				currentUsedMatInst->GetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+
+
+			//Set new Object Mat instance if sigthed element was Melting
+			UMaterialInstanceDynamic* matInstObject = nullptr;
+			if(bIsMelting)
+			{
+				matInstObject = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),material);
+				if(!IsValid(matInstObject))
+				{
+					i++;
+					continue;
+				}
+				matInstObject->SetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+			}
+
+			// //Set StartTime to slicing faced start timing
+			// float initialSlicedStartTime;
+			// if(_HalfSectionMatInst.IsValidIndex(i))_HalfSectionMatInst[i]->GetScalarParameterValue(FName("StartTime"),initialSlicedStartTime);
+			// matInstObject->SetScalarParameterValue(FName("StartTime"),initialSlicedStartTime);
+			//
+			// //Active melting texture
+			// matInstObject->SetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+			
+			_CurrentSightedComponent->SetMaterial(i, bIsMelting ? matInstObject : material);
+			// UMaterialInstanceDynamic* currentBaseMatInst  = Cast<UMaterialInstanceDynamic>(_CurrentSightedBaseMats);			
+
+			/*if(bDebugSightShader)*/ UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
+			i++;
+			
+	
+		}
+
+		// //Reset and destroy slice rack dyn material
+		// for (UMaterialInstanceDynamic* dynMat : _CurrentSightedMatInst)
+		// {
+		// 	if(IsValid(dynMat)) dynMat->MarkAsGarbage();
+		// }
 		
-		_CurrentSightedComponent->SetMaterial(0, _CurrentSightedBaseMat);
+		//Reset variables
 		_CurrentSightedComponent = nullptr;
-		_CurrentSightedMatInst->MarkAsGarbage();
-		_CurrentSightedMatInst = nullptr;
+		_CurrentSightedMatInst.Empty();
+		_CurrentSightedBaseMats.Empty();
+		
 	}
 }
 
 void UPS_WeaponComponent::ForceInitSliceBump()
 {
-	if( _CurrentSightedMatInst->IsValidLowLevel())
+	for (auto currentSightedMatInstElement : _CurrentSightedMatInst)
 	{
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
+		if(IsValid(currentSightedMatInstElement))
+		{
+			currentSightedMatInstElement->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+			currentSightedMatInstElement->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
+		}
 	}
+	
 }
 
 
 void UPS_WeaponComponent::SetupSliceBump()
 {
-	if(IsValid(_CurrentSightedComponent) && _CurrentSightedMatInst->IsValidLowLevel() && IsValid(GetWorld()))
+	if(IsValid(_CurrentSightedComponent) && IsValid(GetWorld()))
 	{
 		if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: Bump %s"), __FUNCTION__, bIsHoldingFire ? TEXT("IN") : TEXT("OUT"));
-
-
+		
 		StartSliceBumpTimestamp = GetWorld()->GetTimeSeconds();
 		bSliceBumping = true;
 
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+		for (UMaterialInstanceDynamic* currentSightedMatInstElement : _CurrentSightedMatInst)
+		{
+			if(IsValid(currentSightedMatInstElement))
+				currentSightedMatInstElement->SetScalarParameterValue(FName("bIsHoldingFire"), bIsHoldingFire ? -1 : 1);
+		}
+		
 	}
 }
 
 void UPS_WeaponComponent::SliceBump()
 {
-	if(!IsValid(_CurrentSightedComponent) || !_CurrentSightedMatInst->IsValidLowLevel() || !IsValid(GetWorld())) return;
+	if(!IsValid(_CurrentSightedComponent) || !IsValid(GetWorld())) return;
 
 	if(bSliceBumping)
 	{
@@ -443,8 +531,13 @@ void UPS_WeaponComponent::SliceBump()
 			CurrentCurveAlpha = SliceBumpCurve->GetFloatValue(alpha);
 		}
 
+		
 		if(bDebugSightSliceBump) UE_LOG(LogTemp, Log, TEXT("%S :: curveAlpha %f "), __FUNCTION__, CurrentCurveAlpha);
-		_CurrentSightedMatInst->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
+		for (UMaterialInstanceDynamic* currentSightedMatInstElement : _CurrentSightedMatInst)
+		{
+			if(!IsValid(currentSightedMatInstElement)) continue;
+			currentSightedMatInstElement->SetScalarParameterValue(FName("SliceBumpAlpha"), CurrentCurveAlpha);
+		}
 
 		if(alpha >= 1)
 			bSliceBumping = false;
@@ -460,26 +553,56 @@ void UPS_WeaponComponent::SliceBump()
 
 UMaterialInstanceDynamic* UPS_WeaponComponent::SetupMeltingMat(const UProceduralMeshComponent* const procMesh)
 {
-	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), HalfSectionMaterial);
+	UMaterialInstanceDynamic* matInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), SliceableMaterial);
 	
-	if(!IsValid(matInst) || !IsValid(GetWorld()) || !IsValid(procMesh->GetMaterial(0))) return nullptr;
-	
+	if(!IsValid(matInst) || !IsValid(GetWorld())) return nullptr;
+
 	matInst->SetScalarParameterValue(FName("StartTime"), GetWorld()->GetTimeSeconds());
 	matInst->SetScalarParameterValue(FName("Duration"), MeltingLifeTime);
 		
 	FLinearColor baseMaterialColor;
 	procMesh->GetMaterial(0)->GetVectorParameterValue(FName("Base Color"), baseMaterialColor);
-	matInst->SetVectorParameterValue(FName("TargetColor"), baseMaterialColor);
+	matInst->SetVectorParameterValue(FName("Base Color"), baseMaterialColor);
 	
 	matInst->SetScalarParameterValue(FName("bIsMelting"), true);
+
+	_HalfSectionMatInst.AddUnique(matInst);
 	
 	return matInst;
 }
 
 void UPS_WeaponComponent::ResetMeltingMat(UProceduralMeshComponent* const parentProcComp, UProceduralMeshComponent* const halfChildComponent, const FSCustomSliceOutput& slicingDatas)
 {
-	parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,slicingDatas.InProcMeshDefaultMat);
-	halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,slicingDatas.InProcMeshDefaultMat);
+	//Reset sighted material by their base
+	if(_CurrentSightedComponent != parentProcComp)
+		parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,SliceableMaterial);
+
+	if(_CurrentSightedComponent != halfChildComponent)
+		halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,SliceableMaterial);
+	
+	// UMaterialInstanceDynamic* parentMatInst = Cast<UMaterialInstanceDynamic>(parentProcComp->GetMaterial(slicingDatas.InProcMeshCapIndex));
+	// UMaterialInstanceDynamic* childMatInst =  Cast<UMaterialInstanceDynamic>(halfChildComponent->GetMaterial(slicingDatas.InProcMeshCapIndex));
+	//
+	// //Reset sighted material by their base
+	// // parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,_CurrentSightedBaseMats[slicingDatas.InProcMeshCapIndex]);
+	// // halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,_CurrentSightedBaseMats[slicingDatas.InProcMeshCapIndex]);
+	//
+	// if(IsValid(parentMatInst))
+	// {
+	// 	parentMatInst->MarkAsGarbage();
+	// 	parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex, nullptr);
+	// 	
+	// 	//parentMatInst->SetScalarParameterValue(FName("bIsMelting"), false);
+	// }
+	//
+	// if(IsValid(childMatInst))
+	// {
+	// 	childMatInst->MarkAsGarbage();
+	// 	halfChildComponent->SetMaterial(slicingDatas.InProcMeshCapIndex, nullptr);
+	// 	
+	// 	//childMatInst->SetScalarParameterValue(FName("bIsMelting"), false);
+	// }
+	
 }
 
 void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
@@ -496,8 +619,6 @@ void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const pro
 	
 	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
 }
-
-
 
 //------------------
 #pragma endregion Slice
