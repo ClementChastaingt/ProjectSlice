@@ -402,14 +402,14 @@ void UPS_WeaponComponent::SightShaderTick()
 			UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),newMaterialMaster);
 			
 			if(!IsValid(matInstObject)) continue;
-			UE_LOG(LogTemp, Log, TEXT("bUseADynMatAsMasterMat %i, Material %i :  %s, newMaterialMaster %s"), bUseADynMatAsMasterMat, i, *GetNameSafe(matInstObject), *GetNameSafe(newMaterialMaster));
+			//UE_LOG(LogTemp, Log, TEXT("bUseADynMatAsMasterMat %i, Material %i :  %s, newMaterialMaster %s"), bUseADynMatAsMasterMat, i, *GetNameSafe(matInstObject), *GetNameSafe(newMaterialMaster));
 			
 			//Start display Slice Rack Ray
 			matInstObject->SetScalarParameterValue(FName("bIsInUse"), true);
-			//If display in a currently melting face
-			if(bUseADynMatAsMasterMat)
-				matInstObject->SetScalarParameterValue(FName("bIsMelting"), true);
 			
+			//If display in a currently melting face
+			if(bUseADynMatAsMasterMat) UpdateMeltingParams(sightedMatInst, matInstObject);
+		
 			//Add in queue
 			_CurrentSightedMatInst.Insert(matInstObject,i);
 			_CurrentSightedBaseMats.Insert(newMaterialMaster, i);
@@ -436,11 +436,15 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		for (UMaterialInterface* material : _CurrentSightedBaseMats)
 		{
 			UMaterialInstanceDynamic* currentUsedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
+			
+
+			if(!IsValid(currentUsedMatInst)) continue;
+
 			float bIsMelting = 0.0f;
-			if(IsValid(currentUsedMatInst))
-				currentUsedMatInst->GetScalarParameterValue(FName("bIsMelting"),bIsMelting);
-
-
+			currentUsedMatInst->GetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+		
+			//If display in a currently melting face
+		
 			//Set new Object Mat instance if sigthed element was Melting
 			UMaterialInstanceDynamic* matInstObject = nullptr;
 			if(bIsMelting)
@@ -451,31 +455,16 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 					i++;
 					continue;
 				}
-				matInstObject->SetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+				UpdateMeltingParams(currentUsedMatInst, matInstObject);
 			}
-
-			// //Set StartTime to slicing faced start timing
-			// float initialSlicedStartTime;
-			// if(_HalfSectionMatInst.IsValidIndex(i))_HalfSectionMatInst[i]->GetScalarParameterValue(FName("StartTime"),initialSlicedStartTime);
-			// matInstObject->SetScalarParameterValue(FName("StartTime"),initialSlicedStartTime);
-			//
-			// //Active melting texture
-			// matInstObject->SetScalarParameterValue(FName("bIsMelting"),bIsMelting);
+			
 			
 			_CurrentSightedComponent->SetMaterial(i, bIsMelting ? matInstObject : material);
-			// UMaterialInstanceDynamic* currentBaseMatInst  = Cast<UMaterialInstanceDynamic>(_CurrentSightedBaseMats);			
-
-			/*if(bDebugSightShader)*/ UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
+			
+			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
 			i++;
 			
-	
 		}
-
-		// //Reset and destroy slice rack dyn material
-		// for (UMaterialInstanceDynamic* dynMat : _CurrentSightedMatInst)
-		// {
-		// 	if(IsValid(dynMat)) dynMat->MarkAsGarbage();
-		// }
 		
 		//Reset variables
 		_CurrentSightedComponent = nullptr;
@@ -619,6 +608,21 @@ void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const pro
 	
 	procMesh->UpdateMeshSection(sectionIndex, outVerticles, outNormals, outUV, vertexColors, outTangent);
 }
+
+
+void UPS_WeaponComponent::UpdateMeltingParams(const UMaterialInstanceDynamic* const sightedMatInst,UMaterialInstanceDynamic* const matInstObject)
+{
+	float bIsMelting, startTime;
+	sightedMatInst->GetScalarParameterValue(FName("bIsMelting"), bIsMelting);
+	sightedMatInst->GetScalarParameterValue(FName("StartTime"), startTime);
+			
+	if(bIsMelting)
+	{
+		matInstObject->SetScalarParameterValue(FName("bIsMelting"), bIsMelting);
+		matInstObject->SetScalarParameterValue(FName("StartTime"), startTime);
+	}
+}
+
 
 //------------------
 #pragma endregion Slice

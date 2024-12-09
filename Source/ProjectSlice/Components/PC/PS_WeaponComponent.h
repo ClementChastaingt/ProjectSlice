@@ -138,6 +138,9 @@ protected:
 	UFUNCTION()
 	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
 
+	UFUNCTION()
+	static void UpdateMeltingParams(const UMaterialInstanceDynamic* sightedMatInst, UMaterialInstanceDynamic* matInstObject);
+
 private:
 	UPROPERTY(Transient)
 	FSCustomSliceOutput _sliceOutput;
@@ -183,7 +186,7 @@ protected:
 
 	UFUNCTION()
 	void SightMeshRotation();
-	
+
 	/**Sight slice shader */
 	UFUNCTION()
 	void SightShaderTick();
