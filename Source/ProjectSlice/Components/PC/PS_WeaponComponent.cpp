@@ -187,6 +187,7 @@ void UPS_WeaponComponent::Fire()
 	//Setup material
 	ResetSightRackProperties();
 	UMaterialInstanceDynamic* matInst = SetupMeltingMat(parentProcMeshComponent);
+	UMaterialInstanceDynamic* outLineInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), OutlineMaterial);
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
@@ -198,10 +199,10 @@ void UPS_WeaponComponent::Fire()
 	
 	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
 	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
-	                                                  sliceDir, true,
-	                                                  outHalfComponent, _sliceOutput,
-	                                                  IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
-	                                                  matInst);
+		sliceDir, true,
+		outHalfComponent, _sliceOutput,
+		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
+		matInst, outLineInst);
 	if(!IsValid(outHalfComponent)) return;
 
 	//Launch melting reset timer
@@ -374,8 +375,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		ResetSightRackProperties();
 		if(!outHit.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
 		_CurrentSightedComponent = outHit.GetComponent();
-
-		UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+		
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
 		{
 			//Setup slice rack shader material inst
@@ -620,6 +620,7 @@ void UPS_WeaponComponent::UpdateMeltingParams(const UMaterialInstanceDynamic* co
 	{
 		matInstObject->SetScalarParameterValue(FName("bIsMelting"), bIsMelting);
 		matInstObject->SetScalarParameterValue(FName("StartTime"), startTime);
+		matInstObject->SetScalarParameterValue(FName("Duration"), MeltingLifeTime);
 	}
 }
 

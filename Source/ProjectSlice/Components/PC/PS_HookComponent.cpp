@@ -886,7 +886,7 @@ void UPS_HookComponent::PowerCablePull()
 		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 100, 1.0f, 0.0f);
 		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 		
-		UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
+		//UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
 		// if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
 	}

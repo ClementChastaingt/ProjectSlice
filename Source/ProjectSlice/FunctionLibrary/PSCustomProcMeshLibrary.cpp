@@ -214,7 +214,7 @@ void SliceConvexElem(const FKConvexElem& InConvex, const FPlane& SlicePlane, TAr
 void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition,
 	FVector PlaneNormal, bool bCreateOtherHalf,
 	UProceduralMeshComponent*& OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData,
-	EProcMeshSliceCapOption CapOption, UMaterialInterface* CapMaterial)
+	EProcMeshSliceCapOption CapOption, UMaterialInterface* CapMaterial,  UMaterialInterface* OutLineMaterial)
 {
 	if (InProcMesh != nullptr)
 	{
@@ -535,6 +535,8 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 			if (CapOption == EProcMeshSliceCapOption::CreateNewSectionForCap)
 			{
 				InProcMesh->SetMaterial(CapSectionIndex, CapMaterial);
+				if(IsValid(OutLineMaterial))
+					InProcMesh->SetMaterial(CapSectionIndex, OutLineMaterial);
 				
 				//Storage InProc modified material for differed usage
 				outSlicingData.InProcMeshCapIndex = CapSectionIndex;
@@ -552,6 +554,8 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 				{
 					OtherSections.Add(FProcMeshSection());
 					OtherMaterials.Add(CapMaterial);
+					if(IsValid(OutLineMaterial))
+						OtherMaterials.Add(OutLineMaterial);
 					
 					//Storage OutProc modified material for differed usage
 					outSlicingData.OutProcMeshCapIndex = OtherSections.Num() - 1;

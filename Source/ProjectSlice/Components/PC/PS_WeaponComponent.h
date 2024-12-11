@@ -129,6 +129,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* SliceableMaterial = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
+	UMaterialInterface* OutlineMaterial = nullptr;
+
 	UFUNCTION()
 	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
 
@@ -139,7 +142,7 @@ protected:
 	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
 
 	UFUNCTION()
-	static void UpdateMeltingParams(const UMaterialInstanceDynamic* sightedMatInst, UMaterialInstanceDynamic* matInstObject);
+	void UpdateMeltingParams(const UMaterialInstanceDynamic* sightedMatInst, UMaterialInstanceDynamic* matInstObject);
 
 private:
 	UPROPERTY(Transient)
