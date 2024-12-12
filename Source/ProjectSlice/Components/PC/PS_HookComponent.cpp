@@ -970,7 +970,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				HookPhysicConstraint->ComponentName1.ComponentName = FName(GetConstraintAttachSlave()->GetName());
 				HookPhysicConstraint->ComponentName2.ComponentName = CablePointComponents.IsValidIndex(0) ? FName(CablePointComponents[0]->GetName()) :  FName(GetConstraintAttachMaster()->GetName());
 				
-				//Set Linear Limit
+				//Set Linear Limit				
 				HookPhysicConstraint->SetLinearXLimit(LCM_Limited, DistanceOnAttach);
 				HookPhysicConstraint->SetLinearYLimit(LCM_Limited, DistanceOnAttach);
 				HookPhysicConstraint->SetLinearZLimit(LCM_Limited, DistanceOnAttach);
@@ -1138,6 +1138,18 @@ void UPS_HookComponent::OnSwingPhysic()
 		return;
 	}
 
+	//Fake AirControl for influence swing
+	if(!_PlayerController->GetRealMoveInput().IsNearlyZero())
+	{
+		FVector swingControlDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetRealMoveInput());
+		swingControlDir.Normalize();
+	
+		float airControlSpeed = _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed * _PlayerCharacter->GetCharacterMovement()->AirControl;
+		FVector swingAirControlVel = swingControlDir * GetWorld()->DeltaTimeSeconds * airControlSpeed * SwingCustomAirControlMultiplier;
+
+		GetConstraintAttachSlave()->AddForce(swingAirControlVel, NAME_None, true);
+	}
+	
 	//Set actor location to ConstraintAttach
 	FTimerDelegate setLastLocDel;
 	FTimerHandle setLastLocHandle;
