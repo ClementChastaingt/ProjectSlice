@@ -355,6 +355,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
 	float SwingMaxAirControl = 2.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing force multiplicator"))
+	float SwingCustomAirControlMultiplier = 2.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Swing input weight divider", EditCondition="!bSwingIsPhysical", EditConditionHides))
 	float SwingInputScaleDivider = 2.0f;
 
