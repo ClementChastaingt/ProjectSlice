@@ -46,11 +46,10 @@ public:
 	 *	@param	OutOtherHalfProcMesh	If bCreateOtherHalf is set, this is the new component created. Its owner will be the same as the supplied InProcMesh.
 	 *	@param	CapOption				If and how to create 'cap' geometry on the slicing plane
 	 *	@param	CapMaterial				If creating a new section for the cap, assign this material to that section
-	 *	@param OutLineMaterial
 	 */
 	
 	UFUNCTION(BlueprintCallable, Category = "Components|ProceduralMesh")
 	static void SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition, FVector PlaneNormal, bool bCreateOtherHalf, UProceduralMeshComponent
 		*& OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData, EProcMeshSliceCapOption CapOption, UMaterialInterface*
-		CapMaterial, UMaterialInterface* OutLineMaterial);
+		CapMaterial);
 };

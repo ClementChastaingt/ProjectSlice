@@ -207,6 +207,7 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 	
 	CreatePostProcessMaterial(SlowmoMaterial, SlowmoMatInst);
 	CreatePostProcessMaterial(DashMaterial, DashMatInst);
+	CreatePostProcessMaterial(OutlineMaterial, OutlineMatInst);
 
 	UpdateWeightedBlendPostProcess();
 }
@@ -298,8 +299,36 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 }
 
+void UPS_PlayerCameraComponent::OnTriggerOutline(const bool bActivate)
+{
+	if(!IsValid(OutlineMatInst) || !IsValid(GetWorld())) return;
+	
+	//Blend PostProcess
+	if(WeightedBlendableArray.IsValidIndex(2)) WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
+	UpdateWeightedBlendPostProcess();
+
+	//Activate Outline Post-Process on sighted element
+	_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bActivate);
+	
+	
+	// UPS_WeaponComponent* weaponComp = _PlayerCharacter->GetWeaponComponent();
+	// if(bActivate && IsValid(weaponComp))
+	// {
+	// 	int32 sectionIndex;
+	// 	//UMaterialInterface* targetFacedMat = weaponComp->GetCurrentSightedComponent()->GetMaterialFromCollisionFaceIndex(weaponComp->GetCurrentSightedFace(),sectionIndex)
+	// }
+}
+
 //------------------
 #pragma endregion Dash
+
+#pragma region Outline
+//------------------
+
+
+
+//------------------
+#pragma endregion Outline
 
 //------------------
 #pragma endregion Post-Process

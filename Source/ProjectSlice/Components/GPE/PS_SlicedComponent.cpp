@@ -64,13 +64,13 @@ void UPS_SlicedComponent::InitSliceObject()
 	UKismetProceduralMeshLibrary::CopyProceduralMeshFromStaticMeshComponent(_RootMesh,0,this,true);
 	_RootMesh->DestroyComponent(true);
 
-	//Init Collision and Physic
+	//Init Collision 
 	bUseComplexAsSimpleCollision = false;
 	SetGenerateOverlapEvents(true);
 	SetCollisionProfileName(Profile_GPE, true);
 	SetNotifyRigidBodyCollision(true);
 
-	
+	//Init Physic
 	const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
 	SetSimulatePhysics(!bFixed);
 	

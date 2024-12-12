@@ -93,6 +93,9 @@ private:
 public:
 	UFUNCTION()
 	void OnTriggerDash(const bool bActivate);
+
+	UFUNCTION()
+	void OnTriggerOutline(const bool bActivate);
 	
 protected:
 
@@ -116,6 +119,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UMaterialInstanceDynamic* OutlineMatInst = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UMaterialInterface* OutlineMaterial = nullptr;
+	
 	
 	UFUNCTION()
 	void InitPostProcess();

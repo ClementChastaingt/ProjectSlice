@@ -187,7 +187,6 @@ void UPS_WeaponComponent::Fire()
 	//Setup material
 	ResetSightRackProperties();
 	UMaterialInstanceDynamic* matInst = SetupMeltingMat(parentProcMeshComponent);
-	UMaterialInstanceDynamic* outLineInst  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), OutlineMaterial);
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
@@ -202,7 +201,7 @@ void UPS_WeaponComponent::Fire()
 		sliceDir, true,
 		outHalfComponent, _sliceOutput,
 		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
-		matInst, outLineInst);
+		matInst);
 	if(!IsValid(outHalfComponent)) return;
 
 	//Launch melting reset timer
@@ -375,7 +374,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		ResetSightRackProperties();
 		if(!outHit.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
 		_CurrentSightedComponent = outHit.GetComponent();
-		
+		_CurrentSightedFace = outHit.FaceIndex;
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
 		{
 			//Setup slice rack shader material inst
@@ -414,6 +413,10 @@ void UPS_WeaponComponent::SightShaderTick()
 			_CurrentSightedMatInst.Insert(matInstObject,i);
 			_CurrentSightedBaseMats.Insert(newMaterialMaster, i);
 			_CurrentSightedComponent->SetMaterial(i, matInstObject);
+
+			//Trigger PostProcess Outline on face sliced
+			if(i>0)
+				_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(true);
 		}
 
 		//Setup Bump to Old params if effective
@@ -462,6 +465,11 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 			_CurrentSightedComponent->SetMaterial(i, bIsMelting ? matInstObject : material);
 			
 			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
+
+			//Stop PostProcess Outline on faced sliced
+			_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(false);
+
+			//Increment index
 			i++;
 			
 		}

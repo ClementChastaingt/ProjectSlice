@@ -129,9 +129,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
 	UMaterialInterface* SliceableMaterial = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slice")
-	UMaterialInterface* OutlineMaterial = nullptr;
-
 	UFUNCTION()
 	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
 
@@ -181,6 +178,12 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
+
+	UFUNCTION(BlueprintCallable)
+	UPrimitiveComponent* GetCurrentSightedComponent() const{return _CurrentSightedComponent;}
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
 
 protected:
 	/** Make the weapon Turn his Rack */
@@ -261,6 +264,8 @@ private:
 	UPROPERTY(Transient)
 	TArray<UMaterialInstanceDynamic*> _CurrentSightedMatInst;
 
+	UPROPERTY(Transient)
+	int32 _CurrentSightedFace;
 
 #pragma endregion SightRack
 };
