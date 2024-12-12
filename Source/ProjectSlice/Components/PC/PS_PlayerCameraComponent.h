@@ -95,7 +95,7 @@ public:
 	void OnTriggerDash(const bool bActivate);
 
 	UFUNCTION()
-	void OnTriggerOutline(const bool bActivate);
+	void OnTriggerOutline(const bool bActivate, const bool bBlendShader);
 	
 protected:
 

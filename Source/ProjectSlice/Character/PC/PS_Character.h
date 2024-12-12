@@ -246,6 +246,22 @@ private:
 	//------------------
 #pragma endregion Slowmo
 
+#pragma region Glasses
+	//------------------
+	
+public:
+	UFUNCTION()
+	void Glasses();
+protected:
+
+
+private:
+	UPROPERTY(Transient)
+	bool _bGlassesActive = false;
+	
+#pragma endregion Glasses
+
+
 #pragma region Weapon
 	//------------------
 

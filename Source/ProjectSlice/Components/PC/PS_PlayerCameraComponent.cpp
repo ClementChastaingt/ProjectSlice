@@ -299,16 +299,22 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 }
 
-void UPS_PlayerCameraComponent::OnTriggerOutline(const bool bActivate)
+void UPS_PlayerCameraComponent::OnTriggerOutline(const bool bActivate, const bool bBlendShader)
 {
 	if(!IsValid(OutlineMatInst) || !IsValid(GetWorld())) return;
 	
 	//Blend PostProcess
-	if(WeightedBlendableArray.IsValidIndex(2)) WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
-	UpdateWeightedBlendPostProcess();
+	if(bBlendShader)
+	{
+		if(WeightedBlendableArray.IsValidIndex(2)) WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
+		UpdateWeightedBlendPostProcess();
+	}
+
 
 	//Activate Outline Post-Process on sighted element
-	_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bActivate);
+	UPrimitiveComponent* sightedComp = _PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent();
+	if(IsValid(sightedComp))
+		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bActivate);
 	
 	
 	// UPS_WeaponComponent* weaponComp = _PlayerCharacter->GetWeaponComponent();

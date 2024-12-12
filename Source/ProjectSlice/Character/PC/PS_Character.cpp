@@ -178,6 +178,9 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		
 		// Slowmotion
 		EnhancedInputComponent->BindAction(_PlayerController->GetSlowmoAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Slowmo);
+
+		// Glasses
+		EnhancedInputComponent->BindAction(_PlayerController->GetGlassesAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Glasses);
 		
 		// Stow
 		EnhancedInputComponent->BindAction(_PlayerController->GetStowAction(), ETriggerEvent::Started, this,  &AProjectSliceCharacter::Stow);
@@ -456,6 +459,25 @@ void AProjectSliceCharacter::Slowmo()
 
 //------------------
 #pragma endregion Slowmo
+
+#pragma region Glasses
+//------------------
+
+void AProjectSliceCharacter::Glasses()
+{
+	if(!IsValid(GetFirstPersonCameraComponent()))
+		return;
+
+	_bGlassesActive = !_bGlassesActive;
+
+	//Trigger PostProcess Outline on face sliced
+	GetFirstPersonCameraComponent()->OnTriggerOutline(_bGlassesActive, true);
+}
+
+
+
+#pragma endregion Glasses
+
 
 #pragma region Weapon
 //------------------

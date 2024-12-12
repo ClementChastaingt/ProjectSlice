@@ -350,7 +350,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, outHit, true);
-
+	
 	//TODO:: Change by laser VFX
 	DrawDebugLine(GetWorld(), start, target, FColor::Red, false);
 	
@@ -413,11 +413,11 @@ void UPS_WeaponComponent::SightShaderTick()
 			_CurrentSightedMatInst.Insert(matInstObject,i);
 			_CurrentSightedBaseMats.Insert(newMaterialMaster, i);
 			_CurrentSightedComponent->SetMaterial(i, matInstObject);
-
-			//Trigger PostProcess Outline on face sliced
-			if(i>0)
-				_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(true);
+			
 		}
+
+		//Stop PostProcess Outline on faced sliced
+		_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(true, false);
 
 		//Setup Bump to Old params if effective
 		ForceInitSliceBump();
@@ -467,7 +467,7 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
 
 			//Stop PostProcess Outline on faced sliced
-			_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(false);
+			_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(false, false);
 
 			//Increment index
 			i++;

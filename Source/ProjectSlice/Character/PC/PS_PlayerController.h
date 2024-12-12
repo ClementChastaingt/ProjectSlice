@@ -60,6 +60,8 @@ public:
 	
 	FORCEINLINE UInputAction* GetSlowmoAction() const{return SlowmoAction;}
 
+	FORCEINLINE UInputAction* GetGlassesAction() const{return GlassesAction;}
+
 	FORCEINLINE UInputAction* GetStowAction() const{return StowAction;}
 	
 protected:
@@ -81,6 +83,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* SlowmoAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
+	UInputAction* GlassesAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* StowAction;
