@@ -417,7 +417,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		}
 
 		//Stop PostProcess Outline on faced sliced
-		_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(true, false);
+		_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerGlasses(true, false);
 
 		//Setup Bump to Old params if effective
 		ForceInitSliceBump();
@@ -467,7 +467,7 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
 
 			//Stop PostProcess Outline on faced sliced
-			_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerOutline(false, false);
+			_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerGlasses(false, false);
 
 			//Increment index
 			i++;

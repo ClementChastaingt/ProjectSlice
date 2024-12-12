@@ -207,7 +207,7 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 	
 	CreatePostProcessMaterial(SlowmoMaterial, SlowmoMatInst);
 	CreatePostProcessMaterial(DashMaterial, DashMatInst);
-	CreatePostProcessMaterial(OutlineMaterial, OutlineMatInst);
+	CreatePostProcessMaterial(GlassesMaterial, GlassesMatInst);
 
 	UpdateWeightedBlendPostProcess();
 }
@@ -299,9 +299,9 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 }
 
-void UPS_PlayerCameraComponent::OnTriggerOutline(const bool bActivate, const bool bBlendShader)
+void UPS_PlayerCameraComponent::OnTriggerGlasses(const bool bActivate, const bool bBlendShader)
 {
-	if(!IsValid(OutlineMatInst) || !IsValid(GetWorld())) return;
+	if(!IsValid(GlassesMatInst) || !IsValid(GetWorld())) return;
 	
 	//Blend PostProcess
 	if(bBlendShader)

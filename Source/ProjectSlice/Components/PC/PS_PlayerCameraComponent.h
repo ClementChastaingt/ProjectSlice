@@ -95,7 +95,7 @@ public:
 	void OnTriggerDash(const bool bActivate);
 
 	UFUNCTION()
-	void OnTriggerOutline(const bool bActivate, const bool bBlendShader);
+	void OnTriggerGlasses(const bool bActivate, const bool bBlendShader);
 	
 protected:
 
@@ -121,10 +121,10 @@ protected:
 	float DashDuration = 0.1f;
 		
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	UMaterialInstanceDynamic* OutlineMatInst = nullptr;
+	UMaterialInstanceDynamic* GlassesMatInst = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
-	UMaterialInterface* OutlineMaterial = nullptr;
+	UMaterialInterface* GlassesMaterial = nullptr;
 	
 	
 	UFUNCTION()
