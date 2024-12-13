@@ -58,12 +58,22 @@ public:
 
 	FORCEINLINE float GetDefaultFOV() const{return DefaultFOV;}
 
+	FORCEINLINE float GetDefaultDirtMaskInt() const{return DefaultDirtMaskInt;}
+	
+	FORCEINLINE FLinearColor GetDefaultDirtMaskTint() const{return DefaultDirtMaskTint;}
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	bool bFieldOfViewInterpChange = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	float DefaultFOV;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	float DefaultDirtMaskInt;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
+	FLinearColor DefaultDirtMaskTint;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	float StartFOV = 0.0f;
@@ -125,8 +135,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* GlassesMaterial = nullptr;
-	
-	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	FLinearColor GlassesDirtMaskColor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	float GlassesDirtMaskIntensity = 64.0f;
+		
 	UFUNCTION()
 	void InitPostProcess();
 
