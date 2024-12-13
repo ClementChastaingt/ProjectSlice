@@ -212,7 +212,8 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 	CreatePostProcessMaterial(SlowmoMaterial, SlowmoMatInst);
 	CreatePostProcessMaterial(DashMaterial, DashMatInst);
 	CreatePostProcessMaterial(GlassesMaterial, GlassesMatInst);
-
+	CreatePostProcessMaterial(FishEyeMaterial, FishEyeMatInst);
+	
 	UpdateWeightedBlendPostProcess();
 }
 
@@ -305,22 +306,27 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 
 void UPS_PlayerCameraComponent::OnTriggerGlasses(const bool bActivate, const bool bBlendShader)
 {
-	if(!IsValid(GlassesMatInst) || !IsValid(GetWorld())) return;
-	
+	if(!IsValid(GlassesMatInst) || !IsValid(FishEyeMatInst) || !IsValid(GetWorld())) return;
 	
 	//Blend PostProcess
 	if(bBlendShader)
 	{
 		if(WeightedBlendableArray.IsValidIndex(2)) WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
+		if(WeightedBlendableArray.IsValidIndex(3)) WeightedBlendableArray[3].Weight = bActivate ? 1.0f : 0.0f;
+		
 		UpdateWeightedBlendPostProcess();
 
 		//Config camera
-		SetFieldOfView(bActivate ? 65.0f : GetDefaultFOV());
+		//SetFieldOfView(bActivate ? GetDefaultFOV() * 1.5f : GetDefaultFOV());
 	}
 	
 	//Activate DirtMask on camera
 	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskIntensity = bActivate ? GlassesDirtMaskIntensity : GetDefaultDirtMaskInt();
 	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskTint = bActivate ? GlassesDirtMaskColor : GetDefaultDirtMaskTint();
+
+	//Activate FilmGrain
+	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.FilmGrainIntensity = bActivate;
+	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.FilmGrainTexelSize = bActivate ? 2.144 : 0.0f;
 
 	//Activate Outline Post-Process on sighted element
 	UPrimitiveComponent* sightedComp = _PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent();

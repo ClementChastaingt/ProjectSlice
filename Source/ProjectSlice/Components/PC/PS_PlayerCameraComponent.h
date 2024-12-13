@@ -130,17 +130,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
 		
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
 	UMaterialInstanceDynamic* GlassesMatInst = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
 	UMaterialInterface* GlassesMaterial = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
 	FLinearColor GlassesDirtMaskColor;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
 	float GlassesDirtMaskIntensity = 64.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
+	UMaterialInstanceDynamic* FishEyeMatInst = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UMaterialInterface* FishEyeMaterial = nullptr;
+
+	
 		
 	UFUNCTION()
 	void InitPostProcess();
