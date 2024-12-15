@@ -115,6 +115,24 @@ private:
 
 #pragma endregion FOV
 
+#pragma region CameraShake
+	//------------------
+
+protected:
+	
+	UFUNCTION()
+	void GlassesCameraShake();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Glasses")
+	TArray<TSubclassOf<UCameraShakeBase>> CameraShakeGlasses;
+
+private:
+	UPROPERTY(Transient)
+	FTimerHandle _ShakeTimerHandle;
+
+#pragma endregion CameraShake
+
+
 #pragma region Post-Process
 	//------------------
 

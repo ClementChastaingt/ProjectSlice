@@ -4,6 +4,7 @@
 #include "PS_PlayerCameraComponent.h"
 
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
@@ -99,6 +100,43 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 //------------------
 #pragma endregion FOV
 
+#pragma region CameraShake
+//------------------
+
+void UPS_PlayerCameraComponent::GlassesCameraShake()
+{
+	if(!IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
+	
+	//Idle or Walk
+	const float playerVel =  _PlayerCharacter->GetVelocity().Length();
+	const int32 shakeIndex = playerVel >_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed / 2;
+	
+	if(CameraShakeGlasses.IsValidIndex(shakeIndex) && !GetWorld()->GetTimerManager().IsTimerActive(_ShakeTimerHandle))
+	{
+		if(!IsValid(CameraShakeGlasses[shakeIndex])) return;
+		_PlayerController->ClientStartCameraShake(CameraShakeGlasses[shakeIndex]);
+	}
+	else
+	{
+		return;
+	}
+	
+	//Reset timer
+	const UCameraShakeBase* shakeParams =Cast<UCameraShakeBase>(CameraShakeGlasses[shakeIndex].GetDefaultObject());
+	
+	float shakeDuration = 0.5f;
+	if(IsValid(shakeParams) && shakeParams->GetCameraShakeDuration().IsFixed())
+		shakeDuration = shakeParams->GetCameraShakeDuration().Get();
+		
+	FTimerDelegate walkTimerDelegate;
+	GetWorld()->GetTimerManager().SetTimer(_ShakeTimerHandle, walkTimerDelegate, shakeDuration, false);
+	
+	
+}
+//------------------
+#pragma endregion CameraShake
+
+
 #pragma region Camera_Tilt                                                                                                                                                                                                                      
 //------------------                                                                                                                                                                                                                            
                                                                                                                                                                                                                                                 
@@ -171,7 +209,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	                                                                                                                                                                                                                                            
 	//Rotate             
 	_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, newRot.Roll));                                                                                                                                                                                              
-	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newRot: %f, alphaTilt %f, CurrentCameraTiltOrientation %"),newRot.Roll, alphaTilt);
+	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: newRot: %f, alphaTilt %f"),newRot.Roll, alphaTilt);
 
 	//If Camera tilt already finished stop                                                                                                                                                                                                      
 	if(alphaTilt >= 1)                                                                                                                                                                                                                          
@@ -318,8 +356,6 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool bRenderCustomDepth)
 {
 	if(_bIsUsingGlasses == bActivate && _bGlassesRenderCustomDepth == bRenderCustomDepth) return;
-
-	UE_LOG(LogTemp, Error, TEXT("bActivate %i, bRenderCustomDepth %i "), bActivate, bRenderCustomDepth);
 	
 	if(!IsValid(_GlassesMatInst) || !IsValid(_FishEyeMatInst) || !IsValid(_VignetteMatInst) || !IsValid(GetWorld())) return;
 
@@ -350,9 +386,14 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 
 	//Callback
 	if(_bIsUsingGlasses != bActivate)
+	{
 		OnTriggerGlasses.Broadcast(bActivate);
+		GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+	}
+
 
 	//Setup var
+	_CamRot = GetComponentRotation();
 	_bIsUsingGlasses = bActivate;
 	if(IsValid(sightedComp)) _bGlassesRenderCustomDepth = bRenderCustomDepth;
 }
@@ -364,25 +405,33 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	FRotator animRot = GetComponentRotation();
 	FRotator newRot;
 
-	//Pitch
+	//If stop moving try to return to 0.0 offset
+	if(animRot.Equals(_CamRot))
+		VignetteAnimParams.Rate = FVector2D::ZeroVector;
+	
+	//Pitch (Up//Down)
 	newRot.Pitch = animRot.Pitch - _CamRot.Pitch;
 	newRot.Pitch = newRot.Pitch + VignetteAnimParams.Rate.X;
 	VignetteAnimParams.Rate.X = FMath::Clamp(newRot.Pitch, VignetteAnimParams.RateMinMax.X *- 1, VignetteAnimParams.RateMinMax.X);
 
-	//Yaw
+	//Yaw (Left//Right)
 	newRot.Yaw = animRot.Yaw - _CamRot.Yaw;
-	newRot.Yaw = newRot.Pitch + VignetteAnimParams.Rate.Y;
+	newRot.Yaw = newRot.Yaw + VignetteAnimParams.Rate.Y;
 	VignetteAnimParams.Rate.Y = FMath::Clamp(newRot.Yaw, VignetteAnimParams.RateMinMax.Y *- 1, VignetteAnimParams.RateMinMax.Y);
-
+	
 	//Set CamRot
-	_CamRot = animRot;
+	_CamRot = GetComponentRotation();
 
 	//Interp offset
 	VignetteAnimParams.VignetteOffset.X = UKismetMathLibrary::FInterpTo(VignetteAnimParams.VignetteOffset.X, VignetteAnimParams.Rate.X, deltaTime, VignetteAnimParams.AnimSpeed);
 	VignetteAnimParams.VignetteOffset.Y = UKismetMathLibrary::FInterpTo(VignetteAnimParams.VignetteOffset.Y, VignetteAnimParams.Rate.Y, deltaTime, VignetteAnimParams.AnimSpeed);
 	
 	//Set offset into material inst
-	_VignetteMatInst->SetVectorParameterValue(FName("VignetteOffset"), FVector(VignetteAnimParams.VignetteOffset.X ,VignetteAnimParams.VignetteOffset.Y ,0.0));
+	//X = (Up//Down) // Y = (Left//Right)
+	_VignetteMatInst->SetVectorParameterValue(FName("VignetteOffset"), FVector(VignetteAnimParams.VignetteOffset.Y ,VignetteAnimParams.VignetteOffset.X,0.0));
+
+	//CameraShake
+	GlassesCameraShake();
 	
 }
 //------------------
