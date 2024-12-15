@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_PlayerCameraComponent.generated.h"
 
 class AProjectSlicePlayerController;
@@ -11,6 +12,28 @@ class AProjectSliceCharacter;
 /**
  * 
  */
+
+USTRUCT(BlueprintType, Category = "Struct")
+struct FSVignetteAnimation
+{
+	GENERATED_BODY()
+
+	FSVignetteAnimation(){};
+	
+public:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters", meta=(Tooltip="X is PITCH && Y is YAW"))
+	FVector2D RateMinMax = FVector2D::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters")
+	float AnimSpeed = 10.0f;
+	
+	UPROPERTY(meta=(Tooltip="X is PITCH && Y is YAW"))
+	FVector2D Rate = FVector2D::ZeroVector;
+	
+	UPROPERTY(meta=(Tooltip="X is PITCH && Y is YAW"))
+	FVector2D VignetteOffset = FVector2D::ZeroVector;
+};
 
 UCLASS(Blueprintable, ClassGroup=(Player), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_PlayerCameraComponent : public UCameraComponent
@@ -30,16 +53,16 @@ public:
 
 protected:
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Debug")
 	bool bDebug = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CameraRollTilt|Debug")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraRollTilt|Debug")
 	bool bDebugCameraTilt = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CameraRollTilt|Debug")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraRollTilt|Debug")
 	bool bDebugCameraTiltTick = false;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Debug")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Debug")
 	bool bDebugPostProcess = false;
 
 private:
@@ -58,9 +81,6 @@ public:
 
 	FORCEINLINE float GetDefaultFOV() const{return DefaultFOV;}
 
-	FORCEINLINE float GetDefaultDirtMaskInt() const{return DefaultDirtMaskInt;}
-	
-	FORCEINLINE FLinearColor GetDefaultDirtMaskTint() const{return DefaultDirtMaskTint;}
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
@@ -69,8 +89,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	float DefaultFOV;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
-	float DefaultDirtMaskInt;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	FLinearColor DefaultDirtMaskTint;
@@ -102,59 +120,54 @@ private:
 
 public:
 	UFUNCTION()
-	void OnTriggerDash(const bool bActivate);
+	void TriggerDash(const bool bActivate);
 
 	UFUNCTION()
-	void OnTriggerGlasses(const bool bActivate, const bool bBlendShader);
+	void TriggerGlasses(const bool bActivate, const bool bRenderCustomDepth);
+
+	//Getters && Setters
+	UFUNCTION()
+	FORCEINLINE FPostProcessSettings GetDefaultPostProcessSettings() const{return _DefaultPostProcessSettings;}
+
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnTriggerGlasses;
 	
 protected:
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	TArray<FWeightedBlendable> WeightedBlendableArray;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	UMaterialInstanceDynamic* SlowmoMatInst = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* SlowmoMaterial = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	UMaterialInstanceDynamic* DashMatInst = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	FTimerHandle DashTimerHandle;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* DashMaterial = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
-	float DashDuration = 0.1f;
-		
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
-	UMaterialInstanceDynamic* GlassesMatInst = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* GlassesMaterial = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
-	FLinearColor GlassesDirtMaskColor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PostProcess|Parameters")
-	float GlassesDirtMaskIntensity = 64.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="PostProcess|Status")
-	UMaterialInstanceDynamic* FishEyeMatInst = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PostProcess|Parameters")
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* FishEyeMaterial = nullptr;
-
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
+	UMaterialInterface* VignetteMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Dash",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
+	float DashDuration = 0.1f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses")
+	FPostProcessSettings GlassesPostProcessSettings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses|Vignette")
+	FSVignetteAnimation VignetteAnimParams;
 		
 	UFUNCTION()
 	void InitPostProcess();
 
 	UFUNCTION()
 	void CreatePostProcessMaterial(UMaterialInterface* const material, UMaterialInstanceDynamic*& outMatInst);
+
+	
+	UFUNCTION()
+	void UpdateWeightedBlendPostProcess();
 	
 	UFUNCTION()
 	void SlowmoTick();
@@ -166,12 +179,44 @@ protected:
 	void DashTick() const;
 
 	UFUNCTION()
-	void UpdateWeightedBlendPostProcess();
+	void GlassesTick(const float deltaTime);
 
 private:
 	UPROPERTY(Transient)
+	FPostProcessSettings _DefaultPostProcessSettings;
+
+	UPROPERTY(Transient)
+	TArray<FWeightedBlendable> _WeightedBlendableArray;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _SlowmoMatInst;
+	
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _DashMatInst;
+	
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _GlassesMatInst;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _FishEyeMatInst;
+	
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _VignetteMatInst;
+	
+	UPROPERTY(Transient)
 	float _DashStartTimestamp;
 
+	UPROPERTY(Transient)
+	FTimerHandle _DashTimerHandle;
+	
+	UPROPERTY(Transient)
+	bool _bIsUsingGlasses;
+	
+	UPROPERTY(Transient)
+	bool _bGlassesRenderCustomDepth;
+
+	UPROPERTY(Transient)
+	FRotator _CamRot;
 
 #pragma endregion Post-Process
 

@@ -181,8 +181,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FRotator GetCurrentCamRot() const{return CurrentCamRot;}
 
-	
-	
 protected:
 	UFUNCTION(BlueprintCallable)
 	void ApplyLookSwayAndOffset(const FRotator& camRotPrev);

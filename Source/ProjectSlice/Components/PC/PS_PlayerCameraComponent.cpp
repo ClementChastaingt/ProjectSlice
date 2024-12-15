@@ -2,6 +2,8 @@
 
 
 #include "PS_PlayerCameraComponent.h"
+
+#include "Blueprint/UserWidget.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
@@ -42,6 +44,7 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	//-----Post-Process-----//                    
 	SlowmoTick();
 	DashTick();
+	GlassesTick(DeltaTime);
 	
 	FieldOfViewTick();
 	
@@ -195,31 +198,31 @@ void UPS_PlayerCameraComponent::CreatePostProcessMaterial(UMaterialInterface* co
 		outMatInst = matInst;
 		
 		FWeightedBlendable outWeightedBlendable = FWeightedBlendable(0.0f, matInst);
-		WeightedBlendableArray.Add(outWeightedBlendable);
+		_WeightedBlendableArray.Add(outWeightedBlendable);
 
-		if(bDebugPostProcess) UE_LOG(LogTemp, Warning, TEXT("%S :: outMatInst %s, BlendableArray %i"), __FUNCTION__, *outMatInst->GetName(), WeightedBlendableArray.Num());
+		if(bDebugPostProcess) UE_LOG(LogTemp, Warning, TEXT("%S :: outMatInst %s, BlendableArray %i"), __FUNCTION__, *outMatInst->GetName(), _WeightedBlendableArray.Num());
 	}
 }
 
 void UPS_PlayerCameraComponent::InitPostProcess()
 {
 	if(!IsValid(GetWorld())) return;
-
-	//Setup PP default var
-	DefaultDirtMaskInt = _PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskIntensity;
-	DefaultDirtMaskTint = _PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskTint;
-	
-	CreatePostProcessMaterial(SlowmoMaterial, SlowmoMatInst);
-	CreatePostProcessMaterial(DashMaterial, DashMatInst);
-	CreatePostProcessMaterial(GlassesMaterial, GlassesMatInst);
-	CreatePostProcessMaterial(FishEyeMaterial, FishEyeMatInst);
+		
+	CreatePostProcessMaterial(SlowmoMaterial, _SlowmoMatInst);
+	CreatePostProcessMaterial(DashMaterial, _DashMatInst);
+	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
+	CreatePostProcessMaterial(FishEyeMaterial, _FishEyeMatInst);
+	CreatePostProcessMaterial(VignetteMaterial, _VignetteMatInst);
 	
 	UpdateWeightedBlendPostProcess();
+
+	//Setup PP default var
+	_DefaultPostProcessSettings = _PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings;
 }
 
 void UPS_PlayerCameraComponent::UpdateWeightedBlendPostProcess()
 {
-	const FWeightedBlendables currentWeightedBlendables = FWeightedBlendables(WeightedBlendableArray);
+	const FWeightedBlendables currentWeightedBlendables = FWeightedBlendables(_WeightedBlendableArray);
 	PostProcessSettings.WeightedBlendables = currentWeightedBlendables;
 }
 
@@ -232,44 +235,44 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 	
 	const UPS_SlowmoComponent* slowmo = _PlayerCharacter->GetSlowmoComponent();
 	
-	if(IsValid(slowmo) && IsValid(SlowmoMatInst))
+	if(IsValid(slowmo) && IsValid(_SlowmoMatInst))
 	{
 		const float alpha = slowmo->GetSlowmoAlpha();
 		if(slowmo->IsIsSlowmoTransiting())
 		{
-			if(WeightedBlendableArray.IsValidIndex(0) && WeightedBlendableArray[0].Weight != 1.0f)
+			if(_WeightedBlendableArray.IsValidIndex(0) && _WeightedBlendableArray[0].Weight != 1.0f)
 			{
-				WeightedBlendableArray[0].Weight = 1.0f;
+				_WeightedBlendableArray[0].Weight = 1.0f;
 				UpdateWeightedBlendPostProcess();
 			}
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
-			SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
-			SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
+			_SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
+			_SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),_PlayerCharacter->GetSlowmoComponent()->GetSlowmoPostProcessAlpha());
+			_SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),alpha);    
 		}
 	}	
 }
 
 void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 {
-	if(!IsValid(SlowmoMatInst)) return;
+	if(!IsValid(_SlowmoMatInst)) return;
 
-	if(WeightedBlendableArray.IsValidIndex(0))
+	if(_WeightedBlendableArray.IsValidIndex(0))
 	{
-		WeightedBlendableArray[0].Weight = 0.0f;
+		_WeightedBlendableArray[0].Weight = 0.0f;
 		UpdateWeightedBlendPostProcess();
 	}
 	
-	SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
-	SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
-	SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);
+	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
+	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
+	_SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);
 }
 
 void UPS_PlayerCameraComponent::DashTick() const
 {
-	if(DashTimerHandle.IsValid() && IsValid(DashMatInst))
+	if(_DashTimerHandle.IsValid() && IsValid(_DashMatInst))
 	{
 		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
-		DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
+		_DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
 	}
 }
 
@@ -279,24 +282,24 @@ void UPS_PlayerCameraComponent::DashTick() const
 #pragma region Dash
 //------------------
 
-void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
+void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 {
-	if(!IsValid(DashMatInst) || !IsValid(GetWorld())) return;
+	if(!IsValid(_DashMatInst) || !IsValid(GetWorld())) return;
 
 	//Blend PostProcess
-	if(WeightedBlendableArray.IsValidIndex(1)) WeightedBlendableArray[1].Weight = bActivate ? 1.0f : 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(1)) _WeightedBlendableArray[1].Weight = bActivate ? 1.0f : 0.0f;
 	UpdateWeightedBlendPostProcess();
 
 	//Desactivation
-	if(!GetWorld()->GetTimerManager().IsTimerActive(DashTimerHandle))
+	if(!GetWorld()->GetTimerManager().IsTimerActive(_DashTimerHandle))
 	{
 		FTimerDelegate dash_TimerDelegate;
-		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::OnTriggerDash, false);
-		GetWorld()->GetTimerManager().SetTimer(DashTimerHandle, dash_TimerDelegate, DashDuration, false);
+		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::TriggerDash, false);
+		GetWorld()->GetTimerManager().SetTimer(_DashTimerHandle, dash_TimerDelegate, DashDuration, false);
 	}
 	else
 	{
-		GetWorld()->GetTimerManager().ClearTimer(DashTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(_DashTimerHandle);
 		return;
 	}
 
@@ -304,35 +307,39 @@ void UPS_PlayerCameraComponent::OnTriggerDash(const bool bActivate)
 	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 }
 
-void UPS_PlayerCameraComponent::OnTriggerGlasses(const bool bActivate, const bool bBlendShader)
+
+//------------------
+#pragma endregion Dash
+
+#pragma region Glasses
+//------------------
+
+
+void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool bRenderCustomDepth)
 {
-	if(!IsValid(GlassesMatInst) || !IsValid(FishEyeMatInst) || !IsValid(GetWorld())) return;
+	if(_bIsUsingGlasses == bActivate && _bGlassesRenderCustomDepth == bRenderCustomDepth) return;
+
+	UE_LOG(LogTemp, Error, TEXT("bActivate %i, bRenderCustomDepth %i "), bActivate, bRenderCustomDepth);
 	
-	//Blend PostProcess
-	if(bBlendShader)
-	{
-		if(WeightedBlendableArray.IsValidIndex(2)) WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
-		if(WeightedBlendableArray.IsValidIndex(3)) WeightedBlendableArray[3].Weight = bActivate ? 1.0f : 0.0f;
+	if(!IsValid(_GlassesMatInst) || !IsValid(_FishEyeMatInst) || !IsValid(_VignetteMatInst) || !IsValid(GetWorld())) return;
+
+	//Get PostProcess settings
+	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings = bActivate ? GlassesPostProcessSettings : GetDefaultPostProcessSettings();
 		
-		UpdateWeightedBlendPostProcess();
-
-		//Config camera
-		//SetFieldOfView(bActivate ? GetDefaultFOV() * 1.5f : GetDefaultFOV());
-	}
-	
-	//Activate DirtMask on camera
-	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskIntensity = bActivate ? GlassesDirtMaskIntensity : GetDefaultDirtMaskInt();
-	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.BloomDirtMaskTint = bActivate ? GlassesDirtMaskColor : GetDefaultDirtMaskTint();
-
-	//Activate FilmGrain
-	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.FilmGrainIntensity = bActivate;
-	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings.FilmGrainTexelSize = bActivate ? 2.144 : 0.0f;
-
 	//Activate Outline Post-Process on sighted element
 	UPrimitiveComponent* sightedComp = _PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent();
 	if(IsValid(sightedComp))
-		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bActivate);
+		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bRenderCustomDepth);
 	
+	//Blend PostProcess
+	if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = bActivate ? 1.0f : 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = bActivate ? 1.0f : 0.0f;
+			
+	UpdateWeightedBlendPostProcess();
+
+	//Config camera
+	//SetFieldOfView(bActivate ? GetDefaultFOV() * 1.5f : GetDefaultFOV());
 	
 	// UPS_WeaponComponent* weaponComp = _PlayerCharacter->GetWeaponComponent();
 	// if(bActivate && IsValid(weaponComp))
@@ -340,18 +347,48 @@ void UPS_PlayerCameraComponent::OnTriggerGlasses(const bool bActivate, const boo
 	// 	int32 sectionIndex;
 	// 	//UMaterialInterface* targetFacedMat = weaponComp->GetCurrentSightedComponent()->GetMaterialFromCollisionFaceIndex(weaponComp->GetCurrentSightedFace(),sectionIndex)
 	// }
+
+	//Callback
+	if(_bIsUsingGlasses != bActivate)
+		OnTriggerGlasses.Broadcast(bActivate);
+
+	//Setup var
+	_bIsUsingGlasses = bActivate;
+	if(IsValid(sightedComp)) _bGlassesRenderCustomDepth = bRenderCustomDepth;
 }
 
+void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(_VignetteMatInst) || !_bIsUsingGlasses) return;
+
+	FRotator animRot = GetComponentRotation();
+	FRotator newRot;
+
+	//Pitch
+	newRot.Pitch = animRot.Pitch - _CamRot.Pitch;
+	newRot.Pitch = newRot.Pitch + VignetteAnimParams.Rate.X;
+	VignetteAnimParams.Rate.X = FMath::Clamp(newRot.Pitch, VignetteAnimParams.RateMinMax.X *- 1, VignetteAnimParams.RateMinMax.X);
+
+	//Yaw
+	newRot.Yaw = animRot.Yaw - _CamRot.Yaw;
+	newRot.Yaw = newRot.Pitch + VignetteAnimParams.Rate.Y;
+	VignetteAnimParams.Rate.Y = FMath::Clamp(newRot.Yaw, VignetteAnimParams.RateMinMax.Y *- 1, VignetteAnimParams.RateMinMax.Y);
+
+	//Set CamRot
+	_CamRot = animRot;
+
+	//Interp offset
+	VignetteAnimParams.VignetteOffset.X = UKismetMathLibrary::FInterpTo(VignetteAnimParams.VignetteOffset.X, VignetteAnimParams.Rate.X, deltaTime, VignetteAnimParams.AnimSpeed);
+	VignetteAnimParams.VignetteOffset.Y = UKismetMathLibrary::FInterpTo(VignetteAnimParams.VignetteOffset.Y, VignetteAnimParams.Rate.Y, deltaTime, VignetteAnimParams.AnimSpeed);
+	
+	//Set offset into material inst
+	_VignetteMatInst->SetVectorParameterValue(FName("VignetteOffset"), FVector(VignetteAnimParams.VignetteOffset.X ,VignetteAnimParams.VignetteOffset.Y ,0.0));
+	
+}
 //------------------
-#pragma endregion Dash
 
-#pragma region Outline
-//------------------
+#pragma endregion Glasses
 
-
-
-//------------------
-#pragma endregion Outline
 
 //------------------
 #pragma endregion Post-Process

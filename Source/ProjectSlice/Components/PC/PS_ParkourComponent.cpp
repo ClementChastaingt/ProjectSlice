@@ -690,7 +690,7 @@ void UPS_ParkourComponent::OnDash()
 	_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(_PlayerCharacter->GetVelocity(), dashDir * (_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed),_PlayerCharacter->GetDefaultMaxWalkSpeed() + DashSpeed);
 
 	//Trigger PostProcess Feedback
-	_PlayerCharacter->GetFirstPersonCameraComponent()->OnTriggerDash(true);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(true);
 	
 	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
 	

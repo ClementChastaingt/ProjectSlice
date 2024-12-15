@@ -252,8 +252,9 @@ private:
 public:
 	UFUNCTION()
 	void Glasses();
-protected:
 
+	UFUNCTION(BlueprintPure)
+	bool IsGlassesActive() const{return _bGlassesActive;}
 
 private:
 	UPROPERTY(Transient)
