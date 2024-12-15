@@ -375,7 +375,9 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 	UpdateWeightedBlendPostProcess();
 
 	//Config camera
-	//SetFieldOfView(bActivate ? GetDefaultFOV() * 1.5f : GetDefaultFOV());
+	//const float zoomFOV = 0.50f;
+	//const float zoomFOV = 0.75f;
+	//SetFieldOfView(bActivate ? GetDefaultFOV() * 0.50f : GetDefaultFOV());
 	
 	// UPS_WeaponComponent* weaponComp = _PlayerCharacter->GetWeaponComponent();
 	// if(bActivate && IsValid(weaponComp))

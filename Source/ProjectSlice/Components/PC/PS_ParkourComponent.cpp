@@ -217,15 +217,15 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	FHitResult outHitRight, outHitLeft;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-										  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
+										  false, actorsToIgnore, bDebugWallRun ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() - _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-									  false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true, FColor::Green);
+									  false, actorsToIgnore, bDebugWallRun ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitLeft, true, FColor::Green);
 
 	//Determine player to/from WallOrientation
 	int32 playerToWallOrientation = 0;
-	bool hitRight = outHitRight.bBlockingHit && outHitRight.GetActor() == otherActor;
-	bool hitLeft = outHitLeft.bBlockingHit && outHitLeft.GetActor() == otherActor;
+	bool hitRight = outHitRight.bBlockingHit /*&& outHitRight.GetActor() == otherActor*/;
+	bool hitLeft = outHitLeft.bBlockingHit /*&& outHitLeft.GetActor() == otherActor*/;
 
 	//If hit left && right choose the nearest
 	if(hitRight && hitLeft)
@@ -242,13 +242,13 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	{
 		playerToWallOrientation = -1;
 	}
-	else
+	else if(!outHitRight.bBlockingHit && !outHitLeft.bBlockingHit)
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the new wall, stop"), __FUNCTION__);
 		OnWallRunStop();
 		return;
 	}
-
+	UE_LOG(LogTemp, Log, TEXT("playerToWallOrientation %i"), playerToWallOrientation);
 	//Update only if don't come from WallRun && Check if player is facing the wall
 	if(!bIsWallRunning)
 	{
