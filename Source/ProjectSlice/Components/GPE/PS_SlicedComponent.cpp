@@ -47,7 +47,10 @@ void UPS_SlicedComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_SlicedComponent::InitSliceObject()
 {
-	 // Cast<UBrushComponent>(GetOwner()->GetRootComponent());
+
+	if(!IsValid(GetOwner())) return;
+	
+	// Cast<UBrushComponent>(GetOwner()->GetRootComponent());
 	_RootMesh = Cast<UStaticMeshComponent>(GetOwner()->GetRootComponent());
 
 	if(!IsValid(_RootMesh))
@@ -55,13 +58,16 @@ void UPS_SlicedComponent::InitSliceObject()
 		UE_LOG(LogTemp, Error, TEXT("%S :: %s _RootMesh invalid"), __FUNCTION__, *GetNameSafe(GetOwner()));
 		return;
 	}
-
-	//Set Transform
-	SetRelativeTransform(_RootMesh->GetRelativeTransform());
-	
+		
 	//Copy StaticMesh to ProceduralMesh
 	//TODO :: See LOD index for complex mesh
 	UKismetProceduralMeshLibrary::CopyProceduralMeshFromStaticMeshComponent(_RootMesh,0,this,true);
+
+	//Set proc new Root and set Transform
+	GetOwner()->SetRootComponent(this);
+	SetRelativeTransform(_RootMesh->GetRelativeTransform());
+
+	//Destroy base StaticMesh comp
 	_RootMesh->DestroyComponent(true);
 
 	//Init Collision 
