@@ -618,7 +618,7 @@ FVector UPS_ParkourComponent::CalculateFloorInflucence(const FVector& floorNorma
 	FVector out = floorNormal.Cross(floorNormal.Cross(FVector(0,0,1)));
 	out.Normalize();
 
-	DrawDebugDirectionalArrow(GetWorld(), GetComponentLocation(), GetComponentLocation() + out * 500, 5.0f, FColor::Blue, false, 2, 10, 2);
+	if(bDebugWallRun) DrawDebugDirectionalArrow(GetWorld(), GetComponentLocation(), GetComponentLocation() + out * 500, 5.0f, FColor::Blue, false, 2, 10, 2);
 	
 	return out;
 }
