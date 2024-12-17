@@ -65,7 +65,8 @@ void UPS_SlicedComponent::InitSliceObject()
 
 	//Set proc new Root and set Transform
 	GetOwner()->SetRootComponent(this);
-	SetRelativeTransform(_RootMesh->GetRelativeTransform());
+	SetWorldTransform(_RootMesh->GetComponentTransform());
+	//SetRelativeTransform(_RootMesh->GetRelativeTransform());
 
 	//Destroy base StaticMesh comp
 	_RootMesh->DestroyComponent(true);

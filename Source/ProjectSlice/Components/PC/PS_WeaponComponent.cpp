@@ -379,23 +379,21 @@ void UPS_WeaponComponent::SightShaderTick()
 		{
 			//Setup slice rack shader material inst
 			UMaterialInterface* newMaterialMaster;
-			
 			UMaterialInstanceDynamic* sightedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
 			const bool bUseADynMatAsMasterMat = IsValid(sightedMatInst);
 
 			//TODO :: When use more complex material reuse that
 			// newMaterialMaster = bUseADynMatAsMasterMat ? sightedMatInst->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
-			//newMaterialMaster = bUseADynMatAsMasterMat ? _HalfSectionMatInst[i]->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
-			//newMaterialMaster = bUseADynMatAsMasterMat ? SliceableMaterial : _CurrentSightedComponent->GetMaterial(i);
+			// newMaterialMaster = bUseADynMatAsMasterMat ? _HalfSectionMatInst[i]->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
+			// newMaterialMaster = bUseADynMatAsMasterMat ? SliceableMaterial : _CurrentSightedComponent->GetMaterial(i);
+			newMaterialMaster = _CurrentSightedComponent->GetMaterial(i);
 			
-			//
-			// if(!IsValid(newMaterialMaster))
-			// {
-			// 	newMaterialMaster = SliceableMaterial;
-			// 	UE_LOG(LogTemp, Error, TEXT("Invalid newMaterialMaster use SliceableMaterial"));
-			// }
-			//
-			newMaterialMaster = SliceableMaterial;
+			 if(!IsValid(newMaterialMaster))
+			 {
+			 	newMaterialMaster = SliceableMaterial;
+			 	UE_LOG(LogTemp, Error, TEXT("Invalid newMaterialMaster use SliceableMaterial"));
+			 }
+			
 			
 			//Set new Object Mat instance
 			UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),newMaterialMaster);
@@ -438,8 +436,11 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		//Reset sighted material by their base
 		for (UMaterialInterface* material : _CurrentSightedBaseMats)
 		{
+			if(!IsValid(material))
+			{
+				UE_LOG(LogTemp, Error, TEXT("%S :: material invalid"),__FUNCTION__);
+			}
 			UMaterialInstanceDynamic* currentUsedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
-			
 
 			if(!IsValid(currentUsedMatInst)) continue;
 
