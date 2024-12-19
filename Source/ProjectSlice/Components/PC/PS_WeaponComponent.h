@@ -184,6 +184,9 @@ public:
 	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
 	UFUNCTION(BlueprintCallable)
+	FHitResult GetSightHitResult() const{return _SightHitResult;}
+
+	UFUNCTION(BlueprintCallable)
 	UPrimitiveComponent* GetCurrentSightedComponent() const{return _CurrentSightedComponent;}
 
 	UFUNCTION(BlueprintCallable)
@@ -261,6 +264,9 @@ protected:
 private:
 	UPROPERTY(Transient)
 	UPrimitiveComponent* _CurrentSightedComponent;
+
+	UPROPERTY(Transient)
+	FHitResult _SightHitResult;
 	
 	UPROPERTY(Transient)
 	TArray<UMaterialInterface*> _CurrentSightedBaseMats;

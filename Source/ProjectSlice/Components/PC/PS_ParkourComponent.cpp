@@ -335,18 +335,12 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	}
 
 	OnWallRunStop();
-	
-	//Trace fwd on jump for check if jump on Right OR Forward
-	FHitResult outHitFwd;
-	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
-	
-	FVector starLoc = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetComponentLocation();	
-	FVector targetLoc = starLoc + _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector() * 4000.0;
-	
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, targetLoc, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false, actorsToIgnore, bDebugWallRunJump ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitFwd, true);
-	
-	bool bIsARightDirJumpOff = outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall;
+
+	FHitResult outHitFwd = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
+	const float angleSigthToWallBack = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector().Dot(WallRunDirection);
+	bool bIsARightDirJumpOff = ((outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall) || FMath::Abs(UKismetMathLibrary::DegAcos(angleSigthToWallBack)) < 6.5f);
+
+	DrawDebugLine(GetWorld(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation() + WallRunDirection * 600.0f, FColor::Yellow, false, 2, 10, 3);
 	
 	//Determine Target Roll
 	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection);
@@ -356,7 +350,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Weight Force when sight is up
 	const float angleCamToWallUp = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection.UpVector);
-
+	UE_LOG(LogTemp, Error, TEXT("angleSigthToWallBack %f"), UKismetMathLibrary::DegAcos(angleSigthToWallBack));
 	float jumpOffSpeed = JumpOffForceSpeed;
 	if(angleCamToWallUp >= 0)
 		jumpOffSpeed = UKismetMathLibrary::MapRangeClamped(angleCamToWallUp,0.0f,1.0f,JumpOffForceSpeed,0.0f);
@@ -1004,7 +998,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 
-	if(bDebug)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if(bDebug)UE_LOG(LogTemp, Log, TEXT("%S :: overlap %s"), __FUNCTION__, *otherActor->GetActorNameOrLabel());
 	
 	//Force WallRun if lineTrace don't hit
 	if(outHit.bBlockingHit)

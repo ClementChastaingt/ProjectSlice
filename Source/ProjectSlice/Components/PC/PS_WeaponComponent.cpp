@@ -346,11 +346,10 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	const FVector start = GetSightMeshComponent()->GetComponentLocation();
 	const FVector target = GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
-		
-	FHitResult outHit;
+	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::None, outHit, true);
+		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
 	DrawDebugLine(GetWorld(), start, target, FColor::Red, false);
@@ -358,8 +357,8 @@ void UPS_WeaponComponent::SightShaderTick()
 	//On shoot Bump tick logic 
 	SliceBump();
 
-	UMeshComponent* sliceTarget = Cast<UMeshComponent>(outHit.GetComponent());
-	if(outHit.bBlockingHit && IsValid(outHit.GetActor()))
+	UMeshComponent* sliceTarget = Cast<UMeshComponent>(_SightHitResult.GetComponent());
+	if(_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetActor()))
 	{
 		if(!IsValid(sliceTarget)) return;
 		
@@ -368,14 +367,14 @@ void UPS_WeaponComponent::SightShaderTick()
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 		
-		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == outHit.GetComponent())
+		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent())
 			return;
 		
 		//Reset last material properties
 		ResetSightRackProperties();
-		if(!outHit.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
-		_CurrentSightedComponent = outHit.GetComponent();
-		_CurrentSightedFace = outHit.FaceIndex;
+		if(!_SightHitResult.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
+		_CurrentSightedComponent = _SightHitResult.GetComponent();
+		_CurrentSightedFace = _SightHitResult.FaceIndex;
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
 		{
 			//Setup slice rack shader material inst
@@ -428,7 +427,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
 	}
 	//If don't Lbock reset old mat properties
-	else if(!outHit.bBlockingHit && IsValid(_CurrentSightedComponent))
+	else if(!_SightHitResult.bBlockingHit && IsValid(_CurrentSightedComponent))
 		ResetSightRackProperties();
 		
 }
