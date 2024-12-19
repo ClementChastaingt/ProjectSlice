@@ -91,6 +91,7 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 {
 	_PlayerCharacter = Target_PlayerCharacter;
 	_PlayerController = Cast<AProjectSlicePlayerController>(Target_PlayerCharacter->GetController());
+	_PlayerCamera = _PlayerCharacter->GetFirstPersonCameraComponent();
 	
 	if(!IsValid(_PlayerController)) return;
 		
@@ -414,9 +415,13 @@ void UPS_WeaponComponent::SightShaderTick()
 			
 		}
 
-		//Stop PostProcess Outline on faced sliced
-		_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerGlasses(_PlayerCharacter->IsGlassesActive(), true);
-
+		//Start PostProcess Outline on faced sliced
+		if(IsValid(_PlayerCamera))
+		{
+			_PlayerCamera->TriggerGlasses(_PlayerCharacter->IsGlassesActive(), false);
+			_PlayerCamera->DisplayOutlineOnSightedComp(true);
+		}
+		
 		//Setup Bump to Old params if effective
 		ForceInitSliceBump();
 
@@ -469,6 +474,9 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 
 			//Stop PostProcess Outline on faced sliced
 			_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerGlasses(_PlayerCharacter->IsGlassesActive(), false);
+
+			if(IsValid(_PlayerCamera))
+				_PlayerCamera->DisplayOutlineOnSightedComp(false);
 
 			//Increment index
 			i++;

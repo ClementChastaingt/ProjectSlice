@@ -10,6 +10,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPSDelegate);
 
 // 1 param
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Bool, const bool, boolValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Int, const int32, intValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Float, const float, floatValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector, const FVector&, vectorValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector2D,const FVector2D&, vectorValue);
 

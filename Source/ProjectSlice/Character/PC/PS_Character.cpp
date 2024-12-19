@@ -472,6 +472,7 @@ void AProjectSliceCharacter::Glasses()
 
 	//Trigger PostProcess Outline on face sliced
 	GetFirstPersonCameraComponent()->TriggerGlasses(_bGlassesActive, true);
+	GetFirstPersonCameraComponent()->DisplayOutlineOnSightedComp(_bGlassesActive);
 }
 
 

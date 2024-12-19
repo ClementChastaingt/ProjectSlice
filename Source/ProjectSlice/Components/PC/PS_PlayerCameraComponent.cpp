@@ -7,7 +7,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
@@ -245,13 +247,19 @@ void UPS_PlayerCameraComponent::CreatePostProcessMaterial(UMaterialInterface* co
 void UPS_PlayerCameraComponent::InitPostProcess()
 {
 	if(!IsValid(GetWorld())) return;
-		
+
+	//Dash
 	CreatePostProcessMaterial(SlowmoMaterial, _SlowmoMatInst);
+
+	//Slowmo
 	CreatePostProcessMaterial(DashMaterial, _DashMatInst);
-	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
+
+	//Glasses
 	CreatePostProcessMaterial(FishEyeMaterial, _FishEyeMatInst);
 	CreatePostProcessMaterial(VignetteMaterial, _VignetteMatInst);
-	
+	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
+
+	//Update postprocess visibility
 	UpdateWeightedBlendPostProcess();
 
 	//Setup PP default var
@@ -353,32 +361,16 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 //------------------
 
 
-void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool bRenderCustomDepth)
+void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool bBlendPostProcess)
 {
-	if(_bIsUsingGlasses == bActivate && _bGlassesRenderCustomDepth == bRenderCustomDepth) return;
+	if(_bIsUsingGlasses == bActivate) return;
 	
 	if(!IsValid(_GlassesMatInst) || !IsValid(_FishEyeMatInst) || !IsValid(_VignetteMatInst) || !IsValid(GetWorld())) return;
 
 	//Get PostProcess settings
 	_PlayerCharacter->GetFirstPersonCameraComponent()->PostProcessSettings = bActivate ? GlassesPostProcessSettings : GetDefaultPostProcessSettings();
-		
-	//Activate Outline Post-Process on sighted element
-	UPrimitiveComponent* sightedComp = _PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent();
-	if(IsValid(sightedComp))
-		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bRenderCustomDepth);
 	
-	//Blend PostProcess
-	if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = bActivate ? 1.0f : 0.0f;
-	if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = bActivate ? 1.0f : 0.0f;
-	if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = bActivate ? 1.0f : 0.0f;
-			
-	UpdateWeightedBlendPostProcess();
-
 	//Config camera
-	//const float zoomFOV = 0.50f;
-	//const float zoomFOV = 0.75f;
-	//SetFieldOfView(bActivate ? GetDefaultFOV() * 0.50f : GetDefaultFOV());
-	
 	// UPS_WeaponComponent* weaponComp = _PlayerCharacter->GetWeaponComponent();
 	// if(bActivate && IsValid(weaponComp))
 	// {
@@ -389,27 +381,115 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 	//Callback
 	if(_bIsUsingGlasses != bActivate)
 	{
-		OnTriggerGlasses.Broadcast(bActivate);
-		GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+		//Start with no delay
+		if(bActivate)
+		{
+			//Start Fish Eye && Vignette
+			if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 1.0f;
+			if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = 1.0f;		
+			UpdateWeightedBlendPostProcess();
+			
+			//Start WBP_Glasses 
+			OnTriggerGlasses.Broadcast(true);
+			GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+		}
+
+		//Launch post process blend if needed
+		if(bBlendPostProcess)
+			_bIsUsingGlasses = bActivate;
+		
 	}
-
-
+	
 	//Setup var
-	_CamRot = GetComponentRotation();
-	_bIsUsingGlasses = bActivate;
-	if(IsValid(sightedComp)) _bGlassesRenderCustomDepth = bRenderCustomDepth;
+	_CamRot = GetComponentRotation();	
+	
+	//Start GlassesTick
+	_bGlassesIsActive = true;
+
+}
+
+void UPS_PlayerCameraComponent::DisplayOutlineOnSightedComp(const bool bRenderCustomDepth)
+{
+	if(_bGlassesRenderCustomDepth == bRenderCustomDepth) return;
+	
+	//Activate Outline Post-Process on sighted element
+	UPrimitiveComponent* sightedComp = _PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent();
+	
+	if(IsValid(sightedComp))
+	{
+		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bRenderCustomDepth);
+		_bGlassesRenderCustomDepth = bRenderCustomDepth;
+	}
+	
+}
+
+void UPS_PlayerCameraComponent::OnStopGlasses()
+{
+	_bGlassesIsActive = false;
+
+	//Stop completly PostProcess
+	if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = 0.0f;
+
+	UpdateWeightedBlendPostProcess();
+
+
+	//Stop WBP_Glasses after Transition delay 
+	OnTriggerGlasses.Broadcast(false);
+	GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+		
 }
 
 void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(_VignetteMatInst) || !_bIsUsingGlasses) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(_FishEyeMatInst) || !IsValid(_VignetteMatInst)  || !IsValid(_GlassesMatInst) || !IsValid(GetWorld()) || !_bGlassesIsActive) return;
+	
+	//Blend PostProcess
+	if(_bIsUsingGlasses ? _BlendWeight < 1.0f  : _BlendWeight > 0.0f)
+	{
+	   _BlendWeight = UKismetMathLibrary::FInterpTo(_BlendWeight,_bIsUsingGlasses,deltaTime,GlassesTransitionSpeed);
 
+		//Blend Master Material Glasses
+		if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = _BlendWeight;
+		UpdateWeightedBlendPostProcess();
+
+		//Callback for Blur transition on WBP_Glasses
+		OnTransitToGlasses.Broadcast(_BlendWeight);
+
+		//Transit FishEye
+		_FishEyeMatInst->SetScalarParameterValue(FName("Density"), FMath::Lerp(0.0f, 0.65f,_BlendWeight));
+		_FishEyeMatInst->SetScalarParameterValue(FName("Radius"), _BlendWeight);
+
+		//Transit Vignette
+		_VignetteMatInst->SetScalarParameterValue(FName("Radius"), FMath::Lerp(0.77f, 0.67f,_BlendWeight));
+		_VignetteMatInst->SetScalarParameterValue(FName("Hardness"), FMath::Lerp(1.0f, 0.9f,_BlendWeight));
+		
+		//Transit LCD
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), GlassesMatCollec,FName("LCD_FlickerHighBound"), FMath::Lerp(0.0f, 12.0f ,_BlendWeight));
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), GlassesMatCollec, FName("LCD_UvMulti"), FMath::Lerp(1024.0f, 256.0f ,_BlendWeight));
+
+		//Transit Sharpen
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), GlassesMatCollec,FName("Sharpen_Intensity"), FMath::Lerp(0.0f, 2.5f ,_BlendWeight));
+
+		//Transit FilmGrain
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FilmGrainMatCollec, FName("alpha"), _BlendWeight);
+	}
+	//Stop Glasses
+	else if(!_bIsUsingGlasses && _bGlassesIsActive)
+	{
+		OnStopGlasses();
+		return;
+	}
+
+	//Setup move variables
 	FRotator animRot = GetComponentRotation();
 	FRotator newRot;
 
 	//If stop moving try to return to 0.0 offset
 	if(animRot.Equals(_CamRot))
 		VignetteAnimParams.Rate = FVector2D::ZeroVector;
+
 	
 	//Pitch (Up//Down)
 	newRot.Pitch = animRot.Pitch - _CamRot.Pitch;
@@ -432,10 +512,19 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	//X = (Up//Down) // Y = (Left//Right)
 	_VignetteMatInst->SetVectorParameterValue(FName("VignetteOffset"), FVector(VignetteAnimParams.VignetteOffset.Y ,VignetteAnimParams.VignetteOffset.X,0.0));
 
+	//Update FilmGrain animation
+	if(FilmGrainMatCollec->IsValidLowLevel())
+	{
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FilmGrainMatCollec, FILMGRAIN_R, FMath::RandRange(0.0f, 1.0f));
+		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FilmGrainMatCollec, FILMGRAIN_G, FMath::RandRange(0.0f ,1.0f));
+	}
+
 	//CameraShake
 	GlassesCameraShake();
 	
 }
+
+
 //------------------
 
 #pragma endregion Glasses

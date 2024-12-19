@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PS_HookComponent.h"
+#include "PS_PlayerCameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
@@ -62,6 +63,9 @@ private:
 
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+	UPROPERTY(Transient)
+	UPS_PlayerCameraComponent* _PlayerCamera;
 
 #pragma region Input
 	//------------------

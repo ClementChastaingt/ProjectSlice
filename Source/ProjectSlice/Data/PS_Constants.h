@@ -37,6 +37,20 @@
 //__________________________________________________
 #pragma endregion Gameplay
 
+#pragma region 3C
+//------------------
+
+
+#pragma region Camera
+// === //
+
+#define FILMGRAIN_R "RandomR"
+#define FILMGRAIN_G "RandomG"
+
+// === //
+#pragma endregion Camera
+
+#pragma endregion 3C
 
 #pragma region GameplayTags
 //__________________________________________________
@@ -67,9 +81,6 @@
 
 //__________________________________________________
 #pragma endregion GameplayTags
-
-
-
 
 #pragma region Input Action Name
 //__________________________________________________

@@ -139,17 +139,11 @@ private:
 public:
 	UFUNCTION()
 	void TriggerDash(const bool bActivate);
-
-	UFUNCTION()
-	void TriggerGlasses(const bool bActivate, const bool bRenderCustomDepth);
-
+	
 	//Getters && Setters
 	UFUNCTION()
 	FORCEINLINE FPostProcessSettings GetDefaultPostProcessSettings() const{return _DefaultPostProcessSettings;}
-
-	//Delegates
-	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Bool OnTriggerGlasses;
+	
 	
 protected:
 	
@@ -170,19 +164,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Dash",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses")
-	FPostProcessSettings GlassesPostProcessSettings;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses|Vignette")
-	FSVignetteAnimation VignetteAnimParams;
-		
+			
 	UFUNCTION()
 	void InitPostProcess();
 
 	UFUNCTION()
 	void CreatePostProcessMaterial(UMaterialInterface* const material, UMaterialInstanceDynamic*& outMatInst);
-
 	
 	UFUNCTION()
 	void UpdateWeightedBlendPostProcess();
@@ -196,8 +183,6 @@ protected:
 	UFUNCTION()
 	void DashTick() const;
 
-	UFUNCTION()
-	void GlassesTick(const float deltaTime);
 
 private:
 	UPROPERTY(Transient)
@@ -227,14 +212,65 @@ private:
 	UPROPERTY(Transient)
 	FTimerHandle _DashTimerHandle;
 	
+
+#pragma region Glasses
+	//------------------
+
+public:
+	UFUNCTION()
+	void TriggerGlasses(const bool bActivate, const bool bBlendPostProcess);
+
+	UFUNCTION()
+	void DisplayOutlineOnSightedComp(const bool bRenderCustomDepth);
+	
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnTriggerGlasses;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Float OnTransitToGlasses;
+
+	
+protected:
+	UFUNCTION()
+	void GlassesTick(const float deltaTime);
+
+	UFUNCTION()
+	void OnStopGlasses();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses", meta=(ClampMin=0.0f, UIMin=0.0f, ForceUnits="sec"))
+	float GlassesTransitionSpeed = 0.25;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses")
+	FPostProcessSettings GlassesPostProcessSettings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses")
+	UMaterialParameterCollection* GlassesMatCollec;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses|Vignette")
+	FSVignetteAnimation VignetteAnimParams;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Parameters|PostProcess|Glasses|FilmGrain")
+	UMaterialParameterCollection* FilmGrainMatCollec;
+private:
 	UPROPERTY(Transient)
-	bool _bIsUsingGlasses;
+	bool _bIsUsingGlasses = false;
+
+	UPROPERTY(Transient)
+	bool _bGlassesIsActive = false;
 	
 	UPROPERTY(Transient)
 	bool _bGlassesRenderCustomDepth;
 
 	UPROPERTY(Transient)
 	FRotator _CamRot;
+
+	UPROPERTY(Transient)
+	float _BlendWeight;
+
+
+#pragma endregion Glasses
+
 
 #pragma endregion Post-Process
 
