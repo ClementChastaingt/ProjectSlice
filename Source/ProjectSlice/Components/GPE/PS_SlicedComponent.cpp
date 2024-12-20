@@ -79,8 +79,9 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetNotifyRigidBodyCollision(true);
 
 	//Init Physic
-	const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
-	SetSimulatePhysics(!bFixed);
+	//const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
+	//SetSimulatePhysics(!bFixed);
+	SetSimulatePhysics(false);
 	
 }
 

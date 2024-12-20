@@ -247,8 +247,8 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetGenerateOverlapEvents(true);
 	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
+
 	outHalfComponent->SetSimulatePhysics(true);
-	
 	parentProcMeshComponent->SetSimulatePhysics(true);
 	
 	//Impulse
@@ -342,7 +342,11 @@ void UPS_WeaponComponent::SightMeshRotation()
 
 void UPS_WeaponComponent::SightShaderTick()
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || _PlayerCharacter->IsIsWeaponStow()) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || _PlayerCharacter->IsWeaponStow())
+	{
+		ResetSightRackProperties();
+		return;
+	}
 
 	const FVector start = GetSightMeshComponent()->GetComponentLocation();
 	const FVector target = GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
@@ -378,40 +382,32 @@ void UPS_WeaponComponent::SightShaderTick()
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
 		{
 			//Setup slice rack shader material inst
-			UMaterialInterface* newMaterialMaster;
-			UMaterialInstanceDynamic* sightedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
-			const bool bUseADynMatAsMasterMat = IsValid(sightedMatInst);
+			UMaterialInterface* newMaterialMaster = _CurrentSightedComponent->GetMaterial(i);
+			if(!IsValid(newMaterialMaster))
+			{
+				newMaterialMaster = SliceableMaterial;
+				UE_LOG(LogTemp, Error, TEXT("Invalid newMaterialMaster use SliceableMaterial"));
+			}
 
-			//TODO :: When use more complex material reuse that
-			// newMaterialMaster = bUseADynMatAsMasterMat ? sightedMatInst->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
-			// newMaterialMaster = bUseADynMatAsMasterMat ? _HalfSectionMatInst[i]->GetMaterial() : _CurrentSightedComponent->GetMaterial(i);
-			// newMaterialMaster = bUseADynMatAsMasterMat ? SliceableMaterial : _CurrentSightedComponent->GetMaterial(i);
-			newMaterialMaster = _CurrentSightedComponent->GetMaterial(i);
-			
-			 if(!IsValid(newMaterialMaster))
-			 {
-			 	newMaterialMaster = SliceableMaterial;
-			 	UE_LOG(LogTemp, Error, TEXT("Invalid newMaterialMaster use SliceableMaterial"));
-			 }
-			
-			
-			//Set new Object Mat instance
-			UMaterialInstanceDynamic* matInstObject  = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),newMaterialMaster);
-			
-			if(!IsValid(matInstObject)) continue;
-			//UE_LOG(LogTemp, Log, TEXT("bUseADynMatAsMasterMat %i, Material %i :  %s, newMaterialMaster %s"), bUseADynMatAsMasterMat, i, *GetNameSafe(matInstObject), *GetNameSafe(newMaterialMaster));
+			//Mat inst
+			UMaterialInstanceDynamic* sightedMatInst = Cast<UMaterialInstanceDynamic>(newMaterialMaster);
+			const bool bUseADynMatAsMasterMat = IsValid(sightedMatInst);
+		
+			//If already use an instance use i else create one
+			if(!bUseADynMatAsMasterMat)
+			{
+				//Set new Object Mat instance
+				sightedMatInst = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),newMaterialMaster);
+				if(!IsValid(sightedMatInst)) continue;
+			}
 			
 			//Start display Slice Rack Ray
-			matInstObject->SetScalarParameterValue(FName("bIsInUse"), true);
-			
-			//If display in a currently melting face
-			if(bUseADynMatAsMasterMat) UpdateMeltingParams(sightedMatInst, matInstObject);
+			sightedMatInst->SetScalarParameterValue(FName("bIsInUse"), true);
 		
 			//Add in queue
-			_CurrentSightedMatInst.Insert(matInstObject,i);
+			_CurrentSightedMatInst.Insert(sightedMatInst,i);
 			_CurrentSightedBaseMats.Insert(newMaterialMaster, i);
-			_CurrentSightedComponent->SetMaterial(i, matInstObject);
-			
+			if(!bUseADynMatAsMasterMat)_CurrentSightedComponent->SetMaterial(i, sightedMatInst);
 		}
 
 		//Start PostProcess Outline on faced sliced
@@ -443,32 +439,31 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 			if(!IsValid(material))
 			{
 				UE_LOG(LogTemp, Error, TEXT("%S :: material invalid"),__FUNCTION__);
+				continue;
 			}
+			
 			UMaterialInstanceDynamic* currentUsedMatInst = Cast<UMaterialInstanceDynamic>(_CurrentSightedComponent->GetMaterial(i));
-
 			if(!IsValid(currentUsedMatInst)) continue;
 
+			//Get Melt info
 			float bIsMelting = 0.0f;
 			currentUsedMatInst->GetScalarParameterValue(FName("bIsMelting"),bIsMelting);
-		
-			//If display in a currently melting face
-		
-			//Set new Object Mat instance if sigthed element was Melting
-			UMaterialInstanceDynamic* matInstObject = nullptr;
-			if(bIsMelting)
+			
+			//If display in a currently melting face update Mat instance if sigthed element was Melting
+			UMaterialInstanceDynamic* currentSightedBaseMatInst = Cast<UMaterialInstanceDynamic>(material);
+			const bool bUseADynMatAsMasterMat = IsValid(currentSightedBaseMatInst);
+						
+			if(bUseADynMatAsMasterMat)
 			{
-				matInstObject = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(),material);
-				if(!IsValid(matInstObject))
-				{
-					i++;
-					continue;
-				}
-				UpdateMeltingParams(currentUsedMatInst, matInstObject);
-			}
-			
-			
-			_CurrentSightedComponent->SetMaterial(i, bIsMelting ? matInstObject : material);
-			
+				//Stop display Slice Rack Ray
+				currentSightedBaseMatInst->SetScalarParameterValue(FName("bIsInUse"), false);
+
+				//Melt
+				if(bIsMelting)UpdateMeltingParams(currentUsedMatInst, currentSightedBaseMatInst);
+			}			
+			if(!bUseADynMatAsMasterMat)_CurrentSightedComponent->SetMaterial(i, material);
+
+			//Debug
 			if(bDebugSightShader) UE_LOG(LogTemp, Warning, TEXT("%S :: reset %s with %s material"), __FUNCTION__, *_CurrentSightedComponent->GetName(), *material->GetName());
 
 			//Stop PostProcess Outline on faced sliced

@@ -275,7 +275,7 @@ public:
 	FORCEINLINE void SetHasRifle(const bool bhasRifle){this->bHasRifle = bhasRifle;}
 
 	UFUNCTION(BlueprintCallable, Category=Weapon)
-	FORCEINLINE bool IsIsWeaponStow() const{return bIsWeaponStow;}
+	FORCEINLINE bool IsWeaponStow() const{return bIsWeaponStow;}
 
 protected:
 	

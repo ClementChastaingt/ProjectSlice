@@ -728,7 +728,6 @@ void UPS_HookComponent::HookObject()
 	//TODO :: Need to define inertia conditioning to false;
 	AttachedMesh->SetLinearDamping(1.0f);
 	AttachedMesh->SetAngularDamping(1.0f);
-	AttachedMesh->SetSimulatePhysics(true);
 	AttachedMesh->WakeRigidBody();
 	
 	//Determine max distance for Pull
@@ -834,6 +833,8 @@ void UPS_HookComponent::DettachHook()
 void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
+
+	if(!AttachedMesh->IsSimulatingPhysics()) return;;
 	
 	//Activate Swing if not active
 	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
