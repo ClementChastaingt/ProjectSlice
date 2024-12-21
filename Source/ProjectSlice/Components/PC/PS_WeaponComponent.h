@@ -137,9 +137,6 @@ protected:
 	UMaterialInstanceDynamic* SetupMeltingMat(const UProceduralMeshComponent* const procMesh);
 
 	UFUNCTION()
-	void ResetMeltingMat(UProceduralMeshComponent* parentProcComp, UProceduralMeshComponent* halfChildComponent, const FSCustomSliceOutput& slicingDatas);
-
-	UFUNCTION()
 	void UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex);
 
 	UFUNCTION()

@@ -175,7 +175,7 @@ void UPS_WeaponComponent::Fire()
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
 	                                      SightMesh->GetComponentLocation() + SightMesh->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-	                                        true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
+	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
 	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
 	
@@ -204,14 +204,7 @@ void UPS_WeaponComponent::Fire()
 		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
 		matInst);
 	if(!IsValid(outHalfComponent)) return;
-
-	//Launch melting reset timer
-	FTimerHandle currentMeltingHandle;
-	FTimerDelegate  currentMeltingTimerDelegate;
 	
-	currentMeltingTimerDelegate.BindUFunction(this, FName("ResetMeltingMat"), parentProcMeshComponent, outHalfComponent, _sliceOutput);
-	GetWorld()->GetTimerManager().SetTimer(currentMeltingHandle, currentMeltingTimerDelegate, MeltingLifeTime, false);
-
 	// Ensure collision is generated for both meshes
 	outHalfComponent->bUseComplexAsSimpleCollision = false;
 	
@@ -569,40 +562,6 @@ UMaterialInstanceDynamic* UPS_WeaponComponent::SetupMeltingMat(const UProcedural
 	_HalfSectionMatInst.AddUnique(matInst);
 	
 	return matInst;
-}
-
-void UPS_WeaponComponent::ResetMeltingMat(UProceduralMeshComponent* const parentProcComp, UProceduralMeshComponent* const halfChildComponent, const FSCustomSliceOutput& slicingDatas)
-{
-	//Reset sighted material by their base
-	if(_CurrentSightedComponent != parentProcComp)
-		parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,SliceableMaterial);
-
-	if(_CurrentSightedComponent != halfChildComponent)
-		halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,SliceableMaterial);
-	
-	// UMaterialInstanceDynamic* parentMatInst = Cast<UMaterialInstanceDynamic>(parentProcComp->GetMaterial(slicingDatas.InProcMeshCapIndex));
-	// UMaterialInstanceDynamic* childMatInst =  Cast<UMaterialInstanceDynamic>(halfChildComponent->GetMaterial(slicingDatas.InProcMeshCapIndex));
-	//
-	// //Reset sighted material by their base
-	// // parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex,_CurrentSightedBaseMats[slicingDatas.InProcMeshCapIndex]);
-	// // halfChildComponent->SetMaterial(slicingDatas.OutProcMeshCapIndex,_CurrentSightedBaseMats[slicingDatas.InProcMeshCapIndex]);
-	//
-	// if(IsValid(parentMatInst))
-	// {
-	// 	parentMatInst->MarkAsGarbage();
-	// 	parentProcComp->SetMaterial(slicingDatas.InProcMeshCapIndex, nullptr);
-	// 	
-	// 	//parentMatInst->SetScalarParameterValue(FName("bIsMelting"), false);
-	// }
-	//
-	// if(IsValid(childMatInst))
-	// {
-	// 	childMatInst->MarkAsGarbage();
-	// 	halfChildComponent->SetMaterial(slicingDatas.InProcMeshCapIndex, nullptr);
-	// 	
-	// 	//childMatInst->SetScalarParameterValue(FName("bIsMelting"), false);
-	// }
-	
 }
 
 void UPS_WeaponComponent::UpdateMeshTangents(UProceduralMeshComponent* const procMesh, const int32 sectionIndex)
