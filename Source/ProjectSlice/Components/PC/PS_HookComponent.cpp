@@ -767,6 +767,8 @@ void UPS_HookComponent::DettachHook()
 
 	//----Stop Cable Warping---
 	StopWindeHook();
+	AttachedMesh->SetLinearDamping(0.01f);
+	AttachedMesh->SetAngularDamping(0.0f);
 	AttachedMesh = nullptr;
 
 	//----Hook Move Feedback---
@@ -834,7 +836,7 @@ void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 
-	if(!AttachedMesh->IsSimulatingPhysics()) return;;
+	if(!AttachedMesh->IsSimulatingPhysics()) return;
 	
 	//Activate Swing if not active
 	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
@@ -884,11 +886,11 @@ void UPS_HookComponent::PowerCablePull()
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
 		//
 
-		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 100, 1.0f, 0.0f);
+		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 1000, 1.0f, 0.0f);
 		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 		
-		//UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
-		// if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
+		UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
+		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
 	}
 

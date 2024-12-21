@@ -37,13 +37,12 @@ public:
 	//Getters && Setters
 	UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
 
-protected:
-	
-
 private:
+	
 	UPROPERTY(Transient)
 	UStaticMeshComponent* _RootMesh = nullptr;
-	
+
+//------------------	
 #pragma endregion General
 
 	

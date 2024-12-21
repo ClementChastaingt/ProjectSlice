@@ -241,7 +241,10 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
 	outHalfComponent->SetNotifyRigidBodyCollision(true);
 
+	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
+	outHalfComponent->SetPhysMaterialOverride(physMat);	
 	outHalfComponent->SetSimulatePhysics(true);
+	
 	parentProcMeshComponent->SetSimulatePhysics(true);
 	
 	//Impulse
