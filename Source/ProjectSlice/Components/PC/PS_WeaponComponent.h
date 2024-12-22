@@ -26,6 +26,9 @@ public:
 	/** Sets default values for this component's properties */
 	UPS_WeaponComponent();
 	
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	FVector GetMuzzlePosition();
+	
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void AttachWeapon(AProjectSliceCharacter* TargetCharacter);
@@ -177,6 +180,9 @@ private:
 	//------------------
 
 public:
+	UFUNCTION()
+	void AdaptSightMeshBound();
+	
 	UFUNCTION(BlueprintCallable)
 	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
@@ -222,10 +228,10 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	float InterpRackRotStartTimestamp = TNumericLimits<float>().Lowest();
-
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
-	FRotator RackDefaultRotation = FRotator::ZeroRotator;
-
+	FTransform RackDefaultRelativeTransform =  FTransform();
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FRotator StartRackRotation = FRotator::ZeroRotator;
 
@@ -251,6 +257,9 @@ protected:
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
 	UCurveFloat* RackRotCurve;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	FVector2D MinMaxSightRaymultiplicator = FVector2D(0.05f,10.0f);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
 	float SliceBumpDuration = 1.0f;

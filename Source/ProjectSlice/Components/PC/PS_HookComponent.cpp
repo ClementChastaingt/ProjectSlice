@@ -700,8 +700,8 @@ void UPS_HookComponent::HookObject()
 	if(!IsValid(sightMesh)) return;
 	
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), sightMesh->GetComponentLocation(),
-										  sightMesh->GetComponentLocation() + sightMesh->GetForwardVector() * HookingMaxDistance,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
+										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 	

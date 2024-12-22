@@ -32,13 +32,21 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	SightMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
 	SightMesh->SetCollisionProfileName(Profile_NoCollision);
 	SightMesh->SetGenerateOverlapEvents(false);
-	RackDefaultRotation = SightMesh->GetRelativeRotation();
 
+}
+
+FVector UPS_WeaponComponent::GetMuzzlePosition()
+{
+	return GetSocketLocation(FName("Muzzle"));
 }
 
 void UPS_WeaponComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//Setup default value
+	RackDefaultRelativeTransform = SightMesh->GetRelativeTransform();
+	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
 }
 
 
@@ -172,8 +180,8 @@ void UPS_WeaponComponent::Fire()
 	
 	//Trace config
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightMesh->GetComponentLocation(),
-	                                      SightMesh->GetComponentLocation() + SightMesh->GetForwardVector() * MaxFireDistance,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetMuzzlePosition(),
+	                                      GetMuzzlePosition() + SightMesh->GetForwardVector() * MaxFireDistance,
 	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
 
@@ -224,8 +232,8 @@ void UPS_WeaponComponent::Fire()
 	if(bDebugSlice)
 	{
 		DrawDebugLine(GetWorld(), CurrentFireHitResult.Location,  CurrentFireHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
-		DrawDebugLine(GetWorld(), SightMesh->GetComponentLocation(),  SightMesh->GetComponentLocation() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
-		DrawDebugLine(GetWorld(), SightMesh->GetComponentLocation() + SightMesh->GetUpVector() * 500 , CurrentFireHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(),GetMuzzlePosition(), GetMuzzlePosition() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(),GetMuzzlePosition() + SightMesh->GetUpVector() * 500 , CurrentFireHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
 	}
 
 	//Register and instanciate
@@ -280,9 +288,8 @@ void UPS_WeaponComponent::TurnRack()
 	bRackInHorizontal = !bRackInHorizontal;
 
 	StartRackRotation = SightMesh->GetRelativeRotation();
-	TargetRackRotation = RackDefaultRotation;
-	TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
-
+	//TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
+	TargetRackRotation.Roll = TargetRackRotation.Roll + 90.0f;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
@@ -336,6 +343,36 @@ void UPS_WeaponComponent::SightMeshRotation()
 	}
 }
 
+void UPS_WeaponComponent::AdaptSightMeshBound()
+{
+	if(!IsValid(SightMesh)) return;
+
+	const bool IsSliceable = _SightHitResult.bBlockingHit && _SightHitResult.GetActor()->ActorHasTag(FName("Sliceable"));
+	SightMesh->SetVisibility(IsSliceable);
+	if(!IsSliceable) return;
+	
+	FVector origin, extent;
+	_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
+	
+	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance) * 10.0f;
+	float sightAjustementBound= UKismetMathLibrary::MapRangeClamped(extent.Length(),0.0f,4000.0f,MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y) * 5.0f;;
+
+	
+	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
+	newScale.X = newScale.X * sightAjustementDist;
+	newScale.Y = newScale.Y * sightAjustementBound;
+	newScale.Z = 0.01f;
+
+	FVector newLoc = RackDefaultRelativeTransform.GetLocation();
+	newLoc.X = newLoc.X * sightAjustementDist;
+		
+	SightMesh->SetRelativeScale3D(newScale);
+	SightMesh->SetRelativeLocation(newLoc);
+
+	/*if(bDebugSightShader) */UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
+		
+}
+
 void UPS_WeaponComponent::SightShaderTick()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || _PlayerCharacter->IsWeaponStow())
@@ -344,8 +381,8 @@ void UPS_WeaponComponent::SightShaderTick()
 		return;
 	}
 
-	const FVector start = GetSightMeshComponent()->GetComponentLocation();
-	const FVector target = GetSightMeshComponent()->GetComponentLocation() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	const FVector start = GetMuzzlePosition();
+	const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
@@ -366,6 +403,9 @@ void UPS_WeaponComponent::SightShaderTick()
 		{
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
+
+		//Adapt sightMesh scale to sighted object bound
+		AdaptSightMeshBound();
 		
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent())
 			return;
@@ -420,7 +460,14 @@ void UPS_WeaponComponent::SightShaderTick()
 	}
 	//If don't Lbock reset old mat properties
 	else if(!_SightHitResult.bBlockingHit && IsValid(_CurrentSightedComponent))
+	{
+		//Reset SightRack display
+		SightMesh->SetVisibility(false);
+
+		//Reset sight shader
 		ResetSightRackProperties();
+	}
+
 		
 }
 
