@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PS_ForceComponent.h"
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -166,6 +167,7 @@ public:
 
 	UFUNCTION()
 	void WindeHook();
+	void ForcePush();
 
 	UFUNCTION()
 	void StopWindeHook();
@@ -284,4 +286,17 @@ private:
 	int32 _CurrentSightedFace;
 
 #pragma endregion SightRack
+
+#pragma region ForcePush
+	//------------------
+
+public:
+	//------------------
+protected:
+	//------------------
+private:
+	UPROPERTY(Transient)
+	UPS_ForceComponent* _ForceComponent = nullptr;
+
+#pragma endregion ForcePush
 };

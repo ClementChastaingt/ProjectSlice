@@ -105,8 +105,10 @@ public:
 	FORCEINLINE UInputAction* GetTurnRackAction() const{return TurnRackAction;}
 
 	FORCEINLINE UInputAction* GetHookAction() const{return HookAction;}
-
+	
 	FORCEINLINE UInputAction* GetWinderAction() const{return WinderAction;}
+
+	FORCEINLINE UInputAction* GetForcePushAction() const{return ForcePushAction;}
 
 protected:
 	/** Fire Input Action */
@@ -124,6 +126,11 @@ protected:
 	/** Winder Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
 	UInputAction* WinderAction;
+
+	/** ForcePush Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* ForcePushAction;
+	
 private:
 	//------------------
 

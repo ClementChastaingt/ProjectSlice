@@ -86,6 +86,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 	//Create HookComponent
 	HookComponent = CreateDefaultSubobject<UPS_HookComponent>(TEXT("HookComponent"));
 	HookComponent->SetupAttachment(CameraSkeletalMeshComponent, FName("HookAttach"));
+
+	//Create ForceComponent
+	ForceComponent = CreateDefaultSubobject<UPS_ForceComponent>(TEXT("ForceComponent"));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);

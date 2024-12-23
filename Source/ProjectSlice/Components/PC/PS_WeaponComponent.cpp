@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
+#include "PS_ForceComponent.h"
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
@@ -92,6 +93,9 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	_HookComponent = Target_PlayerCharacter->GetHookComponent();
 	// _HookComponent->SetupAttachment(this,FName("HookAttach"));
 	_HookComponent->OnAttachWeapon();
+
+	// Link ForceComp to Weapon
+	_ForceComponent = Target_PlayerCharacter->GetForceComponent();
 }
 
 
@@ -142,7 +146,10 @@ void UPS_WeaponComponent::SetupWeaponInputComponent()
 
 		//Winder Launch
 		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
-		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);				
+		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
+
+		//Push Launch
+		EnhancedInputComponent->BindAction(_PlayerController->GetForcePushAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::ForcePush);
 		
 	}
 }
@@ -316,6 +323,13 @@ void UPS_WeaponComponent::StopWindeHook()
 	_HookComponent->StopWindeHook();
 }
 
+void UPS_WeaponComponent::ForcePush()
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_ForceComponent)) return;
+	
+	_ForceComponent->StartPush();
+}
+
 
 //__________________________________________________
 #pragma endregion Input
@@ -354,8 +368,8 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	FVector origin, extent;
 	_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
 	
-	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance) * 10.0f;
-	float sightAjustementBound= UKismetMathLibrary::MapRangeClamped(extent.Length(),0.0f,4000.0f,MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y) * 5.0f;;
+	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance) /** 10.0f*/;
+	float sightAjustementBound= UKismetMathLibrary::MapRangeClamped(extent.Length(),0.0f,4000.0f,MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y) /** 5.0f;*/;
 
 	
 	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
@@ -369,7 +383,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	SightMesh->SetRelativeScale3D(newScale);
 	SightMesh->SetRelativeLocation(newLoc);
 
-	/*if(bDebugSightShader) */UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
+	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
 		
 }
 

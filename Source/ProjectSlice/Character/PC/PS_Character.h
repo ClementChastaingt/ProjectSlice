@@ -45,24 +45,29 @@ class PROJECTSLICE_API AProjectSliceCharacter : public APS_CharacterBase
 	UPS_PlayerCameraComponent* FirstPersonCameraComponent;
 
 	/** ProceduralAnimComponent */
-	UPROPERTY(VisibleDefaultsOnly, Category=Manager)
+	UPROPERTY(VisibleDefaultsOnly, Category=Manager, meta = (AllowPrivateAccess = "true"))
 	UPS_ProceduralAnimComponent* ProceduralAnimComponent;
 
 	/** ParkourComponent */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
 	UPS_SlowmoComponent* SlowmoComponent;
 
 	/** ParkourComponent */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
 	UPS_ParkourComponent* ParkourComponent;
 
 	/** WeaponComponent */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
+	UPROPERTY(VisibleDefaultsOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
 	UPS_WeaponComponent* WeaponComponent;
 	
 	/** HookComponent */
 	UPROPERTY(VisibleInstanceOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
-	UPS_HookComponent* HookComponent = nullptr;
+	UPS_HookComponent* HookComponent;
+	
+	/** ForceComponent */
+	UPROPERTY(VisibleInstanceOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
+	UPS_ForceComponent* ForceComponent;
+
 	
 public:
 	AProjectSliceCharacter();
@@ -106,7 +111,11 @@ public:
 	/** Returns HookComponent **/
 	UFUNCTION(BlueprintCallable)
 	UPS_HookComponent* GetHookComponent() const{return HookComponent;}
-	
+
+	/** Returns ForceComponent **/
+	UFUNCTION(BlueprintCallable)
+	UPS_ForceComponent* GetForceComponent() const{return ForceComponent;}
+		
 protected:
 	virtual void BeginPlay();
 	
