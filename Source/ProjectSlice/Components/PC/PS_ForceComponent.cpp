@@ -56,12 +56,11 @@ void UPS_ForceComponent::StartPush()
 	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent())) return;
 
 	if(bDebugPush)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-
-	DrawDebugLine(GetWorld(), _CurrentPushHitResult.TraceStart, _CurrentPushHitResult.TraceEnd, FColor::Yellow, false, 2, 10, 3);
-
-	FVector fwdDir = _CurrentPushHitResult.TraceEnd - _CurrentPushHitResult.TraceStart;
+	
+	FVector fwdDir = (_CurrentPushHitResult.TraceEnd - _CurrentPushHitResult.TraceStart);
 	fwdDir.Normalize();
 
+	DrawDebugLine(GetWorld(),_CurrentPushHitResult.Location ,_CurrentPushHitResult.Location + fwdDir * 500, FColor::Yellow, false, 2, 10, 3);
 	const float force = PushForce * _CurrentPushHitResult.GetComponent()->GetMass() * _CurrentPushHitResult.GetComponent()->GetMassScale();
 	_CurrentPushHitResult.GetComponent()->AddImpulse(fwdDir * force, NAME_None, false);
 	//_CurrentPushHitResult.GetComponent()->AddRadialImpulse(fwdDir, PushRadius, PushForce, RIF_Linear, true);
