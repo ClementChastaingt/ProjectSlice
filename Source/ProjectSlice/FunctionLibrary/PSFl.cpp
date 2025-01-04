@@ -1,4 +1,6 @@
 #include "PSFl.h"
+
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 
 
@@ -44,4 +46,15 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 	worldInputDirection.Z = 0;
 	worldInputDirection.Normalize();
 	return worldInputDirection;
+}
+
+float UPSFl::GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult)
+{
+	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(sightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
+
+	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), sightHitResult.GetComponent()->GetComponentScale().Length());
+
+	return ((sightHitResult.GetComponent()->GetMass() * sightHitResult.GetComponent()->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / sightHitResult.GetComponent()->GetComponentScale().GetSafeNormal().Length());
+
 }

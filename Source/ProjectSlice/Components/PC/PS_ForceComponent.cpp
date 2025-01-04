@@ -6,8 +6,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 
+class UPS_SlicedComponent;
 // Sets default values for this component's properties
 UPS_ForceComponent::UPS_ForceComponent()
 {
@@ -55,13 +57,21 @@ void UPS_ForceComponent::StartPush()
 	
 	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent())) return;
 
+	if(!_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics()) return;
+
 	if(bDebugPush)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	FVector fwdDir = (_CurrentPushHitResult.TraceEnd - _CurrentPushHitResult.TraceStart);
 	fwdDir.Normalize();
 
 	DrawDebugLine(GetWorld(),_CurrentPushHitResult.Location ,_CurrentPushHitResult.Location + fwdDir * 500, FColor::Yellow, false, 2, 10, 3);
-	const float force = PushForce * _CurrentPushHitResult.GetComponent()->GetMass() * _CurrentPushHitResult.GetComponent()->GetMassScale();
+
+	const float mass = UPSFl::GetSlicedObjectUnifiedMass(_CurrentPushHitResult);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(mass,100.0f, PushMaxWeightThreshold, 0.0f,1.0f);
+	const float force = PushForce * PushMaxWeightThreshold * alpha;
+
+	UE_LOG(LogTemp, Error, TEXT("force %f,mass %f, alpha %f"), force, mass, alpha);
+	
 	_CurrentPushHitResult.GetComponent()->AddImpulse(fwdDir * force, NAME_None, false);
 	//_CurrentPushHitResult.GetComponent()->AddRadialImpulse(fwdDir, PushRadius, PushForce, RIF_Linear, true);
 

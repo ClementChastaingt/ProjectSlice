@@ -166,6 +166,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
 	float CableMaxTensDistance = 500.0f;
 	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
+	// float CableMaxTensMassThreshold = 50000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
+	float CableMaxTensVelocityThreshold = 1000.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
 	bool bDebugMaterialColors = false;
 	
@@ -286,6 +292,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="kg"))
+	float MaxPullWeight = 10000.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Distance for reach Max Force Weight by distance to object"))
 	float MaxForcePullingDistance = 1000.0f;

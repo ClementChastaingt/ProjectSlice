@@ -68,7 +68,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetWorldTransform(_RootMesh->GetComponentTransform());
 	SetMassScale(NAME_None, _RootMesh->GetMassScale());
 	//SetRelativeTransform(_RootMesh->GetRelativeTransform());
-
+	
 	//Destroy base StaticMesh comp
 	_RootMesh->DestroyComponent(true);
 
@@ -79,9 +79,8 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetNotifyRigidBodyCollision(true);
 
 	//Init Physic
-	//const bool bFixed = GetOwner()->ActorHasTag(TAG_FIXED);
-	//SetSimulatePhysics(!bFixed);
-	SetSimulatePhysics(false);
+	const bool bIsNotFixed = GetOwner()->ActorHasTag(TAG_UNFIXED);
+	SetSimulatePhysics(bIsNotFixed);
 	
 }
 

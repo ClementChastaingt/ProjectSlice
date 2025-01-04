@@ -835,18 +835,29 @@ void UPS_HookComponent::DettachHook()
 void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
-
-	if(!AttachedMesh->IsSimulatingPhysics()) return;
+	
 	
 	//Activate Swing if not active
-	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
+	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && !AttachedMesh->IsSimulatingPhysics() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
 		OnTriggerSwing(true);
 	}
+
+	//Swing Tick
+	if(bPlayerIsSwinging)
+	{
+		if(!bSwingIsPhysical)
+			OnSwingForce();
+		else
+			OnSwingPhysic();
+
+		return;
+	}
+
 	
 	//Activate Pull if Winde
 	float alpha;
-	if(bCableWinderPull && !bPlayerIsSwinging)
+	if(bCableWinderPull)
 	{
 		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
 		alpha = windeAlpha;
@@ -862,10 +873,9 @@ void UPS_HookComponent::PowerCablePull()
 		// {
 		// 	HookPhysicConstraint->SetLinearZLimit(LCM_Limited, FMath::Lerp(SwingMaxDistance, MinLinearLimitZ,alpha));
 		// }
-
 	}
-	//Activate Pull On reach Max Distance
-	else if(!bPlayerIsSwinging)
+	//Else try to Activate Pull On reach Max Distance
+	else if(AttachedMesh->IsSimulatingPhysics())
 	{
 		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
@@ -873,28 +883,45 @@ void UPS_HookComponent::PowerCablePull()
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
-	}
 
-	float forceWeight = MaxForceWeight;
+		UE_LOG(LogTemp, Error, TEXT("%S :: alpha %f, bCablePowerPull %i"),__FUNCTION__, alpha, bCablePowerPull);
+	}
+	
+	//Try Auto Break Rope if tense is too high
+	if(bCablePowerPull)
+	{
+		//FHitResult currentSightHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
+		if(/*UPSFl::GetSlicedObjectUnifiedMass(currentSightHitResult) > CableMaxTensMassThreshold ||*/ AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
+		{
+			DettachHook();
+			return;
+		}
+	}
+	
+	//If can't Pull or Swing return
+	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsSwinging) return;
+	
 	//MaxForceWeight impacted by object pulled mass
+	float forceWeight = MaxForceWeight;
+
+	//Common Pull logic
 	if(bCableWinderPull || bCablePowerPull)
 	{
 		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
 		float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
+	
 		//
 		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
 		//
 
-		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * 1000, 1.0f, 0.0f);
+		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
 		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 		
 		UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
 		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
 	}
-
-	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsSwinging)  return;
 	
 	//Pull Attached Object
 	ForceWeight = FMath::Lerp(0,forceWeight, alpha);
@@ -905,17 +932,6 @@ void UPS_HookComponent::PowerCablePull()
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 
 	if(bDebugTick && bDebugPull) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
-	
-	//Use Force
-	if(bPlayerIsSwinging)
-	{
-		if(!bSwingIsPhysical)
-			OnSwingForce();
-		else
-			OnSwingPhysic();
-
-		 return;
-	}
 
 	//Pull Force
 	if(IsValid(AttachedMesh) &&  IsValid(GetWorld()))

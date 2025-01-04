@@ -48,12 +48,12 @@ public:
 	
 protected:
 		/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
-	float MaxPushDistance = 5000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm/s"))
-	float PushForce = 4000.0f;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
+	float PushMaxWeightThreshold = 1000000.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
+	float PushForce = 400.0f;
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float PushRadius = 10.0f;
 			

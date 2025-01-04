@@ -40,6 +40,11 @@ public:
 		
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
+	/*
+	* @brief Return 
+	* */
+	static float GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult);
+
 
 #pragma endregion Utilities
 
