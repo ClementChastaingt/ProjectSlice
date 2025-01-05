@@ -49,6 +49,11 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 //------------------
 
 
+void UPS_ForceComponent::UpdatePushForce()
+{
+	
+}
+
 void UPS_ForceComponent::StartPush()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
@@ -79,6 +84,8 @@ void UPS_ForceComponent::StartPush()
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
+	//Callback
+	OnPushEvent.Broadcast(true);
 	
 }
 

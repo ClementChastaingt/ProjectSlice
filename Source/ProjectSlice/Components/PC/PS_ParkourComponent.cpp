@@ -811,6 +811,9 @@ void UPS_ParkourComponent::OnStartMantle()
 	
 	//Start movement
 	SetComponentTickEnabled(bIsMantling);
+
+	//Callback
+	OnMantleEvent.Broadcast(true);
 }
 
 void UPS_ParkourComponent::OnStoptMantle()
@@ -830,6 +833,9 @@ void UPS_ParkourComponent::OnStoptMantle()
 
 	//--------Reset Collision--------
 	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
+
+	//Callback
+	OnMantleEvent.Broadcast(false);
 	
 }
 

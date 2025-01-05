@@ -491,6 +491,9 @@ void AProjectSliceCharacter::Stow()
 	bIsWeaponStow = !bIsWeaponStow;
 
 	_PlayerController->SetCanFire(!bIsWeaponStow);
+
+	//Callback
+	OnStowEvent.Broadcast(bIsWeaponStow);
 	
 }
 

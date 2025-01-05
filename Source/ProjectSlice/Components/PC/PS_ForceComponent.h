@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_ForceComponent.generated.h"
 
 
@@ -44,7 +45,13 @@ private:
 
 public:
 	UFUNCTION()
+	void UpdatePushForce();
+	
+	UFUNCTION()
 	void StartPush();
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnPushEvent;
 	
 protected:
 		/** AnimMontage to play each time we fire */
@@ -68,6 +75,9 @@ protected:
 private:
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult _CurrentPushHitResult;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	float _PushForceWeight;
 
 
 #pragma endregion Push
