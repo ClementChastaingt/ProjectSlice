@@ -286,6 +286,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category=Weapon)
 	FORCEINLINE bool IsWeaponStow() const{return bIsWeaponStow;}
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnStowEvent;
+	
+
 protected:
 	
 	/** Called for Slowmo input */

@@ -836,11 +836,13 @@ void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 	
-	
+	//Current dist to attash loc
+	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
+			
 	//Activate Swing if not active
 	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && !AttachedMesh->IsSimulatingPhysics() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
-		OnTriggerSwing(true);
+		if(baseToMeshDist > DistanceOnAttach) OnTriggerSwing(true);
 	}
 
 	//Swing Tick
@@ -877,9 +879,8 @@ void UPS_HookComponent::PowerCablePull()
 	//Else try to Activate Pull On reach Max Distance
 	else if(AttachedMesh->IsSimulatingPhysics())
 	{
-		float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
-		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 
+		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
@@ -890,8 +891,9 @@ void UPS_HookComponent::PowerCablePull()
 	//Try Auto Break Rope if tense is too high
 	if(bCablePowerPull)
 	{
+		//UE_LOG(LogTemp, Error, ("PhysicLinearVel %f"), AttachedMesh->GetPhysicsLinearVelocity().Length());
 		//FHitResult currentSightHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
-		if(/*UPSFl::GetSlicedObjectUnifiedMass(currentSightHitResult) > CableMaxTensMassThreshold ||*/ AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
+		if(baseToMeshDist > (DistanceOnAttach + CableMaxTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
 		{
 			DettachHook();
 			return;
