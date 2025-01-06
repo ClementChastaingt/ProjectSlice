@@ -50,7 +50,12 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 
 float UPSFl::GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult)
 {
+	if(!IsValid(sightHitResult.GetActor())) return 0.0f;
+	
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(sightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+
+	if(!IsValid(currentSlicedComponent)) return 0.0f;
+	
 	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
 
 	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), sightHitResult.GetComponent()->GetComponentScale().Length());
