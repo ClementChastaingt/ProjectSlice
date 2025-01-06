@@ -840,9 +840,10 @@ void UPS_HookComponent::PowerCablePull()
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),AttachedMesh->GetComponentLocation()));
 			
 	//Activate Swing if not active
-	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && !AttachedMesh->IsSimulatingPhysics() && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
+	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling()  && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
-		if(baseToMeshDist > DistanceOnAttach) OnTriggerSwing(true);
+		float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
+		if(baseToAttachDist > DistanceOnAttach + CableMaxTensDistance || !AttachedMesh->IsSimulatingPhysics()) OnTriggerSwing(true);
 	}
 
 	//Swing Tick
@@ -879,10 +880,9 @@ void UPS_HookComponent::PowerCablePull()
 	//Else try to Activate Pull On reach Max Distance
 	else if(AttachedMesh->IsSimulatingPhysics())
 	{
-
 		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-		
+
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 
 		UE_LOG(LogTemp, Error, TEXT("%S :: alpha %f, bCablePowerPull %i"),__FUNCTION__, alpha, bCablePowerPull);
@@ -892,8 +892,9 @@ void UPS_HookComponent::PowerCablePull()
 	if(bCablePowerPull)
 	{
 		//UE_LOG(LogTemp, Error, ("PhysicLinearVel %f"), AttachedMesh->GetPhysicsLinearVelocity().Length());
-		//FHitResult currentSightHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
-		if(baseToMeshDist > (DistanceOnAttach + CableMaxTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
+		float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
+
+		if(baseToAttachDist > (DistanceOnAttach + CableMaxTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
 		{
 			DettachHook();
 			return;
@@ -1181,18 +1182,18 @@ void UPS_HookComponent::OnSwingPhysic()
 	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
-	GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations.IsValidIndex(0) ? CablePointLocations[0] : CurrentHookHitResult.Location);
-	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
-	HookPhysicConstraint->UpdateConstraintFrames();
-	
+	const float lastIndex = CablePointLocations.Num() - 1;
 	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 
 	//Update Linearlimit if update cable point
-	float lineartDistByPoint;
-	if(CablePointComponents.IsValidIndex(0) && IsValid(FirstCable))
+	if(CablePointLocations.IsValidIndex(lastIndex))
 	{
+		GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations.IsValidIndex(lastIndex) ? CablePointLocations[lastIndex] : CurrentHookHitResult.Location);
+		HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
+		HookPhysicConstraint->UpdateConstraintFrames();
+				
 		const FVector firstCableEndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
-		lineartDistByPoint = FMath::Max(DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CablePointLocations[0], firstCableEndLocation), SwingMinDistanceAttach);
+		float lineartDistByPoint = FMath::Max(DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CablePointLocations[lastIndex], firstCableEndLocation), SwingMinDistanceAttach);
 
 		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, lineartDistByPoint);
 		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, lineartDistByPoint);
