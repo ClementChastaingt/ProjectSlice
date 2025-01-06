@@ -843,7 +843,7 @@ void UPS_HookComponent::PowerCablePull()
 	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling()  && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
 		float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
-		if(baseToAttachDist > DistanceOnAttach + CableMaxTensDistance || !AttachedMesh->IsSimulatingPhysics()) OnTriggerSwing(true);
+		if(baseToAttachDist > DistanceOnAttach || !AttachedMesh->IsSimulatingPhysics()) OnTriggerSwing(true);
 	}
 
 	//Swing Tick

@@ -54,7 +54,7 @@ float UPSFl::GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult)
 	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
 
 	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), sightHitResult.GetComponent()->GetComponentScale().Length());
-
-	return ((sightHitResult.GetComponent()->GetMass() * sightHitResult.GetComponent()->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / sightHitResult.GetComponent()->GetComponentScale().GetSafeNormal().Length());
+	
+	return ((sightHitResult.GetComponent()->GetMass() * sightHitResult.GetComponent()->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / sightHitResult.GetComponent()->GetComponentScale().Length());
 
 }
