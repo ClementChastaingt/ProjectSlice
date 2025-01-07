@@ -368,10 +368,34 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	FVector origin, extent;
 	_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
 	
-	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance) /** 10.0f*/;
-	float sightAjustementBound= UKismetMathLibrary::MapRangeClamped(extent.Length(),0.0f,4000.0f,MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y) /** 5.0f;*/;
+	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
 
+	const FVector dir = SightMesh->GetComponentLocation() - _SightHitResult.Location;
+	FVector vect = FVector(SightMesh->GetForwardVector().Dot(dir),SightMesh->GetRightVector().Dot(dir),SightMesh->GetUpVector().Dot(dir));
 	
+	double roll = 180.0f;
+	double reminder;
+	UKismetMathLibrary::FMod(SightMesh->GetComponentRotation().Roll, roll, reminder);
+	const bool bRackIsHorizontal = (FMath::IsNearlyEqual(FMath::Abs(reminder), 0.0f, 5.0f) || FMath::IsNearlyEqual(FMath::Abs(reminder), 180.0f, 5.0f));
+
+	//Need to check object sighted rotation
+	//_SightHitResult.GetActor()->GetActorRotation()
+	if(bRackIsHorizontal)
+	{
+		extent.X = 0.0f;
+	}
+	else
+	{
+		extent.Y = 0.0f;
+	}
+	
+	FVector bound = ((SightMesh->GetComponentScale() * extent) + _SightHitResult.Distance);
+	float boxLenght= (vect.GetAbs() - bound * 0.5).Length();
+	
+	
+	float sightAjustementBound= UKismetMathLibrary::MapRangeClamped(boxLenght,0.0f,4000.0f,MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y) /** 5.0f;*/;
+	UE_LOG(LogTemp, Error, TEXT("reminder %f, bRackIsHorizontal %i, boxLenght %f, sightAjustementBound %f"),reminder, bRackIsHorizontal,boxLenght, sightAjustementBound);
+
 	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
 	newScale.X = newScale.X * sightAjustementDist;
 	newScale.Y = newScale.Y * sightAjustementBound;
