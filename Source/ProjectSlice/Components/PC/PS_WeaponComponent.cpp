@@ -144,9 +144,10 @@ void UPS_WeaponComponent::SetupWeaponInputComponent()
 		//Hook Launch
 		EnhancedInputComponent->BindAction(_PlayerController->GetHookAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
 
-		//Winder Launch
-		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
-		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
+		//TODO :: Renable after testing
+		//Winder Launch 
+		// EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
+		// EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
 
 		//Push Launch
 		EnhancedInputComponent->BindAction(_PlayerController->GetForcePushAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::ForcePush);
@@ -361,9 +362,10 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
 	
-	SightMesh->SetVisibility(IsValid(_CurrentSightedComponent));
+	const bool bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow();
+	SightMesh->SetVisibility(bSightMeshIsInUse);
 
-	if(!IsValid(_CurrentSightedComponent)) return;
+	if(!bSightMeshIsInUse) return;
 	
 	double roll = 180.0f;
 	double reminder;
@@ -392,7 +394,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	
 	DrawDebugLine(GetWorld(), _SightHitResult.Location , _SightHitResult.Location + dir, FColor::Magenta, false, 2, 10, 3);
 		
-	float boxLenght= (vect.GetAbs() /*- bound * 0.25f*/).Length();
+	float boxLenght= (vect.GetAbs()).Length();
 	
 	float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(boxLenght,extent.GetAbsMin(),extent.GetAbsMax(), MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y);
 	UE_LOG(LogTemp, Error, TEXT("extent %s, dir %s, vect %s, bRackIsHorizontal %i, boxLenght %f, sightAjustementBound %f"),*extent.ToString(), *dir.ToString(), *vect.ToString(), bRackIsHorizontal,boxLenght, sightAjustementBound);
@@ -563,6 +565,9 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		_CurrentSightedComponent = nullptr;
 		_CurrentSightedMatInst.Empty();
 		_CurrentSightedBaseMats.Empty();
+
+		//Unactive sight
+		SightMesh->SetVisibility(false);
 		
 	}
 }

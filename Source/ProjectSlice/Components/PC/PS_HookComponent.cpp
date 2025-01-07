@@ -854,12 +854,14 @@ void UPS_HookComponent::PowerCablePull()
 		else
 			OnSwingPhysic();
 
-		return;
+		//return;
 	}
 
 	
 	//Activate Pull if Winde
 	float alpha;
+	float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
+	
 	if(bCableWinderPull)
 	{
 		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
@@ -878,9 +880,8 @@ void UPS_HookComponent::PowerCablePull()
 		// }
 	}
 	//Else try to Activate Pull On reach Max Distance
-	else if(AttachedMesh->IsSimulatingPhysics())
+	else if(IsValid(AttachedMesh) && AttachedMesh->IsSimulatingPhysics())
 	{
-		float DistanceOnAttachByTensorCount = CableCapArray.Num() > 0 ? DistanceOnAttach/CableCapArray.Num() : DistanceOnAttach;
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
@@ -894,6 +895,8 @@ void UPS_HookComponent::PowerCablePull()
 		//UE_LOG(LogTemp, Error, ("PhysicLinearVel %f"), AttachedMesh->GetPhysicsLinearVelocity().Length());
 		float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
 
+		_AlphaTense = UKismetMathLibrary::MapRangeClamped(baseToAttachDist, DistanceOnAttach, DistanceOnAttach + CableMaxTensDistance, 0.0f, 1.0f);
+		
 		if(baseToAttachDist > (DistanceOnAttach + CableMaxTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
 		{
 			DettachHook();
@@ -911,7 +914,7 @@ void UPS_HookComponent::PowerCablePull()
 	if(bCableWinderPull || bCablePowerPull)
 	{
 		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		float objectMassScaled = UKismetMathLibrary::SafeDivide(AttachedMesh->GetMass(),AttachedMesh->GetMassScale());
+		float objectMassScaled = UPSFl::GetSlicedObjectUnifiedMass(AttachedMesh);
 	
 		//
 		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
@@ -1183,7 +1186,7 @@ void UPS_HookComponent::OnSwingPhysic()
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	const float lastIndex = CablePointLocations.Num() - 1;
-	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
+	//const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 
 	//Update Linearlimit if update cable point
 	if(CablePointLocations.IsValidIndex(lastIndex))
@@ -1207,11 +1210,11 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 	
 	//Stop by time
-	if(timeWeightAlpha >= 1)
-	{
-		DettachHook();
-		return;
-	}
+	// if(timeWeightAlpha >= 1)
+	// {
+	// 	DettachHook();
+	// 	return;
+	// }
 
 	//Debug
 	if(bDebugSwing) DrawDebugPoint(GetWorld(), GetConstraintAttachMaster()->GetComponentLocation(), 20.f, FColor::Red, true);

@@ -43,7 +43,7 @@ public:
 	/*
 	* @brief Return 
 	* */
-	static float GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult);
+	static float GetSlicedObjectUnifiedMass(UPrimitiveComponent* comp);
 
 
 #pragma endregion Utilities

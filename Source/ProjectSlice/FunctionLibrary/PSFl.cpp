@@ -48,13 +48,16 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 	return worldInputDirection;
 }
 
-float UPSFl::GetSlicedObjectUnifiedMass(const FHitResult& sightHitResult)
+float UPSFl::GetSlicedObjectUnifiedMass(UPrimitiveComponent* comp)
 {
-	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(sightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(comp);
+
+	if(!IsValid(currentSlicedComponent)) return 0.0f;
+	
 	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
 
-	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), sightHitResult.GetComponent()->GetComponentScale().Length());
+	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), currentSlicedComponent->GetComponentScale().Length());
 	
-	return ((sightHitResult.GetComponent()->GetMass() * sightHitResult.GetComponent()->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / sightHitResult.GetComponent()->GetComponentScale().Length());
+	return ((currentSlicedComponent->GetMass() * currentSlicedComponent->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) /currentSlicedComponent->GetComponentScale().Length());
 
 }

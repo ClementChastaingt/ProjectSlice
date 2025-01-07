@@ -102,7 +102,10 @@ private:
 	//------------------
 
 public:
-	//------------------
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetAlphaTense() const{return _AlphaTense;}
+
 protected:
 	//Status
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
@@ -208,6 +211,9 @@ private:
 	
 	UFUNCTION()
 	void AdaptFirstCableLocByAngle(UCableComponent* const attachCable);
+
+	UPROPERTY(Transient)
+	float _AlphaTense; 
 
 #pragma endregion Rope
 

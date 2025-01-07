@@ -70,8 +70,8 @@ void UPS_ForceComponent::StartPush()
 	fwdDir.Normalize();
 
 	DrawDebugLine(GetWorld(),_CurrentPushHitResult.Location ,_CurrentPushHitResult.Location + fwdDir * 500, FColor::Yellow, false, 2, 10, 3);
-
-	const float mass = UPSFl::GetSlicedObjectUnifiedMass(_CurrentPushHitResult);
+	
+	const float mass = UPSFl::GetSlicedObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 	const float alpha = UKismetMathLibrary::MapRangeClamped(mass,100.0f, PushMaxWeightThreshold, 0.0f,1.0f);
 	const float force = PushForce * PushMaxWeightThreshold * alpha;
 
