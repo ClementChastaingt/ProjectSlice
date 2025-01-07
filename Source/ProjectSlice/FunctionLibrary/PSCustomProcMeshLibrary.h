@@ -19,13 +19,13 @@ struct FSCustomSliceOutput
 public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
-	UMaterialInterface* InProcMeshDefaultMat;
+	UMaterialInterface* InProcMeshDefaultMat = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
-	int32 InProcMeshCapIndex;
+	int32 InProcMeshCapIndex = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
-	int32 OutProcMeshCapIndex;
+	int32 OutProcMeshCapIndex = 0;
 
 };
 

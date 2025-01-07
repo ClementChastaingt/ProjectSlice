@@ -853,10 +853,15 @@ void UPS_HookComponent::PowerCablePull()
 			OnSwingForce();
 		else
 			OnSwingPhysic();
-
-		//return;
 	}
 
+	//Dettach if falling with his attached actor
+	// FVector gravityVelocity = FVector(0.0f, 0.0f,  GetWorld()->GetGravityZ()) * GetWorld()->GetDeltaSeconds();;
+	// if(CablePointLocations.Num() == 0 && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->)
+	// {
+	// 	DettachHook();
+	// 	return;
+	// }
 	
 	//Activate Pull if Winde
 	float alpha;
@@ -883,7 +888,6 @@ void UPS_HookComponent::PowerCablePull()
 	else if(IsValid(AttachedMesh) && AttachedMesh->IsSimulatingPhysics())
 	{
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
 
 		UE_LOG(LogTemp, Error, TEXT("%S :: alpha %f, bCablePowerPull %i"),__FUNCTION__, alpha, bCablePowerPull);

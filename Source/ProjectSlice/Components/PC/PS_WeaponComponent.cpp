@@ -374,34 +374,24 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 
 	FVector origin, extent;
 	//_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
-	extent = _CurrentSightedComponent->Bounds.BoxExtent;
-	origin = _CurrentSightedComponent->Bounds.Origin;
+	extent = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentRotation().RotateVector(_CurrentSightedComponent->GetLocalBounds().BoxExtent * _CurrentSightedComponent->GetComponentScale()));
+	origin = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentLocation() + _CurrentSightedComponent->GetLocalBounds().Origin);
 		
 	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
 
-	FVector locTarget =_CurrentSightedComponent->GetComponentLocation() - _SightHitResult.Location;
-	if(bRackIsHorizontal)
-	{
-		locTarget.Z =+ extent.Z;
-	}
-	else
-	{
-		locTarget.Y =+ extent.Y;
-	}
-	
-	const FVector dir = _SightHitResult.Location - locTarget;
-	FVector vect = FVector(SightMesh->GetForwardVector().Dot(dir),SightMesh->GetRightVector().Dot(dir),SightMesh->GetUpVector().Dot(dir));
-	
-	DrawDebugLine(GetWorld(), _SightHitResult.Location , _SightHitResult.Location + dir, FColor::Magenta, false, 2, 10, 3);
-		
-	float boxLenght= (vect.GetAbs()).Length();
-	
-	float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(boxLenght,extent.GetAbsMin(),extent.GetAbsMax(), MinMaxSightRaymultiplicator.X,MinMaxSightRaymultiplicator.Y);
-	UE_LOG(LogTemp, Error, TEXT("extent %s, dir %s, vect %s, bRackIsHorizontal %i, boxLenght %f, sightAjustementBound %f"),*extent.ToString(), *dir.ToString(), *vect.ToString(), bRackIsHorizontal,boxLenght, sightAjustementBound);
+	//TODO :: Fix distToBorder
+	const float maxDistToBorder = (bRackIsHorizontal ? origin.Y + extent.Y : origin.Z + extent.Z);
+	const float distToBorder =  bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(_SightHitResult.Location.Y)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z));
+
+	float compExtent = _CurrentSightedComponent->GetLocalBounds().BoxExtent.Length() * (bRackIsHorizontal ? _CurrentSightedComponent->GetRelativeScale3D().Y : _CurrentSightedComponent->GetRelativeScale3D().Z);
+	float maxScale = UKismetMathLibrary::MapRangeClamped(compExtent, 0.0f, maxDistToBorder,MinSightRayMultiplicator, 1.0f);
+	const float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(distToBorder, 0.0f, maxDistToBorder, MinSightRayMultiplicator, maxScale);
+
+	UE_LOG(LogTemp, Error, TEXT("extent %s, bRackIsHorizontal %i, sightAjustementBound %f, distToBorder %f, maxDistToBorder %f"),*extent.ToString(), bRackIsHorizontal, sightAjustementBound, distToBorder, maxDistToBorder);
 
 	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
 	newScale.X = newScale.X * sightAjustementDist;
-	newScale.Y = newScale.Y * sightAjustementBound;
+	newScale.Y = sightAjustementBound;
 	newScale.Z = 0.01f;
 
 	FVector newLoc = RackDefaultRelativeTransform.GetLocation();

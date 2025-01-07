@@ -106,8 +106,7 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult CurrentFireHitResult;
-
-	/** AnimMontage to play each time we fire */
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float MaxFireDistance = 5000.0f;
 			
@@ -261,7 +260,7 @@ protected:
 	UCurveFloat* RackRotCurve;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FVector2D MinMaxSightRaymultiplicator = FVector2D(0.05f,10.0f);
+	float MinSightRayMultiplicator = 0.1f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
 	float SliceBumpDuration = 1.0f;
