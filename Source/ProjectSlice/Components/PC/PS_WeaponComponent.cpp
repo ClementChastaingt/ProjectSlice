@@ -30,7 +30,7 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
 	//Create Component and Attach
-	SightMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightMesh"));
+	SightMesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("SightMesh"));
 	SightMesh->SetCollisionProfileName(Profile_NoCollision);
 	SightMesh->SetGenerateOverlapEvents(false);
 
@@ -44,10 +44,6 @@ FVector UPS_WeaponComponent::GetMuzzlePosition()
 void UPS_WeaponComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//Setup default value
-	RackDefaultRelativeTransform = SightMesh->GetRelativeTransform();
-	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
 }
 
 
@@ -85,6 +81,8 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 
 	// Attach Sight to Weapon
 	SightMesh->SetupAttachment(this,FName("Muzzle"));
+	RackDefaultRelativeTransform = SightMesh->GetRelativeTransform();
+	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
 		
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Target_PlayerCharacter->SetHasRifle(true);
@@ -372,36 +370,75 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	UKismetMathLibrary::FMod(SightMesh->GetComponentRotation().Roll, roll, reminder);
 	const bool bRackIsHorizontal = (FMath::IsNearlyEqual(FMath::Abs(reminder), 0.0f, 5.0f) || FMath::IsNearlyEqual(FMath::Abs(reminder), 180.0f, 5.0f));
 
-	FVector origin, extent;
-	//_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
-	extent = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentRotation().RotateVector(_CurrentSightedComponent->GetLocalBounds().BoxExtent * _CurrentSightedComponent->GetComponentScale()));
-	origin = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentLocation() + _CurrentSightedComponent->GetLocalBounds().Origin);
+	//OLD
+	// FVector origin, extent;
+	// //_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
+	// extent = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentRotation().RotateVector(_CurrentSightedComponent->GetLocalBounds().BoxExtent * _CurrentSightedComponent->GetComponentScale()));
+	// origin = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentLocation() + _CurrentSightedComponent->GetLocalBounds().Origin);
+	// 	
+	// float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
+	//
+	// //TODO :: Fix distToBorder
+	// const float maxDistToBorder = (bRackIsHorizontal ? origin.Y + extent.Y : origin.Z + extent.Z);
+	// const float distToBorder =  bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(_SightHitResult.Location.Y)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z));
+	//
+	// float compExtent = _CurrentSightedComponent->GetLocalBounds().BoxExtent.Length() * (bRackIsHorizontal ? _CurrentSightedComponent->GetRelativeScale3D().Y : _CurrentSightedComponent->GetRelativeScale3D().Z);
+	// float maxScale = UKismetMathLibrary::MapRangeClamped(compExtent, 0.0f, maxDistToBorder,MinSightRayMultiplicator, 1.0f);
+	// const float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(distToBorder, 0.0f, maxDistToBorder, MinSightRayMultiplicator, maxScale);
+	//
+	// UE_LOG(LogTemp, Error, TEXT("extent %s, bRackIsHorizontal %i, sightAjustementBound %f, distToBorder %f, maxDistToBorder %f"),*extent.ToString(), bRackIsHorizontal, sightAjustementBound, distToBorder, maxDistToBorder);
+	//
+	// FVector newScale = RackDefaultRelativeTransform.GetScale3D();
+	// newScale.X = newScale.X * sightAjustementDist;
+	// newScale.Y = sightAjustementBound;
+	// newScale.Z = 0.01f;
+	//
+	// FVector newLoc = RackDefaultRelativeTransform.GetLocation();
+	// newLoc.X = newLoc.X * sightAjustementDist;
+	// 	
+	// SightMesh->SetRelativeScale3D(newScale);
+	// SightMesh->SetRelativeLocation(newLoc);
+	//if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
 		
-	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
 
-	//TODO :: Fix distToBorder
-	const float maxDistToBorder = (bRackIsHorizontal ? origin.Y + extent.Y : origin.Z + extent.Z);
-	const float distToBorder =  bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(_SightHitResult.Location.Y)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z));
+	// Perform a line trace or collision query
+	UpdatePlaneMesh(_SightHitResult);
+	
+}
 
-	float compExtent = _CurrentSightedComponent->GetLocalBounds().BoxExtent.Length() * (bRackIsHorizontal ? _CurrentSightedComponent->GetRelativeScale3D().Y : _CurrentSightedComponent->GetRelativeScale3D().Z);
-	float maxScale = UKismetMathLibrary::MapRangeClamped(compExtent, 0.0f, maxDistToBorder,MinSightRayMultiplicator, 1.0f);
-	const float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(distToBorder, 0.0f, maxDistToBorder, MinSightRayMultiplicator, maxScale);
+void UPS_WeaponComponent::UpdatePlaneMesh(const FHitResult& hitResult)
+{
+	// Example: Generate a simple rectangle around the hit point
+	FVector hitLocation = hitResult.Location;
 
-	UE_LOG(LogTemp, Error, TEXT("extent %s, bRackIsHorizontal %i, sightAjustementBound %f, distToBorder %f, maxDistToBorder %f"),*extent.ToString(), bRackIsHorizontal, sightAjustementBound, distToBorder, maxDistToBorder);
+	TArray<FVector> vertices = {
+		hitLocation + FVector(-50, -50, 0),
+		hitLocation + FVector(-50, 50, 0),
+		hitLocation + FVector(50, 50, 0),
+		hitLocation + FVector(50, -50, 0)
+	};
 
-	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
-	newScale.X = newScale.X * sightAjustementDist;
-	newScale.Y = sightAjustementBound;
-	newScale.Z = 0.01f;
+	TArray<int32> triangles = { 0, 1, 2, 0, 2, 3 };
 
-	FVector newLoc = RackDefaultRelativeTransform.GetLocation();
-	newLoc.X = newLoc.X * sightAjustementDist;
-		
-	SightMesh->SetRelativeScale3D(newScale);
-	SightMesh->SetRelativeLocation(newLoc);
+	GeneratePlaneMesh(vertices, triangles);
+}
 
-	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
-		
+void UPS_WeaponComponent::GeneratePlaneMesh(const TArray<FVector>& vertices, const TArray<int32>& triangles)
+{
+	TArray<FVector> normals;
+	TArray<FVector2D> UVs;
+	TArray<FColor> vertexColors;
+	TArray<FProcMeshTangent> tangents;
+
+	for (int32 i = 0; i < vertices.Num(); ++i)
+	{
+		normals.Add(FVector(0, 0, 1));
+		UVs.Add(FVector2D(0, 0)); // Customize UV mapping
+		vertexColors.Add(FColor::White);
+		tangents.Add(FProcMeshTangent(1, 0, 0));
+	}
+
+	SightMesh->CreateMeshSection(0, vertices, triangles, normals, UVs, vertexColors, tangents, true);
 }
 
 void UPS_WeaponComponent::SightShaderTick()
@@ -413,7 +450,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	}
 
 	const FVector start = GetMuzzlePosition();
-	const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	const FVector target = GetMuzzlePosition() + GetSocketLocation(FName("Muzzle")).ForwardVector * MaxFireDistance;
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
@@ -574,7 +611,6 @@ void UPS_WeaponComponent::ForceInitSliceBump()
 	}
 	
 }
-
 
 void UPS_WeaponComponent::SetupSliceBump()
 {

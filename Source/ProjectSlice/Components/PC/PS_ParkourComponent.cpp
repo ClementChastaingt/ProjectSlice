@@ -3,6 +3,7 @@
 
 #include "PS_ParkourComponent.h"
 
+#include "ProceduralMeshComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
