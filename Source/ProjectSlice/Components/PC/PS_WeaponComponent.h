@@ -21,7 +21,7 @@ class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 	GENERATED_BODY()
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
-	UProceduralMeshComponent* SightMesh = nullptr;
+	UStaticMeshComponent* SightMesh = nullptr;
 
 public:
 	/** Sets default values for this component's properties */
@@ -183,15 +183,9 @@ private:
 public:
 	UFUNCTION()
 	void AdaptSightMeshBound();
-
-	UFUNCTION()
-	void UpdatePlaneMesh(const FHitResult& HitResult);
-
-	UFUNCTION()
-	void GeneratePlaneMesh(const TArray<FVector>& Vertices, const TArray<int32>& Triangles);
 	
 	UFUNCTION(BlueprintCallable)
-	UProceduralMeshComponent* GetSightMeshComponent() const{return SightMesh;}
+	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
 	UFUNCTION(BlueprintCallable)
 	FHitResult GetSightHitResult() const{return _SightHitResult;}

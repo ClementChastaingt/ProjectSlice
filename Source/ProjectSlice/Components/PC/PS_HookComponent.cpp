@@ -6,7 +6,6 @@
 #include "PS_PlayerCameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "CableComponent.h"
-#include "ProceduralMeshComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
@@ -16,7 +15,6 @@
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 class UCableComponent;
-class UProceduralMeshComponent;
 
 // Sets default values for this component's properties
 UPS_HookComponent::UPS_HookComponent()
@@ -697,7 +695,10 @@ void UPS_HookComponent::HookObject()
 	}
 
 	//Trace config
-	const UProceduralMeshComponent* sightMesh = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent();
+	//TODO :: Make a TraceType for Hook Object
+	UStaticMeshComponent* sightMesh = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent();
+	if(!IsValid(sightMesh)) return;
+	
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
 										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance,
