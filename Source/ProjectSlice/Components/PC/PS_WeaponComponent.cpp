@@ -366,28 +366,42 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	SightMesh->SetVisibility(bSightMeshIsInUse);
 
 	if(!bSightMeshIsInUse) return;
-	
+
+	//Setup variables
+	UProceduralMeshComponent* procMeshComp = Cast<UProceduralMeshComponent>(_CurrentSightedComponent);
 	double roll = 180.0f;
 	double reminder;
 	UKismetMathLibrary::FMod(SightMesh->GetComponentRotation().Roll, roll, reminder);
 	const bool bRackIsHorizontal = (FMath::IsNearlyEqual(FMath::Abs(reminder), 0.0f, 5.0f) || FMath::IsNearlyEqual(FMath::Abs(reminder), 180.0f, 5.0f));
 
+	//Get origin and extent
 	FVector origin, extent;
-	//_SightHitResult.GetActor()->GetActorBounds(true,origin,extent);
-	extent = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentRotation().RotateVector(_CurrentSightedComponent->GetLocalBounds().BoxExtent * _CurrentSightedComponent->GetComponentScale()));
-	origin = UKismetMathLibrary::Vector_GetAbs(_CurrentSightedComponent->GetComponentLocation() + _CurrentSightedComponent->GetLocalBounds().Origin);
-		
+	procMeshComp->GetLocalBounds().GetBox().GetCenterAndExtents(origin, extent);
+	origin = procMeshComp->GetComponentTransform().TransformPosition(origin);
+
+	//Ratio to max dist
 	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
 
-	//TODO :: Fix distToBorder
-	const float maxDistToBorder = (bRackIsHorizontal ? origin.Y + extent.Y : origin.Z + extent.Z);
-	const float distToBorder =  bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(_SightHitResult.Location.Y)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z));
+	//Debug
+	DrawDebugPoint(GetWorld(), origin + extent, 20.f, FColor::Yellow, false);
+	DrawDebugLine(GetWorld(), origin, origin + extent, FColor::Yellow, false, 2, 10, 3);
+	DrawDebugPoint(GetWorld(), origin - extent, 20.f, FColor::Orange, false);
+	DrawDebugLine(GetWorld(), origin, origin - extent, FColor::Orange, false, 2, 10, 3);
 
-	float compExtent = _CurrentSightedComponent->GetLocalBounds().BoxExtent.Length() * (bRackIsHorizontal ? _CurrentSightedComponent->GetRelativeScale3D().Y : _CurrentSightedComponent->GetRelativeScale3D().Z);
+	DrawDebugPoint(GetWorld(), origin + extent, 20.f, FColor::Blue, false);
+	DrawDebugLine(GetWorld(), origin, origin + extent, FColor::Blue, false, 2, 10, 3);
+	DrawDebugPoint(GetWorld(), origin - extent, 20.f, FColor::Cyan, false);
+	DrawDebugLine(GetWorld(), origin, origin - extent, FColor::Cyan, false, 2, 10, 3);
+
+	//Determine placement on distance	
+	const float maxDistToBorder = (bRackIsHorizontal ?  origin.Y + extent.Y : origin.Z + extent.Z) / 2.0f;
+	const float distToBorder =  FMath::Abs(bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(_SightHitResult.Location.Y)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z)));
+
+	float compExtent = (bRackIsHorizontal ? origin.Y + extent.Y : origin.Z + extent.Z);
 	float maxScale = UKismetMathLibrary::MapRangeClamped(compExtent, 0.0f, maxDistToBorder,MinSightRayMultiplicator, 1.0f);
 	const float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(distToBorder, 0.0f, maxDistToBorder, MinSightRayMultiplicator, maxScale);
 
-	UE_LOG(LogTemp, Error, TEXT("extent %s, bRackIsHorizontal %i, sightAjustementBound %f, distToBorder %f, maxDistToBorder %f"),*extent.ToString(), bRackIsHorizontal, sightAjustementBound, distToBorder, maxDistToBorder);
+	UE_LOG(LogTemp, Error, TEXT("sightAjustementDist %f, bRackIsHorizontal %i, sightAjustementBound %f, maxScale %f, compExtent %f, distToBorder %f, maxDistToBorder %f"),sightAjustementDist, bRackIsHorizontal, sightAjustementBound,maxScale, compExtent, distToBorder, maxDistToBorder);
 
 	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
 	newScale.X = newScale.X * sightAjustementDist;
@@ -420,8 +434,9 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
-	DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
-	
+	if(!SightMesh->IsVisible())
+		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
+
 	//On shoot Bump tick logic 
 	SliceBump();
 
