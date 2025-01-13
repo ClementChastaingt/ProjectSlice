@@ -146,9 +146,9 @@ void UPS_WeaponComponent::SetupWeaponInputComponent()
 
 		//TODO :: Renable after testing
 		//Winder Launch 
-		// EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
-		// EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
-
+		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
+		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
+		
 		//Push Launch
 		EnhancedInputComponent->BindAction(_PlayerController->GetForcePushAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::ForcePush);
 		
@@ -310,18 +310,11 @@ void UPS_WeaponComponent::HookObject()
 	_HookComponent->HookObject();
 }
 
-void UPS_WeaponComponent::WindeHook()
+void UPS_WeaponComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
-	
-	_HookComponent->WindeHook();
-}
 
-void UPS_WeaponComponent::StopWindeHook()
-{
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
-	
-	_HookComponent->StopWindeHook();
+	_HookComponent->WindeHook(inputActionInstance.GetValue().Get<float>());
 }
 
 void UPS_WeaponComponent::ForcePush()

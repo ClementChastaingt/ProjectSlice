@@ -736,7 +736,7 @@ void UPS_HookComponent::HookObject()
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
 
-void UPS_HookComponent::WindeHook()
+void UPS_HookComponent::WindeHook(const float inputvalue)
 {
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
@@ -744,6 +744,7 @@ void UPS_HookComponent::WindeHook()
 		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 		bCableWinderPull = true;
 		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
+		CableWindeInputValue = inputvalue;
 	}
 		
 }
@@ -869,12 +870,13 @@ void UPS_HookComponent::PowerCablePull()
 	
 	if(bCableWinderPull)
 	{
-		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
-		alpha = windeAlpha;
+		//const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
+		alpha = CableWindeInputValue;
+		UE_LOG(LogTemp, Error, TEXT("alpha %f"), alpha);
 		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alpha);
 		if(IsValid(WindePullingCurve))
 		{
-			alpha = WindePullingCurve->GetFloatValue(windeAlpha);
+			alpha = WindePullingCurve->GetFloatValue(CableWindeInputValue);
 		}
 
 		//TODO :: If want to activate Winde during swing don't forget to reactivate SetLinearLimitZ
@@ -889,8 +891,6 @@ void UPS_HookComponent::PowerCablePull()
 	{
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach;
-
-		UE_LOG(LogTemp, Error, TEXT("%S :: alpha %f, bCablePowerPull %i"),__FUNCTION__, alpha, bCablePowerPull);
 	}
 	
 	//Try Auto Break Rope if tense is too high
@@ -919,11 +919,9 @@ void UPS_HookComponent::PowerCablePull()
 	{
 		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
 		float objectMassScaled = UPSFl::GetSlicedObjectUnifiedMass(AttachedMesh);
-	
-		//
+		
 		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
-		//
 
 		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
 		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
@@ -934,7 +932,7 @@ void UPS_HookComponent::PowerCablePull()
 	}
 	
 	//Pull Attached Object
-	ForceWeight = FMath::Lerp(0,forceWeight, alpha);
+	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
 	
 	UCableComponent* firstCable = CableListArray[0];
 	

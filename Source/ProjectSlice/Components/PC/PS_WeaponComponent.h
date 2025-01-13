@@ -165,11 +165,9 @@ public:
 	void HookObject();
 
 	UFUNCTION()
-	void WindeHook();
+	void WindeHook(const FInputActionInstance& inputActionInstance);
 	void ForcePush();
 
-	UFUNCTION()
-	void StopWindeHook();
 
 private:
 	UPROPERTY(Transient)

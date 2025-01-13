@@ -234,7 +234,7 @@ public:
 	void HookObject();
 	
 	UFUNCTION()
-	void WindeHook();
+	void WindeHook(const float inputvalue);
 	
 	UFUNCTION()
 	void StopWindeHook();
@@ -276,6 +276,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Is currently pull by Rope Winder effect"))
 	bool bCableWinderPull = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
+	float CableWindeInputValue = 0.0f;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
 	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
