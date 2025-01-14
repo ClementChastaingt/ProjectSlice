@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
+#include "ProjectSlice/Components/PC/PS_HookComponent.h"
+#include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "PS_PlayerController.generated.h"
 
 class AProjectSliceCharacter;
@@ -39,32 +41,19 @@ protected:
 	// Begin Actor interface
 	virtual void BeginPlay() override;
 
-
-
 #pragma region Action
 //------------------
 	
-#pragma region Player
+#pragma region BaseMovement
 	//------------------
 
 public:
-	FORCEINLINE UInputAction* GetMoveAction() const{return MoveAction;}
-
-	FORCEINLINE UInputAction* GetLookAction() const{return LookAction;}
 	
-	FORCEINLINE UInputAction* GetJumpAction() const{return JumpAction;}
-
-	FORCEINLINE UInputAction* GetCrouchAction() const{return CrouchAction;}
-	
-	FORCEINLINE UInputAction* GetDashAction() const{return DashAction;}
-	
-	FORCEINLINE UInputAction* GetSlowmoAction() const{return SlowmoAction;}
-
-	FORCEINLINE UInputAction* GetGlassesAction() const{return GlassesAction;}
-
-	FORCEINLINE UInputAction* GetStowAction() const{return StowAction;}
+	UFUNCTION()
+	void SetupMovementInputComponent(UInputComponent* PlayerInputComponent);
 	
 protected:
+	
 	/** Input Actions **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
@@ -83,57 +72,84 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* SlowmoAction;
+	
 
+	//------------------
+#pragma endregion BaseMovement
+
+#pragma region MiscAction
+	//------------------
+
+public:
+	UFUNCTION()
+	void SetupMiscComponent(UInputComponent* PlayerInputComponent);
+
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* GlassesAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* StowAction;
 	
-private:
 	//------------------
+#pragma endregion MiscAction
 
-	//------------------
-#pragma endregion Player
 
 #pragma region Weapon
 	//------------------
 
 public:
-	FORCEINLINE UInputAction* GetFireAction() const{return FireAction;}
-
-	FORCEINLINE UInputAction* GetTurnRackAction() const{return TurnRackAction;}
-
-	FORCEINLINE UInputAction* GetHookAction() const{return HookAction;}
-	
-	FORCEINLINE UInputAction* GetWinderAction() const{return WinderAction;}
-
-	FORCEINLINE UInputAction* GetForcePushAction() const{return ForcePushAction;}
+	UFUNCTION()
+	void SetupWeaponInputComponent();
 
 protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
+	const UInputAction* IA_ActionKeyboard;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
+	const UInputAction* IA_AxisKeyboard;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
+	const UInputAction* IA_ActionGamepad;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
+	const UInputAction* IA_AxisGamepad;
+	
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
-	UInputAction* FireAction;
+	UInputAction* IA_Fire;
 
 	/** Sight Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
-	UInputAction* TurnRackAction;
+	UInputAction* IA_TurnRack;
 
 	/** Hook Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
-	UInputAction* HookAction;
+	UInputAction* IA_Hook;
 
 	/** Winder Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
-	UInputAction* WinderAction;
+	UInputAction* IA_WinderPull;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* IA_WinderPush;
 
 	/** ForcePush Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
-	UInputAction* ForcePushAction;
-	
-private:
-	//------------------
+	UInputAction* IA_ForcePush;
 
+private:
+	
+	UPROPERTY(Transient)
+	UPS_WeaponComponent* _WeaponComp;
+
+	UPROPERTY(Transient)
+	UPS_HookComponent* _HookComp;
+
+	UPROPERTY(Transient)
+	UPS_ForceComponent* _ForceComp;
+	
 	//------------------
 #pragma endregion Weapon	
 
@@ -216,16 +232,13 @@ private:
 #pragma region Misc
 	//------------------
 
-public:
-	//------------------
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Status")
-	AProjectSliceCharacter* CurrentPossessingPawn = nullptr;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDebugMode = false;
 private:
-	//------------------
+	UPROPERTY(Transient)
+	AProjectSliceCharacter* _CurrentPossessingPawn = nullptr;
 
 #pragma endregion Misc
 };

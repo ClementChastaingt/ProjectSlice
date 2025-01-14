@@ -736,7 +736,7 @@ void UPS_HookComponent::HookObject()
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
 
-void UPS_HookComponent::WindeHook(const float inputvalue)
+void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
@@ -744,7 +744,7 @@ void UPS_HookComponent::WindeHook(const float inputvalue)
 		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 		bCableWinderPull = true;
 		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
-		CableWindeInputValue = inputvalue;
+		CableWindeInputValue = inputActionInstance.GetValue().Get<float>();
 	}
 		
 }

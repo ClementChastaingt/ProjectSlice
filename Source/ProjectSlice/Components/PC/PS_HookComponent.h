@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputAction.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "PS_HookComponent.generated.h"
 
@@ -234,7 +235,7 @@ public:
 	void HookObject();
 	
 	UFUNCTION()
-	void WindeHook(const float inputvalue);
+	void WindeHook(const FInputActionInstance& inputActionInstance);
 	
 	UFUNCTION()
 	void StopWindeHook();

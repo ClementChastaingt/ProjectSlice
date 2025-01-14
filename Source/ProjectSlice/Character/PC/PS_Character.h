@@ -142,12 +142,6 @@ public:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
-	
-protected:
-	//------------------
-
-private:
-	//------------------
 
 #pragma endregion Input
 
@@ -176,6 +170,21 @@ public:
 	/** Called for Crouch input */
 	void Crouching();
 
+	/** Called for Dash input */
+	void Dash();
+		
+	/** Called for movement input */
+	void Move(const FInputActionValue& Value);
+
+	/** Called for looking input */
+	void Look(const FInputActionValue& Value);
+
+	/** Called for Jump input */
+	virtual void Jump() override;
+
+	/** Called for stop Jump input */
+	virtual void StopJumping() override;
+
 
 protected:
 	/** Movement **/
@@ -186,34 +195,20 @@ protected:
 	/** Called for Jump input */
 	virtual bool CanJumpInternal_Implementation() const override;
 
-	/** Called for Jump input */
-	virtual void Jump() override;
-
 	virtual void OnJumped_Implementation() override;
-
-	/** Called for stop Jump input */
-	virtual void StopJumping() override;
 
 	void CoyoteTimeStart();
 
 	void CoyoteTimeStop();
-	
-	void Dash();
-	
+
 	//Crouch functions override
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
-	
-	/** Called for movement input */
-	void Move(const FInputActionValue& Value);
 
 	/** Called for stop movement input */
 	void StopMoving() const;
-
-	/** Called for looking input */
-	void Look(const FInputActionValue& Value);
-		
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status")
 	FVector OnJumpLocation = FVector::ZeroVector;
 
@@ -270,7 +265,6 @@ private:
 	bool _bGlassesActive = false;
 	
 #pragma endregion Glasses
-
 
 #pragma region Weapon
 	//------------------

@@ -157,41 +157,10 @@ void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		UE_LOG(LogTemplateCharacter, Error, TEXT("SetupPlayerInputComponent failde PlayerController is invalid"));
 		return;
 	}
-	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		// Moving
-		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Move);
-		EnhancedInputComponent->BindAction(_PlayerController->GetMoveAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::Move);
-		
-		// Looking
-		EnhancedInputComponent->BindAction(_PlayerController->GetLookAction(), ETriggerEvent::Triggered, this, &AProjectSliceCharacter::Look);
-		
-		// Jumping
-		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Jump);
-		EnhancedInputComponent->BindAction(_PlayerController->GetJumpAction(), ETriggerEvent::Completed, this, &AProjectSliceCharacter::StopJumping);
 
-		// Dash
-		EnhancedInputComponent->BindAction(_PlayerController->GetDashAction(), ETriggerEvent::Started, this,  &AProjectSliceCharacter::Dash);
-
-
-		// Crouching
-		EnhancedInputComponent->BindAction(_PlayerController->GetCrouchAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Crouching);
-		
-		
-		// Slowmotion
-		EnhancedInputComponent->BindAction(_PlayerController->GetSlowmoAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Slowmo);
-
-		// Glasses
-		EnhancedInputComponent->BindAction(_PlayerController->GetGlassesAction(), ETriggerEvent::Started, this, &AProjectSliceCharacter::Glasses);
-		
-		// Stow
-		EnhancedInputComponent->BindAction(_PlayerController->GetStowAction(), ETriggerEvent::Started, this,  &AProjectSliceCharacter::Stow);
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
+	//Setup input binding
+	_PlayerController->SetupMovementInputComponent(PlayerInputComponent);
+	_PlayerController->SetupMiscComponent(PlayerInputComponent);
 }
 
 //------------------

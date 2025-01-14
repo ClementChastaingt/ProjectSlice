@@ -90,9 +90,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerChar
 	Target_PlayerCharacter->SetHasRifle(true);
 
 	// Link Hook to Weapon
-	_HookComponent = Target_PlayerCharacter->GetHookComponent();
-	// _HookComponent->SetupAttachment(this,FName("HookAttach"));
-	_HookComponent->OnAttachWeapon();
+	Target_PlayerCharacter->GetHookComponent()->OnAttachWeapon();
 
 	// Link ForceComp to Weapon
 	_ForceComponent = Target_PlayerCharacter->GetForceComponent();
@@ -116,44 +114,13 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 		Subsystem->AddMappingContext(_PlayerController->GetFireMappingContext(), 1);
 	}
 
-	SetupWeaponInputComponent();
+	_PlayerController->SetupWeaponInputComponent();
 
 	OnWeaponInit.Broadcast();
 }
 
 #pragma region Input
 //__________________________________________________
-
-void UPS_WeaponComponent::SetupWeaponInputComponent()
-{
-	if(!IsValid(_PlayerController))
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("SetupPlayerInputComponent failde PlayerController is invalid"));
-		return;
-	}
-	
-	//BindAction
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(_PlayerController->InputComponent))
-	{
-		// Fire
-		EnhancedInputComponent->BindAction(_PlayerController->GetFireAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::FireTriggered);
-
-		// Rotate Rack
-		EnhancedInputComponent->BindAction(_PlayerController->GetTurnRackAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::TurnRack);
-
-		//Hook Launch
-		EnhancedInputComponent->BindAction(_PlayerController->GetHookAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::HookObject);
-
-		//TODO :: Renable after testing
-		//Winder Launch 
-		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::WindeHook);
-		EnhancedInputComponent->BindAction(_PlayerController->GetWinderAction(), ETriggerEvent::Completed, this, &UPS_WeaponComponent::WindeHook);
-		
-		//Push Launch
-		EnhancedInputComponent->BindAction(_PlayerController->GetForcePushAction(), ETriggerEvent::Triggered, this, &UPS_WeaponComponent::ForcePush);
-		
-	}
-}
 
 void UPS_WeaponComponent::FireTriggered()
 {
@@ -301,27 +268,6 @@ void UPS_WeaponComponent::TurnRack()
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
-}
-
-void UPS_WeaponComponent::HookObject()
-{
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
-	
-	_HookComponent->HookObject();
-}
-
-void UPS_WeaponComponent::WindeHook(const FInputActionInstance& inputActionInstance)
-{
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_HookComponent)) return;
-
-	_HookComponent->WindeHook(inputActionInstance.GetValue().Get<float>());
-}
-
-void UPS_WeaponComponent::ForcePush()
-{
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_ForceComponent)) return;
-	
-	_ForceComponent->StartPush();
 }
 
 

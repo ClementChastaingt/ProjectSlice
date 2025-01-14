@@ -71,22 +71,6 @@ private:
 	UPROPERTY(Transient)
 	UPS_PlayerCameraComponent* _PlayerCamera;
 
-#pragma region Input
-	//------------------
-
-public:
-	//------------------
-	
-protected:
-	UFUNCTION()
-	void SetupWeaponInputComponent();
-	
-private:
-	//------------------
-	
-
-#pragma endregion Input
-
 #pragma region Fire
 	//------------------
 
@@ -155,30 +139,13 @@ private:
 
 #pragma endregion Slice
 
-#pragma region Hook
-	//------------------
-
-public:
-	
-	/** Make the weapon Fire a Hook */
-	UFUNCTION()
-	void HookObject();
-
-	UFUNCTION()
-	void WindeHook(const FInputActionInstance& inputActionInstance);
-	void ForcePush();
-
-
-private:
-	UPROPERTY(Transient)
-	UPS_HookComponent* _HookComponent = nullptr;
-
-#pragma endregion Hook
-
 #pragma region SightRack
 	//------------------
 
 public:
+	UFUNCTION()
+	void TurnRack();
+	
 	UFUNCTION()
 	void AdaptSightMeshBound();
 	
@@ -195,10 +162,6 @@ public:
 	int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
 
 protected:
-	/** Make the weapon Turn his Rack */
-	UFUNCTION()
-	void TurnRack();
-
 	UFUNCTION()
 	void SightMeshRotation();
 
