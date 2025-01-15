@@ -239,6 +239,9 @@ public:
 	
 	UFUNCTION()
 	void StopWindeHook();
+
+	UFUNCTION()
+	void ResetWindeHook();
 	
 	UFUNCTION()
 	void DettachHook();
@@ -283,6 +286,9 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
 	float CableStartWindeTimestamp = TNumericLimits<float>::Min();
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(ToolTip="Winde start time"))
+	FTimerHandle CableWindeMouseCooldown;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Current Pull Force"))
 	float ForceWeight = 1.0f;

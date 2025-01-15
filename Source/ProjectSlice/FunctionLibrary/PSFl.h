@@ -40,11 +40,19 @@ public:
 		
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
+	
+	/*
+	 * @brief Get an Object unified mass. Return Mass scaled by Mass Scale, Object Scale and by Physical Material density
+	 * @param comp UPrimitiveComponent to check mass
+	 * @param bDebug: display returned mass
+	 * @return the Vector velocity Clamped
+	 */
+
+	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
+	
 	/*
 	* @brief Return 
 	* */
-	static float GetSlicedObjectUnifiedMass(UPrimitiveComponent* comp);
-
 
 #pragma endregion Utilities
 

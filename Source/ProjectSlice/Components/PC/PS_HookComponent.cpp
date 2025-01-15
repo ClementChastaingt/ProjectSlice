@@ -685,7 +685,7 @@ void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const attachC
 void UPS_HookComponent::HookObject()
 {
 	//If FirstCable is not in CableList return
-	if(!IsValid(FirstCable) || !IsValid(HookThrower)) return;
+	if(!IsValid(FirstCable) || !IsValid(HookThrower) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
 		
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()))
@@ -704,6 +704,8 @@ void UPS_HookComponent::HookObject()
 										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
+
+	CurrentHookHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
@@ -739,26 +741,28 @@ void UPS_HookComponent::HookObject()
 void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
 	//Break Hook constraint if already exist Or begin Winding
-	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
+	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(CableWindeMouseCooldown)) return;
+
+	//On wheel axis change reset
+	if ((FMath::Sign(CableWindeInputValue) != FMath::Sign(inputActionInstance.GetValue().Get<float>())) &&
+		CableWindeInputValue != 0.0f)
 	{
-		//On use mouse wheel
-		if(!_PlayerController->bIsUsingGamepad)
-		{
-			//On wheel axis change reset
-			if(FMath::Sign(CableWindeInputValue) != inputActionInstance.GetValue().Get<float>() && CableWindeInputValue != 0.0f)
-			{
-				CableWindeInputValue = 0.0f;
-				bCableWinderPull = false;
-				return;
-			}		
-		}
-		
-		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-		bCableWinderPull = true;
-		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
-		CableWindeInputValue = inputActionInstance.GetValue().Get<float>();
+		CableWindeInputValue = 0.0f;
+		bCableWinderPull = false;
+
+		FTimerDelegate timerDelegate;
+		GetWorld()->GetTimerManager().SetTimer(CableWindeMouseCooldown, timerDelegate, 0.1, false);
+		return;
 	}
-		
+	
+	bCableWinderPull = true;
+	CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
+	CableWindeInputValue = inputActionInstance.GetValue().Get<float>();
+
+	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
 }
 
 void UPS_HookComponent::StopWindeHook()
@@ -767,6 +771,11 @@ void UPS_HookComponent::StopWindeHook()
 
 	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
+	ResetWindeHook();
+}
+
+void UPS_HookComponent::ResetWindeHook()
+{
 	CableWindeInputValue = 0.0f;
 	bCableWinderPull = false;
 }
@@ -783,7 +792,7 @@ void UPS_HookComponent::DettachHook()
 	OnTriggerSwing(false);
 
 	//----Stop Cable Warping---
-	StopWindeHook();
+	ResetWindeHook();
 	AttachedMesh->SetLinearDamping(0.01f);
 	AttachedMesh->SetAngularDamping(0.0f);
 	AttachedMesh = nullptr;
@@ -886,15 +895,17 @@ void UPS_HookComponent::PowerCablePull()
 	
 	if(bCableWinderPull)
 	{
-		//const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
-		alpha = CableWindeInputValue;
+		const float windeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), CableStartWindeTimestamp ,CableStartWindeTimestamp + MaxWindePullingDuration,0 ,1);
+		const float inputalpha = FMath::Clamp(CableWindeInputValue,-1.0f,1.0f);
+		
+		alpha = windeAlpha * inputalpha;
 		UE_LOG(LogTemp, Error, TEXT("alpha %f"), alpha);
-		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alpha);
+		
+		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(FMath::Abs(alpha));
 		if(IsValid(WindePullingCurve))
 		{
-			alpha = WindePullingCurve->GetFloatValue(CableWindeInputValue);
+			alpha = WindePullingCurve->GetFloatValue(inputalpha);
 		}
-
 		//TODO :: If want to activate Winde during swing don't forget to reactivate SetLinearLimitZ
 		// //Winde on swing
 		// if(bPlayerIsSwinging)
@@ -933,8 +944,9 @@ void UPS_HookComponent::PowerCablePull()
 	//Common Pull logic
 	if(bCableWinderPull || bCablePowerPull)
 	{
-		float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		float objectMassScaled = UPSFl::GetSlicedObjectUnifiedMass(AttachedMesh);
+		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
+		float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
+		float objectMassScaled = UPSFl::GetObjectUnifiedMass(AttachedMesh);
 		
 		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
@@ -1065,6 +1077,8 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			HookPhysicConstraint->InitComponentConstraint();
 			HookPhysicConstraint->UpdateConstraintFrames();
 
+			ForceWeight = 0.0f;
+
 			//Set Player velocity to slave velocity
 			_PlayerCharacter->GetCharacterMovement()->Velocity = ConstraintAttachSlave->GetComponentVelocity();
 			
@@ -1077,7 +1091,6 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				if(bDebugSwing)
 					DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + impulseDirection * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
 			}
-			
 		}
 
 	}

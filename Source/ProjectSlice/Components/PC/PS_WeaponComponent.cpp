@@ -379,8 +379,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
-	const FVector laserStart = SightMesh->IsVisible() ?  _PlayerCharacter->GetHookComponent()->GetComponentLocation() : start;
-	DrawDebugLine(GetWorld(), laserStart, target, FColor::Red, false, 0.005);
+	DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();

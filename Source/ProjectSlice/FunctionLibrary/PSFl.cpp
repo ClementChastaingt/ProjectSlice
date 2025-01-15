@@ -48,16 +48,18 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 	return worldInputDirection;
 }
 
-float UPSFl::GetSlicedObjectUnifiedMass(UPrimitiveComponent* comp)
+
+
+float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
 {
-	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(comp);
-
-	if(!IsValid(currentSlicedComponent)) return 0.0f;
+	if(!IsValid(comp)) return 0.0f;
 	
-	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
+	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
 
-	UE_LOG(LogTemp, Warning, TEXT("GetComponentScale %f"), currentSlicedComponent->GetComponentScale().Length());
+	const float output = ((comp->GetMass() * comp->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / comp->GetComponentScale().Length());
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s output %f"),__FUNCTION__, *comp->GetName(),output);
 	
-	return ((currentSlicedComponent->GetMass() * currentSlicedComponent->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) /currentSlicedComponent->GetComponentScale().Length());
+	return output ;
 
 }
+
