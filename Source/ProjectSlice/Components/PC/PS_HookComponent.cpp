@@ -741,6 +741,18 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()) && IsValid(GetWorld()))
 	{
+		//On use mouse wheel
+		if(!_PlayerController->bIsUsingGamepad)
+		{
+			//On wheel axis change reset
+			if(FMath::Sign(CableWindeInputValue) != inputActionInstance.GetValue().Get<float>() && CableWindeInputValue != 0.0f)
+			{
+				CableWindeInputValue = 0.0f;
+				bCableWinderPull = false;
+				return;
+			}		
+		}
+		
 		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 		bCableWinderPull = true;
 		CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
@@ -751,7 +763,11 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 
 void UPS_HookComponent::StopWindeHook()
 {
+	if(!_PlayerController->bIsUsingGamepad) return;
+
 	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
+	CableWindeInputValue = 0.0f;
 	bCableWinderPull = false;
 }
 

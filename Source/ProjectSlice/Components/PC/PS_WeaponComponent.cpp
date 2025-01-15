@@ -6,10 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
-#include "PS_ForceComponent.h"
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
@@ -71,29 +69,29 @@ void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		Subsystem->RemoveMappingContext(_PlayerController->GetFireMappingContext());
 }
 
-void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
+void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* targetPlayerCharacter)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	// Check that the _PlayerCharacter is valid, and has no rifle yet
-	if (!IsValid(Target_PlayerCharacter)
-		|| Target_PlayerCharacter->GetHasRifle()
-		|| !IsValid(Target_PlayerCharacter->GetHookComponent())
-		|| !IsValid(Target_PlayerCharacter->GetMesh()))return;
+	if (!IsValid(targetPlayerCharacter)
+		|| targetPlayerCharacter->GetHasRifle()
+		|| !IsValid(targetPlayerCharacter->GetHookComponent())
+		|| !IsValid(targetPlayerCharacter->GetMesh()))return;
 	
 	// Attach the weapon to the First Person _PlayerCharacter
-	this->SetupAttachment(Target_PlayerCharacter->GetMesh(), (TEXT("GripPoint")));
+	this->SetupAttachment(targetPlayerCharacter->GetMesh(), (TEXT("GripPoint")));
 
 	// Attach Sight to Weapon
 	SightMesh->SetupAttachment(this,FName("Muzzle"));
 		
 	// switch bHasRifle so the animation blueprint can switch to another animation set
-	Target_PlayerCharacter->SetHasRifle(true);
+	targetPlayerCharacter->SetHasRifle(true);
 
 	// Link Hook to Weapon
-	Target_PlayerCharacter->GetHookComponent()->OnAttachWeapon();
+	targetPlayerCharacter->GetHookComponent()->OnAttachWeapon();
 
 	// Link ForceComp to Weapon
-	_ForceComponent = Target_PlayerCharacter->GetForceComponent();
+	_ForceComponent = targetPlayerCharacter->GetForceComponent();
 }
 
 
@@ -114,6 +112,7 @@ void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharac
 		Subsystem->AddMappingContext(_PlayerController->GetFireMappingContext(), 1);
 	}
 
+	//Setup input Weapon
 	_PlayerController->SetupWeaponInputComponent();
 
 	OnWeaponInit.Broadcast();
@@ -380,8 +379,8 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
-	if(!SightMesh->IsVisible())
-		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
+	const FVector laserStart = SightMesh->IsVisible() ?  _PlayerCharacter->GetHookComponent()->GetComponentLocation() : start;
+	DrawDebugLine(GetWorld(), laserStart, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();

@@ -5,15 +5,12 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "PS_PlayerController.h"
 #include "Components/ArrowComponent.h"
-#include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/GameSession.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
@@ -117,6 +114,7 @@ void AProjectSliceCharacter::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
 
+	//Setup input
 	// Add Input Mapping Context
 	if(IsValid(_PlayerController))
 	{
@@ -125,6 +123,8 @@ void AProjectSliceCharacter::BeginPlay()
 			Subsystem->AddMappingContext(_PlayerController->GetDefaultMappingContext(), 0);
 		}
 	}
+	_PlayerController->SetupMovementInputComponent();
+	_PlayerController->SetupMiscComponent();
 
 	//Init Weapon Componenet on begin play if attach
 	if(GetHasRifle())
@@ -145,26 +145,6 @@ void AProjectSliceCharacter::BeginPlay()
 	}
 	
 }
-
-#pragma region Input
-//------------------
-
-void AProjectSliceCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	_PlayerController = Cast<AProjectSlicePlayerController>(GetController());
-	if(!IsValid(_PlayerController))
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("SetupPlayerInputComponent failde PlayerController is invalid"));
-		return;
-	}
-
-	//Setup input binding
-	_PlayerController->SetupMovementInputComponent(PlayerInputComponent);
-	_PlayerController->SetupMiscComponent(PlayerInputComponent);
-}
-
-//------------------
-#pragma endregion Input
 
 #pragma region Move
 //------------------

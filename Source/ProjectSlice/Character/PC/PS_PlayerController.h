@@ -5,10 +5,13 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "GameFramework/PlayerController.h"
-#include "ProjectSlice/Components/PC/PS_HookComponent.h"
-#include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "PS_PlayerController.generated.h"
 
+class UPS_PlayerCameraComponent;
+class UPS_SlowmoComponent;
+class UPS_ForceComponent;
+class UPS_HookComponent;
+class UPS_WeaponComponent;
 class AProjectSliceCharacter;
 class UInputMappingContext;
 
@@ -27,15 +30,15 @@ public:
 
 protected:
 	/** Input Mapping Context to be used for player input */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Mapping", meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* InputMappingContext;
 
 	/** DefaultMappingContext use in begin play */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Mapping", meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
 
 	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Mapping", meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* FireMappingContext;
 	
 	// Begin Actor interface
@@ -48,11 +51,31 @@ protected:
 	//------------------
 
 public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input")
+	bool bIsUsingGamepad = true;
+
+	//Keyboard && Gamepad mapping
+	void OnIAActionKeyboardTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAAxisKeyboardTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAActionGamepadTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAAxisGamepadTriggered(const FInputActionInstance& inputActionInstance);
 	
 	UFUNCTION()
-	void SetupMovementInputComponent(UInputComponent* PlayerInputComponent);
+	void SetupMovementInputComponent();
 	
 protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Action")
+	const UInputAction* IA_ActionKeyboard;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Action")
+	const UInputAction* IA_AxisKeyboard;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Action")
+	const UInputAction* IA_ActionGamepad;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Action")
+	const UInputAction* IA_AxisGamepad;
 	
 	/** Input Actions **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
@@ -70,8 +93,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
-	UInputAction* SlowmoAction;
+private:
+	UPROPERTY(Transient)
+	UPS_PlayerCameraComponent* _CameraComp;
+	
 	
 
 	//------------------
@@ -82,18 +107,24 @@ protected:
 
 public:
 	UFUNCTION()
-	void SetupMiscComponent(UInputComponent* PlayerInputComponent);
+	void SetupMiscComponent();
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
+	UInputAction* SlowmoAction;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* GlassesAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
 	UInputAction* StowAction;
+
+private:
+	UPROPERTY(Transient)
+	UPS_SlowmoComponent* _SlowmoComp;
 	
 	//------------------
 #pragma endregion MiscAction
-
 
 #pragma region Weapon
 	//------------------
@@ -103,19 +134,7 @@ public:
 	void SetupWeaponInputComponent();
 
 protected:
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
-	const UInputAction* IA_ActionKeyboard;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
-	const UInputAction* IA_AxisKeyboard;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
-	const UInputAction* IA_ActionGamepad;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Actions")
-	const UInputAction* IA_AxisGamepad;
-	
+		
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
 	UInputAction* IA_Fire;

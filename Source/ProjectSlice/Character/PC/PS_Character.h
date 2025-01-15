@@ -135,16 +135,6 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-#pragma region Input
-	//------------------
-
-public:
-	// APawn interface
-	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-	// End of APawn interface
-
-#pragma endregion Input
-
 #pragma region Move
 	//------------------
 
@@ -270,6 +260,9 @@ private:
 	//------------------
 
 public:
+	/** Called for Slowmo input */
+	UFUNCTION()
+	void Stow();
 
 	UFUNCTION(BlueprintCallable, Category=Weapon)
 	FORCEINLINE bool GetHasRifle() const {return bHasRifle;}
@@ -286,10 +279,6 @@ public:
 
 protected:
 	
-	/** Called for Slowmo input */
-	UFUNCTION()
-	void Stow();
-
 	/** Bool for AnimBP to switch to another animation set */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle = false;
