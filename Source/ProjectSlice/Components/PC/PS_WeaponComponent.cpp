@@ -379,7 +379,8 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
-	DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
+	//if()
+		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();
