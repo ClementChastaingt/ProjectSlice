@@ -1224,25 +1224,18 @@ void UPS_HookComponent::OnSwingPhysic()
 	FTimerHandle setLastLocHandle;
 	setLastLocDel.BindUFunction(this,FName("SetSwingPlayerLastLoc"), GetConstraintAttachSlave()->GetComponentLocation());
 	GetWorld()->GetTimerManager().SetTimer(setLastLocHandle,setLastLocDel,0.1,false);
-
-	//Set player position to constraintSlave loc
-	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	const float lastIndex = CablePointLocations.Num() - 1;
 	//const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
 
-	//Update constraint physic loc
+	//Update slave, master and constraint physic loc
+	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	GetConstraintAttachMaster()->SetWorldLocation(CablePointLocations.IsValidIndex(lastIndex) ? CablePointLocations[lastIndex] : CurrentHookHitResult.Location);
+
 	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
-
-	// Set the first reference position (Pos1: AttachSlave && Pos2: AttachMaster)
-	// HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform(FQuat::Identity, GetConstraintAttachSlave()->GetComponentLocation()));
-	// HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame2, FTransform(FQuat::Identity,  GetConstraintAttachMaster()->GetComponentLocation()));
-	
 	HookPhysicConstraint->UpdateConstraintFrames();
-				
-
+	
 	//Update Linearlimit if update cable point
 	if(CablePointLocations.IsValidIndex(lastIndex))
 	{
