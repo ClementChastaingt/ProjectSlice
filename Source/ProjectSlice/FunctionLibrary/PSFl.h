@@ -54,6 +54,8 @@ public:
 	* @brief Return 
 	* */
 
+	
+	static FCollisionQueryParams CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject);
 
 #pragma endregion Utilities
 
@@ -62,7 +64,7 @@ public:
 
 public:
 	/*
-	 * @brief Made a cone Sweep trace test
+	 * @brief Made a cone Sweep trace test and return HitResult
 	 * @param World: World reference
 	 * @param ConeApex: Cone base start loc
 	 * @param ConeDirection: Conde direction
@@ -82,13 +84,13 @@ public:
 		float ConeAngleDegrees,
 		float ConeLength,
 		float StepInterval,
-		float SphereRadius,
 		TArray<FHitResult>& OutHits,
 		ECollisionChannel TraceChannel,
-		FCollisionQueryParams QueryParams);
+		const TArray<AActor*>& ActorsToIgnore,
+		bool bDebug);
 
 	/*
-	 * @brief Made a cone Sweep trace test
+	 * @brief Made a cone Sweep trace test and return array of component use no duplicates
 	 * @param World: World reference
 	 * @param ConeApex: Cone base start loc
 	 * @param ConeDirection: Conde direction
@@ -108,9 +110,10 @@ public:
 		float ConeAngleDegrees,
 		float ConeLength,
 		float StepInterval,
-		float SphereRadius,
 		TArray<UPrimitiveComponent*>& OutHitComponents,
-		ECollisionChannel TraceChannel, FCollisionQueryParams QueryParams);
+		ECollisionChannel TraceChannel,
+		const TArray<AActor*>& ActorsToIgnore,
+		bool bDebug);
 
 #pragma endregion Trace
 };

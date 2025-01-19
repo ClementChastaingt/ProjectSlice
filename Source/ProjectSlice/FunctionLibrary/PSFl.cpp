@@ -1,10 +1,12 @@
 #include "PSFl.h"
 
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
+#include "KismetTraceUtils.h"
+#include "CollisionQueryParams.h"
+#include "Engine/World.h"
+#include "CollisionQueryParams.h"
+#include "GameFramework/Actor.h"
+#include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
-
 
 class AProjectSliceCharacter;
 
@@ -52,9 +54,6 @@ FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraIns
 	return worldInputDirection;
 }
 
-
-#pragma endregion Utilities
-
 float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
 {
 	if(!IsValid(comp)) return 0.0f;
@@ -68,66 +67,53 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 
 }
 
-void UPSFl::SweepConeMultiByChannel(
-	UWorld* World,
-	FVector ConeApex,
-	FVector ConeDirection,
-	float ConeAngleDegrees,
-	float ConeLength,
-	float StepInterval,
-	float SphereRadius,
-	TArray<FHitResult>& OutHits,
-	ECollisionChannel TraceChannel,
-	FCollisionQueryParams QueryParams
-)
+#pragma endregion Utilities
+
+
+FCollisionQueryParams UPSFl::CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject)
 {
-	if (!World) return;
-
-	// Normalize the cone direction
-	ConeDirection.Normalize();
-
-	// Convert angle to radians
-	float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
-
-	// Sweep multiple spheres along the cone's length
-	for (float Step = 0.0f; Step <= ConeLength; Step += StepInterval)
+	FCollisionQueryParams Params(TraceTag, SCENE_QUERY_STAT_ONLY(KismetTraceUtils), bTraceComplex);
+	Params.bReturnPhysicalMaterial = true;
+	Params.bReturnFaceIndex = !UPhysicsSettings::Get()->bSuppressFaceRemapTable; // Ask for face index, as long as we didn't disable globally
+	Params.AddIgnoredActors(ActorsToIgnore);
+	if (bIgnoreSelf)
 	{
-		// Calculate the current position along the cone's axis
-		FVector SweepCenter = ConeApex + ConeDirection * Step;
-
-		// Perform a sphere sweep
-		TArray<FHitResult> SphereHits;
-		FCollisionShape Sphere = FCollisionShape::MakeSphere(SphereRadius);
-
-		DrawDebugSphere(World,ConeApex,SphereRadius,10,FColor::Yellow,false,4.0f, 10.0f, 3.0f);
-
-		if (World->SweepMultiByChannel(SphereHits, ConeApex, SweepCenter, FQuat::Identity, TraceChannel, Sphere, QueryParams))
+		const AActor* IgnoreActor = Cast<AActor>(WorldContextObject);
+		if (IgnoreActor)
 		{
-			for (const FHitResult& Hit : SphereHits)
+			Params.AddIgnoredActor(IgnoreActor);
+		}
+		else
+		{
+			// find owner
+			const UObject* CurrentObject = WorldContextObject;
+			while (CurrentObject)
 			{
-				// Calculate the vector from the cone apex to the hit location
-				FVector HitDirection = (Hit.ImpactPoint - ConeApex).GetSafeNormal();
-
-				// Check if the hit is within the cone angle
-				float DotProduct = FVector::DotProduct(ConeDirection, HitDirection);
-				float Angle = FMath::Acos(DotProduct); // Angle in radians
-
-				if (Angle <= ConeAngleRadians)
+				CurrentObject = CurrentObject->GetOuter();
+				IgnoreActor = Cast<AActor>(CurrentObject);
+				if (IgnoreActor)
 				{
-					DrawDebugPoint(World,Hit.ImpactPoint,10.0f,FColor::Purple,false,4.0f, 10.0f);
-					OutHits.Add(Hit); // Add valid hit to the result array
+					Params.AddIgnoredActor(IgnoreActor);
+					break;
 				}
 			}
 		}
 	}
 
-	// Debug: Draw the cone (optional)
-	DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+	return Params;
 }
 
-void UPSFl::SweepConeMultiByChannel(UWorld* World, FVector ConeApex, FVector ConeDirection, float ConeAngleDegrees,
-	float ConeLength, float StepInterval, float SphereRadius, TArray<UPrimitiveComponent*>& OutHitComponents,
-	ECollisionChannel TraceChannel, FCollisionQueryParams QueryParams)
+void UPSFl::SweepConeMultiByChannel(
+		UWorld* World,
+		FVector ConeApex,
+		FVector ConeDirection,
+		float ConeAngleDegrees,
+		float ConeLength,
+		float StepInterval,
+		TArray<FHitResult>& OutHits,
+		ECollisionChannel TraceChannel,
+		const TArray<AActor*>& ActorsToIgnore,
+		bool bDebug)
 {
 	if (!World) return;
 
@@ -136,48 +122,98 @@ void UPSFl::SweepConeMultiByChannel(UWorld* World, FVector ConeApex, FVector Con
 
 	// Convert angle to radians
 	float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
-
 	
 	// Sweep multiple spheres along the cone's length
-	int i=0;
-	int j =0;
-	for (float Step = 0.0f; Step <= ConeLength; Step += StepInterval)
+	for (int32 Step = 0; Step < StepInterval; ++Step)
 	{
-		// Calculate the current position along the cone's axis
-		FVector SweepCenter = ConeApex + ConeDirection * Step;
+		// Calculate the distance along the cone
+		float Distance = (ConeLength / StepInterval) * Step;
 
-		// Perform a sphere sweep
-		TArray<FHitResult> SphereHits;
-		FCollisionShape Sphere = FCollisionShape::MakeSphere(SphereRadius);
-		DrawDebugSphere(World,ConeApex,(ConeApex - SweepCenter).Length(),10,FColor::Yellow,false,4.0f, 10.0f, 3.0f);
+		// Calculate the radius of the sphere at this distance
+		float Radius = Distance * ConeAngleRadians;
 		
-		if (World->SweepMultiByChannel(SphereHits, ConeApex, SweepCenter, FQuat::Identity, ECC_WorldDynamic, Sphere, QueryParams))
+		// Calculate the sphere's center
+		FVector SphereCenter = ConeApex + (ConeDirection * Distance);
+
+		// Perform the sphere sweep
+		TArray<FHitResult> SphereHitResults;
+		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+		
+		static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
+		FCollisionQueryParams queryParams = CustomConfigureCollisionParams(SphereTraceMultiName, false, ActorsToIgnore, true, World);
+		
+		if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, FQuat::Identity, TraceChannel, Sphere,queryParams))
 		{
-			for (const FHitResult& Hit : SphereHits)
-			{
-				UE_LOG(LogTemp, Error, TEXT("TEXT i:%i J:%i"), i,j);
-				i++;
-				// Calculate the vector from the cone apex to the hit location
-				FVector HitDirection = (Hit.ImpactPoint - ConeApex).GetSafeNormal();
+			// Collect all valid hits
+			OutHits.Append(SphereHitResults);
+		}
 
-				// Check if the hit is within the cone angle
-				float DotProduct = FVector::DotProduct(ConeDirection, HitDirection);
-				float Angle = FMath::Acos(DotProduct); // Angle in radians
+		// Optional: Visualize the cone sweep
+		//DrawDebugSphere(World, SphereCenter, Radius, 12, FColor::Red, false, 1.0f);
+	}
+	
+	// Debug: Draw the cone (optional)
+	if(bDebug) DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+}
+
+void UPSFl::SweepConeMultiByChannel(
+		UWorld* World,
+		FVector ConeApex,
+		FVector ConeDirection,
+		float ConeAngleDegrees,
+		float ConeLength,
+		float StepInterval,
+		TArray<UPrimitiveComponent*>& OutHitComponents,
+		ECollisionChannel TraceChannel,
+		const TArray<AActor*>& ActorsToIgnore,
+		bool bDebug)
+{	
+	if (!World) return;
+
+	// Normalize the cone direction
+	ConeDirection.Normalize();
+
+	// Convert angle to radians
+	float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
+	
+	// Sweep multiple spheres along the cone's length
+	for (int32 Step = 0; Step < StepInterval; ++Step)
+	{
+		// Calculate the distance along the cone
+		float Distance = (ConeLength / StepInterval) * Step;
+
+		// Calculate the radius of the sphere at this distance
+		float Radius = Distance * ConeAngleRadians;
 		
-				DrawDebugPoint(World,Hit.ImpactPoint,10.0f,FColor::Red,false,4.0f, 55.0f);
-				
-				if (Angle <= ConeAngleRadians && IsValid(Hit.GetComponent()))
+		// Calculate the sphere's center
+		FVector SphereCenter = ConeApex + (ConeDirection * Distance);
+
+		// Perform the sphere sweep
+		TArray<FHitResult> SphereHitResults;
+		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+		
+		static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
+		FCollisionQueryParams queryParams = CustomConfigureCollisionParams(SphereTraceMultiName, false, ActorsToIgnore, true, World);
+		
+		if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, FQuat::Identity, TraceChannel, Sphere,queryParams))
+		{
+			// Collect all valid hits
+			for (const FHitResult& Hit : SphereHitResults)
+			{
+				if (IsValid(Hit.GetComponent()))
 				{
 					DrawDebugPoint(World,Hit.ImpactPoint,15.0f,FColor::Purple,false,4.0f, 10.0f);
-					OutHitComponents.AddUnique(Hit.GetComponent()); // Add valid hit to the result array
+					OutHitComponents.AddUnique(Hit.GetComponent()); // Add valid hit comp to the result array
 				}
 			}
 		}
-		j++;
-	}
 
+		// Optional: Visualize the cone sweep
+		//DrawDebugSphere(World, SphereCenter, Radius, 12, FColor::Red, false, 1.0f);
+	}
+	
 	// Debug: Draw the cone (optional)
-	DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+	if(bDebug)DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
 }
 
 

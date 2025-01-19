@@ -3,10 +3,10 @@
 
 #include "PS_ForceComponent.h"
 
-#include "KismetTraceUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
@@ -42,8 +42,7 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
+	
 }
 
 
@@ -69,38 +68,31 @@ void UPS_ForceComponent::StartPush(const FInputActionInstance& inputActionInstan
 	//Setup work variables
 	const float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 	const float alphaInput = FMath::Clamp(inputActionInstance.GetValue().Get<float>(),0.0f,1.0f);
-	const float force = PushForce * 1000/** alpha*/;
-
+	//const float force = PushForce * 1000/** alpha*/;
+	const float force = PushForce * mass/** alpha*/;
 	//Calculate direction of impulse
 	//Forward dir
-	//FVector dirPlayer =_CurrentPushHitResult.Location - _CurrentPushHitResult.TraceStart;
+
 	
-	//Normal dir
+	//Determine dir
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
 	dir.Normalize();
 	FVector start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
 	
 	//Cone raycast
 	TArray<UPrimitiveComponent*> outHits;
+	TArray<AActor*> actorsToIgnore;
+	actorsToIgnore.AddUnique(_PlayerCharacter);
+	
+	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);	
 
-	TArray<AActor*> ignoredActors;
-	ignoredActors.AddUnique(_PlayerCharacter);
-
-	static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
-	FCollisionQueryParams QueryParams = ConfigureCollisionParams(SphereTraceMultiName, false, ignoredActors, true, GetWorld());
-
-	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,SphereRadius, outHits, ECC_GPE, QueryParams);	
-
-	//Impulse 
+	//Impulse
 	for (UPrimitiveComponent* compHit : outHits)
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, "),__FUNCTION__,*compHit->GetName());
-		compHit->AddImpulse(_CurrentPushHitResult.Location + dir * force, NAME_None, false);
+		if(!IsValid(Cast<UProceduralMeshComponent>(compHit))) continue;
+		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f,mass %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, alphaInput);
+		compHit->AddImpulse(start + dir * force, NAME_None, false);
 	}
-	
-	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: force %f,mass %f, alphainput %f"),__FUNCTION__, force, mass, alphaInput);
-	
-	//_CurrentPushHitResult.GetComponent()->AddRadialImpulse(fwdDir, PushRadius, PushForce, RIF_Linear, true);
 	
 	// Try and play the sound if specified
 	if(IsValid(PushSound))
