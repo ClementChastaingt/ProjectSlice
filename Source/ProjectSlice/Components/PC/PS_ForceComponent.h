@@ -48,21 +48,27 @@ public:
 	void UpdatePushForce();
 	
 	UFUNCTION()
-	void StartPush();
+	void StartPush(const FInputActionInstance& inputActionInstance);
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
 	
 protected:
-		/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
-	float PushMaxWeightThreshold = 1000000.0f;
-	
+		/** AnimMontage to play each time we fire */	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 400.0f;
-		
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
-	float PushRadius = 10.0f;
+	float SphereRadius = 50.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="deg"))
+	float ConeAngleDegrees = 35.0f; 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	float ConeLength = 500.0f ;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float StepInterval = 100.0f; 
 			
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push")

@@ -132,7 +132,6 @@ private:
 
 #pragma endregion CameraShake
 
-
 #pragma region Post-Process
 	//------------------
 

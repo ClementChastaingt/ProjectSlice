@@ -44,7 +44,7 @@ void AProjectSlicePlayerController::OnIAActionKeyboardTriggered(const FInputActi
 
 void AProjectSlicePlayerController::OnIAAxisKeyboardTriggered(const FInputActionInstance& inputActionInstance)
 {
-	if(!inputActionInstance.GetValue().IsNonZero()) return;
+	if(inputActionInstance.GetValue().Get<FVector2D>().Equals(FVector2D::ZeroVector)) return;
 	bIsUsingGamepad = false;
 }
 
@@ -55,7 +55,7 @@ void AProjectSlicePlayerController::OnIAActionGamepadTriggered(const FInputActio
 
 void AProjectSlicePlayerController::OnIAAxisGamepadTriggered(const FInputActionInstance& inputActionInstance)
 {
-	if(inputActionInstance.GetValue().IsNonZero()) return;
+	if(inputActionInstance.GetValue().Get<FVector2D>().Equals(FVector2D::ZeroVector)) return;
 	bIsUsingGamepad = true;
 }
 
@@ -153,7 +153,8 @@ void AProjectSlicePlayerController::SetupWeaponInputComponent()
 		// EnhancedInputComponent->BindAction(IA_WinderPush, ETriggerEvent::Completed, _HookComp, &UPS_HookComponent::WindeHook);
 		
 		//Push Launch
-		EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Triggered, _ForceComp, &UPS_ForceComponent::StartPush);
+		EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Started, _ForceComp, &UPS_ForceComponent::StartPush);
+		//EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Triggered, _ForceComp, &UPS_ForceComponent::StartPush);
 		
 	}
 }

@@ -54,7 +54,63 @@ public:
 	* @brief Return 
 	* */
 
+
 #pragma endregion Utilities
 
+#pragma region Trace
+	//------------------
 
+public:
+	/*
+	 * @brief Made a cone Sweep trace test
+	 * @param World: World reference
+	 * @param ConeApex: Cone base start loc
+	 * @param ConeDirection: Conde direction
+	 * @param ConeAngleDegrees: maximum velocity threshold
+	 * @param ConeLength: Cone length in cm
+	 * @param StepInterval: Sweep multiple spheres along the cone's length refresh rate
+	 * @param SphereRadius: Sweep sphere radius.
+	 * @param OutHits: Array of FHitResult founded in cone radius
+	 * @param TraceChannel: Trace channel to test
+	 * @param QueryParams: Collsion query params (ignored actor ect...).
+	 * @return the void
+	 */
+	static void SweepConeMultiByChannel(
+		UWorld* World,
+		FVector ConeApex,
+		FVector ConeDirection,
+		float ConeAngleDegrees,
+		float ConeLength,
+		float StepInterval,
+		float SphereRadius,
+		TArray<FHitResult>& OutHits,
+		ECollisionChannel TraceChannel,
+		FCollisionQueryParams QueryParams);
+
+	/*
+	 * @brief Made a cone Sweep trace test
+	 * @param World: World reference
+	 * @param ConeApex: Cone base start loc
+	 * @param ConeDirection: Conde direction
+	 * @param ConeAngleDegrees: maximum velocity threshold
+	 * @param ConeLength: Cone length in cm
+	 * @param StepInterval: Sweep multiple spheres along the cone's length refresh rate
+	 * @param SphereRadius: Sweep sphere radius.
+	 * @param OutHitComponents: Array of components founded in cone radius
+	 * @param TraceChannel: Trace channel to test
+	 * @param QueryParams: Collsion query params (ignored actor ect...).
+	 * @return the void
+	 */
+	static void SweepConeMultiByChannel(
+		UWorld* World,
+		FVector ConeApex,
+		FVector ConeDirection,
+		float ConeAngleDegrees,
+		float ConeLength,
+		float StepInterval,
+		float SphereRadius,
+		TArray<UPrimitiveComponent*>& OutHitComponents,
+		ECollisionChannel TraceChannel, FCollisionQueryParams QueryParams);
+
+#pragma endregion Trace
 };

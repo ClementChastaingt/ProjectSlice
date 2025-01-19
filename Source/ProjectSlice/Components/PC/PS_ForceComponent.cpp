@@ -3,9 +3,11 @@
 
 #include "PS_ForceComponent.h"
 
+#include "KismetTraceUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 
@@ -54,32 +56,52 @@ void UPS_ForceComponent::UpdatePushForce()
 	
 }
 
-void UPS_ForceComponent::StartPush()
+void UPS_ForceComponent::StartPush(const FInputActionInstance& inputActionInstance)
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
-
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld())) return;
+	
 	_CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent())) return;
 
 	if(!_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics()) return;
-
-	if(bDebugPush)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
-	FVector fwdDir = (_CurrentPushHitResult.TraceEnd - _CurrentPushHitResult.TraceStart);
-	fwdDir.Normalize();
-
-	DrawDebugLine(GetWorld(),_CurrentPushHitResult.Location ,_CurrentPushHitResult.Location + fwdDir * 500, FColor::Yellow, false, 2, 10, 3);
-	
+	//Setup work variables
 	const float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
-	const float alpha = UKismetMathLibrary::MapRangeClamped(mass,100.0f, PushMaxWeightThreshold, 0.0f,1.0f);
-	const float force = PushForce * PushMaxWeightThreshold * alpha;
+	const float alphaInput = FMath::Clamp(inputActionInstance.GetValue().Get<float>(),0.0f,1.0f);
+	const float force = PushForce * 1000/** alpha*/;
 
-	UE_LOG(LogTemp, Error, TEXT("force %f,mass %f, alpha %f"), force, mass, alpha);
+	//Calculate direction of impulse
+	//Forward dir
+	//FVector dirPlayer =_CurrentPushHitResult.Location - _CurrentPushHitResult.TraceStart;
 	
-	_CurrentPushHitResult.GetComponent()->AddImpulse(fwdDir * force, NAME_None, false);
-	//_CurrentPushHitResult.GetComponent()->AddRadialImpulse(fwdDir, PushRadius, PushForce, RIF_Linear, true);
+	//Normal dir
+	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
+	dir.Normalize();
+	FVector start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
+	
+	//Cone raycast
+	TArray<UPrimitiveComponent*> outHits;
 
+	TArray<AActor*> ignoredActors;
+	ignoredActors.AddUnique(_PlayerCharacter);
+
+	static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
+	FCollisionQueryParams QueryParams = ConfigureCollisionParams(SphereTraceMultiName, false, ignoredActors, true, GetWorld());
+
+	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,SphereRadius, outHits, ECC_GPE, QueryParams);	
+
+	//Impulse 
+	for (UPrimitiveComponent* compHit : outHits)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, "),__FUNCTION__,*compHit->GetName());
+		compHit->AddImpulse(_CurrentPushHitResult.Location + dir * force, NAME_None, false);
+	}
+	
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: force %f,mass %f, alphainput %f"),__FUNCTION__, force, mass, alphaInput);
+	
+	//_CurrentPushHitResult.GetComponent()->AddRadialImpulse(fwdDir, PushRadius, PushForce, RIF_Linear, true);
+	
 	// Try and play the sound if specified
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
