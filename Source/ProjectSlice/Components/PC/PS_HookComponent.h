@@ -166,9 +166,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."))
 	float CableUnwrapLastFrameDelay = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
+	float CablePullSlackDistance = 100.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
-	float CableMaxTensDistance = 500.0f;
+	float CableSlackTensDistance = 200.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
+	float CableBreakTensDistance = 500.0f;
 	
 	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
 	// float CableMaxTensMassThreshold = 50000.0f;
@@ -388,9 +394,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Use physic constraint swing or force", EditCondition="bSwingIsPhysical", EditConditionHides))
 	float MinLinearLimitZ = 500.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",  meta=(ToolTip="Physic constraint swing chara movement gravity scale"))
-	float SwingMinDistanceAttach= 100.0f;
 
 
 private:
