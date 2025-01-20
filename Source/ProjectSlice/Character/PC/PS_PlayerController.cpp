@@ -59,9 +59,58 @@ void AProjectSlicePlayerController::OnIAAxisGamepadTriggered(const FInputActionI
 	bIsUsingGamepad = true;
 }
 
+
+void AProjectSlicePlayerController::OnMoveInputTriggered(const FInputActionValue& Value)
+{
+	if(IsValid(_CurrentPossessingPawn) && CanMove())
+		_CurrentPossessingPawn->Move(Value.Get<FVector2D>());
+	else
+		MoveInput = FVector2d::ZeroVector;
+
+}
+
+void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue& Value)
+{
+	if(IsValid(_CurrentPossessingPawn) && CanLook())
+	{
+		LookInput = Value.Get<FVector2D>();
+		_CurrentPossessingPawn->Look(LookInput);
+	}
+	else
+		LookInput = FVector2d::ZeroVector;
+}
+
+void AProjectSlicePlayerController::OnTurnRackInputStarted(const FInputActionInstance& actionInstance)
+{
+	TurnRackInputActionInstance = actionInstance;
+	
+	if(IsValid(GetWorld()))
+		TurnRackInputPressedTimestamp = GetWorld()->GetRealTimeSeconds();
+}
+
+
+void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionValue& Value)
+{
+	if(!IsValid(_WeaponComp) || !_bCanTurnRack) return;
+	
+	_WeaponComp->TurnRack();
+	
+}
+
+void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionValue& Value)
+{
+	if(!IsValid(_WeaponComp) || !IsValid(GetWorld()) || !_bCanTurnRack) return;
+
+	_bCanTurnRack = (GetWorld()->GetRealTimeSeconds() - TurnRackInputPressedTimestamp) < InputTurnRackHoldThresholdTargetting;
+
+	if(!_bCanTurnRack)
+	{
+		_WeaponComp->TurnRackTarget();
+	}
+}
+
 //------------------
 #pragma endregion Keyborad && Gamepad
-
 
 void AProjectSlicePlayerController::SetupMovementInputComponent()
 {
@@ -81,11 +130,11 @@ void AProjectSlicePlayerController::SetupMovementInputComponent()
 
 		
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, _CurrentPossessingPawn, &AProjectSliceCharacter::Move);
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, _CurrentPossessingPawn, &AProjectSliceCharacter::Move);
-		
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnMoveInputTriggered);
+		//EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, _CurrentPossessingPawn, &AProjectSliceCharacter::Move);
+
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, _CurrentPossessingPawn, &AProjectSliceCharacter::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnLookInputTriggered);
 		
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Jump);
@@ -140,8 +189,10 @@ void AProjectSlicePlayerController::SetupWeaponInputComponent()
 		EnhancedInputComponent->BindAction(IA_Fire, ETriggerEvent::Triggered, _WeaponComp, &UPS_WeaponComponent::FireTriggered);
 
 		// Rotate Rack
-		EnhancedInputComponent->BindAction(IA_TurnRack, ETriggerEvent::Triggered, _WeaponComp, &UPS_WeaponComponent::TurnRack);
-
+		EnhancedInputComponent->BindAction(IA_TurnRack, ETriggerEvent::Started, this, &AProjectSlicePlayerController::OnTurnRackInputStarted);
+		EnhancedInputComponent->BindAction(IA_TurnRack, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnTurnRackInputTriggered);
+		EnhancedInputComponent->BindAction(IA_TurnRack_Targeted, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered);
+		
 		//Hook Launch
 		EnhancedInputComponent->BindAction(IA_Hook, ETriggerEvent::Triggered, _HookComp, &UPS_HookComponent::HookObject);
 		

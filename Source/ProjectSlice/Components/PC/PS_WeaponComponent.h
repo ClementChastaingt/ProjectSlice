@@ -141,14 +141,8 @@ private:
 
 #pragma region SightRack
 	//------------------
-
-public:
-	UFUNCTION()
-	void TurnRack();
 	
-	UFUNCTION()
-	void AdaptSightMeshBound();
-	
+public:	
 	UFUNCTION(BlueprintCallable)
 	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
@@ -162,24 +156,46 @@ public:
 	int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
 
 protected:
+		
+	/** Gun muzzle's offset from the characters location ::UNUSED:: */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	FVector MuzzleOffset;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
+	float MinSightRayMultiplicator = 0.1f;
+
+private:
+	UPROPERTY(Transient)
+	UPrimitiveComponent* _CurrentSightedComponent;
+
+	UPROPERTY(Transient)
+	FHitResult _SightHitResult;
+	
+	UPROPERTY(Transient)
+	TArray<UMaterialInterface*> _CurrentSightedBaseMats;
+
+	UPROPERTY(Transient)
+	TArray<UMaterialInstanceDynamic*> _CurrentSightedMatInst;
+
+	UPROPERTY(Transient)
+	int32 _CurrentSightedFace;
+
+#pragma region Rack
+	//------------------
+
+public:
+	UFUNCTION()
+	void TurnRack();
+
+	UFUNCTION()
+	void SetupTurnRackTargetting();
+
+	UFUNCTION()
+	void TurnRackTarget();
+	
+protected:
 	UFUNCTION()
 	void SightMeshRotation();
-
-	/**Sight slice shader */
-	UFUNCTION()
-	void SightShaderTick();
-	
-	UFUNCTION()
-	void ResetSightRackProperties();
-
-	UFUNCTION()
-	void ForceInitSliceBump();
-
-	UFUNCTION()
-	void SetupSliceBump();
-	
-	UFUNCTION()
-	void SliceBump();
 	
 	/** Rack is placed in horizontal */
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
@@ -200,6 +216,49 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FRotator TargetRackRotation = FRotator::ZeroRotator;
 
+	/** Rack Rotation interpolation params */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
+	float RackRotDuration = 0.5f;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
+	UCurveFloat* RackRotCurve;
+
+private:
+			
+	UPROPERTY(Transient)
+	bool _bTurnRackTargetSetuped = false;
+
+#pragma endregion Rack
+
+#pragma region Ray_Rack
+	//------------------
+
+public:
+	UFUNCTION()
+	void AdaptSightMeshBound();
+
+#pragma endregion Ray_Rack
+
+#pragma region Shader
+	//------------------
+
+protected:
+	/**Sight slice shader */
+	UFUNCTION()
+	void SightShaderTick();
+	
+	UFUNCTION()
+	void ResetSightRackProperties();
+
+	UFUNCTION()
+	void ForceInitSliceBump();
+
+	UFUNCTION()
+	void SetupSliceBump();
+	
+	UFUNCTION()
+	void SliceBump();
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	bool bSliceBumping = false;
 	
@@ -209,50 +268,17 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Shader")
 	float CurrentCurveAlpha = 0;
 	
-	/** Gun muzzle's offset from the characters location ::UNUSED:: */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	FVector MuzzleOffset;
-	
-	/** Rack Rotation interpolation params */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
-	float RackRotDuration = 0.5f;
-		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
-	UCurveFloat* RackRotCurve;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
-	float MinSightRayMultiplicator = 0.1f;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
 	float SliceBumpDuration = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Shader")
 	UCurveFloat* SliceBumpCurve;
 
-private:
-	UPROPERTY(Transient)
-	UPrimitiveComponent* _CurrentSightedComponent;
-
-	UPROPERTY(Transient)
-	FHitResult _SightHitResult;
-	
-	UPROPERTY(Transient)
-	TArray<UMaterialInterface*> _CurrentSightedBaseMats;
-
-	UPROPERTY(Transient)
-	TArray<UMaterialInstanceDynamic*> _CurrentSightedMatInst;
-
-	UPROPERTY(Transient)
-	int32 _CurrentSightedFace;
+#pragma endregion Shader
 
 #pragma endregion SightRack
 
 #pragma region ForcePush
-	//------------------
-
-public:
-	//------------------
-protected:
 	//------------------
 private:
 	UPROPERTY(Transient)

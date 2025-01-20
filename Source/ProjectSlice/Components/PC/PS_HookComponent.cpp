@@ -932,13 +932,13 @@ void UPS_HookComponent::PowerCablePull()
 		//UE_LOG(LogTemp, Error, ("PhysicLinearVel %f"), AttachedMesh->GetPhysicsLinearVelocity().Length());
 		float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
 
-		// _AlphaTense = UKismetMathLibrary::MapRangeClamped(baseToAttachDist, DistanceOnAttach, DistanceOnAttach + CableBreakTensDistance, 0.0f, 1.0f);
-		//
-		// if(baseToAttachDist > (DistanceOnAttach + CableBreakTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
-		// {
-		// 	DettachHook();
-		// 	return;
-		// }
+		_AlphaTense = UKismetMathLibrary::MapRangeClamped(baseToAttachDist, DistanceOnAttach, DistanceOnAttach + CableBreakTensDistance, 0.0f, 1.0f);
+		
+		if(baseToAttachDist > (DistanceOnAttach + CableBreakTensDistance) || AttachedMesh->GetPhysicsLinearVelocity().Length() > CableMaxTensVelocityThreshold)
+		{
+			DettachHook();
+			return;
+		}
 	}
 	
 	//If can't Pull or Swing return
@@ -960,7 +960,7 @@ void UPS_HookComponent::PowerCablePull()
 		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
 		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 		
-		UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
+		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
 		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
 		// alpha = massAlpha * distAlpha;
 	}
@@ -1177,8 +1177,8 @@ void UPS_HookComponent::OnSwingForce()
 	
 	//Add movement
 	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, UKismetMathLibrary::SafeDivide(alphaCurve,fakeInputAlpha));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetRealMoveInput().X * (alphaCurve / SwingInputScaleDivider));
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
+	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (alphaCurve / SwingInputScaleDivider));
 
 	if(bDebugTick && bDebugSwing)
 		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
@@ -1208,9 +1208,9 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Fake AirControl for influence swing
-	if(!_PlayerController->GetRealMoveInput().IsNearlyZero())
+	if(!_PlayerController->GetMoveInput().IsNearlyZero())
 	{
-		FVector swingControlDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetRealMoveInput());
+		FVector swingControlDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
 		swingControlDir.Normalize();
 	
 		float airControlSpeed = _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed * _PlayerCharacter->GetCharacterMovement()->AirControl;

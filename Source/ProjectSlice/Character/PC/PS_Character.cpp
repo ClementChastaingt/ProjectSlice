@@ -332,31 +332,22 @@ void AProjectSliceCharacter::CoyoteTimeStop()
 //------------------
 #pragma endregion Jump
 
-void AProjectSliceCharacter::Move(const FInputActionValue& Value)
+void AProjectSliceCharacter::Move(const FVector2D& inputValue)
 {
 	if(!IsValid(_PlayerController)) return;
 		
 	//0.2 is the Deadzone min threshold for Gamepad
-	if (Value.Get<FVector2D>().Size() > 0.2)
+	if (inputValue.Size() > 0.2)
 	{
 		const double inputWeight = UKismetMathLibrary::MapRangeClamped(GetVelocity().Length(), 0, GetCharacterMovement()->GetMaxSpeed(), _PlayerController->GetInputMaxSmoothingWeight(), _PlayerController->GetInputMinSmoothingWeight());
-		const float moveX = FMath::WeightedMovingAverage(Value.Get<FVector2D>().X, _PlayerController->GetMoveInput().X, inputWeight);
-		const float moveY = FMath::WeightedMovingAverage(Value.Get<FVector2D>().Y, _PlayerController->GetMoveInput().Y, inputWeight);
-
-		if(!_PlayerController->CanMove())
-		{
-			_PlayerController->SetRealMoveInput(FVector2D(moveX, moveY));
-			_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-			return;
-		}
-		
-		_PlayerController->SetRealMoveInput(FVector2D(moveX, moveY));
+		const float moveX = FMath::WeightedMovingAverage(inputValue.X, _PlayerController->GetMoveInput().X, inputWeight);
+		const float moveY = FMath::WeightedMovingAverage(inputValue.Y, _PlayerController->GetMoveInput().Y, inputWeight);
+				
 		_PlayerController->SetMoveInput(FVector2D(moveX, moveY));
 		
 		//Add movement
-		AddMovementInput(GetActorForwardVector() * CustomTimeDilation, _PlayerController->GetMoveInput().Y);
-		AddMovementInput(GetActorRightVector() * CustomTimeDilation, _PlayerController->GetMoveInput().X);
-		
+		AddMovementInput(GetActorForwardVector() * CustomTimeDilation,moveY);
+		AddMovementInput(GetActorRightVector() * CustomTimeDilation, moveX);
 	}
 	else
 	{
@@ -368,26 +359,18 @@ void AProjectSliceCharacter::Move(const FInputActionValue& Value)
 void AProjectSliceCharacter::StopMoving() const
 {
 	_PlayerController->SetMoveInput(FVector2D::ZeroVector);
-	_PlayerController->SetRealMoveInput(FVector2D::ZeroVector);
 }
 
 //------------------
 #pragma endregion Move
 
 #pragma region Look
-//------------------
 
-void AProjectSliceCharacter::Look(const FInputActionValue& Value)
+void AProjectSliceCharacter::Look(const FVector2D& inputValue)
 {
-	// input is a Vector2D
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
-
-	if (IsValid(_PlayerController) && _PlayerController->CanLook())
-	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
-	}
+	// add yaw and pitch input to controller
+	AddControllerYawInput(inputValue.X);
+	AddControllerPitchInput(inputValue.Y);
 }
 
 //------------------

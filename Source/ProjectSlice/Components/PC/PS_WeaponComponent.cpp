@@ -48,7 +48,6 @@ void UPS_WeaponComponent::BeginPlay()
 	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
 }
 
-
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
@@ -93,7 +92,6 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* targetPlayerChara
 	// Link ForceComp to Weapon
 	_ForceComponent = targetPlayerCharacter->GetForceComponent();
 }
-
 
 void UPS_WeaponComponent::InitWeapon(AProjectSliceCharacter* Target_PlayerCharacter)
 {
@@ -269,11 +267,19 @@ void UPS_WeaponComponent::TurnRack()
 	
 }
 
+void UPS_WeaponComponent::TurnRackTarget()
+{
+	SetupTurnRackTargetting();
+}
+
 
 //__________________________________________________
 #pragma endregion Input
 
 #pragma region Sight
+//------------------
+
+#pragma region Rack
 //------------------
 
 void UPS_WeaponComponent::SightMeshRotation()
@@ -296,6 +302,22 @@ void UPS_WeaponComponent::SightMeshRotation()
 	}
 }
 
+void UPS_WeaponComponent::SetupTurnRackTargetting()
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh) || _bTurnRackTargetSetuped) return;
+
+	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
+
+	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
+
+	_bTurnRackTargetSetuped = true;
+}
+
+//------------------
+#pragma endregion Rack
+
+#pragma region Ray_Rack
+//------------------
 void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
@@ -362,6 +384,11 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
 		
 }
+//------------------
+#pragma endregion Ray_Rack
+
+#pragma region Shader
+//------------------
 
 void UPS_WeaponComponent::SightShaderTick()
 {
@@ -535,7 +562,6 @@ void UPS_WeaponComponent::ForceInitSliceBump()
 	
 }
 
-
 void UPS_WeaponComponent::SetupSliceBump()
 {
 	if(IsValid(_CurrentSightedComponent) && IsValid(GetWorld()))
@@ -581,6 +607,9 @@ void UPS_WeaponComponent::SliceBump()
 	}
 			
 }
+
+//------------------
+#pragma endregion Shader
 
 //------------------
 #pragma endregion Sight

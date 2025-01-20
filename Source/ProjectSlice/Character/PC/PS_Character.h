@@ -164,10 +164,10 @@ public:
 	void Dash();
 		
 	/** Called for movement input */
-	void Move(const FInputActionValue& Value);
+	void Move(const FVector2D& inputValue);
 
 	/** Called for looking input */
-	void Look(const FInputActionValue& Value);
+	void Look(const FVector2D& inputValue);
 
 	/** Called for Jump input */
 	virtual void Jump() override;

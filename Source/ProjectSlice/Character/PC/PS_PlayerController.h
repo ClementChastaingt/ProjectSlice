@@ -53,12 +53,6 @@ protected:
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input")
 	bool bIsUsingGamepad = true;
-
-	//Keyboard && Gamepad mapping
-	void OnIAActionKeyboardTriggered(const FInputActionInstance& inputActionInstance);
-	void OnIAAxisKeyboardTriggered(const FInputActionInstance& inputActionInstance);
-	void OnIAActionGamepadTriggered(const FInputActionInstance& inputActionInstance);
-	void OnIAAxisGamepadTriggered(const FInputActionInstance& inputActionInstance);
 	
 	UFUNCTION()
 	void SetupMovementInputComponent();
@@ -92,6 +86,21 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
+	
+	//Keyboard && Gamepad mapping
+	void OnIAActionKeyboardTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAAxisKeyboardTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAActionGamepadTriggered(const FInputActionInstance& inputActionInstance);
+	void OnIAAxisGamepadTriggered(const FInputActionInstance& inputActionInstance);
+
+	//Input action received func
+	void OnMoveInputTriggered(const FInputActionValue& Value);
+	void OnLookInputTriggered(const FInputActionValue& Value);
+	
+	void OnTurnRackInputStarted(const FInputActionInstance& actionInstance);
+	void OnTurnRackInputTriggered(const FInputActionValue& Value);
+	void OnTurnRackTargetedInputTriggered(const FInputActionValue& Value);
+
 
 private:
 	UPROPERTY(Transient)
@@ -143,6 +152,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
 	UInputAction* IA_TurnRack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
+	UInputAction* IA_TurnRack_Targeted;
+
 	/** Hook Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Weapon|Gun", meta=(AllowPrivateAccess = "true"))
 	UInputAction* IA_Hook;
@@ -187,10 +199,8 @@ public:
 	
 	FORCEINLINE void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
 
-	FORCEINLINE FVector2D GetRealMoveInput() const{return RealMoveInput;}
+	FORCEINLINE FVector2D GetLookInput() const{return LookInput;}
 	
-	FORCEINLINE void SetRealMoveInput(const FVector2D& moveInput){this->RealMoveInput = moveInput;}
-
 	FORCEINLINE bool CanMove() const{return bCanMove;}
 
 	FORCEINLINE bool CanLook() const{return bCanLook;}
@@ -211,6 +221,10 @@ public:
 	
 	FORCEINLINE bool IsCrouchInputTrigger() const{return bIsCrouchInputTrigger;}
 
+	FORCEINLINE void SetIsTurnRackInputTrigger(const bool bisCrouchInputTrigger){this->bIsCrouchInputTrigger = bisCrouchInputTrigger;}
+	
+	FORCEINLINE bool IsCrouchInputPressed() const{return bIsCrouchInputTrigger;}
+
 protected:
 	/** Bool for force block Move */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
@@ -227,24 +241,37 @@ protected:
 	/** Bool for force block Fire  */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	bool bCanFire = true;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Look")
+	FVector2D LookInput = FVector2D::ZeroVector;
+	
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Move")
 	FVector2D MoveInput = FVector2D::ZeroVector;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
-	FVector2D RealMoveInput = FVector2D::ZeroVector;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input")
-	bool bIsCrouchInputTrigger = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input|Move")
 	double InputMaxSmoothingWeight = 0.5f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input|Move")
 	double InputMinSmoothingWeight = 0.06f;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Move")
+	bool bIsCrouchInputTrigger = false;
+	
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|TurnRack")
+	FInputActionInstance TurnRackInputActionInstance = nullptr;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|TurnRack")
+	float TurnRackInputPressedTimestamp = TNumericLimits<float>().Lowest();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input|TurnRack", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float InputTurnRackHoldThresholdTargetting = 1.0f;
+	
 private:
-	//------------------
+	/** Bool for force block TurnRack targetting  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
+	bool _bCanTurnRack = true;
 
 #pragma endregion Input
 
