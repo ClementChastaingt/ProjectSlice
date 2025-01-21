@@ -62,22 +62,30 @@ void AProjectSlicePlayerController::OnIAAxisGamepadTriggered(const FInputActionI
 
 void AProjectSlicePlayerController::OnMoveInputTriggered(const FInputActionValue& Value)
 {
+	MoveInput = Value.Get<FVector2D>();
+	
 	if(IsValid(_CurrentPossessingPawn) && CanMove())
-		_CurrentPossessingPawn->Move(Value.Get<FVector2D>());
-	else
-		MoveInput = FVector2d::ZeroVector;
+		_CurrentPossessingPawn->Move(MoveInput);
 
 }
 
+void AProjectSlicePlayerController::OnMoveInputCompleted()
+{
+	MoveInput = FVector2D::ZeroVector;
+}
+
+
 void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue& Value)
 {
+	LookInput = Value.Get<FVector2D>();
+		
 	if(IsValid(_CurrentPossessingPawn) && CanLook())
-	{
-		LookInput = Value.Get<FVector2D>();
 		_CurrentPossessingPawn->Look(LookInput);
-	}
-	else
-		LookInput = FVector2d::ZeroVector;
+}
+
+void AProjectSlicePlayerController::OnLookInputCompleted()
+{
+	LookInput = FVector2d::ZeroVector;
 }
 
 
@@ -93,15 +101,19 @@ void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionI
 
 void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance)
 {
+	bCanLook = false;
+	
 	if(!IsValid(_WeaponComp)) return;
 	
-	_WeaponComp->TurnRackTarget();
+	_WeaponComp->TurnRackTarget(LookInput);
 	
 	_bTurnRackTargeted = true;
 }
 
 void AProjectSlicePlayerController::OnTurnRackTargetedInputCompleted()
 {
+	bCanLook = true;
+	
 	if(!IsValid(_WeaponComp) || !_bTurnRackTargeted) return;
 	
 	_WeaponComp->StopTurnRackTargetting();
@@ -146,10 +158,11 @@ void AProjectSlicePlayerController::SetupMovementInputComponent()
 		
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnMoveInputTriggered);
-		//EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, _CurrentPossessingPawn, &AProjectSliceCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnMoveInputCompleted);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnLookInputTriggered);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnLookInputCompleted);
 		
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Jump);

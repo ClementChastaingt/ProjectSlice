@@ -54,6 +54,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSlice = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugSightRack = false;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Shader")
 	bool bDebugSightSliceBump = false;
 
@@ -194,7 +197,7 @@ public:
 	void StopTurnRackTargetting();
 
 	UFUNCTION()
-	void TurnRackTarget();
+	void TurnRackTarget(const FVector2D& lookInput);
 	
 protected:
 	UFUNCTION()

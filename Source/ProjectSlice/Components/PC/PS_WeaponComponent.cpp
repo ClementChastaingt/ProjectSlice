@@ -18,6 +18,7 @@
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -144,6 +145,13 @@ void UPS_WeaponComponent::FireTriggered()
 	
 }
 
+//__________________________________________________
+#pragma endregion Input
+
+#pragma region Fire
+//------------------
+
+
 void UPS_WeaponComponent::Fire()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
@@ -253,6 +261,16 @@ void UPS_WeaponComponent::Fire()
 	}
 }
 
+//------------------
+
+#pragma endregion Fire
+
+#pragma region Sight
+//------------------
+
+#pragma region Rack
+//------------------
+
 void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
@@ -267,26 +285,10 @@ void UPS_WeaponComponent::TurnRack()
 	
 }
 
-void UPS_WeaponComponent::TurnRackTarget()
-{
-	if(!_bTurnRackTargetSetuped)
-		SetupTurnRackTargetting();
-}
-
-
-//__________________________________________________
-#pragma endregion Input
-
-#pragma region Sight
-//------------------
-
-#pragma region Rack
-//------------------
-
 void UPS_WeaponComponent::SightMeshRotation()
 {
 	//Smoothly rotate Sight Mesh
-	if(bInterpRackRotation)
+	if(bInterpRackRotation) 
 	{
 		const float alpha = (GetWorld()->GetAudioTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
 		float curveAlpha = alpha;
@@ -303,23 +305,65 @@ void UPS_WeaponComponent::SightMeshRotation()
 	}
 }
 
+#pragma region TurnRack_Target
+//------------------
+
 void UPS_WeaponComponent::SetupTurnRackTargetting()
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh) || !IsValid(GetWorld())) return;
 
 	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 
+	//Trigger slowmo
 	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
+	//Setup work var
+	StartRackRotation = SightMesh->GetRelativeRotation();
+	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bTurnRackTargetSetuped = true;
 }
 
 void UPS_WeaponComponent::StopTurnRackTargetting()
 {
 	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
-	
+
+	bInterpRackRotation = false;
 	_bTurnRackTargetSetuped = false;
 }
+
+void UPS_WeaponComponent::TurnRackTarget(const FVector2D& lookInput)
+{
+	if(!_bTurnRackTargetSetuped)
+		SetupTurnRackTargetting();
+
+	//Determine dir by input world
+	FVector dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetRightVector() * lookInput.X + _PlayerCharacter->GetFirstPersonCameraComponent()->GetUpVector() * lookInput.Y * -1;
+	dir.Normalize();
+
+	if(dir.IsNearlyZero()) return;
+
+	const FVector sightDir = SightMesh->GetRightVector();
+
+	const float dotProd = GetMuzzlePosition().RightVector.Dot(dir);
+	const float angleToInputTargetLoc = UKismetMathLibrary::DegAcos(dotProd);
+	
+	UE_LOG(LogTemp, Error, TEXT("dotProd %f, angleToInputTargetLoc %f"),dotProd, angleToInputTargetLoc);
+	
+	if(bDebugSightRack)
+	{
+		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + dir * 100, 10.0f,FColor::Yellow, false, 0.1, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + GetMuzzlePosition().RightVector * 100, 10.0f,FColor::Orange, false, 0.1, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + sightDir * 100, 10.0f,FColor::Green, false, 0.1, 10, 3);
+	}
+	
+	TargetRackRotation.Roll = angleToInputTargetLoc;
+
+	bInterpRackRotation = true;
+		
+}
+
+//------------------
+#pragma endregion TurnRack_Target
 
 //------------------
 #pragma endregion Rack

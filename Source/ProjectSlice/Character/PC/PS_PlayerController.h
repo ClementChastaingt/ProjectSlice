@@ -95,7 +95,9 @@ protected:
 
 	//Input action received func
 	void OnMoveInputTriggered(const FInputActionValue& Value);
+	void OnMoveInputCompleted();
 	void OnLookInputTriggered(const FInputActionValue& Value);
+	void OnLookInputCompleted();
 	
 	void OnTurnRackInputTriggered(const FInputActionInstance& actionInstance);
 	void OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance);
