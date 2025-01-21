@@ -315,7 +315,7 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 
 	//Trigger slowmo
-	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
+	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
 	//Setup work var
 	StartRackRotation = SightMesh->GetRelativeRotation();
@@ -325,7 +325,8 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 
 void UPS_WeaponComponent::StopTurnRackTargetting()
 {
-	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
+	//Trigger slowmo
+	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
 	bInterpRackRotation = false;
 	_bTurnRackTargetSetuped = false;
@@ -336,30 +337,35 @@ void UPS_WeaponComponent::TurnRackTarget(const FVector2D& lookInput)
 	if(!_bTurnRackTargetSetuped)
 		SetupTurnRackTargetting();
 
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())) return;
+
 	//Determine dir by input world
-	FVector dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetRightVector() * lookInput.X + _PlayerCharacter->GetFirstPersonCameraComponent()->GetUpVector() * lookInput.Y * -1;
+	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	
+	FVector dir = playerCam->GetRightVector() * lookInput.X + playerCam->GetUpVector() * lookInput.Y * -1;
 	dir.Normalize();
 
 	if(dir.IsNearlyZero()) return;
 
 	const FVector sightDir = SightMesh->GetRightVector();
 
-	const float dotProd = GetMuzzlePosition().RightVector.Dot(dir);
-	const float angleToInputTargetLoc = UKismetMathLibrary::DegAcos(dotProd);
+	const float dotProdRight = playerCam->GetRightVector().Dot(dir);
+	const float dotProdDown = (playerCam->GetUpVector() * -1).Dot(dir);
 	
-	UE_LOG(LogTemp, Error, TEXT("dotProd %f, angleToInputTargetLoc %f"),dotProd, angleToInputTargetLoc);
+	const float angleToInputTargetLoc = UKismetMathLibrary::DegAcos(dotProdRight) * FMath::Sign(dotProdDown);
+	const FVector muzzleDir = playerCam->GetRightVector() * FMath::Sign(dotProdRight);
+	
+	//UE_LOG(LogTemp, Error, TEXT("dotProdRight %f, dotProdUp %f, angledotProdRight %f, angledotProdUp %f"),dotProdRight, dotProdDown,  UKismetMathLibrary::DegAcos(dotProdRight), UKismetMathLibrary::DegAcos(dotProdDown));
 	
 	if(bDebugSightRack)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + dir * 100, 10.0f,FColor::Yellow, false, 0.1, 10, 3);
-		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + GetMuzzlePosition().RightVector * 100, 10.0f,FColor::Orange, false, 0.1, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + muzzleDir * 100, 10.0f,FColor::Orange, false, 0.1, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + sightDir * 100, 10.0f,FColor::Green, false, 0.1, 10, 3);
 	}
-	
 	TargetRackRotation.Roll = angleToInputTargetLoc;
 
 	bInterpRackRotation = true;
-		
 }
 
 //------------------
