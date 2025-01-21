@@ -127,7 +127,7 @@ void UPS_SlowmoComponent::OnStopSlowmo()
 
 void UPS_SlowmoComponent::OnTriggerSlowmo()
 {
-	if(!IsValid(GetWorld()) || bIsSlowmoTransiting)
+	if(!IsValid(GetWorld()) /*|| bIsSlowmoTransiting*/)
 		return;
 	
 	StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());

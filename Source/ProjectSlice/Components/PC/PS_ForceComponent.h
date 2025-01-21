@@ -19,10 +19,11 @@ class PROJECTSLICE_API UPS_ForceComponent : public UActorComponent
 public:
 	// Sets default values for this component's properties
 	UPS_ForceComponent();
-
+	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	void UpdatePushTargetLoc();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bDebugPush = false;
@@ -45,45 +46,62 @@ private:
 
 public:
 	UFUNCTION()
-	void UpdatePushForce();
+	void ReleasePush();
 	
 	UFUNCTION()
-	void StartPush(const FInputActionInstance& inputActionInstance);
-	
+	void SetupPush();
+
+	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
+
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Vector OnPushTargetUpdate;
 	
 protected:
 		/** AnimMontage to play each time we fire */	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 400.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float MaxPushForceTime = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float SphereRadius = 50.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="deg"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="deg"))
 	float ConeAngleDegrees = 35.0f; 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float ConeLength = 500.0f ;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
 	float StepInterval = 100.0f; 
 			
 	/** Sound to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
 	USoundBase* PushSound;
 	
 	/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Feedback")
 	UAnimMontage* PushAnimation;
 
+	UFUNCTION()
+	void StopPush();
+
 private:
+	UPROPERTY(Transient)
+	bool _bIsPushing;
+	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult _CurrentPushHitResult;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	float _PushForceWeight;
+
+	UPROPERTY(Transient)
+	float _StartForcePushTimestamp;
 
 
 #pragma endregion Push

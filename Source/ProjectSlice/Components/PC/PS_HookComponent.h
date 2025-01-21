@@ -53,7 +53,6 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UPROPERTY(VisibleDefaultsOnly, Category=Root)
 	UStaticMeshComponent* ConstraintAttachMaster;
 	
-	
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
 	// UStaticMeshComponent* HookMesh = nullptr;
 
@@ -63,7 +62,7 @@ public:
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
+	
 	/** Returns FirstPersonCameraComponent subobject **/
 	UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
 

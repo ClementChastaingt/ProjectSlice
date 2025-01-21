@@ -80,33 +80,48 @@ void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue
 		LookInput = FVector2d::ZeroVector;
 }
 
-void AProjectSlicePlayerController::OnTurnRackInputStarted(const FInputActionInstance& actionInstance)
+
+void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionInstance& actionInstance)
 {
 	TurnRackInputActionInstance = actionInstance;
 	
-	if(IsValid(GetWorld()))
-		TurnRackInputPressedTimestamp = GetWorld()->GetRealTimeSeconds();
-}
-
-
-void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionValue& Value)
-{
-	if(!IsValid(_WeaponComp) || !_bCanTurnRack) return;
+	if(!IsValid(_WeaponComp) || _bTurnRackTargeted) return;
 	
 	_WeaponComp->TurnRack();
 	
 }
 
-void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionValue& Value)
+void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance)
 {
-	if(!IsValid(_WeaponComp) || !IsValid(GetWorld()) || !_bCanTurnRack) return;
+	if(!IsValid(_WeaponComp)) return;
+	
+	_WeaponComp->TurnRackTarget();
+	
+	_bTurnRackTargeted = true;
+}
 
-	_bCanTurnRack = (GetWorld()->GetRealTimeSeconds() - TurnRackInputPressedTimestamp) < InputTurnRackHoldThresholdTargetting;
+void AProjectSlicePlayerController::OnTurnRackTargetedInputCompleted()
+{
+	if(!IsValid(_WeaponComp) || !_bTurnRackTargeted) return;
+	
+	_WeaponComp->StopTurnRackTargetting();
+	
+	_bTurnRackTargeted = false;
+}
 
-	if(!_bCanTurnRack)
-	{
-		_WeaponComp->TurnRackTarget();
-	}
+void AProjectSlicePlayerController::OnForcePushInputStarted()
+{
+	if(!IsValid(_ForceComp)) return;
+
+	_ForceComp->SetupPush(); 
+
+}
+
+void AProjectSlicePlayerController::OnForcePushInputTriggered(const FInputActionInstance& actionInstancee)
+{
+	if(!IsValid(_ForceComp)) return;
+	
+	_ForceComp->ReleasePush();
 }
 
 //------------------
@@ -189,9 +204,9 @@ void AProjectSlicePlayerController::SetupWeaponInputComponent()
 		EnhancedInputComponent->BindAction(IA_Fire, ETriggerEvent::Triggered, _WeaponComp, &UPS_WeaponComponent::FireTriggered);
 
 		// Rotate Rack
-		EnhancedInputComponent->BindAction(IA_TurnRack, ETriggerEvent::Started, this, &AProjectSlicePlayerController::OnTurnRackInputStarted);
 		EnhancedInputComponent->BindAction(IA_TurnRack, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnTurnRackInputTriggered);
 		EnhancedInputComponent->BindAction(IA_TurnRack_Targeted, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered);
+		EnhancedInputComponent->BindAction(IA_TurnRack_Targeted, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnTurnRackTargetedInputCompleted);
 		
 		//Hook Launch
 		EnhancedInputComponent->BindAction(IA_Hook, ETriggerEvent::Triggered, _HookComp, &UPS_HookComponent::HookObject);
@@ -204,8 +219,8 @@ void AProjectSlicePlayerController::SetupWeaponInputComponent()
 		// EnhancedInputComponent->BindAction(IA_WinderPush, ETriggerEvent::Completed, _HookComp, &UPS_HookComponent::WindeHook);
 		
 		//Push Launch
-		EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Started, _ForceComp, &UPS_ForceComponent::StartPush);
-		//EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Triggered, _ForceComp, &UPS_ForceComponent::StartPush);
+		EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Started, this, &AProjectSlicePlayerController::OnForcePushInputStarted);
+		EnhancedInputComponent->BindAction(IA_ForcePush, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnForcePushInputTriggered);
 		
 	}
 }

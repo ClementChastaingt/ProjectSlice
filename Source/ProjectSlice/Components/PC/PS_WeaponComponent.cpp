@@ -269,7 +269,8 @@ void UPS_WeaponComponent::TurnRack()
 
 void UPS_WeaponComponent::TurnRackTarget()
 {
-	SetupTurnRackTargetting();
+	if(!_bTurnRackTargetSetuped)
+		SetupTurnRackTargetting();
 }
 
 
@@ -304,13 +305,20 @@ void UPS_WeaponComponent::SightMeshRotation()
 
 void UPS_WeaponComponent::SetupTurnRackTargetting()
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh) || _bTurnRackTargetSetuped) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
 
 	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 
 	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
 	_bTurnRackTargetSetuped = true;
+}
+
+void UPS_WeaponComponent::StopTurnRackTargetting()
+{
+	_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
+	
+	_bTurnRackTargetSetuped = false;
 }
 
 //------------------
@@ -398,7 +406,8 @@ void UPS_WeaponComponent::SightShaderTick()
 		return;
 	}
 
-	const FVector start = GetMuzzlePosition();
+	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
+	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
 	const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -406,7 +415,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//TODO:: Change by laser VFX
-	// if(!_PlayerCharacter->IsGlassesActive())
+	//if(!_PlayerCharacter->IsGlassesActive())
 		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 

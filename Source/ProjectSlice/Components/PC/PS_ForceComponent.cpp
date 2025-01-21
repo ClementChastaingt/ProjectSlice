@@ -37,12 +37,28 @@ void UPS_ForceComponent::BeginPlay()
 }
 
 
+void UPS_ForceComponent::UpdatePushTargetLoc()
+{
+	if(!_bIsPushing) return;
+	
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
+		
+	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
+	
+	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
+	dir.Normalize();
+	const FVector pushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location + dir * -10.0f;
+	
+	OnPushTargetUpdate.Broadcast(pushTargetLoc);
+}
+
 // Called every frame
 void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
+	UpdatePushTargetLoc();
 }
 
 
@@ -50,29 +66,32 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 //------------------
 
 
-void UPS_ForceComponent::UpdatePushForce()
+void UPS_ForceComponent::ReleasePush()
 {
-	
-}
-
-void UPS_ForceComponent::StartPush(const FInputActionInstance& inputActionInstance)
-{
-	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld())) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
+	{
+		StopPush();
+		return;
+	}
 	
 	_CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
-	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent())) return;
+	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent()))
+	{
+		StopPush();
+		return;
+	}
 
-	if(!_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics()) return;
+	if(!_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics())
+	{
+		StopPush();
+		return;
+	}
 	
 	//Setup work variables
 	const float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
-	const float alphaInput = FMath::Clamp(inputActionInstance.GetValue().Get<float>(),0.0f,1.0f);
-	//const float force = PushForce * 1000/** alpha*/;
-	const float force = PushForce * mass/** alpha*/;
-	//Calculate direction of impulse
-	//Forward dir
-
+	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.5f, 1.0f);
+	const float force = PushForce * mass * alphaInput;
 	
 	//Determine dir
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
@@ -99,8 +118,23 @@ void UPS_ForceComponent::StartPush(const FInputActionInstance& inputActionInstan
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
 	//Callback
-	OnPushEvent.Broadcast(true);
+	StopPush();
+}
+
+void UPS_ForceComponent::SetupPush()
+{
+	if(!IsValid(GetWorld())) return;
 	
+	_StartForcePushTimestamp = GetWorld()->GetAudioTimeSeconds();
+	
+	_bIsPushing = true;
+	OnPushEvent.Broadcast(_bIsPushing);
+}
+
+void UPS_ForceComponent::StopPush()
+{
+	_bIsPushing = false;
+	OnPushEvent.Broadcast(_bIsPushing);
 }
 
 //------------------

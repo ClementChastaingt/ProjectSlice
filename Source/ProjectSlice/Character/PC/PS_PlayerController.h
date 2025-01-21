@@ -97,9 +97,13 @@ protected:
 	void OnMoveInputTriggered(const FInputActionValue& Value);
 	void OnLookInputTriggered(const FInputActionValue& Value);
 	
-	void OnTurnRackInputStarted(const FInputActionInstance& actionInstance);
-	void OnTurnRackInputTriggered(const FInputActionValue& Value);
-	void OnTurnRackTargetedInputTriggered(const FInputActionValue& Value);
+	void OnTurnRackInputTriggered(const FInputActionInstance& actionInstance);
+	void OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance);
+	void OnTurnRackTargetedInputCompleted();
+	
+	void OnForcePushInputStarted();
+	void OnForcePushInputTriggered(const FInputActionInstance& actionInstancee);
+
 
 
 private:
@@ -191,15 +195,15 @@ private:
 	//------------------
 
 public:
-	FORCEINLINE double GetInputMaxSmoothingWeight() const{return InputMaxSmoothingWeight;}
-
-	FORCEINLINE double GetInputMinSmoothingWeight() const{return InputMinSmoothingWeight;}
-
+	FORCEINLINE FVector2D GetLookInput() const{return LookInput;}
+	
 	FORCEINLINE FVector2D GetMoveInput() const{return MoveInput;}
 	
 	FORCEINLINE void SetMoveInput(const FVector2D& moveInput){this->MoveInput = moveInput;}
 
-	FORCEINLINE FVector2D GetLookInput() const{return LookInput;}
+	FORCEINLINE double GetInputMaxSmoothingWeight() const{return InputMaxSmoothingWeight;}
+
+	FORCEINLINE double GetInputMinSmoothingWeight() const{return InputMinSmoothingWeight;}
 	
 	FORCEINLINE bool CanMove() const{return bCanMove;}
 
@@ -245,7 +249,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Look")
 	FVector2D LookInput = FVector2D::ZeroVector;
 	
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Move")
 	FVector2D MoveInput = FVector2D::ZeroVector;
 
@@ -258,20 +261,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Move")
 	bool bIsCrouchInputTrigger = false;
 	
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|TurnRack")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Weapon|Rack")
 	FInputActionInstance TurnRackInputActionInstance = nullptr;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|TurnRack")
-	float TurnRackInputPressedTimestamp = TNumericLimits<float>().Lowest();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input|TurnRack", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
 	float InputTurnRackHoldThresholdTargetting = 1.0f;
 	
 private:
 	/** Bool for force block TurnRack targetting  */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
-	bool _bCanTurnRack = true;
+	UPROPERTY(Transient)
+	bool _bTurnRackTargeted = false;
 
 #pragma endregion Input
 

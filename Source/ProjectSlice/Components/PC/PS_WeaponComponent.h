@@ -191,6 +191,9 @@ public:
 	void SetupTurnRackTargetting();
 
 	UFUNCTION()
+	void StopTurnRackTargetting();
+
+	UFUNCTION()
 	void TurnRackTarget();
 	
 protected:
