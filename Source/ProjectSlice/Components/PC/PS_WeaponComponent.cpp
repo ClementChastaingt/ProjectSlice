@@ -310,10 +310,14 @@ void UPS_WeaponComponent::SightMeshRotation()
 
 void UPS_WeaponComponent::SetupTurnRackTargetting()
 {
+	if(_bTurnRackTargetSetuped) return;
+	
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh) || !IsValid(GetWorld())) return;
 
 	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 
+	_PlayerController->SetCanLook(false);
+	
 	//Trigger slowmo
 	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
@@ -325,6 +329,10 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 
 void UPS_WeaponComponent::StopTurnRackTargetting()
 {
+	if(!_bTurnRackTargetSetuped) return;
+	
+	_PlayerController->SetCanLook(true);
+	
 	//Trigger slowmo
 	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
@@ -332,15 +340,24 @@ void UPS_WeaponComponent::StopTurnRackTargetting()
 	_bTurnRackTargetSetuped = false;
 }
 
-void UPS_WeaponComponent::TurnRackTarget(const FVector2D& lookInput)
+void UPS_WeaponComponent::TurnRackTarget()
 {
-	if(!_bTurnRackTargetSetuped)
-		SetupTurnRackTargetting();
-
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())) return;
 
+	//Setup or stop if no slideable object was sighted
+	if(!_bSightMeshIsInUse)
+	{
+		StopTurnRackTargetting();
+		return;
+	}else if(!_bTurnRackTargetSetuped)
+	{
+		SetupTurnRackTargetting();
+	}
+	
+	
 	//Determine dir by input world
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	const FVector2D lookInput =_PlayerController->GetLookInput();
 	
 	FVector dir = playerCam->GetRightVector() * lookInput.X + playerCam->GetUpVector() * lookInput.Y * -1;
 	dir.Normalize();
@@ -380,10 +397,10 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
 	
-	const bool bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow();
-	SightMesh->SetVisibility(bSightMeshIsInUse);
+	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow();
+	SightMesh->SetVisibility(_bSightMeshIsInUse);
 
-	if(!bSightMeshIsInUse) return;
+	if(!_bSightMeshIsInUse) return;
 
 	//Setup variables
 	UProceduralMeshComponent* procMeshComp = Cast<UProceduralMeshComponent>(_CurrentSightedComponent);

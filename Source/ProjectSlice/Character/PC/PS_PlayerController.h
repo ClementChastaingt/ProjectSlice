@@ -56,7 +56,7 @@ public:
 	
 	UFUNCTION()
 	void SetupMovementInputComponent();
-	
+
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Action")
@@ -73,19 +73,19 @@ protected:
 	
 	/** Input Actions **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* MoveAction;
+	UInputAction* IA_Move;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input|Action|Player", meta = (AllowPrivateAccess = "true"))
-	UInputAction* LookAction;
+	UInputAction* IA_Look;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* JumpAction;
+	UInputAction* IA_Jump;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* DashAction;
+	UInputAction* IA_Dash;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Action|Player", meta=(AllowPrivateAccess = "true"))
-	UInputAction* CrouchAction;
+	UInputAction* IA_Crouch;
 	
 	//Keyboard && Gamepad mapping
 	void OnIAActionKeyboardTriggered(const FInputActionInstance& inputActionInstance);

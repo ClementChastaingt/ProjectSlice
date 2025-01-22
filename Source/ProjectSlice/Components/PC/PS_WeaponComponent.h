@@ -168,6 +168,10 @@ protected:
 	float MinSightRayMultiplicator = 0.1f;
 
 private:
+	
+	UPROPERTY(Transient)
+	bool _bSightMeshIsInUse;
+	
 	UPROPERTY(Transient)
 	UPrimitiveComponent* _CurrentSightedComponent;
 
@@ -197,7 +201,7 @@ public:
 	void StopTurnRackTargetting();
 
 	UFUNCTION()
-	void TurnRackTarget(const FVector2D& lookInput);
+	void TurnRackTarget();
 	
 protected:
 	UFUNCTION()

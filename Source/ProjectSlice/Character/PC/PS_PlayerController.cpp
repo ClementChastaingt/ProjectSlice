@@ -80,7 +80,7 @@ void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue
 	LookInput = Value.Get<FVector2D>();
 
 	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *LookInput.ToString());
-		
+			
 	if(IsValid(_CurrentPossessingPawn) && CanLook())
 		_CurrentPossessingPawn->Look(LookInput);
 }
@@ -88,6 +88,8 @@ void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue
 void AProjectSlicePlayerController::OnLookInputCompleted()
 {
 	LookInput = FVector2d::ZeroVector;
+
+	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *LookInput.ToString());
 }
 
 
@@ -102,20 +104,16 @@ void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionI
 }
 
 void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance)
-{
-	bCanLook = false;
-	
+{	
 	if(!IsValid(_WeaponComp)) return;
 	
-	_WeaponComp->TurnRackTarget(LookInput);
+	_WeaponComp->TurnRackTarget();
 	
 	_bTurnRackTargeted = true;
 }
 
 void AProjectSlicePlayerController::OnTurnRackTargetedInputCompleted()
-{
-	bCanLook = true;
-	
+{	
 	if(!IsValid(_WeaponComp) || !_bTurnRackTargeted) return;
 	
 	_WeaponComp->StopTurnRackTargetting();
@@ -159,22 +157,22 @@ void AProjectSlicePlayerController::SetupMovementInputComponent()
 
 		
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnMoveInputTriggered);
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnMoveInputCompleted);
+		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnMoveInputTriggered);
+		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnMoveInputCompleted);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnLookInputTriggered);
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnLookInputCompleted);
+		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AProjectSlicePlayerController::OnLookInputTriggered);
+		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Completed, this, &AProjectSlicePlayerController::OnLookInputCompleted);
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, _CurrentPossessingPawn, &AProjectSliceCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Jump);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, _CurrentPossessingPawn, &AProjectSliceCharacter::StopJumping);
 
 		// Dash
-		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, _CurrentPossessingPawn,  &AProjectSliceCharacter::Dash);
+		EnhancedInputComponent->BindAction(IA_Dash, ETriggerEvent::Started, _CurrentPossessingPawn,  &AProjectSliceCharacter::Dash);
 
 		// Crouching
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Crouching);
+		EnhancedInputComponent->BindAction(IA_Crouch, ETriggerEvent::Started, _CurrentPossessingPawn, &AProjectSliceCharacter::Crouching);
 	}
 	else
 	{
