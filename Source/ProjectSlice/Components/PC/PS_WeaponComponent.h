@@ -206,6 +206,9 @@ public:
 protected:
 	UFUNCTION()
 	void SightMeshRotation();
+
+	UFUNCTION()
+	void RackTick();
 	
 	/** Rack is placed in horizontal */
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
@@ -233,10 +236,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
 	UCurveFloat* RackRotCurve;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Rack custom tick rate"))
+	float RackTickRate = 0.05f;
+
 private:
-			
 	UPROPERTY(Transient)
-	bool _bTurnRackTargetSetuped = false;
+	FTimerHandle _RackTickTimerHandle;
+	
+	UPROPERTY(Transient)
+	bool _bTurnRackTargetSetuped;
+
+	UPROPERTY(Transient)
+	float _LastAngleToInputTargetLoc;
+
+	UPROPERTY(Transient)
+	FVector2D _LookInput;
 
 #pragma endregion Rack
 

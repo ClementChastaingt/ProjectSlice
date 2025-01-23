@@ -18,7 +18,6 @@
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
-#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -47,6 +46,15 @@ void UPS_WeaponComponent::BeginPlay()
 	//Setup default value
 	RackDefaultRelativeTransform = SightMesh->GetRelativeTransform();
 	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
+
+	//Custom Tick
+	if (IsValid(GetWorld()))
+	{
+		FTimerDelegate wallRunTick_TimerDelegate;
+		wallRunTick_TimerDelegate.BindUObject(this, &UPS_WeaponComponent::RackTick);
+		GetWorld()->GetTimerManager().SetTimer(_RackTickTimerHandle, wallRunTick_TimerDelegate, RackTickRate, true);
+		GetWorld()->GetTimerManager().PauseTimer(_RackTickTimerHandle);
+	}
 }
 
 void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -290,19 +298,31 @@ void UPS_WeaponComponent::SightMeshRotation()
 	//Smoothly rotate Sight Mesh
 	if(bInterpRackRotation) 
 	{
-		const float alpha = (GetWorld()->GetAudioTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration;
+		float alpha = ((GetWorld()->GetAudioTimeSeconds() - InterpRackRotStartTimestamp) / RackRotDuration);
+		alpha = FMath::Clamp(alpha,0.0f,1.0f);
 		float curveAlpha = alpha;
 		if(IsValid(RackRotCurve))
 			curveAlpha = RackRotCurve->GetFloatValue(alpha);
-
-		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation,curveAlpha);
+				
+		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation, curveAlpha);
 		SightMesh->SetRelativeRotation(newRotation);
 
+		UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRotation %s, TargetRackRotation %s, alpha %f"),__FUNCTION__,*StartRackRotation.ToString(),*TargetRackRotation.ToString(), alpha);
+
 		//Stop Rot
-		if(alpha > 1)
+		if(alpha > 1 && !_bTurnRackTargetSetuped)
 			bInterpRackRotation = false;
 		
 	}
+}
+
+void UPS_WeaponComponent::RackTick()
+{
+	if(!IsValid(_PlayerController)) return;
+	
+	_LookInput = _PlayerController->GetLookInput();
+	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *_LookInput.ToString());
+			
 }
 
 #pragma region TurnRack_Target
@@ -314,7 +334,7 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 	
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh) || !IsValid(GetWorld())) return;
 
-	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
+	if(bDebugSightRack) UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 
 	_PlayerController->SetCanLook(false);
 	
@@ -325,11 +345,16 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 	StartRackRotation = SightMesh->GetRelativeRotation();
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bTurnRackTargetSetuped = true;
+
+	//Reactive custom tick
+	GetWorld()->GetTimerManager().UnPauseTimer(_RackTickTimerHandle);
 }
 
 void UPS_WeaponComponent::StopTurnRackTargetting()
 {
 	if(!_bTurnRackTargetSetuped) return;
+
+	if(bDebugSightRack) UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
 	
 	_PlayerController->SetCanLook(true);
 	
@@ -338,12 +363,18 @@ void UPS_WeaponComponent::StopTurnRackTargetting()
 
 	bInterpRackRotation = false;
 	_bTurnRackTargetSetuped = false;
+
+	//Stop custom tick
+	GetWorld()->GetTimerManager().PauseTimer(_RackTickTimerHandle);
 }
 
 void UPS_WeaponComponent::TurnRackTarget()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())) return;
-
+		
+	//Determine dir by input world
+	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	
 	//Setup or stop if no slideable object was sighted
 	if(!_bSightMeshIsInUse)
 	{
@@ -354,12 +385,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 		SetupTurnRackTargetting();
 	}
 	
-	
-	//Determine dir by input world
-	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-	const FVector2D lookInput =_PlayerController->GetLookInput();
-	
-	FVector dir = playerCam->GetRightVector() * lookInput.X + playerCam->GetUpVector() * lookInput.Y * -1;
+	FVector dir = playerCam->GetRightVector() * _LookInput.X + playerCam->GetUpVector() * _LookInput.Y * -1;
 	dir.Normalize();
 
 	if(dir.IsNearlyZero()) return;
@@ -381,7 +407,17 @@ void UPS_WeaponComponent::TurnRackTarget()
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + sightDir * 100, 10.0f,FColor::Green, false, 0.1, 10, 3);
 	}
 	TargetRackRotation.Roll = angleToInputTargetLoc;
+	
+	//TODO :: FORCE INTERP - Not WORKING PROPERLY: If new target roll is equal to last reset rot start time 
+	// if(FMath::IsNearlyEqual(_LastAngleToInputTargetLoc, angleToInputTargetLoc))
+	// {
+	// 	if(bDebugSightRack)UE_LOG(LogTemp, Error, TEXT("%S :: reset target roll start"), __FUNCTION__);
+	// 	StartRackRotation = SightMesh->GetRelativeRotation();
+	// 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
+	// }
+	// _LastAngleToInputTargetLoc = angleToInputTargetLoc;
 
+	//Active rot interp
 	bInterpRackRotation = true;
 }
 
@@ -616,6 +652,7 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		
 		//Reset variables
 		_CurrentSightedComponent = nullptr;
+		_bSightMeshIsInUse = false;
 		_CurrentSightedMatInst.Empty();
 		_CurrentSightedBaseMats.Empty();
 

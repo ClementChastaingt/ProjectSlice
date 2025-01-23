@@ -78,9 +78,7 @@ void AProjectSlicePlayerController::OnMoveInputCompleted()
 void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue& Value)
 {
 	LookInput = Value.Get<FVector2D>();
-
-	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *LookInput.ToString());
-			
+	
 	if(IsValid(_CurrentPossessingPawn) && CanLook())
 		_CurrentPossessingPawn->Look(LookInput);
 }
