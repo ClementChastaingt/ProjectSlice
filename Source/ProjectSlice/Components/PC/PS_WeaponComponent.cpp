@@ -283,11 +283,16 @@ void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
 	
-	bRackInHorizontal = !bRackInHorizontal;
-
 	StartRackRotation = SightMesh->GetRelativeRotation();
-	//TargetRackRotation.Roll = RackDefaultRotation.Roll + (bRackInHorizontal ? 1 : -1 * 90);
-	TargetRackRotation.Roll = TargetRackRotation.Roll + 90.0f;
+
+	double defaultRoll = RackDefaultRelativeTransform.Rotator().Clamp().Roll;
+	double divMod;
+	UKismetMathLibrary::FMod(StartRackRotation.Clamp().Roll, defaultRoll, divMod);
+	const float rollTarget = divMod < 1.0f ? 90.0f : divMod;
+	
+	UE_LOG(LogTemp, Error, TEXT("divMod %f, currentroll %f, defaultRoll %f"), divMod, StartRackRotation.Clamp().Roll, defaultRoll);
+	
+	TargetRackRotation.Roll = TargetRackRotation.Roll + rollTarget;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
@@ -307,7 +312,7 @@ void UPS_WeaponComponent::SightMeshRotation()
 		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation, curveAlpha);
 		SightMesh->SetRelativeRotation(newRotation);
 
-		UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRotation %s, TargetRackRotation %s, alpha %f"),__FUNCTION__,*StartRackRotation.ToString(),*TargetRackRotation.ToString(), alpha);
+		if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRotation %s, TargetRackRotation %s, alpha %f"),__FUNCTION__,*StartRackRotation.ToString(),*TargetRackRotation.ToString(), alpha);
 
 		//Stop Rot
 		if(alpha > 1 && !_bTurnRackTargetSetuped)
@@ -319,10 +324,10 @@ void UPS_WeaponComponent::SightMeshRotation()
 void UPS_WeaponComponent::RackTick()
 {
 	if(!IsValid(_PlayerController)) return;
-	
-	_LookInput = _PlayerController->GetLookInput();
-	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *_LookInput.ToString());
-			
+
+	const FVector2D inputValue = _PlayerController->GetLookInput().ClampAxes(-1.0f,1.0f);
+	_LookInput = (_LookInput + inputValue).ClampAxes(-1.0f,1.0f);
+				
 }
 
 #pragma region TurnRack_Target
@@ -397,9 +402,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 	
 	const float angleToInputTargetLoc = UKismetMathLibrary::DegAcos(dotProdRight) * FMath::Sign(dotProdDown);
 	const FVector muzzleDir = playerCam->GetRightVector() * FMath::Sign(dotProdRight);
-	
-	//UE_LOG(LogTemp, Error, TEXT("dotProdRight %f, dotProdUp %f, angledotProdRight %f, angledotProdUp %f"),dotProdRight, dotProdDown,  UKismetMathLibrary::DegAcos(dotProdRight), UKismetMathLibrary::DegAcos(dotProdDown));
-	
+
 	if(bDebugSightRack)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + dir * 100, 10.0f,FColor::Yellow, false, 0.1, 10, 3);
@@ -408,14 +411,6 @@ void UPS_WeaponComponent::TurnRackTarget()
 	}
 	TargetRackRotation.Roll = angleToInputTargetLoc;
 	
-	//TODO :: FORCE INTERP - Not WORKING PROPERLY: If new target roll is equal to last reset rot start time 
-	// if(FMath::IsNearlyEqual(_LastAngleToInputTargetLoc, angleToInputTargetLoc))
-	// {
-	// 	if(bDebugSightRack)UE_LOG(LogTemp, Error, TEXT("%S :: reset target roll start"), __FUNCTION__);
-	// 	StartRackRotation = SightMesh->GetRelativeRotation();
-	// 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
-	// }
-	// _LastAngleToInputTargetLoc = angleToInputTargetLoc;
 
 	//Active rot interp
 	bInterpRackRotation = true;

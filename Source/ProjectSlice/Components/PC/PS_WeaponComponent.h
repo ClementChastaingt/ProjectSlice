@@ -210,10 +210,6 @@ protected:
 	UFUNCTION()
 	void RackTick();
 	
-	/** Rack is placed in horizontal */
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
-	bool bRackInHorizontal = true;
-	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	bool bInterpRackRotation = false;
 
