@@ -283,16 +283,14 @@ void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
 	
-	StartRackRotation = SightMesh->GetRelativeRotation();
-
-	double defaultRoll = RackDefaultRelativeTransform.Rotator().Clamp().Roll;
-	double divMod;
-	UKismetMathLibrary::FMod(StartRackRotation.Clamp().Roll, defaultRoll, divMod);
-	const float rollTarget = divMod < 1.0f ? 90.0f : divMod;
+	StartRackRotation = SightMesh->GetRelativeRotation().Clamp();
 	
-	UE_LOG(LogTemp, Error, TEXT("divMod %f, currentroll %f, defaultRoll %f"), divMod, StartRackRotation.Clamp().Roll, defaultRoll);
+	const float divider = UKismetMathLibrary::SafeDivide(StartRackRotation.Roll, 90.0f) + 1.0f;
+	const float rollTarget = 90.0f * UKismetMathLibrary::FTrunc(divider);
 	
-	TargetRackRotation.Roll = TargetRackRotation.Roll + rollTarget;
+	if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: DividerRounded %i, Divider %f, RollTarget %f, Currentroll %f"), __FUNCTION__, UKismetMathLibrary::Round(divider), divider, rollTarget, StartRackRotation.Clamp().Roll);
+	
+	TargetRackRotation.Roll = rollTarget;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
@@ -326,11 +324,11 @@ void UPS_WeaponComponent::RackTick()
 	if(!IsValid(_PlayerController)) return;
 
 	const FVector2D inputValue = _PlayerController->GetLookInput().ClampAxes(-1.0f,1.0f);
-	_LookInput = (_LookInput + inputValue).ClampAxes(-1.0f,1.0f);
-				
+	_SightLookInput = (_SightLookInput + inputValue).ClampAxes(-1.0f,1.0f);
+	
 }
 
-#pragma region TurnRack_Target
+#pragma region TurnRackTarget
 //------------------
 
 void UPS_WeaponComponent::SetupTurnRackTargetting()
@@ -353,6 +351,9 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 
 	//Reactive custom tick
 	GetWorld()->GetTimerManager().UnPauseTimer(_RackTickTimerHandle);
+
+	//Callback
+	OnToggleTurnRackTargetEvent.Broadcast(true);
 }
 
 void UPS_WeaponComponent::StopTurnRackTargetting()
@@ -371,6 +372,9 @@ void UPS_WeaponComponent::StopTurnRackTargetting()
 
 	//Stop custom tick
 	GetWorld()->GetTimerManager().PauseTimer(_RackTickTimerHandle);
+
+	//Callback
+	OnToggleTurnRackTargetEvent.Broadcast(false);
 }
 
 void UPS_WeaponComponent::TurnRackTarget()
@@ -390,7 +394,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 		SetupTurnRackTargetting();
 	}
 	
-	FVector dir = playerCam->GetRightVector() * _LookInput.X + playerCam->GetUpVector() * _LookInput.Y * -1;
+	FVector dir = playerCam->GetRightVector() * _SightLookInput.X + playerCam->GetUpVector() * _SightLookInput.Y * -1;
 	dir.Normalize();
 
 	if(dir.IsNearlyZero()) return;
@@ -411,13 +415,12 @@ void UPS_WeaponComponent::TurnRackTarget()
 	}
 	TargetRackRotation.Roll = angleToInputTargetLoc;
 	
-
 	//Active rot interp
 	bInterpRackRotation = true;
 }
 
 //------------------
-#pragma endregion TurnRack_Target
+#pragma endregion TurnRackTarget
 
 //------------------
 #pragma endregion Rack

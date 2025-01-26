@@ -85,9 +85,7 @@ void AProjectSlicePlayerController::OnLookInputTriggered(const FInputActionValue
 
 void AProjectSlicePlayerController::OnLookInputCompleted()
 {
-	LookInput = FVector2d::ZeroVector;
-
-	UE_LOG(LogTemp, Log, TEXT("LookInput %s"), *LookInput.ToString());
+	LookInput = FVector2D::ZeroVector;
 }
 
 

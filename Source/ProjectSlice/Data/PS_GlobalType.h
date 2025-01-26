@@ -20,6 +20,14 @@ enum class ETransitPhase : uint8
 	TRANSIT_OUT = 1 UMETA(DisplayName = "Transit_Out"),
 };
 
+UENUM(BlueprintType)
+enum class ETriangularOrientation : uint8
+{
+	CENTER = 0 UMETA(DisplayName = "Center"),
+	UP = 1 UMETA(DisplayName = "Up"),
+	LEFT = 2 UMETA(DisplayName = "Left"),
+	RIGHT = 3 UMETA(DisplayName = "Right"),
+};
 
 USTRUCT(BlueprintType)
 struct FSRangeFloat

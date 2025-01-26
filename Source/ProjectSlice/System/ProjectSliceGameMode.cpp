@@ -29,7 +29,7 @@ void AProjectSliceGameMode::InitSliceableContent()
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("Sliceable")), SliceableActors);
 
 	int i = 0;
-	if(bDebugMode) UE_LOG(LogTemp, Warning, TEXT("----- PS_GameMode :: Add SliceComponent to Sliceable Actors -----"));
+	if(bDebugMode) UE_LOG(LogTemp, Log, TEXT("===================== PS_GameMode :: Add SliceComponent to Sliceable Actors ====================="));
 
 	
 	for (const auto outActor : SliceableActors)

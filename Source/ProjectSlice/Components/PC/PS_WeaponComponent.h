@@ -202,6 +202,15 @@ public:
 
 	UFUNCTION()
 	void TurnRackTarget();
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector2D GetSightLookInput() const{return _SightLookInput;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetTargetRackRoll() const{return TargetRackRotation.Roll;}
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnToggleTurnRackTargetEvent;
 	
 protected:
 	UFUNCTION()
@@ -246,7 +255,7 @@ private:
 	float _LastAngleToInputTargetLoc;
 
 	UPROPERTY(Transient)
-	FVector2D _LookInput;
+	FVector2D _SightLookInput;
 
 #pragma endregion Rack
 
