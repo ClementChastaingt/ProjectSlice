@@ -26,7 +26,6 @@ FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVeloc
 	return clampedVel;
 }
 
-
 FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
 	FVector clampedVel = targetVelocity;
@@ -45,13 +44,62 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 	return clampedVel;
 }
 
-
 FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, const FVector2D moveInput)
 {
 	FVector worldInputDirection = cameraInstance->GetRightVector() * moveInput.X + cameraInstance->GetForwardVector() * moveInput.Y;
 	worldInputDirection.Z = 0;
 	worldInputDirection.Normalize();
 	return worldInputDirection;
+}
+
+FVector UPSFl::GetScreenCenterWorldLocation(const APlayerController* const PlayerController)
+{
+	if (!PlayerController) return FVector::ZeroVector;
+
+	// Get viewport size (screen resolution)
+	int32 ScreenWidth, ScreenHeight;
+	PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+
+	// Calculate screen center
+	float ScreenCenterX = ScreenWidth * 0.5f;
+	float ScreenCenterY = ScreenHeight * 0.5f;
+
+	// World location and direction
+	FVector WorldLocation;
+	FVector WorldDirection;
+
+	// Convert screen position to world space
+	if (PlayerController->DeprojectScreenPositionToWorld(ScreenCenterX, ScreenCenterY, WorldLocation, WorldDirection))
+	{
+		return WorldLocation; // The world position at the screen center
+	}
+
+	return FVector::ZeroVector; // Return zero vector if conversion fails
+}
+
+FVector UPSFl::GetWorldPointInFrontOfCamera(const APlayerController* const PlayerController, const float Distance)
+{
+	if (!IsValid(PlayerController)) return FVector::ZeroVector;
+
+	// Get viewport size (screen resolution)
+	int32 ScreenWidth, ScreenHeight;
+	PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+
+	// Calculate screen center
+	float ScreenCenterX = ScreenWidth * 0.5f;
+	float ScreenCenterY = ScreenHeight * 0.5f;
+
+	// World location and direction
+	FVector WorldLocation;
+	FVector WorldDirection;
+
+	// Convert screen position to world space
+	if (PlayerController->DeprojectScreenPositionToWorld(ScreenCenterX, ScreenCenterY, WorldLocation, WorldDirection))
+	{
+		return WorldLocation + (WorldDirection * Distance); // The world position at the screen center
+	}
+
+	return FVector::ZeroVector; // Return zero vector if conversion fails
 }
 
 float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
@@ -68,7 +116,6 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 }
 
 #pragma endregion Utilities
-
 
 FCollisionQueryParams UPSFl::CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject)
 {

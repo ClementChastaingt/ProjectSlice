@@ -91,9 +91,6 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	bool bIsHoldingFire = false;
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	FHitResult CurrentFireHitResult;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float MaxFireDistance = 5000.0f;
 			

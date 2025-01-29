@@ -40,7 +40,10 @@ public:
 		
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
-	
+	static FVector GetScreenCenterWorldLocation(const APlayerController* const PlayerController);
+
+	static FVector GetWorldPointInFrontOfCamera(const APlayerController* PlayerController, float Distance);
+
 	/*
 	 * @brief Get an Object unified mass. Return Mass scaled by Mass Scale, Object Scale and by Physical Material density
 	 * @param comp UPrimitiveComponent to check mass

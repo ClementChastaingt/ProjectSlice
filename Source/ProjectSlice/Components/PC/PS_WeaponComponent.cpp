@@ -18,6 +18,7 @@
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -36,7 +37,8 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 FVector UPS_WeaponComponent::GetMuzzlePosition()
 {
-	return GetSocketLocation(FName("Muzzle"));
+	//return GetSocketLocation(FName("Muzzle"));
+	return GetComponentLocation();
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -166,18 +168,11 @@ void UPS_WeaponComponent::Fire()
 
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
-	//Trace config
-	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetMuzzlePosition(),
-	                                      GetMuzzlePosition() + SightMesh->GetForwardVector() * MaxFireDistance,
-	                                      UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-	                                        bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentFireHitResult, true);
-
-	if (!CurrentFireHitResult.bBlockingHit || !IsValid(CurrentFireHitResult.GetComponent()->GetOwner())) return;
+	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetComponent()->GetOwner())) return;
 	
 	//Cut ProceduralMesh
-	UProceduralMeshComponent* parentProcMeshComponent = Cast<UProceduralMeshComponent>(CurrentFireHitResult.GetComponent());
-	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(CurrentFireHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+	UProceduralMeshComponent* parentProcMeshComponent = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
+	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(_SightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
 
 	if (!IsValid(parentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 	
@@ -187,13 +182,12 @@ void UPS_WeaponComponent::Fire()
 
 	//Slice mesh
 	UProceduralMeshComponent* outHalfComponent;
-	FVector sliceLocation = CurrentFireHitResult.Location;
+	FVector sliceLocation = _SightHitResult.Location;
 	FVector sliceDir = SightMesh->GetUpVector();
 	// UMeshComponent* sliceTarget = Cast<UMeshComponent>(CurrentFireHitResult.GetComponent());
 	// FVector sliceDir = SightMesh->GetUpVector() / (sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale());
 	sliceDir.Normalize();
 	
-	//TODO :: replace by EProcMeshSliceCapOption::CreateNewSectionForCap for reactivate melting mat
 	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
 		sliceDir, true,
 		outHalfComponent, _sliceOutput,
@@ -219,9 +213,9 @@ void UPS_WeaponComponent::Fire()
 	//Debug trace
 	if(bDebugSlice)
 	{
-		DrawDebugLine(GetWorld(), CurrentFireHitResult.Location,  CurrentFireHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(), _SightHitResult.Location,  _SightHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
 		DrawDebugLine(GetWorld(),GetMuzzlePosition(), GetMuzzlePosition() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
-		DrawDebugLine(GetWorld(),GetMuzzlePosition() + SightMesh->GetUpVector() * 500 , CurrentFireHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(),GetMuzzlePosition() + SightMesh->GetUpVector() * 500 , _SightHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
 	}
 
 	//Register and instanciate
@@ -265,7 +259,10 @@ void UPS_WeaponComponent::Fire()
 		// Get the animation object for the arms mesh
 		UAnimInstance* AnimInstance = _PlayerCharacter->GetMesh()->GetAnimInstance();
 		if (IsValid(AnimInstance))
+		{
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
+		}
+	
 	}
 }
 
@@ -509,15 +506,20 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
 	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
-	const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
+	
+	//OLD
+	//const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
+	//const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
-	
+		false, actorsToIgnore, EDrawDebugTrace::ForOneFrame, _SightHitResult, true);
+
+	//Laser
 	//TODO:: Change by laser VFX
 	//if(!_PlayerCharacter->IsGlassesActive())
-		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
+		//DrawDebugLine(GetWorld(), laserStart, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();
