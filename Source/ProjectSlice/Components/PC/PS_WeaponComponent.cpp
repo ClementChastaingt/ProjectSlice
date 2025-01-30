@@ -507,6 +507,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
 	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
+	DrawDebugPoint(GetWorld(), target, 20.f, FColor::Orange, false);
 	
 	//OLD
 	//const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
