@@ -813,7 +813,7 @@ void UPS_ParkourComponent::OnStartMantle()
 	SetComponentTickEnabled(bIsMantling);
 
 	//Callback
-	OnMantleEvent.Broadcast(true);
+	OnTriggerMantleEvent.Broadcast(true);
 }
 
 void UPS_ParkourComponent::OnStoptMantle()
@@ -835,7 +835,7 @@ void UPS_ParkourComponent::OnStoptMantle()
 	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 
 	//Callback
-	OnMantleEvent.Broadcast(false);
+	OnTriggerMantleEvent.Broadcast(false);
 	
 }
 
@@ -877,7 +877,12 @@ void UPS_ParkourComponent::MantleTick()
 	//2nd Phase
 	else
 	{
-		_MantlePhase = EMantlePhase::PULL_UP;
+		//For anim
+		if(_MantlePhase != EMantlePhase::PULL_UP)
+		{
+			_MantlePhase = EMantlePhase::PULL_UP;
+			OnPullUpMantleEvent.Broadcast();
+		}
 
 		const float alphaPullUp = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantlePullUpTimestamp, StartMantlePullUpTimestamp + MantlePullUpDuration, 0,1);
 		if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPullUp %f"),__FUNCTION__, alphaPullUp);

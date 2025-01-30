@@ -130,8 +130,11 @@ public:
 	FORCEINLINE bool IsMantling() const{return bIsMantling;}
 
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Bool OnMantleEvent;
+	FOnPSDelegate_Bool OnTriggerMantleEvent;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnPullUpMantleEvent;
+	
 	//------------------
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Mantle")
