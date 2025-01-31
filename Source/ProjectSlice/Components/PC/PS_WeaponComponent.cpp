@@ -37,8 +37,8 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 FVector UPS_WeaponComponent::GetMuzzlePosition()
 {
-	//return GetSocketLocation(FName("Muzzle"));
-	return GetComponentLocation();
+	return GetSocketLocation(FName("Muzzle"));
+	//return GetComponentLocation();
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -515,12 +515,13 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::ForOneFrame, _SightHitResult, true);
+		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 
 	//Laser
 	//TODO:: Change by laser VFX
+	const FVector laserTarget = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 	//if(!_PlayerCharacter->IsGlassesActive())
-		//DrawDebugLine(GetWorld(), laserStart, target, FColor::Red, false, 0.005);
+		DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();
