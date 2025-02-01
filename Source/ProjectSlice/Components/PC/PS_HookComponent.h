@@ -38,7 +38,7 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	GENERATED_BODY()
 	
 	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
-	UStaticMeshComponent* HookThrower = nullptr;
+	USkeletalMeshComponent* HookThrower = nullptr;
 	
 	UPROPERTY(VisibleAnywhere,  Category="Component", meta = (AllowPrivateAccess = "true"))
 	UCableComponent* FirstCable= nullptr;

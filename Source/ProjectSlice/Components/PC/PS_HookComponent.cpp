@@ -23,7 +23,7 @@ UPS_HookComponent::UPS_HookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	HookThrower = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HookThrower"));
+	HookThrower = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HookThrower"));
 	HookThrower->SetCollisionProfileName(Profile_NoCollision, true);
 	HookThrower->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
@@ -79,7 +79,14 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
+
+	if(IsValid(FirstCable) && IsValid(HookThrower))
+	{
+		DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(FName(SOCKET_HOOK)), 15.f, FColor::Magenta, false, 10.0f);
+		DrawDebugPoint(GetWorld(), FirstCable->GetComponentLocation(), 10.f, FColor::Orange, false,-1, 10.0f);
+		FirstCable->SetWorldLocation(HookThrower->GetSocketLocation(FName(SOCKET_HOOK)));
+	}
+
 	CableWraping();
 	PowerCablePull();
 
@@ -246,8 +253,9 @@ void UPS_HookComponent::WrapCable()
 	}
 	else
 	{
-		newCable->AttachToComponent(HookThrower, AttachmentRule);
-		newCable->SetWorldLocation(HookThrower->GetComponentLocation());
+		const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+		//newCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
+		newCable->SetWorldScale3D(FVector(1.0f));
 	}
 	
 	//Attach End to Last Cable
@@ -402,8 +410,10 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	else
 	{
 		//Reset to HookAttach default set
-		firstCable->AttachToComponent(HookThrower, AttachmentRule);
-		firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+		const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+		//firstCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
+		firstCable->SetWorldScale3D(FVector(1.0f));
+
 	}
 }
 
@@ -544,9 +554,10 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	UCableComponent* firstCable = CableListArray[cableListLastIndex];
 
 	//Reset to HookAttach default set
-	firstCable->AttachToComponent(HookThrower, AttachmentRule);
-	firstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
-	
+	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+	//firstCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
+	firstCable->SetWorldScale3D(FVector(1.0f));
+
 	// }
 	
 }
@@ -719,6 +730,11 @@ void UPS_HookComponent::HookObject()
 	//Define new attached component
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
 	//Attach First cable to it
+	//----Setup First Cable---
+	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, false);
+	//FirstCable->AttachToComponent(HookThrower,AttachmentRuleToHook, SOCKET_HOOK);
+	FirstCable->SetWorldScale3D(FVector(1.0f));
+
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	FirstCable->bAttachEnd = true;
@@ -848,10 +864,11 @@ void UPS_HookComponent::DettachHook()
 
 	
 	//----Setup First Cable---
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
+	//FirstCable->AttachToComponent(HookThrower,  AttachmentRuleToHook, SOCKET_HOOK);
+	FirstCable->SetWorldScale3D(FVector(1.0f));
 
-	FirstCable->AttachToComponent(HookThrower, AttachmentRule);
-	FirstCable->SetWorldLocation(HookThrower->GetComponentLocation(), false,nullptr, ETeleportType::TeleportPhysics);
+	DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(SOCKET_HOOK), 20.f, FColor::Purple, true);
 
 	FirstCable->bAttachEnd = false;
 	FirstCable->AttachEndTo = FComponentReference();
@@ -1074,11 +1091,11 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			_SwingImpulseForce = GetConstraintAttachSlave()->GetComponentVelocity().Length();
 			
 			GetConstraintAttachMaster()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			GetConstraintAttachMaster()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			GetConstraintAttachMaster()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale,  FName(SOCKET_HOOK));
 			
 			GetConstraintAttachSlave()->SetSimulatePhysics(false);
 			GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			GetConstraintAttachSlave()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			GetConstraintAttachSlave()->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale,  FName(SOCKET_HOOK));
 
 			
 			HookPhysicConstraint->ConstraintActor1 = nullptr;

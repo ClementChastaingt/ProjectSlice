@@ -82,6 +82,12 @@
 //__________________________________________________
 #pragma endregion GameplayTags
 
+#pragma region SocketName
+//__________________________________________________
+#define SOCKET_HOOK "HookAttach"
+//__________________________________________________
+#pragma endregion SocketName
+
 #pragma region Input Action Name
 //__________________________________________________
 
