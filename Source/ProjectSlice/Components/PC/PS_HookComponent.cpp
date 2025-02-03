@@ -79,27 +79,9 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if(IsValid(FirstCable) && IsValid(HookThrower))
-	{
-		DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(FName(SOCKET_HOOK)), 15.f, FColor::Magenta, false, -1, 10.0f);
-		FVector loc = FirstCable->GetRelativeLocation();
-		loc.X = 0.0f;
-		FirstCable->SetRelativeLocation(loc);
-		DrawDebugPoint(GetWorld(), FirstCable->GetComponentLocation(), 10.f, FColor::Orange, false,-1, 10.0f);
-	}
-
+	
 	CableWraping();
 	PowerCablePull();
-
-	if(bObjectHook)
-	{
-		UCableComponent* cableToAdapt = IsValid(CableListArray.Last()) ? CableListArray.Last() : FirstCable;
-		if(IsValid(cableToAdapt))
-		{
-			AdaptFirstCableLocByAngle(cableToAdapt);
-		}
-	}
 
 }
 
@@ -653,37 +635,6 @@ void UPS_HookComponent::AdaptCableTens()
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
 }
 
-void UPS_HookComponent::AdaptFirstCableLocByAngle(UCableComponent* const attachCable)
-{
-	FVector currentCableEndLocation;
-	if(CableAttachedArray.IsValidIndex(CableAttachedArray.Num() - 1))
-	{
-		currentCableEndLocation = CableAttachedArray[CableAttachedArray.Num() -  1]->GetSocketLocation(TAG_CABLESTART);
-	}
-	else
-	{
-		if(!IsValid(attachCable)) return;
-		currentCableEndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(attachCable->EndLocation);
-	}
-	
-	FRotator rotAngle = UKismetMathLibrary::FindLookAtRotation(HookThrower->GetComponentLocation(),currentCableEndLocation);
-	
-	const float angle = UKismetMathLibrary::DegAcos(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(rotAngle.Vector()));
-	const float alpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(angle),0,MaxAngleHookOffset,0.0f,1.0f);
-
-	if(bDebugTick)
-	{
-		if(bDebugDrawLine)
-		{
-			DrawDebugPoint(GetWorld(), currentCableEndLocation, 30.f, FColor::Magenta, false);
-			DrawDebugLine(GetWorld(), HookThrower->GetComponentLocation(), HookThrower->GetComponentLocation() + rotAngle.Vector() * 600, FColor::Magenta, false, 0.1, 10, 3);
-		}
-		UE_LOG(LogTemp, Log, TEXT("%S :: angle %f , alpha %f"), __FUNCTION__, angle, alpha);
-	}
-	const FVector hookOffset= UKismetMathLibrary::VLerp(MinCableHookOffset,MaxCableHookOffset,alpha);
-	attachCable->SetRelativeLocation(hookOffset, false, nullptr, ETeleportType::TeleportPhysics);
-}
-
 
 //------------------
 #pragma endregion Cable_Wrap_Logic
@@ -758,11 +709,11 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttach
 
 	if(!IsValid(cable)) return;
 	
-	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
-	cable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
-
-	//cable->SetWorldScale3D(FVector(1.0f));
-	cable->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));	
+	cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale,  SOCKET_HOOK);
+	// cable->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));
+	// cable->SetWorldScale3D(FVector(1.0f));
+	//
+	// UE_LOG(LogTemp, Warning, TEXT("Relative Location: %s"), *cable->GetRelativeLocation().ToString());
 }
 
 

@@ -215,9 +215,6 @@ protected:
 	
 private:
 	
-	UFUNCTION()
-	void AdaptFirstCableLocByAngle(UCableComponent* const attachCable);
-
 	UPROPERTY(Transient)
 	float _AlphaTense; 
 
@@ -305,13 +302,7 @@ protected:
 	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
 	float HookingMaxDistance = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Min Offset apply to fistcable attahce dot Hookthrower mesh"))
-	FVector MinCableHookOffset = FVector(1,0,0);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Offset apply to RealFirstCable attahce dot Hookthrower mesh (cable angle from thrower > MaxAngleHookOffset"))
-	FVector MaxCableHookOffset = FVector(4,0,0);
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="deg",ToolTip="Max Offset angle apply to RealFirstCable attahce dot Hookthrower mesh"))
 	float MaxAngleHookOffset = 90.0;
 	

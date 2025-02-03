@@ -520,7 +520,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	//TODO:: Change by laser VFX
 	const FVector laserTarget = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
 	//if(!_PlayerCharacter->IsGlassesActive())
-		DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
+		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();
