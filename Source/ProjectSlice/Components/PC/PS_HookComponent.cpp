@@ -82,9 +82,11 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if(IsValid(FirstCable) && IsValid(HookThrower))
 	{
-		DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(FName(SOCKET_HOOK)), 15.f, FColor::Magenta, false, 10.0f);
+		DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(FName(SOCKET_HOOK)), 15.f, FColor::Magenta, false, -1, 10.0f);
+		FVector loc = FirstCable->GetRelativeLocation();
+		loc.X = 0.0f;
+		FirstCable->SetRelativeLocation(loc);
 		DrawDebugPoint(GetWorld(), FirstCable->GetComponentLocation(), 10.f, FColor::Orange, false,-1, 10.0f);
-		FirstCable->SetWorldLocation(HookThrower->GetSocketLocation(FName(SOCKET_HOOK)));
 	}
 
 	CableWraping();
@@ -151,7 +153,6 @@ void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 
 #pragma region Cable_Wrap_Logic
 //------------------
-
 
 void UPS_HookComponent::CableWraping()
 {
@@ -253,9 +254,7 @@ void UPS_HookComponent::WrapCable()
 	}
 	else
 	{
-		const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
-		//newCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
-		newCable->SetWorldScale3D(FVector(1.0f));
+		AttachCableToHookThrower(newCable);
 	}
 	
 	//Attach End to Last Cable
@@ -410,10 +409,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	else
 	{
 		//Reset to HookAttach default set
-		const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
-		//firstCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
-		firstCable->SetWorldScale3D(FVector(1.0f));
-
+		AttachCableToHookThrower(firstCable);
 	}
 }
 
@@ -554,9 +550,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	UCableComponent* firstCable = CableListArray[cableListLastIndex];
 
 	//Reset to HookAttach default set
-	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
-	//firstCable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
-	firstCable->SetWorldScale3D(FVector(1.0f));
+	AttachCableToHookThrower(firstCable);
 
 	// }
 	
@@ -729,12 +723,11 @@ void UPS_HookComponent::HookObject()
 
 	//Define new attached component
 	AttachedMesh = Cast<UMeshComponent>(CurrentHookHitResult.GetComponent());
+
 	//Attach First cable to it
 	//----Setup First Cable---
-	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, false);
-	//FirstCable->AttachToComponent(HookThrower,AttachmentRuleToHook, SOCKET_HOOK);
-	FirstCable->SetWorldScale3D(FVector(1.0f));
-
+	AttachCableToHookThrower(FirstCable);
+	
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	FirstCable->bAttachEnd = true;
@@ -757,6 +750,21 @@ void UPS_HookComponent::HookObject()
 	
 	if (GEngine && bDebug) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, FString::Printf(TEXT("SetConstraint")));
 }
+
+
+void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttachedCable)
+{
+	UCableComponent* cable = IsValid(overrideAttachedCable) ? overrideAttachedCable : FirstCable;
+
+	if(!IsValid(cable)) return;
+	
+	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	cable->AttachToComponent(HookThrower, AttachmentRuleToHook, SOCKET_HOOK);
+
+	//cable->SetWorldScale3D(FVector(1.0f));
+	cable->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));	
+}
+
 
 void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
@@ -864,11 +872,7 @@ void UPS_HookComponent::DettachHook()
 
 	
 	//----Setup First Cable---
-	const FAttachmentTransformRules AttachmentRuleToHook =FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, true);
-	//FirstCable->AttachToComponent(HookThrower,  AttachmentRuleToHook, SOCKET_HOOK);
-	FirstCable->SetWorldScale3D(FVector(1.0f));
-
-	DrawDebugPoint(GetWorld(), HookThrower->GetSocketLocation(SOCKET_HOOK), 20.f, FColor::Purple, true);
+	AttachCableToHookThrower(FirstCable);
 
 	FirstCable->bAttachEnd = false;
 	FirstCable->AttachEndTo = FComponentReference();

@@ -238,6 +238,9 @@ public:
 	
 	UFUNCTION()
 	void HookObject();
+
+	UFUNCTION()
+	void AttachCableToHookThrower(UCableComponent* overrideAttachedCable = nullptr);
 	
 	UFUNCTION()
 	void WindeHook(const FInputActionInstance& inputActionInstance);
@@ -247,7 +250,8 @@ public:
 
 	UFUNCTION()
 	void ResetWindeHook();
-	
+
+
 	UFUNCTION()
 	void DettachHook();
 
