@@ -117,7 +117,7 @@ void UPS_ForceComponent::ReleasePush()
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
-	//Callback
+	//Stop
 	StopPush();
 }
 

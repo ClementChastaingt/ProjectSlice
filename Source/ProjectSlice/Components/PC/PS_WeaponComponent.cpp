@@ -39,7 +39,6 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 FVector UPS_WeaponComponent::GetMuzzlePosition()
 {
 	return GetSocketLocation(FName("Muzzle"));
-	//return GetComponentLocation();
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -510,20 +509,18 @@ void UPS_WeaponComponent::SightShaderTick()
 	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
-	//OLD
-	//const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
-	//const FVector target = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
-	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 
 	//Laser
-	//TODO:: Change by laser VFX
-	//const FVector laserTarget = start + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
-	const FVector laserTarget = start + UPSFl::GetScreenCenterWorldLocation(_PlayerController) * MaxFireDistance;
-	//if(!_PlayerCharacter->IsGlassesActive())
-		DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
+	const FVector laserDir = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetForwardVector() : GetSightMeshComponent()->GetForwardVector() ;
+	const FVector laserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + laserDir * MaxFireDistance;
+	LaserTarget = laserTarget;
+	DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
+	// DrawDebugPoint(GetWorld(), laserTarget, 20.f, FColor::Orange, false);
+	// DrawDebugPoint(GetWorld(), target, 20.f, FColor::Yellow, false);
+
 
 	//On shoot Bump tick logic 
 	SliceBump();

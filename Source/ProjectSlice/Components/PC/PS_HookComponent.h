@@ -64,13 +64,14 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	/** Returns HookThrowerComp subobject **/
-	USkeletalMeshComponent* GetHookThrower() const { return HookThrower; }
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE USkeletalMeshComponent* GetHookThrower() const { return HookThrower; }
 	
 	/** Returns Swing system ConstraintAttachSlave subobject **/
-	UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
+	FORCEINLINE UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
 
 	/** Returnss Swing system ConstraintAttachMaster subobject  **/
-	UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
+	FORCEINLINE UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
 
 
 protected:

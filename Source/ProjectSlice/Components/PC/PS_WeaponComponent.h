@@ -144,16 +144,19 @@ private:
 	
 public:	
 	UFUNCTION(BlueprintCallable)
-	UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
+	FORCEINLINE UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
 	UFUNCTION(BlueprintCallable)
-	FHitResult GetSightHitResult() const{return _SightHitResult;}
+	FORCEINLINE FHitResult GetSightHitResult() const{return _SightHitResult;}
 
 	UFUNCTION(BlueprintCallable)
-	UPrimitiveComponent* GetCurrentSightedComponent() const{return _CurrentSightedComponent;}
+	FORCEINLINE UPrimitiveComponent* GetCurrentSightedComponent() const{return _CurrentSightedComponent;}
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
+	FORCEINLINE int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetLaserTarget() const{return LaserTarget;}
 
 protected:
 		
@@ -183,6 +186,9 @@ private:
 
 	UPROPERTY(Transient)
 	int32 _CurrentSightedFace;
+
+	UPROPERTY(Transient)
+	FVector LaserTarget;
 
 #pragma region Rack
 	//------------------
