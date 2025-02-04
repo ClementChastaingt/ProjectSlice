@@ -16,6 +16,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
@@ -504,8 +505,9 @@ void UPS_WeaponComponent::SightShaderTick()
 		return;
 	}
 
+	//Determine Sight Hit
 	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetComponentLocation() : GetMuzzlePosition();
+	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	//OLD
@@ -518,9 +520,10 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	//Laser
 	//TODO:: Change by laser VFX
-	const FVector laserTarget = GetMuzzlePosition() + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	//const FVector laserTarget = start + GetSightMeshComponent()->GetForwardVector() * MaxFireDistance;
+	const FVector laserTarget = start + UPSFl::GetScreenCenterWorldLocation(_PlayerController) * MaxFireDistance;
 	//if(!_PlayerCharacter->IsGlassesActive())
-		DrawDebugLine(GetWorld(), start, target, FColor::Red, false, 0.005);
+		DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
 
 	//On shoot Bump tick logic 
 	SliceBump();

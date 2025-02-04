@@ -62,11 +62,14 @@ public:
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	/** Returns HookThrowerComp subobject **/
+	USkeletalMeshComponent* GetHookThrower() const { return HookThrower; }
 	
-	/** Returns FirstPersonCameraComponent subobject **/
+	/** Returns Swing system ConstraintAttachSlave subobject **/
 	UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
 
-	/** Returns FirstPersonCameraComponent subobject **/
+	/** Returnss Swing system ConstraintAttachMaster subobject  **/
 	UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
 
 
