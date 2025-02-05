@@ -483,10 +483,10 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 
 	FVector newLoc = RackDefaultRelativeTransform.GetLocation();
 	newLoc.X = newLoc.X * sightAjustementDist;
-		
+	
 	SightMesh->SetRelativeScale3D(newScale);
 	SightMesh->SetRelativeLocation(newLoc);
-
+	
 	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
 		
 }
@@ -514,14 +514,8 @@ void UPS_WeaponComponent::SightShaderTick()
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 
 	//Laser
-	const FVector laserDir = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetForwardVector() : GetSightMeshComponent()->GetForwardVector() ;
-	const FVector laserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + laserDir * MaxFireDistance;
-	LaserTarget = laserTarget;
-	DrawDebugLine(GetWorld(), start, laserTarget, FColor::Red, false, 0.005);
-	// DrawDebugPoint(GetWorld(), laserTarget, 20.f, FColor::Orange, false);
-	// DrawDebugPoint(GetWorld(), target, 20.f, FColor::Yellow, false);
-
-
+	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * MaxFireDistance;
+	
 	//On shoot Bump tick logic 
 	SliceBump();
 
