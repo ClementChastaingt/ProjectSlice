@@ -40,6 +40,7 @@ public:
 		
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
+	UFUNCTION(BlueprintCallable)
 	static FVector GetScreenCenterWorldLocation(const APlayerController* const PlayerController);
 
 	static FVector GetWorldPointInFrontOfCamera(const APlayerController* PlayerController, float Distance);

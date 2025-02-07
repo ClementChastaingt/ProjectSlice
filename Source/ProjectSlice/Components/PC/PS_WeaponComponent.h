@@ -158,6 +158,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetLaserTarget() const{return LaserTarget;}
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetSightTarget() const{return SightTarget;}
+
 protected:
 		
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
@@ -189,6 +192,9 @@ private:
 
 	UPROPERTY(Transient)
 	FVector LaserTarget;
+
+	UPROPERTY(Transient)
+	FVector SightTarget;
 
 #pragma region Rack
 	//------------------

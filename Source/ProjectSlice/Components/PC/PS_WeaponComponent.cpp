@@ -515,7 +515,8 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	//Laser
 	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * MaxFireDistance;
-	
+	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
+
 	//On shoot Bump tick logic 
 	SliceBump();
 
