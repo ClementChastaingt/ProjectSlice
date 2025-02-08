@@ -428,7 +428,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
 	
-	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow();
+	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushing();
 	SightMesh->SetVisibility(_bSightMeshIsInUse);
 
 	if(!_bSightMeshIsInUse) return;

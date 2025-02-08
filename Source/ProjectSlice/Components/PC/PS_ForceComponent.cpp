@@ -48,6 +48,8 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
 	dir.Normalize();
 	const FVector pushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location + dir * -10.0f;
+
+	if(bDebugPush) DrawDebugLine(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location, _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location + dir * -10, FColor::Yellow, false, 2, 10, 3);
 	
 	OnPushTargetUpdate.Broadcast(pushTargetLoc);
 }
