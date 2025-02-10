@@ -51,13 +51,19 @@ public:
 	UFUNCTION()
 	void SetupPush();
 
+	UFUNCTION()
+	void StopPush();
+
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnSpawnPushDistorsion;
 	
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Vector OnPushTargetUpdate;
+	FOnPSDelegate_Vector_Rotator OnPushTargetUpdate;
 	
 protected:
 		/** AnimMontage to play each time we fire */	
@@ -86,10 +92,7 @@ protected:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Feedback")
 	UAnimMontage* PushAnimation;
-
-	UFUNCTION()
-	void StopPush();
-
+	
 private:
 	UPROPERTY(Transient)
 	bool _bIsPushing;

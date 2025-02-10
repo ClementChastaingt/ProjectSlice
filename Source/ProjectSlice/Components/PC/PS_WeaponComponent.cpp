@@ -498,7 +498,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 
 void UPS_WeaponComponent::SightShaderTick()
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || _PlayerCharacter->IsWeaponStow())
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || !IsValid(_PlayerCharacter->GetForceComponent()) || !IsValid(_PlayerCharacter->GetHookComponent()))
 	{
 		ResetSightRackProperties();
 		return;
@@ -516,6 +516,13 @@ void UPS_WeaponComponent::SightShaderTick()
 	//Laser
 	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * MaxFireDistance;
 	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
+
+	//Stop if in can't slice situation
+	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushing())
+	{
+		ResetSightRackProperties();
+		return;
+	}
 
 	//On shoot Bump tick logic 
 	SliceBump();

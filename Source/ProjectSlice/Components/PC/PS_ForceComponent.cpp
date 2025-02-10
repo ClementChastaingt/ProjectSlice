@@ -42,16 +42,25 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	if(!_bIsPushing) return;
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
-		
+
+	OnSpawnPushDistorsion.Broadcast(_CurrentPushHitResult.bBlockingHit);
+	if(!_CurrentPushHitResult.bBlockingHit) return;
+
+	//Target Loc
 	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
-	
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
 	dir.Normalize();
-	const FVector pushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location + dir * -10.0f;
-
-	if(bDebugPush) DrawDebugLine(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location, _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location + dir * -10, FColor::Yellow, false, 2, 10, 3);
+	FVector start = _CurrentPushHitResult.Location;
 	
-	OnPushTargetUpdate.Broadcast(pushTargetLoc);
+	const FVector pushTargetLoc = start + dir * -10.0f;
+
+	//Target Rot
+	const FRotator pushTargetRot = UKismetMathLibrary::FindLookAtRotation(start + _CurrentPushHitResult.Normal * -500, pushTargetLoc);
+
+	//Debug
+	//if(bDebugPush) DrawDebugLine(GetWorld(), start, start + dir * -100, FColor::Yellow, false, 2, 10, 3);
+	OnPushTargetUpdate.Broadcast(pushTargetLoc,pushTargetRot);
+	
 }
 
 // Called every frame
@@ -59,6 +68,8 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	_CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	UpdatePushTargetLoc();
 }
@@ -75,8 +86,6 @@ void UPS_ForceComponent::ReleasePush()
 		StopPush();
 		return;
 	}
-	
-	_CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent()))
 	{
