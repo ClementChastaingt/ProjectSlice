@@ -19,7 +19,7 @@ class PROJECTSLICE_API UPS_ForceComponent : public UActorComponent
 public:
 	// Sets default values for this component's properties
 	UPS_ForceComponent();
-	
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -58,6 +58,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnPushReleasedEvent;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSpawnPushDistorsion;
@@ -88,11 +91,7 @@ protected:
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
 	USoundBase* PushSound;
-	
-	/** AnimMontage to play each time we fire */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Feedback")
-	UAnimMontage* PushAnimation;
-	
+
 private:
 	UPROPERTY(Transient)
 	bool _bIsPushing;
@@ -108,4 +107,22 @@ private:
 
 
 #pragma endregion Push
+
+#pragma region Screw
+	//------------------
+
+public:
+	//------------------
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Screw")
+	TSoftObjectPtr<UStaticMesh> ScrewMesh;
+	
+	UFUNCTION()
+	void AttachScrew();
+	
+private:
+	//------------------
+
+	//------------------
+#pragma endregion Screw
 };

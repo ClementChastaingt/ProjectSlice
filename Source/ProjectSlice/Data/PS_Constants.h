@@ -85,6 +85,11 @@
 #pragma region SocketName
 //__________________________________________________
 #define SOCKET_HOOK "HookAttach"
+#define SOCKET_SCREW_INDEX "Index_Screw"
+#define SOCKET_SCREW_MIDDLE "Middle_Screw"
+#define SOCKET_SCREW_PINKY "Pinky_Screw"
+#define SOCKET_SCREW_RING "Ring_Screw"
+
 //__________________________________________________
 #pragma endregion SocketName
 

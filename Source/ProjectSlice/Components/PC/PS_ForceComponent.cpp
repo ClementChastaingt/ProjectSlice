@@ -7,6 +7,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
+#include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
@@ -33,6 +34,9 @@ void UPS_ForceComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
+
+	//Screw Attach 
+	AttachScrew();
 	
 }
 
@@ -150,5 +154,50 @@ void UPS_ForceComponent::StopPush()
 
 //------------------
 #pragma endregion Push
+
+#pragma region Screw
+//------------------
+void UPS_ForceComponent::AttachScrew()
+{
+	USkeletalMeshComponent* playerSkel = _PlayerCharacter->GetMesh();
+	if(!IsValid(playerSkel))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: Skeletal Mesh not found !"),__FUNCTION__);
+		return;
+	}
+
+	if(!ScrewMesh.IsValid() || !IsValid(Cast<UStaticMesh>(ScrewMesh.Get())))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: ScrewMesh not found or invalid !"),__FUNCTION__);
+		return;
+	}
+
+	// List of socket names
+	const TArray<FName> SocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
+	for (FName SocketName : SocketNames)
+	{
+		// Check if socket exists
+		if (_PlayerCharacter->GetMesh()->DoesSocketExist(SocketName))
+		{
+			// Create a new StaticMeshComponent
+			UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
+			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(ScrewMesh.Get()));
+			NewMeshComponent->RegisterComponent(); 
+            
+			// Attach the mesh to the socket
+			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%S :: Socket %s does not exist!"),__FUNCTION__, *SocketName.ToString());
+		}
+	}
+
+	
+}
+
+//------------------
+#pragma endregion Screw
+	
 	
 
