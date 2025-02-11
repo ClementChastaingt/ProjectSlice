@@ -8,6 +8,7 @@
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
@@ -172,9 +173,8 @@ void UPS_ForceComponent::AttachScrew()
 		return;
 	}
 
-	// List of socket names
-	const TArray<FName> SocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
-	for (FName SocketName : SocketNames)
+	// Parkour list of socket names
+	for (FName SocketName : ScrewSocketNames)
 	{
 		// Check if socket exists
 		if (_PlayerCharacter->GetMesh()->DoesSocketExist(SocketName))
@@ -182,7 +182,7 @@ void UPS_ForceComponent::AttachScrew()
 			// Create a new StaticMeshComponent
 			UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
 			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(ScrewMesh.Get()));
-			NewMeshComponent->RegisterComponent(); 
+			NewMeshComponent->RegisterComponent();
             
 			// Attach the mesh to the socket
 			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);

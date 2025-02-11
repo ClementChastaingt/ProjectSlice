@@ -40,7 +40,6 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-
 #pragma region Push
 	//------------------
 
@@ -55,6 +54,8 @@ public:
 	void StopPush();
 
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
+	
+	FORCEINLINE float GetMaxPushForceTime() const{return MaxPushForceTime;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
@@ -111,17 +112,12 @@ private:
 #pragma region Screw
 	//------------------
 
-public:
-	//------------------
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Screw")
 	TSoftObjectPtr<UStaticMesh> ScrewMesh;
 	
 	UFUNCTION()
 	void AttachScrew();
-	
-private:
-	//------------------
 
 	//------------------
 #pragma endregion Screw

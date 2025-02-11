@@ -8,6 +8,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 
 
 // Sets default values for this component's properties
@@ -35,10 +36,17 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
 
-	
-	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	//Setup comp var
+	if(IsValid(_PlayerCharacter->GetForceComponent()))
+		_ForceComponent = _PlayerCharacter->GetForceComponent();
+
+	if(IsValid(_ParkourComponent))
+		_ParkourComponent = _ParkourComponent;
+
+	//Setup Callback
+	if(IsValid(_ParkourComponent))
 	{
-		_PlayerCharacter->GetParkourComponent()->OnDashEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
+		_ParkourComponent->OnDashEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
 	}
 	
 }
@@ -48,9 +56,9 @@ void UPS_ProceduralAnimComponent::EndPlay(const EEndPlayReason::Type EndPlayReas
 	Super::EndPlay(EndPlayReason);
 	
 	//Unbind delegate
-	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	if(IsValid(_ParkourComponent))
 	{
-		_PlayerCharacter->GetParkourComponent()->OnDashEvent.RemoveDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
+		_ParkourComponent->OnDashEvent.RemoveDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
 	}
 }
 
@@ -61,6 +69,7 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	Dip();
+	ApplyScrewMovement();
 }
 
 #pragma region Dip
@@ -146,7 +155,7 @@ void UPS_ProceduralAnimComponent::SetLagPositionAndAirTilt()
 	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), deltaTime, (1 / deltaTime) / VelocityLagSmoothingSpeed);
 
 	//In Air Animation
-	if(!_PlayerCharacter->GetParkourComponent()->IsWallRunning())
+	if(!_ParkourComponent->IsWallRunning())
 	{
 		InAirTilt = UKismetMathLibrary::RInterpTo(InAirTilt, FRotator(0.0f, LocationLagPosition.Z * -2.0f,0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
 		InAirOffset = UKismetMathLibrary::VInterpTo(InAirOffset,FVector(LocationLagPosition.Z * 0.5f, 0.0f, 0.0f), deltaTime, (1 / deltaTime) / AirTiltLagSmoothingSpeed);
@@ -191,9 +200,9 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	//Find WalkAnim Alpha
 	const UCharacterMovementComponent* playerMovementComp = _PlayerCharacter->GetCharacterMovement();
 	//TODO :: Do a var when custom mode in place for tweak in BP the proc walk move forbidden state 
-	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_PlayerCharacter->GetParkourComponent()->IsWallRunning())
+	const bool bIsWalkProcAnimDesactive = (playerMovementComp->MovementMode == MOVE_Falling && !_ParkourComponent->IsWallRunning())
 	|| playerMovementComp->IsCrouching()
-	|| _PlayerCharacter->GetParkourComponent()->IsDashing()
+	|| _ParkourComponent->IsDashing()
 	|| playerMovementComp->MovementMode == MOVE_None;
 		
 	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));
@@ -255,6 +264,12 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 		
 }
 
+//------------------
+#pragma endregion Sway
+
+#pragma region Hook
+//------------------
+
 void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()))
@@ -262,10 +277,37 @@ void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)
 		
 	const float maxHookOffset = UKismetMathLibrary::MapRangeClamped(alpha, 0.0f, 1.0f, 0.0, HookLocMaxOffset);
 	HookLocOffset = FVector(0.0f, FMath::RandRange(-maxHookOffset, maxHookOffset), FMath::RandRange(-maxHookOffset, maxHookOffset));
+
+	UE_LOG(LogTemp, Error, TEXT("HookLocOffset %f"), HookLocOffset.Length());
+}
+
+#pragma endregion Hook
+
+#pragma region Screw
+//------------------
+
+void UPS_ProceduralAnimComponent::StartScrewMovement()
+{
+	if(!IsValid(_ForceComponent)) return;
+	
+	_ScrewLoadMoveDuration = _ForceComponent->GetMaxPushForceTime() / 4.0f;
+}
+
+void UPS_ProceduralAnimComponent::StartResetScrewMovement()
+{
+	_ScrewLoadMoveDuration = _ForceComponent->GetMaxPushForceTime() / 4.0f;
+}
+
+void UPS_ProceduralAnimComponent::ApplyScrewMovement(const bool bIsReset)
+{
+	if(!IsValid(_ForceComponent)) return;
+
 }
 
 //------------------
-#pragma endregion Sway
+
+#pragma endregion Screw
+
 	
 	
 

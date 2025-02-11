@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "PS_Constants.h"
 
 #include "PS_GlobalType.generated.h"
 
@@ -43,6 +44,9 @@ struct FSRangeFloat
 	UPROPERTY()
 	float Min = 0.0f;
 };
+
+
+const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
 
 
 //__________________________________________________

@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Components/TimelineComponent.h"
+#include "ProjectSlice/Components/PC/PS_ForceComponent.h"
+#include "ProjectSlice/Components/PC/PS_ParkourComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_ProceduralAnimComponent.generated.h"
 
@@ -44,6 +46,12 @@ private:
 
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+	UPROPERTY(Transient)
+	UPS_ParkourComponent* _ParkourComponent;
+
+	UPROPERTY(Transient)
+	UPS_ForceComponent* _ForceComponent;
 
 #pragma region Dip
 	//------------------
@@ -243,4 +251,33 @@ private:
 	//------------------
 
 #pragma endregion Hook
+
+#pragma region Screw
+	//------------------
+
+public:
+	UFUNCTION()
+	void StartScrewMovement();
+
+	UFUNCTION()
+	void StartResetScrewMovement();
+	
+	UFUNCTION()
+	void ApplyScrewMovement(const bool bIsReset = false);
+	
+protected:	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw offset range"))
+	FFloatInterval HookLocMinMaxOffset = FFloatInterval(0.f, 2.0f);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw loc offset curve"))
+	UCurveFloat* ScrewLocOffsetCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw rot offset curve"))
+	UCurveFloat* ScrewRotOffsetCurve;
+	
+private:
+	UPROPERTY(Transient)
+	float _ScrewLoadMoveDuration;
+
+#pragma endregion Screw
 };
