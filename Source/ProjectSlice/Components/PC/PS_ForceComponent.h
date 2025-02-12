@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_ForceComponent.generated.h"
@@ -56,6 +57,10 @@ public:
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 	
 	FORCEINLINE float GetMaxPushForceTime() const{return MaxPushForceTime;}
+	
+	FORCEINLINE float GetInputTimeWeigtAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.0f, 1.0f);};
+
+	FORCEINLINE float GetReleasePushTimestamp() const{ return _ReleasePushTimestamp; }
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
@@ -105,13 +110,15 @@ private:
 
 	UPROPERTY(Transient)
 	float _StartForcePushTimestamp;
-
+	
+	UPROPERTY(Transient)
+	float _ReleasePushTimestamp;
 
 #pragma endregion Push
 
 #pragma region Screw
 	//------------------
-
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Screw")
 	TSoftObjectPtr<UStaticMesh> ScrewMesh;

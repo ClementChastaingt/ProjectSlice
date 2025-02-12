@@ -37,16 +37,20 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	if(!IsValid(_PlayerController))return;
 
 	//Setup comp var
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+		_ParkourComponent = _PlayerCharacter->GetParkourComponent();
+	
 	if(IsValid(_PlayerCharacter->GetForceComponent()))
 		_ForceComponent = _PlayerCharacter->GetForceComponent();
-
-	if(IsValid(_ParkourComponent))
-		_ParkourComponent = _ParkourComponent;
-
+	
 	//Setup Callback
 	if(IsValid(_ParkourComponent))
 	{
 		_ParkourComponent->OnDashEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::DashDip);
+	}
+	if(IsValid(_ForceComponent))
+	{
+		_ForceComponent->OnPushEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::OnPushEventReceived);
 	}
 	
 }
@@ -286,21 +290,78 @@ void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)
 #pragma region Screw
 //------------------
 
+void UPS_ProceduralAnimComponent::OnPushEventReceived(bool bLoading)
+{
+	if(bLoading)
+		StartScrewMovement();
+	else
+		StartResetScrewMovement();
+}
+
 void UPS_ProceduralAnimComponent::StartScrewMovement()
 {
 	if(!IsValid(_ForceComponent)) return;
 	
 	_ScrewLoadMoveDuration = _ForceComponent->GetMaxPushForceTime() / 4.0f;
+
+	_bMoveScrew = true;
+	_bIsReseting = false;
+
+	//Reset reset starting position
+	_LastScrewLocOffset = FVector::ZeroVector;
+	_LastScrewRotOffset = FRotator::ZeroRotator;
 }
 
 void UPS_ProceduralAnimComponent::StartResetScrewMovement()
 {
-	_ScrewLoadMoveDuration = _ForceComponent->GetMaxPushForceTime() / 4.0f;
+	_bMoveScrew = true;
+	_bIsReseting = true;
+
+	//Get starting position
+	_LastScrewLocOffset = ScrewLocOffset;
+	_LastScrewRotOffset = ScrewRotOffset;
+	
 }
 
-void UPS_ProceduralAnimComponent::ApplyScrewMovement(const bool bIsReset)
+void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 {
-	if(!IsValid(_ForceComponent)) return;
+	if(!IsValid(_ForceComponent) || !IsValid(GetWorld())) return;
+
+	if(!_bMoveScrew) return;
+
+	//Alpha
+	const float alpha = _bIsReseting ?
+		UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _ForceComponent->GetReleasePushTimestamp(),
+			_ForceComponent->GetReleasePushTimestamp() + ScrewResetMoveDuration, 0.0f, 1.0f) :  _ForceComponent->GetInputTimeWeigtAlpha();
+	float curveLocAlpha = alpha;
+	float curveRotAlpha = alpha;
+	
+	if(IsValid(ScrewLocOffsetCurve))
+	{
+		curveLocAlpha = ScrewLocOffsetCurve->GetFloatValue(alpha);
+	}
+	if(IsValid(ScrewRotOffsetCurve))
+	{
+		curveRotAlpha = ScrewRotOffsetCurve->GetFloatValue(alpha);
+	}
+
+	//Loc Offset
+	float startLoc = _bIsReseting ? _LastScrewLocOffset.Y : ScrewLocYOffsetRange.Min;
+	float targetLoc = _bIsReseting ?  ScrewLocYOffsetRange.Min : ScrewLocYOffsetRange.Max;
+	ScrewLocOffset = FVector::ZeroVector;
+	ScrewLocOffset.Y = FMath::Lerp(startLoc,targetLoc, curveLocAlpha);
+
+	//Rot Offset
+	float startRot = _bIsReseting ? _LastScrewRotOffset.Roll : 0.0f;
+	float targetRot = _bIsReseting ? 0.0f : 360.0f;
+	ScrewRotOffset = FRotator::ZeroRotator;
+	ScrewRotOffset.Roll = FMath::Lerp(startRot,targetRot, curveRotAlpha);
+	
+	//Stop movement
+	if(alpha >= 1.0f)
+	{
+		_bMoveScrew = false;
+	}
 
 }
 

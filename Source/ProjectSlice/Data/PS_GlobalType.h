@@ -30,22 +30,6 @@ enum class ETriangularOrientation : uint8
 	RIGHT = 3 UMETA(DisplayName = "Right"),
 };
 
-USTRUCT(BlueprintType)
-struct FSRangeFloat
-{
-	GENERATED_BODY()
-
-	FSRangeFloat(){};
-	FSRangeFloat(const float max, const float min){ Max = max; Min = min;}
-
-	UPROPERTY()
-	float Max = 0.0f;
-	
-	UPROPERTY()
-	float Min = 0.0f;
-};
-
-
 const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
 
 

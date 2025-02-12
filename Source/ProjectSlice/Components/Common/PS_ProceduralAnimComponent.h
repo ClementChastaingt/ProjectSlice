@@ -257,27 +257,51 @@ private:
 
 public:
 	UFUNCTION()
+	void OnPushEventReceived(bool bLoading);
+	
+	UFUNCTION()
 	void StartScrewMovement();
 
 	UFUNCTION()
 	void StartResetScrewMovement();
 	
 	UFUNCTION()
-	void ApplyScrewMovement(const bool bIsReset = false);
+	void ApplyScrewMovement();
 	
-protected:	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Screw", meta=(ToolTip="Current Screw offset location"))
+	FVector ScrewLocOffset = FVector::ZeroVector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Screw", meta=(ToolTip="Current Screw offset rotation"))
+	FRotator ScrewRotOffset = FRotator::ZeroRotator;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw offset range"))
-	FFloatInterval HookLocMinMaxOffset = FFloatInterval(0.f, 2.0f);
+	FFloatInterval ScrewLocYOffsetRange = FFloatInterval(0.0f, 2.0f);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw loc offset curve"))
 	UCurveFloat* ScrewLocOffsetCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw rot offset curve"))
 	UCurveFloat* ScrewRotOffsetCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Tweak as same of release push anim duration"))
+	float ScrewResetMoveDuration = 0.10f;
 	
 private:
 	UPROPERTY(Transient)
+	bool _bMoveScrew;
+	
+	UPROPERTY(Transient)
+	bool _bIsReseting;
+	
+	UPROPERTY(Transient)
 	float _ScrewLoadMoveDuration;
+
+	UPROPERTY(Transient)
+	FVector _LastScrewLocOffset;
+
+	UPROPERTY(Transient)
+	FRotator _LastScrewRotOffset;
 
 #pragma endregion Screw
 };
