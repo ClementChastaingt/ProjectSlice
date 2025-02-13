@@ -185,7 +185,10 @@ void UPS_ForceComponent::AttachScrew()
 			NewMeshComponent->RegisterComponent();
             
 			// Attach the mesh to the socket
-			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+			DrawDebugPoint(GetWorld(), playerSkel->GetSocketLocation(FName("index_01_l")), 160.f, FColor::Green, true);
+			DrawDebugPoint(GetWorld(), playerSkel->GetSocketLocation(FName("toto")), 150.f, FColor::Red, true);
+			
+			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetIncludingScale, FName("VB_toto"));
 		}
 		else
 		{
