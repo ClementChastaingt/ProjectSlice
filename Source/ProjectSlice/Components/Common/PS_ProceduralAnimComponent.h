@@ -34,6 +34,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugDip = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugForcePush = false;
+
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
@@ -267,7 +270,7 @@ public:
 	
 	UFUNCTION()
 	void ApplyScrewMovement();
-	
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Screw", meta=(ToolTip="Current Screw offset location"))
 	FVector ScrewLocOffset = FVector::ZeroVector;

@@ -344,7 +344,7 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 	{
 		curveRotAlpha = ScrewRotOffsetCurve->GetFloatValue(alpha);
 	}
-
+	
 	//Loc Offset
 	float startLoc = _bIsReseting ? _LastScrewLocOffset.Y : ScrewLocYOffsetRange.Min;
 	float targetLoc = _bIsReseting ?  ScrewLocYOffsetRange.Min : ScrewLocYOffsetRange.Max;
@@ -352,10 +352,14 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 	ScrewLocOffset.Y = FMath::Lerp(startLoc,targetLoc, curveLocAlpha);
 
 	//Rot Offset
-	float startRot = _bIsReseting ? _LastScrewRotOffset.Roll : 0.0f;
-	float targetRot = _bIsReseting ? 0.0f : 360.0f;
+	// float startRot = _bIsReseting ? _LastScrewRotOffset.Roll : 0.0f;
+	// float targetRot = _bIsReseting ? 0.0f : 360.0f;
+	float startRot = 0.0f;
+	float targetRot = 360.0f;
 	ScrewRotOffset = FRotator::ZeroRotator;
-	ScrewRotOffset.Roll = FMath::Lerp(startRot,targetRot, curveRotAlpha);
+	ScrewRotOffset.Pitch = FMath::Lerp(startRot,targetRot, curveRotAlpha);
+
+	if(bDebugForcePush)UE_LOG(LogTemp, Log, TEXT("%S :: bIsReseting %i, alpha %f, ScrewLocOffset %s, ScrewRotOffset %s"),__FUNCTION__, _bIsReseting, alpha, *ScrewLocOffset.ToString(), *ScrewRotOffset.ToString());
 	
 	//Stop movement
 	if(alpha >= 1.0f)

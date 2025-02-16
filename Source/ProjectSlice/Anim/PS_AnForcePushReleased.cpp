@@ -14,8 +14,11 @@ void UPSAnForcePushReleased::Notify(USkeletalMeshComponent* meshComp, UAnimSeque
 	Super::Notify(meshComp, animation, eventReference);
 
 	const AProjectSliceCharacter* animatedPlayer = Cast<AProjectSliceCharacter>(meshComp->GetOwner());
-	if(!IsValid(animatedPlayer)) return;
+	if(!IsValid(animatedPlayer) || !IsValid(animatedPlayer->GetWorld())) return;
+
+	UPS_ForceComponent* forceComp = Cast<UPS_ForceComponent>(animatedPlayer->GetForceComponent());
+	if(!IsValid(forceComp)) return;
 	
-	Cast<UPS_ForceComponent>(animatedPlayer->GetForceComponent())->OnPushReleasedEvent.Broadcast();
+	forceComp->OnPushReleasedEvent.Broadcast();
 	
 }

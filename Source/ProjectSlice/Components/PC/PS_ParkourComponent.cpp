@@ -212,7 +212,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
 
-	DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(),  otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 1100, 12.0f, FColor::Cyan, true, 2, 10, 6);
+	//DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(),  otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 1100, 12.0f, FColor::Cyan, true, 2, 10, 6);
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};

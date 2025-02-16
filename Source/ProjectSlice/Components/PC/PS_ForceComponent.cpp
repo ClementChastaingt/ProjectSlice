@@ -35,7 +35,7 @@ void UPS_ForceComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
-
+	
 	//Screw Attach 
 	AttachScrew();
 	
@@ -149,6 +149,7 @@ void UPS_ForceComponent::SetupPush()
 
 void UPS_ForceComponent::StopPush()
 {
+	_ReleasePushTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bIsPushing = false;
 	OnPushEvent.Broadcast(_bIsPushing);
 }
@@ -183,12 +184,13 @@ void UPS_ForceComponent::AttachScrew()
 			UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
 			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(ScrewMesh.Get()));
 			NewMeshComponent->RegisterComponent();
-            
-			// Attach the mesh to the socket
-			DrawDebugPoint(GetWorld(), playerSkel->GetSocketLocation(FName("index_01_l")), 160.f, FColor::Green, true);
-			DrawDebugPoint(GetWorld(), playerSkel->GetSocketLocation(FName("toto")), 150.f, FColor::Red, true);
 			
-			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetIncludingScale, FName("VB_toto"));
+			//Setup mesh transform
+			NewMeshComponent->SetRelativeRotation(FRotator(90.0f,0.0f,0.0f));
+			NewMeshComponent->SetRelativeScale3D(FVector(0.25f,0.25f,0.25f));
+            
+			// Attach the mesh to the socket			
+			NewMeshComponent->AttachToComponent(playerSkel, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 		}
 		else
 		{

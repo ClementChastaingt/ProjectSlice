@@ -62,6 +62,8 @@ public:
 
 	FORCEINLINE float GetReleasePushTimestamp() const{ return _ReleasePushTimestamp; }
 
+	FORCEINLINE void SetReleasePushTimestamp(const float ReleasePushTimestamp){_ReleasePushTimestamp = ReleasePushTimestamp;}
+
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnPushEvent;
 	
