@@ -172,7 +172,8 @@ void UPS_ForceComponent::AttachScrew()
 		return;
 	}
 
-	if(!ScrewMesh.IsValid() || !IsValid(Cast<UStaticMesh>(ScrewMesh.Get())))
+	UStaticMesh* LoadedScrewMesh =  ScrewMesh.LoadSynchronous();
+	if(!IsValid(LoadedScrewMesh))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%S :: ScrewMesh not found or invalid !"),__FUNCTION__);
 		return;
@@ -186,7 +187,7 @@ void UPS_ForceComponent::AttachScrew()
 		{
 			// Create a new StaticMeshComponent
 			UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
-			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(ScrewMesh.Get()));
+			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(LoadedScrewMesh));
 			NewMeshComponent->RegisterComponent();
 			
 			//Setup mesh transform
