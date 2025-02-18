@@ -270,6 +270,12 @@ public:
 	
 	UFUNCTION()
 	void ApplyScrewMovement();
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetScrewLocAlpha() const{return _ScrewLocAlpha;}
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnScrewMoveUpdate;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Screw", meta=(ToolTip="Current Screw offset location"))
@@ -305,6 +311,9 @@ private:
 
 	UPROPERTY(Transient)
 	FRotator _LastScrewRotOffset;
+
+	UPROPERTY(Transient)
+	float _ScrewLocAlpha;
 
 #pragma endregion Screw
 };

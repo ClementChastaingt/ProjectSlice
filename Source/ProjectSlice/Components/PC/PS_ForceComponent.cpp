@@ -5,6 +5,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
@@ -105,6 +106,9 @@ void UPS_ForceComponent::ReleasePush()
 	}
 	
 	//Setup work variables
+	UPhysicalMaterial* physMat = _CurrentPushHitResult.GetComponent()->BodyInstance.GetSimplePhysicalMaterial();
+	const float density = IsValid(physMat) ? physMat->Density : 1.0f;
+		
 	const float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.5f, 1.0f);
 	const float force = PushForce * mass * alphaInput;
@@ -125,7 +129,7 @@ void UPS_ForceComponent::ReleasePush()
 	for (UPrimitiveComponent* compHit : outHits)
 	{
 		if(!IsValid(Cast<UProceduralMeshComponent>(compHit))) continue;
-		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f,mass %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, alphaInput);
+		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f,mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, PushForce, alphaInput);
 		compHit->AddImpulse(start + dir * force, NAME_None, false);
 	}
 	
