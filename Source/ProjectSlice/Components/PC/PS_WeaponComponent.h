@@ -154,7 +154,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
-	
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetSightStart() const{return SightStart;}
+
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetLaserTarget() const{return LaserTarget;}
 
@@ -189,6 +192,9 @@ private:
 
 	UPROPERTY(Transient)
 	int32 _CurrentSightedFace;
+
+	UPROPERTY(Transient)
+	FVector SightStart;
 
 	UPROPERTY(Transient)
 	FVector LaserTarget;

@@ -377,35 +377,50 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 
 void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 {
+	//Exit
 	if(!_ForceComponent->IsPushing())
 	{
 		HandRotOffset = FRotator::ZeroRotator;
 		_HandShakeTime = 0.0f;
-		return;	}
-		
+		return;
+	}
+
+	//Curved alpha input
+	float curveAlpha = _ForceComponent->GetInputTimeWeigtAlpha();
+	if(IsValid(ShakeChargeCurve))
+	{
+		curveAlpha = ShakeChargeCurve->GetFloatValue(_ForceComponent->GetInputTimeWeigtAlpha());
+	}
+	
 	// Time-based oscillation
 	_HandShakeTime =_HandShakeTime + deltaTime;
-	float frequency = FMath::Lerp(0.0f,30.0f,_ForceComponent->GetInputTimeWeigtAlpha());
+	//TODO :: Frenquency seam more stabel when stop to interpolate
+	float frequency = FMath::Lerp(ShakeFrequency.Min,ShakeFrequency.Max,curveAlpha);
 
 	// Remap sin from [-1,1] to [0,1]
-	float LerpAlpha = (FMath::Sin(_HandShakeTime * frequency) + 1.0f) * 0.5f;
+	float alpha = (FMath::Sin(_HandShakeTime * frequency) + 1.0f) * 0.5f;
 
 	//Random
 	//const float rangePitch = UKismetMathLibrary::RandomFloatInRange(0.1,2.0);
-	const float rangePitch = FMath::Lerp(1.0f,2.0f,_ForceComponent->GetInputTimeWeigtAlpha());
-	const float rangeX = FMath::Lerp(0.0f,0.25f,_ForceComponent->GetInputTimeWeigtAlpha());
+	const float rangePitch = FMath::Lerp(RangePitch.Min,RangePitch.Max,curveAlpha);
+	const float rangeX = FMath::Lerp(RangeForward.Min,RangeForward.Max,curveAlpha);
 	
 	// Interpolate between two positions
 	FRotator StartRot = FRotator(-rangePitch, 0, 0);
 	FRotator EndRot = FRotator(rangePitch, 0, 0);
-	HandRotOffset = UKismetMathLibrary::RLerp(StartRot, EndRot, LerpAlpha, true);
+	HandRotOffset = UKismetMathLibrary::RLerp(StartRot, EndRot, alpha, true);
 
 	FVector StartLoc = FVector(-rangeX,0, 0);
 	FVector EndLot = FVector(rangeX, 0, 0);
-	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, LerpAlpha);
+	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, alpha);
+
+	if(alpha >= 1.0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	}
 
 
-	UE_LOG(LogTemp, Log, TEXT("frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),frequency, _HandShakeTime,HandRotOffset.Pitch, _ForceComponent->GetInputTimeWeigtAlpha());
+	UE_LOG(LogTemp, Log, TEXT("frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),frequency, _HandShakeTime,HandRotOffset.Pitch, alpha);
 }
 
 //------------------

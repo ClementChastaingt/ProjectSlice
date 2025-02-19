@@ -333,6 +333,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Hand", meta=(ToolTip="Current Hand Shake offset rotation"))
 	FRotator HandRotOffset = FRotator::ZeroRotator;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	FFloatInterval ShakeFrequency = FFloatInterval(0.0f, 30.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	FFloatInterval RangePitch = FFloatInterval(1.0f, 2.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	FFloatInterval RangeForward = FFloatInterval(0.0f, 0.25f);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	UCurveFloat* ShakeChargeCurve;
+
 private:
 	UPROPERTY(Transient)
 	float _HandShakeTime;

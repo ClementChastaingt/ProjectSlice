@@ -506,15 +506,15 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	//Determine Sight Hit
 	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	const FVector start = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
+	SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 
 	//Laser
-	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * MaxFireDistance;
+	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 100.0f : MaxFireDistance);
 	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
 
 	//Stop if in can't slice situation
