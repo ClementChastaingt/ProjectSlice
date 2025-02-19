@@ -129,7 +129,8 @@ void AProjectSlicePlayerController::OnForcePushInputTriggered(const FInputAction
 {
 	if(!IsValid(_ForceComp)) return;
 	
-	_ForceComp->ReleasePush();
+	_ForceComp->UnloadPush();
+
 }
 
 //------------------

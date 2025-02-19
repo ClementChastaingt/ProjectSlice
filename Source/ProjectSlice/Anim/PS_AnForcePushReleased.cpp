@@ -19,6 +19,6 @@ void UPSAnForcePushReleased::Notify(USkeletalMeshComponent* meshComp, UAnimSeque
 	UPS_ForceComponent* forceComp = Cast<UPS_ForceComponent>(animatedPlayer->GetForceComponent());
 	if(!IsValid(forceComp)) return;
 	
-	forceComp->OnPushReleasedEvent.Broadcast();
+	forceComp->OnPushReleaseNotifyEvent.Broadcast();
 	
 }

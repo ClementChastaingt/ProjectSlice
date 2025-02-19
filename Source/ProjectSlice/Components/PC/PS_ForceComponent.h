@@ -45,6 +45,10 @@ private:
 	//------------------
 
 public:
+	
+	UFUNCTION()
+	void UnloadPush();
+	
 	UFUNCTION()
 	void ReleasePush();
 	
@@ -68,7 +72,7 @@ public:
 	FOnPSDelegate_Bool OnPushEvent;
 	
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate OnPushReleasedEvent;
+	FOnPSDelegate OnPushReleaseNotifyEvent;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSpawnPushDistorsion;
@@ -124,6 +128,9 @@ private:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Screw")
 	TSoftObjectPtr<UStaticMesh> ScrewMesh;
+
+	UFUNCTION()
+	void OnScrewResetEndEventReceived();
 	
 	UFUNCTION()
 	void AttachScrew();

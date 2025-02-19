@@ -270,12 +270,18 @@ public:
 	
 	UFUNCTION()
 	void ApplyScrewMovement();
+
+	UFUNCTION()
+	void HandShake(const float deltaTime);
 	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetScrewLocAlpha() const{return _ScrewLocAlpha;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnScrewMoveUpdate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnScrewResetEnd;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Screw", meta=(ToolTip="Current Screw offset location"))
@@ -316,4 +322,20 @@ private:
 	float _ScrewLocAlpha;
 
 #pragma endregion Screw
+
+#pragma region Hand
+	//------------------
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Hand", meta=(ToolTip="Current Hand Shake offset rotation"))
+	FVector HandLocOffset = FVector::ZeroVector;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Hand", meta=(ToolTip="Current Hand Shake offset rotation"))
+	FRotator HandRotOffset = FRotator::ZeroRotator;
+
+private:
+	UPROPERTY(Transient)
+	float _HandShakeTime;
+
+#pragma endregion Hand
 };

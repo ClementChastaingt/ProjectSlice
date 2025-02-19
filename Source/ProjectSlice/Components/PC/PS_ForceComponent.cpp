@@ -39,6 +39,12 @@ void UPS_ForceComponent::BeginPlay()
 	
 	//Screw Attach 
 	AttachScrew();
+
+	//Callback
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		_PlayerCharacter->GetProceduralAnimComponent()->OnScrewResetEnd.AddUniqueDynamic(this, &UPS_ForceComponent::OnScrewResetEndEventReceived);
+	}
 	
 }
 
@@ -85,8 +91,19 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 //------------------
 
 
+void UPS_ForceComponent::UnloadPush()
+{
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+	
+	_ReleasePushTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_bIsPushing = false;
+	OnPushEvent.Broadcast(_bIsPushing);
+}
+
 void UPS_ForceComponent::ReleasePush()
 {
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
 	{
 		StopPush();
@@ -137,13 +154,13 @@ void UPS_ForceComponent::ReleasePush()
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
-	//Stop
-	StopPush();
 }
 
 void UPS_ForceComponent::SetupPush()
 {
 	if(!IsValid(GetWorld())) return;
+
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
 	_StartForcePushTimestamp = GetWorld()->GetAudioTimeSeconds();
 	
@@ -153,16 +170,21 @@ void UPS_ForceComponent::SetupPush()
 
 void UPS_ForceComponent::StopPush()
 {
-	_ReleasePushTimestamp = GetWorld()->GetAudioTimeSeconds();
-	_bIsPushing = false;
-	OnPushEvent.Broadcast(_bIsPushing);
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 }
 
 //------------------
 #pragma endregion Push
 
 #pragma region Screw
+
 //------------------
+
+void UPS_ForceComponent::OnScrewResetEndEventReceived()
+{
+	//Release force when screw reseting finished
+	ReleasePush();
+}
 void UPS_ForceComponent::AttachScrew()
 {
 	USkeletalMeshComponent* playerSkel = _PlayerCharacter->GetMesh();
