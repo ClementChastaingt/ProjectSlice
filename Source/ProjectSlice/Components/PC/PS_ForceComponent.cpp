@@ -140,7 +140,10 @@ void UPS_ForceComponent::ReleasePush()
 	TArray<AActor*> actorsToIgnore;
 	actorsToIgnore.AddUnique(_PlayerCharacter);
 	
-	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);	
+	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
+
+	//Push cone feedback
+	OnSpawnPushBurst.Broadcast(start,dir);
 
 	//Impulse
 	for (UPrimitiveComponent* compHit : outHits)
