@@ -413,12 +413,7 @@ void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 	FVector StartLoc = FVector(-rangeX,0, 0);
 	FVector EndLot = FVector(rangeX, 0, 0);
 	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, alpha);
-
-	if(alpha >= 1.0)
-	{
-		UE_LOG(LogTemp, Error, TEXT("TEXT"));
-	}
-
+	
 
 	UE_LOG(LogTemp, Log, TEXT("frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),frequency, _HandShakeTime,HandRotOffset.Pitch, alpha);
 }

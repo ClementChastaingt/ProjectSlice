@@ -55,7 +55,7 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
 
-	OnSpawnPushDistorsion.Broadcast(_CurrentPushHitResult.bBlockingHit);
+	OnSpawnPushDistorsion.Broadcast(_CurrentPushHitResult.bBlockingHit && !bIsQuickPush);
 	if(!_CurrentPushHitResult.bBlockingHit) return;
 
 	//Target Loc
@@ -109,51 +109,71 @@ void UPS_ForceComponent::ReleasePush()
 		StopPush();
 		return;
 	}
-	
-	if(!_CurrentPushHitResult.bBlockingHit || !IsValid(_CurrentPushHitResult.GetActor()) || !IsValid(_CurrentPushHitResult.GetComponent()))
-	{
-		StopPush();
-		return;
-	}
 
-	if(!_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics())
+	//Quick pushing check && if player target is valid, if don't do quickPush logic
+	bIsQuickPush = GetWorld()->GetAudioTimeSeconds() - _StartForcePushTimestamp <= QuickPushTimeThreshold;
+	if(!bIsQuickPush)
 	{
-		StopPush();
-		return;
+		bIsQuickPush =
+			!_CurrentPushHitResult.bBlockingHit
+			|| !IsValid(_CurrentPushHitResult.GetActor())
+			|| !IsValid(_CurrentPushHitResult.GetComponent())
+			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
 	}
-	
-	//Setup work variables
-	UPhysicalMaterial* physMat = _CurrentPushHitResult.GetComponent()->BodyInstance.GetSimplePhysicalMaterial();
-	const float density = IsValid(physMat) ? physMat->Density : 1.0f;
 		
-	const float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
+	
+	//Setup force var
 	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.5f, 1.0f);
-	const float force = PushForce * mass * alphaInput;
+	const float force = PushForce * alphaInput;
+	float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 	
 	//Determine dir
-	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
-	dir.Normalize();
-	FVector start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
+	FVector start, dir;
+	if(bIsQuickPush)
+	{
+		dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+		dir.Normalize();
+		start = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + dir * 100.0f;
+	}
+	else
+	{
+		dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
+		dir.Normalize();
+		start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
+
+	}
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 	
 	//Cone raycast
-	TArray<UPrimitiveComponent*> outHits;
+	TArray<FHitResult> outHits;
 	TArray<AActor*> actorsToIgnore;
 	actorsToIgnore.AddUnique(_PlayerCharacter);
-	
+
+	DrawDebugLine(GetWorld(), start, start + dir * 100, FColor::Yellow, false, 2, 10, 3);
 	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
-	//Push cone feedback
+	//Push cone burst feedback
 	OnSpawnPushBurst.Broadcast(start,dir);
 
 	//Impulse
-	for (UPrimitiveComponent* compHit : outHits)
+	for (FHitResult outHit : outHits)
 	{
-		if(!IsValid(Cast<UProceduralMeshComponent>(compHit))) continue;
-		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f,mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, PushForce, alphaInput);
-		compHit->AddImpulse(start + dir * force, NAME_None, false);
+		UMeshComponent* compHit = Cast<UMeshComponent>(outHit.GetComponent());
+		if(!IsValid(Cast<UMeshComponent>(compHit)) || !compHit->IsSimulatingPhysics()) continue;
+		
+		//Direction
+		//FVector pushDir = outHit.TraceStart + outHit.Location;
+
+		//Calculate mass for weight force 
+		mass = UPSFl::GetObjectUnifiedMass(outHit.GetComponent());
+
+		//impulse
+		compHit->AddImpulse(start + dir * (force * mass), NAME_None, false);
+
+		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f, mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, PushForce, alphaInput);
 	}
 	
-	// Try and play the sound if specified
+	//Play the sound if specified
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 

@@ -104,7 +104,7 @@ FVector UPSFl::GetWorldPointInFrontOfCamera(const APlayerController* const Playe
 
 float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
 {
-	if(!IsValid(comp)) return 0.0f;
+	if(!IsValid(comp)) return 1.0f;
 	
 	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
 

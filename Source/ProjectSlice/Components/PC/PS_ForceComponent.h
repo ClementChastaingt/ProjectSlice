@@ -83,9 +83,15 @@ public:
 	FOnPSDelegate_Vector_Rotator OnPushTargetUpdate;
 	
 protected:
-		/** AnimMontage to play each time we fire */	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Status|Push")
+	bool bIsQuickPush;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 400.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float QuickPushTimeThreshold = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
 	float MaxPushForceTime = 2.0f;
