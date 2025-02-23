@@ -51,13 +51,14 @@ void UPS_ForceComponent::BeginPlay()
 
 void UPS_ForceComponent::UpdatePushTargetLoc()
 {
-	if(!_bIsPushing) return;
+	if(!_bIsPushLoading) return;
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
 
 	OnSpawnPushDistorsion.Broadcast(_CurrentPushHitResult.bBlockingHit && !bIsQuickPush);
-	if(!_CurrentPushHitResult.bBlockingHit) return;
-
+	
+	if(!_CurrentPushHitResult.bBlockingHit || bIsQuickPush) return;
+	
 	//Target Loc
 	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
@@ -96,14 +97,12 @@ void UPS_ForceComponent::UnloadPush()
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
 	_ReleasePushTimestamp = GetWorld()->GetAudioTimeSeconds();
-	_bIsPushing = false;
-	OnPushEvent.Broadcast(_bIsPushing);
+	_bIsPushLoading = false;
+	OnPushEvent.Broadcast(_bIsPushLoading);
 }
 
 void UPS_ForceComponent::ReleasePush()
-{
-	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
-	
+{	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
 	{
 		StopPush();
@@ -120,6 +119,7 @@ void UPS_ForceComponent::ReleasePush()
 			|| !IsValid(_CurrentPushHitResult.GetComponent())
 			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
 	}
+	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 		
 	
 	//Setup force var
@@ -140,42 +140,53 @@ void UPS_ForceComponent::ReleasePush()
 		dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
 		dir.Normalize();
 		start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
-
 	}
-	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 	
 	//Cone raycast
 	TArray<FHitResult> outHits;
 	TArray<AActor*> actorsToIgnore;
 	actorsToIgnore.AddUnique(_PlayerCharacter);
-
-	DrawDebugLine(GetWorld(), start, start + dir * 100, FColor::Yellow, false, 2, 10, 3);
+	
 	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
-	//Push cone burst feedback
-	OnSpawnPushBurst.Broadcast(start,dir);
-
-	//Impulse
+	//Sort comp result
+	TArray<UMeshComponent*> sortedHitResult;
 	for (FHitResult outHit : outHits)
 	{
-		UMeshComponent* compHit = Cast<UMeshComponent>(outHit.GetComponent());
-		if(!IsValid(Cast<UMeshComponent>(compHit)) || !compHit->IsSimulatingPhysics()) continue;
-		
+		if (IsValid(outHit.GetComponent()))
+		{
+			UMeshComponent* compHit = Cast<UMeshComponent>(outHit.GetComponent());
+			if(!IsValid(compHit) || !compHit->IsSimulatingPhysics()) continue;
+			
+			sortedHitResult.AddUnique(Cast<UMeshComponent>(compHit)); // Add valid hit comp to the result array
+		}
+	}
+
+	//Impulse
+	for (UMeshComponent* outComp : sortedHitResult)
+	{
 		//Direction
 		//FVector pushDir = outHit.TraceStart + outHit.Location;
 
 		//Calculate mass for weight force 
-		mass = UPSFl::GetObjectUnifiedMass(outHit.GetComponent());
+		mass = UPSFl::GetObjectUnifiedMass(outComp);
 
 		//impulse
-		compHit->AddImpulse(start + dir * (force * mass), NAME_None, false);
+		outComp->AddImpulse(start + dir * (force * mass), NAME_None, false);
 
-		if(bDebugPush) UE_LOG(LogTemp, Error, TEXT("%S :: actor %s, force %f, mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*compHit->GetOwner()->GetActorNameOrLabel(), force, mass, PushForce, alphaInput);
+		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*outComp->GetOwner()->GetActorNameOrLabel(), *outComp->GetName(), force, mass, PushForce, alphaInput);
 	}
+
+	//---Feedbacks----
+	//Push cone burst feedback
+	OnSpawnPushBurst.Broadcast(start,dir * 5000.0f);
 	
 	//Play the sound if specified
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
+
+	//Stop push
+	StopPush();
 
 }
 
@@ -187,13 +198,18 @@ void UPS_ForceComponent::SetupPush()
 	
 	_StartForcePushTimestamp = GetWorld()->GetAudioTimeSeconds();
 	
-	_bIsPushing = true;
-	OnPushEvent.Broadcast(_bIsPushing);
+	_bIsPushLoading = true;
+	_bIsPushReleased = false;
+	OnPushEvent.Broadcast(_bIsPushLoading);
 }
 
 void UPS_ForceComponent::StopPush()
 {
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+
+	_bIsPushLoading = false;
+	_bIsPushReleased = true;
+	bIsQuickPush = false;
 }
 
 //------------------

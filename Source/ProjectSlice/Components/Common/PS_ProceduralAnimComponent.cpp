@@ -354,10 +354,8 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 	ScrewLocOffset.Y = FMath::Lerp(startLoc,targetLoc, _ScrewLocAlpha);
 
 	//Rot Offset
-	// float startRot = _bIsReseting ? _LastScrewRotOffset.Roll : 0.0f;
-	// float targetRot = _bIsReseting ? 0.0f : 360.0f;
-	float startRot = 0.0f;
-	float targetRot = 360.0f;
+	float startRot = _bIsReseting ? _LastScrewRotOffset.Pitch : 0.0f;
+	float targetRot = _bIsReseting ? 0.0f : 360.0f;
 	ScrewRotOffset = FRotator::ZeroRotator;
 	ScrewRotOffset.Pitch = FMath::Lerp(startRot,targetRot, curveRotAlpha);
 
@@ -378,7 +376,7 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 {
 	//Exit
-	if(!_ForceComponent->IsPushing())
+	if(!_ForceComponent->IsPushLoading())
 	{
 		HandRotOffset = FRotator::ZeroRotator;
 		_HandShakeTime = 0.0f;

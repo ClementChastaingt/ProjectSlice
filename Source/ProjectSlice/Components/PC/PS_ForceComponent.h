@@ -57,7 +57,9 @@ public:
 	UFUNCTION()
 	void StopPush();
 
-	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
+	FORCEINLINE bool IsPushLoading() const{return _bIsPushLoading;}
+
+	FORCEINLINE bool IsPushReleased() const{return _bIsPushReleased;}
 	
 	FORCEINLINE float GetMaxPushForceTime() const{return MaxPushForceTime;}
 	
@@ -88,10 +90,10 @@ protected:
 	bool bIsQuickPush;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
-	float PushForce = 400.0f;
+	float PushForce = 25.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
-	float QuickPushTimeThreshold = 0.25f;
+	float QuickPushTimeThreshold = 0.35f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
 	float MaxPushForceTime = 2.0f;
@@ -114,7 +116,10 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	bool _bIsPushing;
+	bool _bIsPushLoading;
+
+	UPROPERTY(Transient)
+	bool _bIsPushReleased;
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult _CurrentPushHitResult;

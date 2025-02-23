@@ -428,7 +428,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
 	
-	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushing();
+	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushLoading();
 	SightMesh->SetVisibility(_bSightMeshIsInUse);
 
 	if(!_bSightMeshIsInUse) return;
@@ -505,19 +505,19 @@ void UPS_WeaponComponent::SightShaderTick()
 	}
 
 	//Determine Sight Hit
-	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
+	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushLoading() && !_PlayerCharacter->GetForceComponent()->IsPushReleased();
 	SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
+		false, actorsToIgnore, EDrawDebugTrace::ForOneFrame, _SightHitResult, true);
 	//Laser
 	LaserTarget = bUseHookStartForLaser ? target : UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 100.0f : MaxFireDistance);
 	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
 
 	//Stop if in can't slice situation
-	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushing())
+	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
 	{
 		ResetSightRackProperties();
 		return;
