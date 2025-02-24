@@ -179,7 +179,7 @@ void UPS_ForceComponent::ReleasePush()
 
 	//---Feedbacks----
 	//Push cone burst feedback
-	OnSpawnPushBurst.Broadcast(start,dir * 5000.0f);
+	OnSpawnPushBurst.Broadcast(start,UKismetMathLibrary::FindLookAtRotation(start, start + dir * 500.0f).Clamp());
 	
 	//Play the sound if specified
 	if(IsValid(PushSound))

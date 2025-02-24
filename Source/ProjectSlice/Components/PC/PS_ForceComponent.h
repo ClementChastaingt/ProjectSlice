@@ -79,7 +79,7 @@ public:
 	FOnPSDelegate_Bool OnSpawnPushDistorsion;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Vector_Vector OnSpawnPushBurst;
+	FOnPSDelegate_Vector_Rotator OnSpawnPushBurst;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Vector_Rotator OnPushTargetUpdate;
