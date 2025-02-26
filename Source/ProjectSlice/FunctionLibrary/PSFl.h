@@ -11,7 +11,6 @@ class PROJECTSLICE_API UPSFl : public UBlueprintFunctionLibrary
 public:
 	UPSFl() {}
 
-
 #pragma region Utilities
 	//------------------
 
@@ -37,12 +36,29 @@ public:
 	 * @return the Vector velocity Clamped
 	 */
 	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
-		
+
+	/*
+	 * @brief Return Input direction by Camera orientation
+	 * @param cameraInstance: camera instance used
+	 * @param moveInput: input of the current movement
+	 * @return the world input direction
+	*/
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
+	/*
+	 * @brief Return screen center point world location 
+	 * @param APlayerController: current player controller reference
+	 * @return the screen center point world location 
+	*/
 	UFUNCTION(BlueprintCallable)
 	static FVector GetScreenCenterWorldLocation(const APlayerController* const PlayerController);
 
+	/*
+	 * @brief Return screen center directed point on an input distance 
+	 * @param APlayerController: current player controller reference
+	 * @param Distance: distance of the point
+	 * @return the screen center point world location 
+	*/
 	static FVector GetWorldPointInFrontOfCamera(const APlayerController* PlayerController, float Distance);
 
 	/*
@@ -51,15 +67,7 @@ public:
 	 * @param bDebug: display returned mass
 	 * @return the Vector velocity Clamped
 	 */
-
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
-	
-	/*
-	* @brief Return 
-	* */
-
-	
-	static FCollisionQueryParams CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject);
 
 #pragma endregion Utilities
 
@@ -67,6 +75,13 @@ public:
 	//------------------
 
 public:
+	
+	/*
+	 * @brief Generate a custom Collision Query Params 
+	 */
+	
+	static FCollisionQueryParams CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject);
+	
 	/*
 	 * @brief Made a cone Sweep trace test and return HitResult
 	 * @param World: World reference
@@ -120,4 +135,22 @@ public:
 		bool bDebug);
 
 #pragma endregion Trace
+
+#pragma region Cooldown
+	//------------------
+
+public:
+	
+	/*
+	 * @brief Start cooldown logic
+	 * @param World: World reference
+	 * @param Duration: durartion of cooldown
+	 * @param FTimerHandle: timerHandler output
+	 * @return the cooldown timerhandler
+	 */
+	UFUNCTION(BlueprintCallable)
+	static void StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTimerHandle& timerHandler);
+	
+	//------------------
+#pragma endregion Cooldown
 };

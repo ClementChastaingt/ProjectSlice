@@ -102,7 +102,9 @@ void UPS_ForceComponent::UnloadPush()
 }
 
 void UPS_ForceComponent::ReleasePush()
-{	
+{
+	if(!_bIsPushLoading || GetWorld()->GetTimerManager().IsTimerActive(_CoolDownTimerHandle)) return;
+	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
 	{
 		StopPush();
@@ -194,6 +196,8 @@ void UPS_ForceComponent::SetupPush()
 {
 	if(!IsValid(GetWorld())) return;
 
+	if(_bIsPushLoading || GetWorld()->GetTimerManager().IsTimerActive(_CoolDownTimerHandle)) return;
+
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
 	_StartForcePushTimestamp = GetWorld()->GetAudioTimeSeconds();
@@ -210,6 +214,9 @@ void UPS_ForceComponent::StopPush()
 	_bIsPushLoading = false;
 	_bIsPushReleased = true;
 	bIsQuickPush = false;
+
+	//TODO:: Made cooldown proportional to force weight
+	UPSFl::StartCooldown(GetWorld(),CoolDownDuration,_CoolDownTimerHandle);
 }
 
 //------------------
@@ -224,6 +231,7 @@ void UPS_ForceComponent::OnScrewResetEndEventReceived()
 	//Release force when screw reseting finished
 	ReleasePush();
 }
+
 void UPS_ForceComponent::AttachScrew()
 {
 	USkeletalMeshComponent* playerSkel = _PlayerCharacter->GetMesh();
@@ -269,6 +277,7 @@ void UPS_ForceComponent::AttachScrew()
 
 //------------------
 #pragma endregion Screw
+	
 	
 	
 

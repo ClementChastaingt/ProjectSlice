@@ -150,4 +150,22 @@ protected:
 
 	//------------------
 #pragma endregion Screw
+	
+#pragma region Cooldown
+	//------------------
+	
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnCoolDownEnded;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Cooldown", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float CoolDownDuration = 0.2f;
+
+private:
+	UPROPERTY(Transient)
+	FTimerHandle _CoolDownTimerHandle;
+	
+	//------------------
+#pragma endregion Cooldown
 };

@@ -263,5 +263,20 @@ void UPSFl::SweepConeMultiByChannel(
 	if(bDebug)DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
 }
 
+#pragma region Cooldown
+//------------------
+
+void UPSFl::StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTimerHandle& timerHandler)
+{
+	if (!World) return;
+	
+	FTimerDelegate timerDelegate;
+	World->GetTimerManager().SetTimer(timerHandler, timerDelegate, coolDownDuration, false);
+}
+
+//------------------
+#pragma endregion Cooldown
+
+
 
 
