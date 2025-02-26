@@ -103,7 +103,7 @@ void UPS_ForceComponent::UnloadPush()
 
 void UPS_ForceComponent::ReleasePush()
 {
-	if(!_bIsPushLoading || GetWorld()->GetTimerManager().IsTimerActive(_CoolDownTimerHandle)) return;
+	if(GetWorld()->GetTimerManager().IsTimerActive(_CoolDownTimerHandle)) return;
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
 	{
