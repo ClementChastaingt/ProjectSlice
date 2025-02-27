@@ -65,6 +65,9 @@ public:
 	
 	FORCEINLINE float GetInputTimeWeigtAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.0f, 1.0f);};
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FRotator GetPushForceRotation() const{return _PushForceRotation;}
+
 	FORCEINLINE float GetReleasePushTimestamp() const{ return _ReleasePushTimestamp; }
 
 	FORCEINLINE void SetReleasePushTimestamp(const float ReleasePushTimestamp){_ReleasePushTimestamp = ReleasePushTimestamp;}
@@ -79,7 +82,7 @@ public:
 	FOnPSDelegate_Bool OnSpawnPushDistorsion;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Vector_Rotator OnSpawnPushBurst;
+	FOnPSDelegate_Vector_Vector OnSpawnPushBurst;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Vector_Rotator OnPushTargetUpdate;
@@ -88,6 +91,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Status|Push")
 	bool bIsQuickPush;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float PushDuration = 3.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 25.0f;
@@ -114,6 +120,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
 	USoundBase* PushSound;
 
+	UFUNCTION()
+	void Impulse(UMeshComponent* inComp, const FVector impulse);
+
 private:
 	UPROPERTY(Transient)
 	bool _bIsPushLoading;
@@ -126,7 +135,10 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	float _PushForceWeight;
-
+	
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	FRotator _PushForceRotation;
+	
 	UPROPERTY(Transient)
 	float _StartForcePushTimestamp;
 	

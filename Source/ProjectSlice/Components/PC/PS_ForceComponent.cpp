@@ -151,7 +151,8 @@ void UPS_ForceComponent::ReleasePush()
 	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
 	//Sort comp result
-	TArray<UMeshComponent*> sortedHitResult;
+	TArray<UMeshComponent*> sortedMeshComp;
+	TArray<FHitResult> filteredHitResult;
 	for (FHitResult outHit : outHits)
 	{
 		if (IsValid(outHit.GetComponent()))
@@ -159,29 +160,65 @@ void UPS_ForceComponent::ReleasePush()
 			UMeshComponent* compHit = Cast<UMeshComponent>(outHit.GetComponent());
 			if(!IsValid(compHit) || !compHit->IsSimulatingPhysics()) continue;
 			
-			sortedHitResult.AddUnique(Cast<UMeshComponent>(compHit)); // Add valid hit comp to the result array
+			const int32 index = sortedMeshComp.AddUnique(Cast<UMeshComponent>(compHit)); // Add valid hit comp to the result array
+			filteredHitResult.Insert(outHit, index);
 		}
 	}
 
-	//Impulse
-	for (UMeshComponent* outComp : sortedHitResult)
+	//Sort HitResult by distance
+	int i = 0;
+	TArray<FHitResult> sortedHitResult = filteredHitResult;
+	for (UMeshComponent* outComp : sortedMeshComp)
 	{
-		//Direction
-		//FVector pushDir = outHit.TraceStart + outHit.Location;
+		if(!filteredHitResult.IsValidIndex(i)) continue;
+				
+		FHitResult hitResult = filteredHitResult[i];
+		const float studiedDist = hitResult.Distance;
 
+		int f = 0;
+		int b = i;
+		for (FHitResult outfilteredHit : filteredHitResult)
+		{
+			//TODO :: rework that
+			if(studiedDist < outfilteredHit.Distance)
+			{
+				sortedHitResult.Swap(f, b);
+				b = f;
+			}
+			f++;
+		}
+		i++;
+	}
+	
+	
+	//Impulse
+	for (FHitResult outHitResult : sortedHitResult)
+	{
+		if(!IsValid(outHitResult.GetComponent())) continue;
+		UMeshComponent* outComp = Cast<UMeshComponent>(outHitResult.GetComponent());
+		if(!IsValid(outComp)) continue;
+			
 		//Calculate mass for weight force 
 		mass = UPSFl::GetObjectUnifiedMass(outComp);
 
-		//impulse
-		outComp->AddImpulse(start + dir * (force * mass), NAME_None, false);
+		//Impulse with delay
+		FTimerHandle timerHandle;
+		FTimerDelegate timerDelegate;
 
-		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f"),__FUNCTION__,*outComp->GetOwner()->GetActorNameOrLabel(), *outComp->GetName(), force, mass, PushForce, alphaInput);
+		const float duration = PushDuration * outHitResult.Distance;
+			
+		timerDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outComp, start + dir * (force * mass)); 
+		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, duration, false);
+		
+		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outComp->GetOwner()->GetActorNameOrLabel(), *outComp->GetName(), force, mass, PushForce, alphaInput, duration);
+
 	}
 
 	//---Feedbacks----
 	//Push cone burst feedback
-	OnSpawnPushBurst.Broadcast(start,UKismetMathLibrary::FindLookAtRotation(start, start + dir * 500.0f).Clamp());
-	
+	_PushForceRotation = UKismetMathLibrary::FindLookAtRotation(start, start + dir * ConeLength).Clamp();
+	OnSpawnPushBurst.Broadcast(start, dir * ConeLength);
+		
 	//Play the sound if specified
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
@@ -189,6 +226,12 @@ void UPS_ForceComponent::ReleasePush()
 	//Stop push
 	StopPush();
 
+}
+
+void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse)
+{
+	//impulse
+	inComp->AddImpulse(impulse, NAME_None, false);
 }
 
 void UPS_ForceComponent::SetupPush()
