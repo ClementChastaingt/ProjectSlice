@@ -122,7 +122,6 @@ void UPS_ForceComponent::ReleasePush()
 			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
 	}
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
-		
 	
 	//Setup force var
 	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.5f, 1.0f);
