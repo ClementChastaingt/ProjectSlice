@@ -505,7 +505,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	}
 
 	//Determine Sight Hit
-	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushLoading() && !_PlayerCharacter->GetForceComponent()->IsPushReleased();
+	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
 	SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	

@@ -134,7 +134,7 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		dir.Normalize();
-		start = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + dir * 100.0f;
+		start = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + dir;
 	}
 	else
 	{
@@ -150,51 +150,29 @@ void UPS_ForceComponent::ReleasePush()
 	
 	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
-	//Sort comp result
-	TArray<UMeshComponent*> sortedMeshComp;
+	// Remove duplicate components
+	TSet<UPrimitiveComponent*> uniqueComp;
 	TArray<FHitResult> filteredHitResult;
 	for (FHitResult outHit : outHits)
 	{
-		if (IsValid(outHit.GetComponent()))
+		if(!IsValid(outHit.GetComponent()) || !outHit.GetComponent()->IsSimulatingPhysics()) continue;
+		
+		if (outHit.GetComponent() && !uniqueComp.Contains(outHit.GetComponent()))
 		{
-			UMeshComponent* compHit = Cast<UMeshComponent>(outHit.GetComponent());
-			if(!IsValid(compHit) || !compHit->IsSimulatingPhysics()) continue;
-			
-			const int32 index = sortedMeshComp.AddUnique(Cast<UMeshComponent>(compHit)); // Add valid hit comp to the result array
-			filteredHitResult.Insert(outHit, index);
+			uniqueComp.Add(outHit.GetComponent());
+			filteredHitResult.Add(outHit);
 		}
 	}
 
-	//Sort HitResult by distance
-	int i = 0;
-	TArray<FHitResult> sortedHitResult = filteredHitResult;
-	for (UMeshComponent* outComp : sortedMeshComp)
+	// Sort by distance (nearest to farthest)
+	Algo::Sort(filteredHitResult, [](const FHitResult& A, const FHitResult& B)
 	{
-		if(!filteredHitResult.IsValidIndex(i)) continue;
-				
-		FHitResult hitResult = filteredHitResult[i];
-		const float studiedDist = hitResult.Distance;
-
-		int f = 0;
-		int b = i;
-		for (FHitResult outfilteredHit : filteredHitResult)
-		{
-			//TODO :: rework that
-			if(studiedDist < outfilteredHit.Distance)
-			{
-				sortedHitResult.Swap(f, b);
-				b = f;
-			}
-			f++;
-		}
-		i++;
-	}
-	
+		return A.Distance < B.Distance;
+	});
 	
 	//Impulse
-	for (FHitResult outHitResult : sortedHitResult)
+	for (FHitResult outHitResult : filteredHitResult)
 	{
-		if(!IsValid(outHitResult.GetComponent())) continue;
 		UMeshComponent* outComp = Cast<UMeshComponent>(outHitResult.GetComponent());
 		if(!IsValid(outComp)) continue;
 			
@@ -204,14 +182,15 @@ void UPS_ForceComponent::ReleasePush()
 		//Impulse with delay
 		FTimerHandle timerHandle;
 		FTimerDelegate timerDelegate;
-
-		const float duration = PushDuration * outHitResult.Distance;
+		
+		//start start + (dir * ConeLength)
+		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outComp->GetComponentLocation());
+		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength /** FMath::DegreesToRadians(ConeAngleDegrees)*/);
 			
 		timerDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outComp, start + dir * (force * mass)); 
 		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, duration, false);
 		
 		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outComp->GetOwner()->GetActorNameOrLabel(), *outComp->GetName(), force, mass, PushForce, alphaInput, duration);
-
 	}
 
 	//---Feedbacks----
@@ -243,16 +222,18 @@ void UPS_ForceComponent::SetupPush()
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
 	_StartForcePushTimestamp = GetWorld()->GetAudioTimeSeconds();
-	
+
+	_bIsPushing = true;
 	_bIsPushLoading = true;
 	_bIsPushReleased = false;
-	OnPushEvent.Broadcast(_bIsPushLoading);
+	OnPushEvent.Broadcast(_bIsPushing);
 }
 
 void UPS_ForceComponent::StopPush()
 {
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 
+	_bIsPushing = false;
 	_bIsPushLoading = false;
 	_bIsPushReleased = true;
 	bIsQuickPush = false;

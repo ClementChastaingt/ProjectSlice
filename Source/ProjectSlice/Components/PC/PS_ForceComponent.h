@@ -57,6 +57,8 @@ public:
 	UFUNCTION()
 	void StopPush();
 
+	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
+
 	FORCEINLINE bool IsPushLoading() const{return _bIsPushLoading;}
 
 	FORCEINLINE bool IsPushReleased() const{return _bIsPushReleased;}
@@ -91,10 +93,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Status|Push")
 	bool bIsQuickPush;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
-	float PushDuration = 3.0f;
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 25.0f;
 
@@ -124,6 +123,9 @@ protected:
 	void Impulse(UMeshComponent* inComp, const FVector impulse);
 
 private:
+	UPROPERTY(Transient)
+	bool _bIsPushing;
+	
 	UPROPERTY(Transient)
 	bool _bIsPushLoading;
 

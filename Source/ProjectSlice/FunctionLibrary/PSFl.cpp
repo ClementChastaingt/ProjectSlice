@@ -200,7 +200,11 @@ void UPSFl::SweepConeMultiByChannel(
 	}
 	
 	// Debug: Draw the cone (optional)
-	if(bDebug) DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+	if(bDebug)
+	{
+		DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+		DrawDebugSphere(World, ConeApex + (ConeDirection * ConeLength), ConeLength * ConeAngleRadians, 12, FColor::Green, false, 1.0f);
+	}
 }
 
 void UPSFl::SweepConeMultiByChannel(
