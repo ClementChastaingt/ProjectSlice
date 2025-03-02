@@ -248,16 +248,18 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 {
 	if(!IsValid(GetWorld())) return;
 
+	//Glasses
+	CreatePostProcessMaterial(FishEyeMaterial, _FishEyeMatInst);
+	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
+	CreatePostProcessMaterial(VignetteMaterial, _VignetteMatInst);
+	CreatePostProcessMaterial(OutlineMaterial, _OutlineMatInst);
+	
 	//Dash
 	CreatePostProcessMaterial(SlowmoMaterial, _SlowmoMatInst);
 
 	//Slowmo
 	CreatePostProcessMaterial(DashMaterial, _DashMatInst);
-
-	//Glasses
-	CreatePostProcessMaterial(FishEyeMaterial, _FishEyeMatInst);
-	CreatePostProcessMaterial(VignetteMaterial, _VignetteMatInst);
-	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
+	
 
 	//Update postprocess visibility
 	UpdateWeightedBlendPostProcess();
@@ -286,9 +288,9 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 		const float alpha = slowmo->GetSlowmoAlpha();
 		if(slowmo->IsIsSlowmoTransiting())
 		{
-			if(_WeightedBlendableArray.IsValidIndex(0) && _WeightedBlendableArray[0].Weight != 1.0f)
+			if(_WeightedBlendableArray.IsValidIndex(4) && _WeightedBlendableArray[4].Weight != 1.0f)
 			{
-				_WeightedBlendableArray[0].Weight = 1.0f;
+				_WeightedBlendableArray[4].Weight = 1.0f;
 				UpdateWeightedBlendPostProcess();
 			}
 			_SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),alpha);
@@ -302,9 +304,9 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 {
 	if(!IsValid(_SlowmoMatInst)) return;
 
-	if(_WeightedBlendableArray.IsValidIndex(0))
+	if(_WeightedBlendableArray.IsValidIndex(4))
 	{
-		_WeightedBlendableArray[0].Weight = 0.0f;
+		_WeightedBlendableArray[4].Weight = 0.0f;
 		UpdateWeightedBlendPostProcess();
 	}
 	
@@ -333,7 +335,7 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 	if(!IsValid(_DashMatInst) || !IsValid(GetWorld())) return;
 
 	//Blend PostProcess
-	if(_WeightedBlendableArray.IsValidIndex(1)) _WeightedBlendableArray[1].Weight = bActivate ? 1.0f : 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(5)) _WeightedBlendableArray[5].Weight = bActivate ? 1.0f : 0.0f;
 	UpdateWeightedBlendPostProcess();
 
 	//Desactivation
@@ -385,8 +387,8 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 		if(bActivate)
 		{
 			//Start Fish Eye && Vignette
-			if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 1.0f;
-			if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = 1.0f;		
+			if(_WeightedBlendableArray.IsValidIndex(0)) _WeightedBlendableArray[0].Weight = 1.0f;
+			if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 1.0f;		
 			UpdateWeightedBlendPostProcess();
 			
 			//Start WBP_Glasses 
@@ -428,9 +430,10 @@ void UPS_PlayerCameraComponent::OnStopGlasses()
 	_bGlassesIsActive = false;
 
 	//Stop completly PostProcess
+	if(_WeightedBlendableArray.IsValidIndex(0)) _WeightedBlendableArray[0].Weight = 0.0f;
+	if(_WeightedBlendableArray.IsValidIndex(1)) _WeightedBlendableArray[1].Weight = 0.0f;
 	if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 0.0f;
 	if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = 0.0f;
-	if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = 0.0f;
 
 	UpdateWeightedBlendPostProcess();
 
@@ -451,7 +454,8 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	   _BlendWeight = UKismetMathLibrary::FInterpTo(_BlendWeight,_bIsUsingGlasses,deltaTime,GlassesTransitionSpeed);
 
 		//Blend Master Material Glasses
-		if(_WeightedBlendableArray.IsValidIndex(4)) _WeightedBlendableArray[4].Weight = _BlendWeight;
+		if(_WeightedBlendableArray.IsValidIndex(1)) _WeightedBlendableArray[1].Weight = _BlendWeight;
+		if(_WeightedBlendableArray.IsValidIndex(3)) _WeightedBlendableArray[3].Weight = _BlendWeight;
 		UpdateWeightedBlendPostProcess();
 
 		//Callback for Blur transition on WBP_Glasses

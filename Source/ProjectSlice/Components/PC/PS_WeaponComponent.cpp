@@ -511,7 +511,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::ForOneFrame, _SightHitResult, true);
+		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	//Laser
 	LaserTarget = bUseHookStartForLaser ? target : UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 100.0f : MaxFireDistance);
 	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;

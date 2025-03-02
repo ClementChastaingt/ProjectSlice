@@ -147,12 +147,6 @@ public:
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
-	UMaterialInterface* SlowmoMaterial = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
-	UMaterialInterface* DashMaterial = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* GlassesMaterial = nullptr;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
@@ -160,6 +154,15 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* VignetteMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
+	UMaterialInterface* OutlineMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
+	UMaterialInterface* SlowmoMaterial = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
+	UMaterialInterface* DashMaterial = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Dash",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
@@ -189,13 +192,7 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FWeightedBlendable> _WeightedBlendableArray;
-
-	UPROPERTY(Transient)
-	UMaterialInstanceDynamic* _SlowmoMatInst;
-	
-	UPROPERTY(Transient)
-	UMaterialInstanceDynamic* _DashMatInst;
-	
+		
 	UPROPERTY(Transient)
 	UMaterialInstanceDynamic* _GlassesMatInst;
 
@@ -204,6 +201,15 @@ private:
 	
 	UPROPERTY(Transient)
 	UMaterialInstanceDynamic* _VignetteMatInst;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _OutlineMatInst;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _SlowmoMatInst;
+	
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _DashMatInst;
 	
 	UPROPERTY(Transient)
 	float _DashStartTimestamp;
