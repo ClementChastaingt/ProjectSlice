@@ -33,7 +33,7 @@ public:
 public:
 	UFUNCTION()
 	void InitSliceObject();
-
+	
 	//Getters && Setters
 	UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
 

@@ -2,6 +2,8 @@
 
 
 #include "PS_SlicedComponent.h"
+
+#include "Editor.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "Components/BrushComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
@@ -67,9 +69,13 @@ void UPS_SlicedComponent::InitSliceObject()
 	GetOwner()->SetRootComponent(this);
 	SetWorldTransform(_RootMesh->GetComponentTransform());
 	SetMassScale(NAME_None, _RootMesh->GetMassScale());
+	this->SetAffectDistanceFieldLighting(true);
 	//SetRelativeTransform(_RootMesh->GetRelativeTransform());
 	
 	//Destroy base StaticMesh comp
+	UKismetProceduralMeshLibrary::Mesh
+	this->MeshD
+	NewStaticMesh->GetMeshDescription(0) = MeshDescription;
 	_RootMesh->DestroyComponent(true);
 
 	//Init Collision 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ProceduralMeshComponent.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "PSFl.generated.h"
 
@@ -68,6 +69,9 @@ public:
 	 * @return the Vector velocity Clamped
 	 */
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
+
+	UFUNCTION()
+	UStaticMesh* CreateMeshFromProcMesh(UProceduralMeshComponent* procMesh);
 
 #pragma endregion Utilities
 
