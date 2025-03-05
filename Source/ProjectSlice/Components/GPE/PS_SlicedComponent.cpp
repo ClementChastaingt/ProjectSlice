@@ -8,6 +8,7 @@
 #include "Components/BrushComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 
 // Sets default values for this component's properties
@@ -73,9 +74,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	//SetRelativeTransform(_RootMesh->GetRelativeTransform());
 	
 	//Destroy base StaticMesh comp
-	UKismetProceduralMeshLibrary::Mesh
-	this->MeshD
-	NewStaticMesh->GetMeshDescription(0) = MeshDescription;
+	//UPSFl::CreateMeshFromProcMesh(this);
 	_RootMesh->DestroyComponent(true);
 
 	//Init Collision 
