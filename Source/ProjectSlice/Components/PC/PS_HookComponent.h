@@ -205,7 +205,7 @@ protected:
 	void UnwrapCableByLast();
 
 	UFUNCTION()
-	FSCableWarpParams TraceCableWrap(const USceneComponent* cable, const bool bReverseLoc) const;
+	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
 
 	UFUNCTION()
 	void AddSphereCaps(const FSCableWarpParams& currentTraceParams);

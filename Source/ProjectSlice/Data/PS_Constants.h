@@ -59,8 +59,6 @@
 // === //
 #define TAG_HURTBOX "Hurtbox"
 #define TAG_HITBOX "Hitbox"
-#define TAG_CABLESTART "CableStart"
-#define TAG_CABLEEND "CableEnd"
 #define TAG_UNPARKOURABLE "Unparkourable"
 // === //
 #pragma endregion 3C
@@ -85,6 +83,8 @@
 #pragma region SocketName
 //__________________________________________________
 #define SOCKET_HOOK "HookAttach"
+#define SOCKET_CABLE_START "CableStart"
+#define SOCKET_CABLE_END "CableEnd"
 #define SOCKET_HAND_LEFT "middle_01_l"
 #define SOCKET_SCREW_INDEX "SC_Index_01_Screw"
 #define SOCKET_SCREW_MIDDLE "SC_Middle_01_Screw"

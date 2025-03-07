@@ -157,7 +157,7 @@ void UPS_HookComponent::WrapCable()
 	//-----Add Wrap Logic-----
 	//Init works Variables
 	UCableComponent* latestCable = nullptr;
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
 	FSCableWarpParams currentTraceCableWarp;
 
 	//Add By First
@@ -275,7 +275,8 @@ void UPS_HookComponent::WrapCable()
 		newCable->CollisionFriction = FirstCable->CollisionFriction;
 		newCable->bEnableCollision = FirstCable->bEnableCollision;
 		newCable->bEnableStiffness = FirstCable->bEnableStiffness;
-		
+		newCable->bUseSubstepping = FirstCable->bUseSubstepping;
+		newCable->SubstepTime = FirstCable->SubstepTime;
 	}
 
 	//----Debug Cable Color---
@@ -317,14 +318,14 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	//----Unwrap Test-----
 	const TArray<AActor*> actorsToIgnore;
 
-	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(TAG_CABLESTART);
-	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(TAG_CABLEEND);
-	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(TAG_CABLEEND);
+	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_START);
+	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_END);
+	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(SOCKET_CABLE_END);
 
-	const FVector currentCableDirection = UKismetMathLibrary::FindLookAtRotation(currentCableEndSocketLoc, pastCableStartSocketLoc).Vector();
+	const FVector currentCableDirection =  UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(currentCableEndSocketLoc, pastCableStartSocketLoc));
 	const float  currentCableDirectionDistance = UKismetMathLibrary::Vector_Distance(currentCableEndSocketLoc, pastCableStartSocketLoc);
 	
-	const FVector pastCableDirection = UKismetMathLibrary::FindLookAtRotation(pastCableEndSocketLoc, pastCableStartSocketLoc).Vector();
+	const FVector pastCableDirection =  UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(pastCableEndSocketLoc, pastCableStartSocketLoc));
 
 	const FVector start = currentCableEndSocketLoc;
 	const FVector endSafeCheck = currentCableEndSocketLoc + currentCableDirection * (currentCableDirectionDistance * 0.91);
@@ -338,16 +339,15 @@ void UPS_HookComponent::UnwrapCableByFirst()
 
 	//If no hit, or hit very close to trace end then continue unwrap
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return;
+	
 	//----Main Trace-----
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end,  UEngineTypes::ConvertToTraceType(ECC_Rope),
-false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Cyan);
-	
+	false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Cyan);
 
 	//If no hit, or hit very close to trace end then process unwrap
-	float currentUnwrapAlpha = CablePointUnwrapAlphaArray[0];
 	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
 		CablePointUnwrapAlphaArray[0] = 0.0f;
@@ -357,7 +357,7 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
 	CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
-	if(currentUnwrapAlpha < CableUnwrapFirstFrameDelay) return;
+	if(CablePointUnwrapAlphaArray[0] < CableUnwrapFirstFrameDelay) return;
 
 	//----Destroy and remove Last Cable tick-----
 	//If attached cables are more than 0 remove the second one (when first cable gets closer to it)
@@ -429,15 +429,15 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//----Unwrap Test-----
 	const TArray<AActor*> actorsToIgnore;
 
-	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(TAG_CABLESTART);
-	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(TAG_CABLEEND);
-	const FVector currentCableStartSocketLoc = currentCable->GetSocketLocation(TAG_CABLESTART);
-	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(TAG_CABLEEND);
+	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_START);
+	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_END);
+	const FVector currentCableStartSocketLoc = currentCable->GetSocketLocation(SOCKET_CABLE_START);
+	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(SOCKET_CABLE_END);
 
-	const FVector currentCableDirection = UKismetMathLibrary::FindLookAtRotation(currentCableStartSocketLoc, pastCableEndSocketLoc).Vector();
+	const FVector currentCableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(currentCableStartSocketLoc, pastCableEndSocketLoc));
 	const float  currentCableDirectionDistance = UKismetMathLibrary::Vector_Distance(currentCableStartSocketLoc, pastCableEndSocketLoc);
 	
-	const FVector pastCableDirection = UKismetMathLibrary::FindLookAtRotation(pastCableStartSocketLoc, pastCableEndSocketLoc).Vector();
+	const FVector pastCableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(pastCableStartSocketLoc, pastCableEndSocketLoc));
 
 	const FVector start = currentCableStartSocketLoc;
 	const FVector endSafeCheck = start + currentCableDirection * (currentCableDirectionDistance * 0.91);
@@ -509,43 +509,42 @@ false, actorsToIgnore, bDebugTick ? EDrawDebugTrace::ForOneFrame : EDrawDebugTra
 	CablePointLocations.RemoveAt(cablePointLocationsLastIndex);
 
 	//----Set first cable Loc && Attach----
-	// if(CablePointLocations.IsValidIndex(0))
-	// {
-	// 	UCableComponent* firstCable;
-	// 	cableListLastIndex = CableListArray.Num()-1;
-	// 	cablePointLocationsLastIndex = CablePointLocations.Num()-1;
-	// 	float cablePointComponentsLastIndex = CablePointComponents.Num()-1;
-	// 	
-	// 	if(!CableListArray.IsValidIndex(cableListLastIndex) || !CablePointLocations.IsValidIndex(cablePointLocationsLastIndex) || !CablePointComponents.IsValidIndex(cablePointComponentsLastIndex)) return;
-	// 	
-	// 	firstCable = CableListArray[cableListLastIndex];
-	//
-	// 	//Set the latest oldest point as cable active point && attach cable to the latest component point
-	// 	firstCable->SetWorldLocation(CablePointLocations[cablePointLocationsLastIndex], false,nullptr, ETeleportType::TeleportPhysics);
-	// 	firstCable->AttachToComponent(CablePointComponents[cablePointComponentsLastIndex], AttachmentRule);
-	// }
-	// else
-	// {
+	if(CablePointLocations.IsValidIndex(CablePointLocations.Num()-1))
+	{
+		UCableComponent* firstCable;
+		cableListLastIndex = CableListArray.Num()-1;
+		cablePointLocationsLastIndex = CablePointLocations.Num()-1;
+		float cablePointComponentsLastIndex = CablePointComponents.Num()-1;
+		
+		if(!CableListArray.IsValidIndex(cableListLastIndex) || !CablePointLocations.IsValidIndex(cablePointLocationsLastIndex) || !CablePointComponents.IsValidIndex(cablePointComponentsLastIndex)) return;
+		
+		firstCable = CableListArray[cableListLastIndex];
 	
-	cableListLastIndex = CableListArray.Num()-1;
-	if(!CableListArray.IsValidIndex(cableListLastIndex)) return;
-	UCableComponent* firstCable = CableListArray[cableListLastIndex];
+		//Set the latest oldest point as cable active point && attach cable to the latest component point
+		firstCable->SetWorldLocation(CablePointLocations[cablePointLocationsLastIndex], false,nullptr, ETeleportType::TeleportPhysics);
+		firstCable->AttachToComponent(CablePointComponents[cablePointComponentsLastIndex], AttachmentRule);
+	}
+	else
+	{
+		cableListLastIndex = CableListArray.Num()-1;
+		if(!CableListArray.IsValidIndex(cableListLastIndex)) return;
+		UCableComponent* firstCable = CableListArray[cableListLastIndex];
 
-	//Reset to HookAttach default set
-	AttachCableToHookThrower(firstCable);
-
-	// }
+		//Reset to HookAttach default set
+		AttachCableToHookThrower(firstCable);
+	}
 	
 }
 
-FSCableWarpParams UPS_HookComponent::TraceCableWrap(const USceneComponent* cable, const bool bReverseLoc) const
+FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const
 {
 	if(IsValid(cable) && IsValid(GetWorld()))
 	{
 		FSCableWarpParams out;
+
+		FVector start = cable->GetSocketLocation(SOCKET_CABLE_START);
+		FVector end = cable->GetSocketLocation(SOCKET_CABLE_END);
 		
-		FVector start = cable->GetSocketLocation(TAG_CABLESTART);
-		FVector end = cable->GetSocketLocation(TAG_CABLEEND);
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
@@ -683,6 +682,7 @@ void UPS_HookComponent::HookObject()
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
+	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
 	FirstCable->SetVisibility(true);
 
 	//Setup  new attached component
@@ -708,12 +708,7 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttach
 	UCableComponent* cable = IsValid(overrideAttachedCable) ? overrideAttachedCable : FirstCable;
 
 	if(!IsValid(cable)) return;
-	
-	cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale,  SOCKET_HOOK);
-	// cable->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));
-	// cable->SetWorldScale3D(FVector(1.0f));
-	//
-	// UE_LOG(LogTemp, Warning, TEXT("Relative Location: %s"), *cable->GetRelativeLocation().ToString());
+	cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
 }
 
 
