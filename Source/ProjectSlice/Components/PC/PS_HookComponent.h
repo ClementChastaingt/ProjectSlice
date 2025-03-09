@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_HookComponent.generated.h"
 
 
@@ -85,7 +86,7 @@ protected:
 	bool bDebugTick = false;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
-	bool bDebugDrawLine = false;
+	bool bDebugCable = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSwing = false;
@@ -111,9 +112,9 @@ public:
 	FORCEINLINE float GetAlphaTense() const{return _AlphaTense;}
 
 protected:
-	//Status
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
-	bool bIsAddByFirst = false;
+	//Status	
+	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
+	// bool bIsAddByFirst = false;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
@@ -154,15 +155,18 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(ToolTip="Use cable shared settings to the start cable, like width, length, basically all settings exlcuding the ones that cannot be changed at runtime, like segments, and etc."))
 	bool bCableUseSharedSettings = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable trace sphere radius"))
+	float CableTraceSphereRadius = 2.5f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
-	float CableWrapErrorTolerance = 0.002;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."))
-	float CableUnwrapErrorMultiplier = 5.0f;
+	float CableWrapErrorTolerance = 0.02;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap trace distance, between start point and second cable point, this value should be around from 5 to 20 for effective work."))
-	float CableUnwrapDistance = 10.0f;
+	float CableUnwrapDistance = 20.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."))
+	float CableUnwrapErrorMultiplier = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."))
 	float CableUnwrapFirstFrameDelay = 4.0f;
@@ -174,10 +178,10 @@ protected:
 	float CablePullSlackDistance = 100.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
-	float CableSlackTensDistance = 200.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
 	float CableBreakTensDistance = 500.0f;
+	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
+	// float CableSlackTensDistance = 200.0f;
 	
 	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
 	// float CableMaxTensMassThreshold = 50000.0f;
@@ -196,7 +200,10 @@ protected:
 	void CableWraping();
 	
 	UFUNCTION()
-	void WrapCable();
+	void WrapCableByFirst();
+
+	UFUNCTION()
+	void WrapCableByLast();
 	
 	UFUNCTION()
 	void UnwrapCableByFirst();
@@ -208,7 +215,7 @@ protected:
 	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
 
 	UFUNCTION()
-	void AddSphereCaps(const FSCableWarpParams& currentTraceParams);
+	void AddSphereCaps(const FSCableWarpParams& currentTraceParams, const bool bIsAddByFirst);
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION()
@@ -251,11 +258,9 @@ public:
 
 	UFUNCTION()
 	void ResetWindeHook();
-
-
+	
 	UFUNCTION()
 	void DettachHook();
-
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE float GetForceWeight() const{return ForceWeight;}
@@ -270,6 +275,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsCableWinderPull() const{return bCableWinderPull;}
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnHookObject;
 
 protected:
 	//Status
