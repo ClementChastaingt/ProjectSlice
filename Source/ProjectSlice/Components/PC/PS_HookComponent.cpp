@@ -52,9 +52,10 @@ void UPS_HookComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
-	
-	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
 
+	//Callback
+	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
+	
 	if(IsValid(FirstCable))
 		FirstCableDefaultLenght = FirstCable->CableLength;
 
@@ -69,6 +70,15 @@ void UPS_HookComponent::BeginPlay()
 	
 	}
 
+	//Custom tick - substep to tick at 120 fps (more stable but cable can flicker on unwrap)
+	if(bCanUseSubstepTick)
+	{
+		FTimerDelegate TimerDelegate;
+        TimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTick);
+		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/120.0f, true);
+	}
+	
+	//Constraint display
 	GetConstraintAttachMaster()->SetVisibility(bDebugSwing);
 	GetConstraintAttachSlave()->SetVisibility(bDebugSwing);
 	
@@ -80,7 +90,7 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	CableWraping();
+	if(!bCanUseSubstepTick) CableWraping();
 	PowerCablePull();
 
 }
@@ -134,6 +144,13 @@ void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 
 #pragma region Cable_Wrap_Logic
 //------------------
+
+void UPS_HookComponent::SubstepTick()
+{
+	if(!bCanUseSubstepTick) return;
+	
+	CableWraping();
+}
 
 void UPS_HookComponent::CableWraping()
 {
@@ -628,7 +645,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 
 	const FVector pastCableStartSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_START);
 	const FVector pastCableEndSocketLoc = pastCable->GetSocketLocation(SOCKET_CABLE_END);
-	const FVector currentCableStartSocketLoc = /*currentCable->GetSocketLocation(SOCKET_CABLE_START) : */HookThrower->GetSocketLocation(SOCKET_HOOK);
+	const FVector currentCableStartSocketLoc = currentCable->GetSocketLocation(SOCKET_CABLE_START)  /*HookThrower->GetSocketLocation(SOCKET_HOOK)*/;
 	const FVector currentCableEndSocketLoc = currentCable->GetSocketLocation(SOCKET_CABLE_END);
 
 	const FVector currentCableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(currentCableStartSocketLoc, pastCableEndSocketLoc));
@@ -724,7 +741,8 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 	{
 		FSCableWarpParams out;
 
-		FVector start = bReverseLoc ? cable->GetSocketLocation(SOCKET_CABLE_START) : HookThrower->GetSocketLocation(SOCKET_HOOK);
+		//FVector start = bReverseLoc ? cable->GetSocketLocation(SOCKET_CABLE_START) : HookThrower->GetSocketLocation(SOCKET_HOOK);
+		FVector start = cable->GetSocketLocation(SOCKET_CABLE_START);
 		FVector end = cable->GetSocketLocation(SOCKET_CABLE_END);
 
 		out.CableStart = bReverseLoc ? end : start;
@@ -864,7 +882,9 @@ void UPS_HookComponent::HookObject()
 	AttachCableToHookThrower(FirstCable);
 	
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
+	//TODO :: Use hook location is too more glitchy for the moment 
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
+	//FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.GetComponent()->GetComponentLocation());
 	DrawDebugPoint(GetWorld(), FirstCable->EndLocation, 100.f, FColor::Orange, true);
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
@@ -1124,10 +1144,20 @@ void UPS_HookComponent::PowerCablePull()
 	
 	UCableComponent* firstCable = CableListArray[0];
 	
-	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(FName("CableStart")));
+	//FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(firstCable->GetSocketLocation(SOCKET_CABLE_END), firstCable->GetSocketLocation(SOCKET_CABLE_START));
+	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
 
-	if(bDebugTick && bDebugPull) DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(FName("CableStart")), 20.f, FColor::Orange, false);
+	if(bDebugPull)
+	{
+		DrawDebugLine(GetWorld(), AttachedMesh->GetComponentLocation(),AttachedMesh->GetComponentLocation() + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
+		DrawDebugPoint(GetWorld(), firstCable->GetComponentLocation(), 10.0f, FColor::Yellow, false, 0.1f);
+		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_START), 10.0f, FColor::Yellow, false, 0.1f);
+		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END), 10.0f, FColor::Yellow, false, 0.1f);
+	}
+	//if(bDebugPull) DrawDebugLine(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END),firstCable->GetSocketLocation(SOCKET_CABLE_END) + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
+
+
 
 	//Pull Force
 	if(IsValid(AttachedMesh) &&  IsValid(GetWorld()))

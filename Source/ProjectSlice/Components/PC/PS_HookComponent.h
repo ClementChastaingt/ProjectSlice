@@ -101,7 +101,6 @@ private:
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
 
-	
 
 #pragma region Rope
 	//------------------
@@ -141,6 +140,9 @@ protected:
 	UCurveFloat* CableTensCurve = nullptr;
 	
 	//Parameters
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable", meta=(ToolTip="Enable using of substep constant timer ticks instead of event tick, more stable tracing but issues like cable flickering"))
+	bool bCanUseSubstepTick = true;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point", meta=(ToolTip="Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"))
 	bool bCanUseSphereCaps = true;
 
@@ -197,6 +199,9 @@ protected:
 
 	//Functions
 	UFUNCTION()
+	void SubstepTick();
+	
+	UFUNCTION()
 	void CableWraping();
 	
 	UFUNCTION()
@@ -227,7 +232,10 @@ protected:
 private:
 	
 	UPROPERTY(Transient)
-	float _AlphaTense; 
+	float _AlphaTense;
+
+	UPROPERTY(Transient)
+	FTimerHandle _SubstepTickHandler;
 
 #pragma endregion Rope
 
