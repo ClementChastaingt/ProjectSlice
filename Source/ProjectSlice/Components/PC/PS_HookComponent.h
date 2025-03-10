@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "InputAction.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_HookComponent.generated.h"
@@ -40,6 +42,9 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	
 	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* HookThrower = nullptr;
+
+	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
+	UBoxComponent* HookCollider = nullptr;
 	
 	UPROPERTY(VisibleAnywhere,  Category="Component", meta = (AllowPrivateAccess = "true"))
 	UCableComponent* FirstCable= nullptr;
@@ -67,6 +72,9 @@ public:
 	/** Returns HookThrowerComp subobject **/
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE USkeletalMeshComponent* GetHookThrower() const { return HookThrower; }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE UBoxComponent* GetHookCollider() const { return HookCollider; }
 	
 	/** Returns Swing system ConstraintAttachSlave subobject **/
 	FORCEINLINE UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
@@ -74,10 +82,11 @@ public:
 	/** Returnss Swing system ConstraintAttachMaster subobject  **/
 	FORCEINLINE UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
 
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
@@ -100,6 +109,27 @@ private:
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+#pragma region Arm
+	//------------------
+
+protected:
+	UFUNCTION()
+	void OnHookThrowerOverlapReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
+
+	UFUNCTION()
+	void OnHookThrowerHitReceived(UPrimitiveComponent* hitComponent, AActor* otherActor, UPrimitiveComponent* otherComp, FVector normalImpulse, const FHitResult& hit );
+
+	UFUNCTION()
+	void OnHookCapsuleBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
+
+	UFUNCTION()
+	void OnHookCapsuleEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex);
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	float ArmRepulseStrenght = 10.0f;
+
+#pragma endregion Arm
 
 
 #pragma region Rope

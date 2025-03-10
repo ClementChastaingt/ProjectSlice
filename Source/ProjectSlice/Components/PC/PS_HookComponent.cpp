@@ -24,8 +24,10 @@ UPS_HookComponent::UPS_HookComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	HookThrower = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HookThrower"));
-	HookThrower->SetCollisionProfileName(Profile_NoCollision, true);
-	HookThrower->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HookThrower->SetCollisionProfileName(Profile_NoCollision);
+	
+	HookCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("HookCollider"));
+	HookCollider->SetCollisionProfileName(Profile_NoCollision);
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
@@ -52,22 +54,22 @@ void UPS_HookComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
-
-	//Callback
-	_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
 	
 	if(IsValid(FirstCable))
 		FirstCableDefaultLenght = FirstCable->CableLength;
 
+	//Callback
+	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
+	{
+		_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
+	}
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
-
 	if(IsValid(_PlayerCharacter->GetParkourComponent()))
 	{
 		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
-	
 	}
 
 	//Custom tick - substep to tick at 120 fps (more stable but cable can flicker on unwrap)
@@ -75,7 +77,7 @@ void UPS_HookComponent::BeginPlay()
 	{
 		FTimerDelegate TimerDelegate;
         TimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTick);
-		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/120.0f, true);
+		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/360.0f, true);
 	}
 	
 	//Constraint display
@@ -84,24 +86,55 @@ void UPS_HookComponent::BeginPlay()
 	
 }
 
+void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	
+	//Callback
+	GetHookThrower()->OnComponentHit.RemoveDynamic(this, &UPS_HookComponent::OnHookThrowerHitReceived);
+	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
+	{
+		_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.RemoveDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
+	}
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.RemoveDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
+	}
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	{
+		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.RemoveDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
+	}
+
+}
 // Called every frame
 void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
+
+	//Force attach when arm use physic
+	if (IsValid(HookThrower) && HookThrower->IsSimulatingPhysics())
+	{
+		FVector TargetLocation = GetComponentLocation();
+		FQuat TargetRotation = GetComponentQuat();
+		HookThrower->SetWorldLocationAndRotation(TargetLocation, TargetRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	}
+
+	//CableLogics
 	if(!bCanUseSubstepTick) CableWraping();
 	PowerCablePull();
 
 }
 
 #pragma region Event_Receiver
-//------------------
+//-----------------
 
 void UPS_HookComponent::OnAttachWeapon()
 {
 	//Setup HookThrower
 	HookThrower->SetupAttachment(this);
+	HookCollider->SetupAttachment(this);
+	HookCollider->SetCollisionProfileName(Profile_NoCollision);
 	
 	//Setup Cable
 	FirstCable->SetupAttachment(HookThrower);
@@ -116,7 +149,14 @@ void UPS_HookComponent::OnAttachWeapon()
 				
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
-	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));	
+	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));
+
+	//Callback
+	HookThrower->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookThrowerOverlapReceived);
+	HookThrower->OnComponentHit.AddUniqueDynamic(this, &UPS_HookComponent::OnHookThrowerHitReceived);
+
+	HookCollider->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookCapsuleBeginOverlapEvent);
+	HookCollider->OnComponentEndOverlap.AddUniqueDynamic(this,  &UPS_HookComponent::OnHookCapsuleEndOverlapEvent);
 }
 
 
@@ -138,9 +178,42 @@ void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 }
 
 
-
 //------------------
 #pragma endregion Event_Receiver
+
+#pragma region Arm
+//------------------
+
+void UPS_HookComponent::OnHookThrowerHitReceived(UPrimitiveComponent* hitComponent, AActor* otherActor,
+	UPrimitiveComponent* otherComp, FVector normalImpulse, const FHitResult& hit)
+{
+	UE_LOG(LogTemp, Error, TEXT("%S to"), __FUNCTION__);
+	if(!IsValid(otherActor) || !IsValid(otherComp) || !IsValid(HookThrower)) return;
+	//-hit.ImpactNormal 
+	// Calculate repulsive force
+	//HookThrower->AddImpulse(-normalImpulse * ArmRepulseStrenght, NAME_None, false);
+}
+
+void UPS_HookComponent::OnHookThrowerOverlapReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
+	UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
+{
+	UE_LOG(LogTemp, Error, TEXT("%S te "), __FUNCTION__);
+}
+
+void UPS_HookComponent::OnHookCapsuleBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
+	UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%S ta"), __FUNCTION__);
+}
+
+void UPS_HookComponent::OnHookCapsuleEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%S ti"), __FUNCTION__);
+}
+
+//------------------
+#pragma endregion Arm
+
 
 #pragma region Cable_Wrap_Logic
 //------------------
@@ -654,7 +727,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	const FVector pastCableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(pastCableStartSocketLoc, pastCableEndSocketLoc));
 
 	const FVector start = currentCableStartSocketLoc;
-	DrawDebugPoint(GetWorld(), start, 20.f, FColor::Blue, false, 0.01f);
+	DrawDebugPoint(GetWorld(), start, 20.f, FColor::Blue, false, 0.1f);
 	UE_LOG(LogTemp, Error, TEXT("cable %s"),*currentCable->GetName());
 	const FVector endSafeCheck = start + currentCableDirection * (currentCableDirectionDistance * 0.91);
 	const FVector end = pastCableStartSocketLoc + pastCableDirection * CableUnwrapDistance;
@@ -885,7 +958,6 @@ void UPS_HookComponent::HookObject()
 	//TODO :: Use hook location is too more glitchy for the moment 
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	//FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.GetComponent()->GetComponentLocation());
-	DrawDebugPoint(GetWorld(), FirstCable->EndLocation, 100.f, FColor::Orange, true);
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
 	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
@@ -905,60 +977,12 @@ void UPS_HookComponent::HookObject()
 	//Determine max distance for Pull
 	DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), AttachedMesh->GetComponentLocation()));
 
+	//Activate HookThrower collision
+	HookCollider->SetCollisionProfileName(Profile_CharacterMesh);
+	HookThrower->SetCollisionProfileName(Profile_CharacterMesh);
+
 	//Callback
 	OnHookObject.Broadcast(true);
-}
-
-
-void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttachedCable)
-{
-	UCableComponent* cable = IsValid(overrideAttachedCable) ? overrideAttachedCable : FirstCable;
-
-	if(!IsValid(cable)) return;
-	cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
-}
-
-
-void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
-{
-	//Break Hook constraint if already exist Or begin Winding
-	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
-
-	if (GetWorld()->GetTimerManager().IsTimerActive(CableWindeMouseCooldown)) return;
-
-	//On wheel axis change reset
-	if ((FMath::Sign(CableWindeInputValue) != FMath::Sign(inputActionInstance.GetValue().Get<float>())) &&
-		CableWindeInputValue != 0.0f)
-	{
-		CableWindeInputValue = 0.0f;
-		bCableWinderPull = false;
-
-		FTimerDelegate timerDelegate;
-		GetWorld()->GetTimerManager().SetTimer(CableWindeMouseCooldown, timerDelegate, 0.1, false);
-		return;
-	}
-	
-	bCableWinderPull = true;
-	CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
-	CableWindeInputValue = inputActionInstance.GetValue().Get<float>();
-
-	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	
-}
-
-void UPS_HookComponent::StopWindeHook()
-{
-	if(!_PlayerController->bIsUsingGamepad) return;
-
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	
-	ResetWindeHook();
-}
-
-void UPS_HookComponent::ResetWindeHook()
-{
-	CableWindeInputValue = 0.0f;
-	bCableWinderPull = false;
 }
 
 void UPS_HookComponent::DettachHook()
@@ -1031,9 +1055,62 @@ void UPS_HookComponent::DettachHook()
 	FirstCable->SetVisibility(false);
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
 	
+	//Desactivate HookThrower collision
+	HookCollider->SetCollisionProfileName(Profile_NoCollision);
+	
 	//Callback
 	OnHookObject.Broadcast(false);
 
+}
+
+void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttachedCable)
+{
+	UCableComponent* cable = IsValid(overrideAttachedCable) ? overrideAttachedCable : FirstCable;
+
+	if(!IsValid(cable)) return;
+	cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
+}
+
+void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
+{
+	//Break Hook constraint if already exist Or begin Winding
+	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(CableWindeMouseCooldown)) return;
+
+	//On wheel axis change reset
+	if ((FMath::Sign(CableWindeInputValue) != FMath::Sign(inputActionInstance.GetValue().Get<float>())) &&
+		CableWindeInputValue != 0.0f)
+	{
+		CableWindeInputValue = 0.0f;
+		bCableWinderPull = false;
+
+		FTimerDelegate timerDelegate;
+		GetWorld()->GetTimerManager().SetTimer(CableWindeMouseCooldown, timerDelegate, 0.1, false);
+		return;
+	}
+	
+	bCableWinderPull = true;
+	CableStartWindeTimestamp = GetWorld()->GetAudioTimeSeconds();
+	CableWindeInputValue = inputActionInstance.GetValue().Get<float>();
+
+	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
+}
+
+void UPS_HookComponent::StopWindeHook()
+{
+	if(!_PlayerController->bIsUsingGamepad) return;
+
+	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
+	ResetWindeHook();
+}
+
+void UPS_HookComponent::ResetWindeHook()
+{
+	CableWindeInputValue = 0.0f;
+	bCableWinderPull = false;
 }
 
 void UPS_HookComponent::PowerCablePull()
