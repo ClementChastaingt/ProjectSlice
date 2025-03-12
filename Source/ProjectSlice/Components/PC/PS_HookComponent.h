@@ -75,6 +75,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UBoxComponent* GetHookCollider() const { return HookCollider; }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE UCableComponent* GetFirstCable() const { return FirstCable; }
 	
 	/** Returns Swing system ConstraintAttachSlave subobject **/
 	FORCEINLINE UStaticMeshComponent* GetConstraintAttachSlave() const { return ConstraintAttachSlave; }
@@ -246,14 +249,14 @@ protected:
 	UFUNCTION()
 	void UnwrapCableByLast();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
 
 	UFUNCTION()
 	void AddSphereCaps(const FSCableWarpParams& currentTraceParams, const bool bIsAddByFirst);
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
 	
 	UFUNCTION()
@@ -308,7 +311,8 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsObjectHooked() const{return bObjectHook;}
-	
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UMeshComponent* GetAttachedMesh() const{return AttachedMesh;}
 
 	UFUNCTION(BlueprintPure)

@@ -231,11 +231,11 @@ void UPS_HookComponent::CableWraping()
 	if(!IsValid(AttachedMesh) || !IsValid(GetOwner()) || !IsValid(HookThrower)) return;
 
 	//Wrap Logics
-	WrapCableByLast();
-	WrapCableByFirst();
-
-	UnwrapCableByLast();
-	UnwrapCableByFirst();
+	// WrapCableByLast();
+	// WrapCableByFirst();
+	//
+	// UnwrapCableByLast();
+	// UnwrapCableByFirst();
 	
 	//Rope Adaptation
 	//AdaptCableTens();
@@ -929,6 +929,8 @@ void UPS_HookComponent::HookObject()
 		return;
 	}
 
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+
 	//Trace config
 	//TODO :: Make a TraceType for Hook Object
 	UStaticMeshComponent* sightMesh = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent();
@@ -938,7 +940,7 @@ void UPS_HookComponent::HookObject()
 	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
 										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance, CableTraceSphereRadius,
 										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-										  bDebugTick ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
+										  bDebugCable ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 
 	CurrentHookHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
@@ -955,7 +957,7 @@ void UPS_HookComponent::HookObject()
 	AttachCableToHookThrower(FirstCable);
 	
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
-	//TODO :: Use hook location is too more glitchy for the moment 
+	//TODO :: Use hook location is too more glitchy for the moment => Keep hit result for visual but get componentloc for math
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	//FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.GetComponent()->GetComponentLocation());
 	FirstCable->bAttachEnd = true;
@@ -987,7 +989,7 @@ void UPS_HookComponent::HookObject()
 
 void UPS_HookComponent::DettachHook()
 {
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(AttachedMesh)) return;

@@ -73,6 +73,8 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	Super::EndPlay();
+	
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController)) return;
 	
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(_PlayerController->GetLocalPlayer()))
