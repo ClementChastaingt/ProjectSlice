@@ -230,12 +230,14 @@ void UPS_HookComponent::CableWraping()
 	//Try Wrap only if attached
 	if(!IsValid(AttachedMesh) || !IsValid(GetOwner()) || !IsValid(HookThrower)) return;
 
+	if(bDisableCableCodeLogic) return;
+
 	//Wrap Logics
-	// WrapCableByLast();
-	// WrapCableByFirst();
-	//
-	// UnwrapCableByLast();
-	// UnwrapCableByFirst();
+	WrapCableByLast();
+	WrapCableByFirst();
+	
+	UnwrapCableByLast();
+	UnwrapCableByFirst();
 	
 	//Rope Adaptation
 	//AdaptCableTens();
@@ -408,7 +410,7 @@ void UPS_HookComponent::WrapCableByFirst()
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
 		
 	//If Location Already Exist return
-	if (!IsValid(latestCable) || !CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	if (!IsValid(latestCable) || !CheckPointLocation(CablePointLocations, currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
 	
 	//----Last Cable && New Points---
 	//Add new Point Loc && Hitted Component to Array
@@ -515,7 +517,7 @@ void UPS_HookComponent::WrapCableByLast()
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
 		
 	//If Location Already Exist return
-	if (!IsValid(latestCable) || !CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	if (!IsValid(latestCable) || !CheckPointLocation(CablePointLocations, currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
 	
 	//----Last Cable && New Points---
 	//Add new Point Loc && Hitted Component to Array
@@ -634,7 +636,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), start, endSafeCheck, CableTraceSphereRadius,  UEngineTypes::ConvertToTraceType(ECC_Rope),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,  UEngineTypes::ConvertToTraceType(ECC_Rope),
 	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
@@ -644,7 +646,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), start, end, CableTraceSphereRadius, UEngineTypes::ConvertToTraceType(ECC_Rope),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
 	false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Cyan);
 
 	//If no hit, or hit very close to trace end then process unwrap
@@ -727,15 +729,13 @@ void UPS_HookComponent::UnwrapCableByLast()
 	const FVector pastCableDirection = UKismetMathLibrary::GetForwardVector(UKismetMathLibrary::FindLookAtRotation(pastCableStartSocketLoc, pastCableEndSocketLoc));
 
 	const FVector start = currentCableStartSocketLoc;
-	DrawDebugPoint(GetWorld(), start, 20.f, FColor::Blue, false, 0.1f);
-	UE_LOG(LogTemp, Error, TEXT("cable %s"),*currentCable->GetName());
 	const FVector endSafeCheck = start + currentCableDirection * (currentCableDirectionDistance * 0.91);
 	const FVector end = pastCableStartSocketLoc + pastCableDirection * CableUnwrapDistance;
 
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), start, endSafeCheck, CableTraceSphereRadius,UEngineTypes::ConvertToTraceType(ECC_Rope),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,UEngineTypes::ConvertToTraceType(ECC_Rope),
 	false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
@@ -745,7 +745,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	/*This trace is the main one, basically checks from last cable to past cable but slightly forward by cable path. so if cable is wrapped,
 	then the target will be slightly on other side, to unwrap we should either get no hit, or hit very close to target location.*/
 	FHitResult outHit;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), start, end, CableTraceSphereRadius, UEngineTypes::ConvertToTraceType(ECC_Rope),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
 	false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	//----Custom tick-----
@@ -822,7 +822,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 		out.CableEnd = bReverseLoc ? start : end;
 		
 		const TArray<AActor*> actorsToIgnore;
-		UKismetSystemLibrary::SphereTraceSingle(GetWorld(), out.CableStart, out.CableEnd, CableTraceSphereRadius, UEngineTypes::ConvertToTraceType(ECC_Rope),
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd, UEngineTypes::ConvertToTraceType(ECC_Rope),
 			true, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple);
 
 		return out;
@@ -866,13 +866,12 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 		OnTriggerSwing(true);
 }
 
-bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)
+bool UPS_HookComponent::CheckPointLocation(const TArray<FVector>& pointsLocation, const FVector& targetLoc, const float& errorTolerance)
 {
 	bool bLocalPointFound = false;
-	for (FVector cableElementLoc : CablePointLocations)
+	for (FVector cableElementLoc : pointsLocation)
 	{
-		if(cableElementLoc.Equals(targetLoc, errorTolerance))
-			bLocalPointFound = true;
+		if(cableElementLoc.Equals(targetLoc, errorTolerance)) bLocalPointFound = true;
 	}
 	return !bLocalPointFound;
 }
@@ -937,8 +936,8 @@ void UPS_HookComponent::HookObject()
 	if(!IsValid(sightMesh)) return;
 	
 	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
-										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance, CableTraceSphereRadius,
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
+										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance,
 										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
 										  bDebugCable ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
 

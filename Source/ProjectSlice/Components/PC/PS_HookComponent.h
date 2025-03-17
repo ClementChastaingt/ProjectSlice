@@ -129,11 +129,10 @@ protected:
 	UFUNCTION()
 	void OnHookCapsuleEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Arm")
 	float ArmRepulseStrenght = 10.0f;
 
 #pragma endregion Arm
-
 
 #pragma region Rope
 	//------------------
@@ -226,6 +225,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
 	bool bDebugMaterialColors = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="New Cable Material Instance"))
+	bool bDisableCableCodeLogic = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="New Cable Material Instance"))
 	UMaterialInterface* CableDebugMaterialInst = nullptr;
@@ -257,7 +259,7 @@ protected:
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION(BlueprintCallable)
-	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
+	bool CheckPointLocation(const TArray<FVector>& pointsLocation, const FVector& targetLoc, const float& errorTolerance);
 	
 	UFUNCTION()
 	void AdaptCableTens();
