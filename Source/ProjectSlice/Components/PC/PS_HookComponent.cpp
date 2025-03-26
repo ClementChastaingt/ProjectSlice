@@ -407,7 +407,7 @@ void UPS_HookComponent::WrapCableByFirst()
 	FSCableWarpParams currentTraceCableWarp = TraceCableWrap(latestCable, true);
 	
 	//If Trace Hit nothing or Invalid object return
-	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent()) || (currentTraceCableWarp.CableStart == FVector::ZeroVector && currentTraceCableWarp.CableEnd == FVector::ZeroVector)) return;
 		
 	//If Location Already Exist return
 	if (!IsValid(latestCable) || !CheckPointLocation(CablePointLocations, currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
@@ -514,7 +514,7 @@ void UPS_HookComponent::WrapCableByLast()
 	DrawDebugPoint(GetWorld(), currentTraceCableWarp.CableStart, 30.f, FColor::Purple, false, 0.01f);
 
 	//If Trace Hit nothing or Invalid object return
-	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent()) || (currentTraceCableWarp.CableStart == FVector::ZeroVector && currentTraceCableWarp.CableEnd == FVector::ZeroVector)) return;
 		
 	//If Location Already Exist return
 	if (!IsValid(latestCable) || !CheckPointLocation(CablePointLocations, currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
@@ -814,14 +814,14 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 	{
 		FSCableWarpParams out;
 
-		//FVector start = bReverseLoc ? cable->GetSocketLocation(SOCKET_CABLE_START) : HookThrower->GetSocketLocation(SOCKET_HOOK);
+		//If reverseLoc is true we trace Wrap by First
 		FVector start = cable->GetSocketLocation(SOCKET_CABLE_START);
-		FVector end = cable->GetSocketLocation(SOCKET_CABLE_END);
+		FVector end = bReverseLoc && IsValid(AttachedMesh) ? AttachedMesh->GetComponentLocation() :cable->GetSocketLocation(SOCKET_CABLE_END);
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
 		
-		const TArray<AActor*> actorsToIgnore;
+		const TArray<AActor*> actorsToIgnore = {GetOwner()};
 		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd, UEngineTypes::ConvertToTraceType(ECC_Rope),
 			true, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple);
 
@@ -1217,21 +1217,28 @@ void UPS_HookComponent::PowerCablePull()
 		// alpha = massAlpha * distAlpha;
 	}
 	
-	//Pull Attached Object
+	//Pull Attached Object,
 	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
 	
 	UCableComponent* firstCable = CableListArray[0];
 	
-	//FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(firstCable->GetSocketLocation(SOCKET_CABLE_END), firstCable->GetSocketLocation(SOCKET_CABLE_START));
+	//TODO :: Continue rework pull orientation
+	const FVector dirToStart = UKismetMathLibrary::GetDirectionUnitVector(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
+	const FVector dirToEnd = UKismetMathLibrary::GetDirectionUnitVector(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_END));
+	const bool bEndIsAtRight = dirToEnd.Dot(dirToStart) > 0;
+
+	//UE_LOG(LogTemp, Error, TEXT("bEndIsAtRight %i, %f dot dir"), bEndIsAtRight, UKismetMathLibrary::DegAcos(dirToEnd.Dot(dirToStart)));
+	
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
-	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50,50);
+	 rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
+	// rotMeshCable.Yaw = rotMeshCable.Yaw + (UKismetMathLibrary::RandomFloatInRange(0, 50) * (bEndIsAtRight ? 1 : -1));
 
 	if(bDebugPull)
 	{
 		DrawDebugLine(GetWorld(), AttachedMesh->GetComponentLocation(),AttachedMesh->GetComponentLocation() + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
-		DrawDebugPoint(GetWorld(), firstCable->GetComponentLocation(), 10.0f, FColor::Yellow, false, 0.1f);
-		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_START), 10.0f, FColor::Yellow, false, 0.1f);
-		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END), 10.0f, FColor::Yellow, false, 0.1f);
+		DrawDebugPoint(GetWorld(), firstCable->GetComponentLocation(), 30.0f, FColor::Red, false, 0.1f, 10.0f);
+		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Yellow, false, 0.1f, 10.0f);
+		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END), 30.0f, FColor::Orange, false, 0.1f, 10.0f);
 	}
 	//if(bDebugPull) DrawDebugLine(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END),firstCable->GetSocketLocation(SOCKET_CABLE_END) + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
 
