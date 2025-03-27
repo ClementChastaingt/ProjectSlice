@@ -368,8 +368,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="kg"))
 	float MaxPullWeight = 10000.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Hook", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max Distance between forst and second cable to have reached for using pull direction random variation"))
-	float MaxDistanceBetweenFirstAndSecondCable = 100.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Hook", meta=(UIMin="0", ClampMin="0", ForceUnits="deg", ToolTip="Max Angle between first and second cable to have reached for using pull direction random variation"))
+	float MaxAngleBetweenFirstAndSecondCable = 20.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Distance for reach Max Force Weight by distance to object"))
 	float MaxForcePullingDistance = 1000.0f;
