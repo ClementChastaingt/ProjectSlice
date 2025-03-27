@@ -1220,16 +1220,28 @@ void UPS_HookComponent::PowerCablePull()
 	//Pull Attached Object,
 	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
 	
-	UCableComponent* firstCable = CableListArray[0];
-	
-	//TODO :: Continue rework pull orientation
-	const FVector dirToStart = UKismetMathLibrary::GetDirectionUnitVector(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
-	const FVector dirToEnd = UKismetMathLibrary::GetDirectionUnitVector(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_END));
-	const bool bEndIsAtRight = dirToEnd.Dot(dirToStart) > 0;
+	const UCableComponent* firstCable = CableListArray[0];
 
-	//UE_LOG(LogTemp, Error, TEXT("bEndIsAtRight %i, %f dot dir"), bEndIsAtRight, UKismetMathLibrary::DegAcos(dirToEnd.Dot(dirToStart)));
-	
-	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
+	int index = 1;
+	FVector lastCablePointLoc = CablePointLocations.IsValidIndex(index) ? CablePointLocations[index] : FVector::ZeroVector;
+	bool bCanUseSecondDir = false;
+	for (FVector cablePointLoc : CablePointLocations)
+	{
+		if(UKismetMathLibrary::Vector_Distance2D(cablePointLoc,lastCablePointLoc) > MaxDistanceBetweenFirstAndSecondCable)
+		{
+			bCanUseSecondDir = true;
+			break;
+		}
+		
+		lastCablePointLoc = cablePointLoc;
+		index++;
+	}
+	const UCableComponent* secondCable = CableListArray.IsValidIndex(index) ? CableListArray[index] : nullptr;
+	const bool bUseSecondCable = FMath::RandBool() && IsValid(secondCable) && secondCable != firstCable && bCanUseSecondDir;
+
+	UE_LOG(LogTemp, Error, TEXT("bUseSecondCable %i, index %i"),bUseSecondCable, index);
+
+	FRotator rotMeshCable = bUseSecondCable ? UKismetMathLibrary::FindLookAtRotation(firstCable->GetSocketLocation(SOCKET_CABLE_START), secondCable->GetSocketLocation(SOCKET_CABLE_START)) : UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(), firstCable->GetSocketLocation(SOCKET_CABLE_START));
 	 rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
 	// rotMeshCable.Yaw = rotMeshCable.Yaw + (UKismetMathLibrary::RandomFloatInRange(0, 50) * (bEndIsAtRight ? 1 : -1));
 
@@ -1238,7 +1250,7 @@ void UPS_HookComponent::PowerCablePull()
 		DrawDebugLine(GetWorld(), AttachedMesh->GetComponentLocation(),AttachedMesh->GetComponentLocation() + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
 		DrawDebugPoint(GetWorld(), firstCable->GetComponentLocation(), 30.0f, FColor::Red, false, 0.1f, 10.0f);
 		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Yellow, false, 0.1f, 10.0f);
-		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END), 30.0f, FColor::Orange, false, 0.1f, 10.0f);
+		if(IsValid(secondCable))DrawDebugPoint(GetWorld(), secondCable->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Orange, false, 0.1f, 10.0f);
 	}
 	//if(bDebugPull) DrawDebugLine(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_END),firstCable->GetSocketLocation(SOCKET_CABLE_END) + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
 
