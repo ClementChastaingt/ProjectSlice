@@ -238,12 +238,18 @@ protected:
 	
 	UFUNCTION()
 	void CableWraping();
-	
-	UFUNCTION()
-	void WrapCableByFirst();
 
 	UFUNCTION()
-	void WrapCableByLast();
+	void ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable) const;
+
+	UFUNCTION()
+	void ConfigCableToFirstCableSettings(UCableComponent* newCable) const;
+
+	UFUNCTION()
+	void WrapCableAddByFirst();
+
+	UFUNCTION()
+	void WrapCableAddByLast();
 	
 	UFUNCTION()
 	void UnwrapCableByFirst();
@@ -252,9 +258,12 @@ protected:
 	void UnwrapCableByLast();
 
 	UFUNCTION(BlueprintCallable)
-	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
+	bool TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable, bool bReverseLoc, FHitResult& outHit) const;
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
+	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
+	
+	UFUNCTION(BlueprintCallable)
 	void AddSphereCaps(const FSCableWarpParams& currentTraceParams, const bool bIsAddByFirst);
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
