@@ -63,7 +63,9 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
 	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
 	dir.Normalize();
-	FVector start = _CurrentPushHitResult.Location;
+	
+	//FVector start = _CurrentPushHitResult.Location;
+	FVector start = _PlayerCharacter->GetWeaponComponent()->GetSightTarget();
 	
 	const FVector pushTargetLoc = start + dir * -10.0f;
 

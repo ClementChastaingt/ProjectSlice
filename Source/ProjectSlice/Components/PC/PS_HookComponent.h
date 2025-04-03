@@ -189,9 +189,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(ToolTip="Use cable shared settings to the start cable, like width, length, basically all settings exlcuding the ones that cannot be changed at runtime, like segments, and etc."))
 	bool bCableUseSharedSettings = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable trace sphere radius"))
-	float CableTraceSphereRadius = 2.5f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
 	float CableWrapErrorTolerance = 0.02;
@@ -214,18 +211,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
 	float CableBreakTensDistance = 500.0f;
 	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
-	// float CableSlackTensDistance = 200.0f;
-	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
-	// float CableMaxTensMassThreshold = 50000.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
 	float CableMaxTensVelocityThreshold = 1000.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="Change New Cable Material color randomly"))
 	bool bDebugMaterialColors = false;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug", meta=(ToolTip="New Cable Material Instance"))
 	bool bDisableCableCodeLogic = false;
 	
@@ -244,6 +235,7 @@ protected:
 
 	UFUNCTION()
 	void ConfigCableToFirstCableSettings(UCableComponent* newCable) const;
+	void SetupCableMaterial(UCableComponent* newCable) const;
 
 	UFUNCTION()
 	void WrapCableAddByFirst();
@@ -367,9 +359,6 @@ protected:
 	//Parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="MaxDistance for HookObject Object"))
 	float HookingMaxDistance = 1000.0f;
-		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="deg",ToolTip="Max Offset angle apply to RealFirstCable attahce dot Hookthrower mesh"))
-	float MaxAngleHookOffset = 90.0;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;

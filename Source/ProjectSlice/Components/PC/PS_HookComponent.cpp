@@ -253,8 +253,11 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
 
 	//Make lastCable tense
-	lastCable->CableLength = 1.0f;
-	lastCable->SubstepTime = 0.002f;
+	if(IsValid(FirstCable) && lastCable != FirstCable)
+	{
+		lastCable->CableLength = 10.0f;
+		lastCable->SubstepTime = 0.005f;
+	}
 
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
@@ -281,7 +284,7 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	//Tense
 	//TODO :: Review this thing for Pull by Tens func
 	newCable->CableLength = FirstCable->CableLength;
-	newCable->SolverIterations = FirstCable->CableLength;
+	newCable->SolverIterations = FirstCable->SolverIterations;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 	newCable->bUseSubstepping = FirstCable->bUseSubstepping;
 	newCable->SubstepTime = FirstCable->SubstepTime;
@@ -294,11 +297,31 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	newCable->bEnableCollision = FirstCable->bEnableCollision;
 }
 
+void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
+{
+	if (bDebug && bDebugMaterialColors)
+	{
+		if (!IsValid(CableDebugMaterialInst)) return;
+	
+		UMaterialInstanceDynamic* dynMatInstance = newCable->CreateDynamicMaterialInstance(0, CableDebugMaterialInst);
+	
+		if (!IsValid(dynMatInstance)) return;
+		dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0, 360), 1, 1, 1));
+	}
+	else if(IsValid(FirstCable))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: cable %s"),__FUNCTION__, *newCable->GetName());
+		UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
+		if(IsValid(currentCableMaterialInst))
+			newCable->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
+	}
+}
+
 void UPS_HookComponent::WrapCableAddByFirst()
-{	
+{
 	//-----Add Wrap Logic-----
 	//Add By First
-	if(!CableListArray.IsValidIndex(0) || CableListArray.Num() < 1) return;
+	if(!CableListArray.IsValidIndex(0) || CableListArray.IsEmpty()) return;
 	
 	UCableComponent* lastCable = CableListArray[0];
 	if(!IsValid(lastCable)) return;
@@ -330,54 +353,42 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	if(bCanUseSphereCaps) AddSphereCaps(currentTraceCableWarp, true);
 
 	//Add latest cable to attached cables array && Add this new cable to "cable list array"
-	CableAttachedArray.Insert(newCable,1);
+	if(CableAttachedArray.IsEmpty())
+		CableAttachedArray.Add(newCable);
+	else
+		CableAttachedArray.Insert(newCable,1);
 	CableListArray.Insert(newCable,1);
-	
+
 	//Attach New Cable to Hitted Object && Set his position to it
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
-	newCable->SetWorldLocation(CablePointLocations[1]);
-	newCable->AttachToComponent(CablePointComponents[1], AttachmentRule);
-
+	newCable->SetWorldLocation(CablePointLocations.IsValidIndex(1) ? CablePointLocations[1] : CablePointLocations[0] );
+	newCable->AttachToComponent(CablePointLocations.IsValidIndex(1) ? CablePointComponents[1] : CablePointComponents[0], AttachmentRule);
+	
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
 	
 	//----Material----
 	//Debug Cable Color OR use FirstCable material
-	if (bDebug && bDebugMaterialColors)
-	{
-		if (!IsValid(CableDebugMaterialInst)) return;
+	SetupCableMaterial(newCable);
 
-		UMaterialInstanceDynamic* dynMatInstance = newCable->CreateDynamicMaterialInstance(0, CableDebugMaterialInst);
-
-		if (!IsValid(dynMatInstance)) return;
-		dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0, 360), 1, 1, 1));
-	}
-	else if(IsValid(FirstCable))
-	{
-		
-		UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
-		if(IsValid(currentCableMaterialInst))
-			newCable->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
-	}
 }
 
 void UPS_HookComponent::WrapCableAddByLast()
-{	
+{
 	//-----Add Wrap Logic-----
 	//Add By Last
-	if(!CableListArray.IsValidIndex(CableListArray.Num()-1)) return;
+	if(!CableListArray.IsValidIndex(CableListArray.Num()-1) || CableListArray.IsEmpty()) return;
 
 	UCableComponent* lastCable = CableListArray[CableListArray.Num() - 1];
 	if(!IsValid(lastCable)) return;
-
-	//Trace Warp
 	FSCableWarpParams currentTraceCableWarp = TraceCableWrap(lastCable, false);
 
 	//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
-		
+	
 	//If Location Already Exist return
 	if (!CheckPointLocation(CablePointLocations, currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	
 	
 	//----Last Cable && New Points---
 	//Add new Point Loc && Hitted Component to Array
@@ -410,21 +421,7 @@ void UPS_HookComponent::WrapCableAddByLast()
 
 	//----Material----
 	//Debug Cable Color OR use FirstCable material
-	if (bDebug && bDebugMaterialColors)
-	{
-		if (!IsValid(CableDebugMaterialInst)) return;
-
-		UMaterialInstanceDynamic* dynMatInstance = newCable->CreateDynamicMaterialInstance(0, CableDebugMaterialInst);
-
-		if (!IsValid(dynMatInstance)) return;
-		dynMatInstance->SetVectorParameterValue(FName("Color"),UKismetMathLibrary::HSVToRGB(UKismetMathLibrary::RandomFloatInRange(0, 360), 1, 1, 1));
-	}
-	else if(IsValid(FirstCable))
-	{
-		UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
-		if(IsValid(currentCableMaterialInst))
-			newCable->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
-	}
+	SetupCableMaterial(newCable);
 }
 
 void UPS_HookComponent::UnwrapCableByFirst()
@@ -574,7 +571,6 @@ void UPS_HookComponent::UnwrapCableByLast()
 	AttachCableToHookThrower(firstCable);
 }
 
-
 bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable, bool bReverseLoc, FHitResult& outHit) const
 {
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -615,7 +611,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 
 		//If reverseLoc is true we trace Wrap by First
 		FVector start = cable->GetSocketLocation(SOCKET_CABLE_START);
-		FVector end = bReverseLoc && IsValid(AttachedMesh) ? AttachedMesh->GetComponentLocation() :cable->GetSocketLocation(SOCKET_CABLE_END);
+		FVector end = bReverseLoc && IsValid(AttachedMesh) ? AttachedMesh->GetComponentLocation() : cable->GetSocketLocation(SOCKET_CABLE_END);
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
@@ -733,21 +729,18 @@ void UPS_HookComponent::HookObject()
 
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
-	//Trace config
-	//TODO :: Make a TraceType for Hook Object
-	UStaticMeshComponent* sightMesh = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent();
-	if(!IsValid(sightMesh)) return;
+	//Get Trace	
+	const FVector start = _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK);
+	const FVector target = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * HookingMaxDistance;
 	
-	const TArray<AActor*> ActorsToIgnore{_PlayerCharacter, GetOwner()};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition(),
-										_PlayerCharacter->GetWeaponComponent()->GetMuzzlePosition() + sightMesh->GetForwardVector() * HookingMaxDistance,
-										  UEngineTypes::ConvertToTraceType(ECC_Slice), false, ActorsToIgnore,
-										  bDebugCable ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, CurrentHookHitResult, true, FColor::Blue, FColor::Cyan);
-
-	CurrentHookHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
-	
+	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
+		false, actorsToIgnore, EDrawDebugTrace::None, CurrentHookHitResult, true);
+		
 	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
+	DrawDebugPoint(GetWorld(), CurrentHookHitResult.Location, 20.0f, FColor::Cyan, false, 1);
+	
 	//Hook Move Feedback
 	bObjectHook = true;
 
@@ -759,9 +752,7 @@ void UPS_HookComponent::HookObject()
 	AttachCableToHookThrower(FirstCable);
 	
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
-	//TODO :: Use hook location is too more glitchy for the moment => Keep hit result for visual but get componentloc for math
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
-	//FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.GetComponent()->GetComponentLocation());
 	FirstCable->bAttachEnd = true;
 	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
 	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
