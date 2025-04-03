@@ -310,7 +310,6 @@ void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
 	}
 	else if(IsValid(FirstCable))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: cable %s"),__FUNCTION__, *newCable->GetName());
 		UMaterialInterface* currentCableMaterialInst = FirstCable->GetMaterial(0);
 		if(IsValid(currentCableMaterialInst))
 			newCable->CreateDynamicMaterialInstance(0, currentCableMaterialInst);
@@ -731,16 +730,15 @@ void UPS_HookComponent::HookObject()
 
 	//Get Trace	
 	const FVector start = _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK);
-	const FVector target = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * HookingMaxDistance;
+	const FVector target = _PlayerCharacter->GetWeaponComponent()->GetLaserTarget();
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, CurrentHookHitResult, true);
-		
-	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
 
-	DrawDebugPoint(GetWorld(), CurrentHookHitResult.Location, 20.0f, FColor::Cyan, false, 1);
-	
+	//If not blocking exit
+	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
+		
 	//Hook Move Feedback
 	bObjectHook = true;
 
