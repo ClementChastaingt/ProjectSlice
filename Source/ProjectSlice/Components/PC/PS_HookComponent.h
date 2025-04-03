@@ -191,10 +191,10 @@ protected:
 	bool bCableUseSharedSettings = true;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable error tolerance for wrapping, so there will be no duplicate points around already added ones, keep this low for smooth wrapping."))
-	float CableWrapErrorTolerance = 0.02;
+	float CableWrapErrorTolerance = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap trace distance, between start point and second cable point, this value should be around from 5 to 20 for effective work."))
-	float CableUnwrapDistance = 20.0f;
+	float CableUnwrapDistance = 200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ToolTip="Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."))
 	float CableUnwrapErrorMultiplier = 10.0f;
@@ -250,7 +250,7 @@ protected:
 	void UnwrapCableByLast();
 
 	UFUNCTION(BlueprintCallable)
-	bool TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable, bool bReverseLoc, FHitResult& outHit) const;
+	bool TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable,const bool& bReverseLoc, FHitResult& outHit) const;
 
 	UFUNCTION(BlueprintCallable)
 	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
@@ -292,7 +292,7 @@ public:
 	void HookObject();
 
 	UFUNCTION()
-	void AttachCableToHookThrower(UCableComponent* overrideAttachedCable = nullptr);
+	void AttachCableToHookThrower(UCableComponent* cableToAttach = nullptr) const;
 	
 	UFUNCTION()
 	void WindeHook(const FInputActionInstance& inputActionInstance);

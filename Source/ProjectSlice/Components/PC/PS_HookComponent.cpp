@@ -140,6 +140,7 @@ void UPS_HookComponent::OnAttachWeapon()
 	//Setup Cable
 	FirstCable->SetupAttachment(HookThrower);
 	FirstCable->SetVisibility(false);
+	
 	CableListArray.AddUnique(FirstCable);
 	CableCapArray.Add(nullptr);
 
@@ -265,6 +266,7 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//GetOwner()->AddInstanceComponent(newCable);
 
 	//Config newCable
+	newCable->bEnableCollision = false;
 	newCable->SetCollisionProfileName(Profile_NoCollision, true);
 	newCable->bAttachEnd = true;
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
@@ -375,7 +377,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 void UPS_HookComponent::WrapCableAddByLast()
 {
 	//-----Add Wrap Logic-----
-	//Add By Last
+	
 	if(!CableListArray.IsValidIndex(CableListArray.Num()-1) || CableListArray.IsEmpty()) return;
 
 	UCableComponent* lastCable = CableListArray[CableListArray.Num() - 1];
@@ -426,26 +428,28 @@ void UPS_HookComponent::WrapCableAddByLast()
 void UPS_HookComponent::UnwrapCableByFirst()
 {	
 	//-----Unwrap Logic-----
-	//Init works Variables
-	UCableComponent* pastCable = nullptr;
-	UCableComponent* currentCable = nullptr;
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	
+	if(!CableListArray.IsValidIndex(1) || !CableListArray.IsValidIndex(0)) return;
 
-	//Remove By First
-	if(CableListArray.IsValidIndex(1))
-	{
-		pastCable = CableListArray[1];
-		currentCable = CableListArray[0];
-	}
+	UCableComponent* pastCable = CableListArray[1];
+	UCableComponent* currentCable = CableListArray[0];
 
 	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
 	
 	//----Unwrap Trace-----
+	//If no hit, or hit very close to trace end then process unwrap
+	
+	if(!CablePointUnwrapAlphaArray.IsValidIndex(0))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
+		return;
+	}
+
+	//Trace
 	FHitResult outHit;
 	if(!TraceCableUnwrap(pastCable, currentCable, true, outHit)) return;
-
-	//If no hit, or hit very close to trace end then process unwrap
-	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
+	
+	if(outHit.bBlockingHit && outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
@@ -454,21 +458,26 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
 	CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
-	if(CablePointUnwrapAlphaArray[0] < CableUnwrapFirstFrameDelay) return;
+	if(CablePointUnwrapAlphaArray[0] < CableUnwrapFirstFrameDelay)
+		return;
 
 	//----Destroy and remove Last Cable tick-----
-	//If attached cables are more than 0 remove the second one (when first cable gets closer to it)
+	if(!CableListArray.IsValidIndex(1)) return;
+	
+	//If attached cables are more than 0, remove the second one (when first cable gets closer to it)
 	CableAttachedArray.RemoveAt(CableAttachedArray.IsValidIndex(1) ? 1 : 0);
+	
 	//In any case, destroy the second cable (the first one is our main cable)
 	CableListArray[1]->DestroyComponent();
 
 	//----Caps Sphere---
-	if(bCanUseSphereCaps)
+	if(bCanUseSphereCaps && CableCapArray.IsValidIndex(1))
 	{
 		CableCapArray[1]->DestroyComponent();
 		CableCapArray.RemoveAt(1);
 	}
-	
+
+	//End Unwrap
 	CableListArray.RemoveAt(1);
 	CablePointLocations.RemoveAt(0);
 	CablePointComponents.RemoveAt(0);
@@ -481,6 +490,8 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	
 	if(CablePointLocations.IsValidIndex(0))
 	{
+		const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+
 		//Set the latest oldest point as cable active point && attach cable to the latest component point
 		firstCable->SetWorldLocation(CablePointLocations[0], false,nullptr, ETeleportType::TeleportPhysics);
 		firstCable->AttachToComponent(CablePointComponents[0], AttachmentRule);
@@ -497,8 +508,8 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//-----Unwrap Logic-----
 	//Init works Variables
 	int32 cableListLastIndex = CableListArray.Num()-1;
-	int32 cableAttachedLastIndex = CableAttachedArray.Num()-1;
-	int32 cablePointLocationsLastIndex = CablePointLocations.Num()-1;
+	const int32 cableAttachedLastIndex = CableAttachedArray.Num()-1;
+	const int32 cablePointLocationsLastIndex = CablePointLocations.Num()-1;
 	
 	//Remove By Last
 	if(!CableAttachedArray.IsValidIndex(cableAttachedLastIndex) || !CableListArray.IsValidIndex(cableListLastIndex)) return;
@@ -509,12 +520,20 @@ void UPS_HookComponent::UnwrapCableByLast()
 	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
 	
 	//----Unwrap Trace-----
+	//If no hit, or hit very close to trace end then process unwrap
+	
+	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;
+	if(!CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
+		return;
+	}
+	
+	//Trace
 	FHitResult outHit;
 	if(!TraceCableUnwrap(pastCable, currentCable, false, outHit)) return;
 	
-	//If no hit, or hit very close to trace end then process unwrap
-	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;
-	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier) && CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
+	if(outHit.bBlockingHit && outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 		return;
@@ -522,37 +541,24 @@ void UPS_HookComponent::UnwrapCableByLast()
 
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
-	if(CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
-	{
-		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] + 1;
-		if(CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapLastFrameDelay)
-		{
-			return;
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
+	CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] + 1;
+	if (CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapLastFrameDelay)
 		return;
-		//CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
-	}
 	
 	//----Destroy and remove Last Cable tick-----
 	if(!CableAttachedArray.IsValidIndex(0) || !CableAttachedArray.IsValidIndex(cableAttachedLastIndex) || !CableListArray.IsValidIndex(cableListLastIndex)) return;
 
-	//If attached cables are more than 0 remove the second one (when first cable gets closer to it)
+	//If attached cables are more than 0, remove the second one (when first cable gets closer to it)
 	CableAttachedArray.RemoveAt(cableAttachedLastIndex);	
+
 	//In any case, destroy the second cable (the first one is our main cable)
 	CableListArray[cableListLastIndex]->DestroyComponent();
 
 	//----Caps Sphere---
-	if(bCanUseSphereCaps)
+	if(bCanUseSphereCaps && CableCapArray.IsValidIndex(cableListLastIndex))
 	{
-		if(CableCapArray.IsValidIndex(cableListLastIndex))
-		{
-			CableCapArray[cableListLastIndex]->DestroyComponent();
-			CableCapArray.RemoveAt(cableListLastIndex);
-		}
+		CableCapArray[cableListLastIndex]->DestroyComponent();
+		CableCapArray.RemoveAt(cableListLastIndex);
 	}
 
 	//End Unwrap
@@ -570,9 +576,10 @@ void UPS_HookComponent::UnwrapCableByLast()
 	AttachCableToHookThrower(firstCable);
 }
 
-bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable, bool bReverseLoc, FHitResult& outHit) const
+bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable,const bool& bReverseLoc, FHitResult& outHit) const
 {
-	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
+		
+	const TArray<AActor*> actorsToIgnore = {GetOwner()};
 
 	const FVector pastCableStartSocketLoc = bReverseLoc ? pastCable->GetSocketLocation(SOCKET_CABLE_END) : pastCable->GetSocketLocation(SOCKET_CABLE_START);
 	const FVector pastCableEndSocketLoc = bReverseLoc ? pastCable->GetSocketLocation(SOCKET_CABLE_START) : pastCable->GetSocketLocation(SOCKET_CABLE_END);
@@ -587,6 +594,11 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	const FVector endSafeCheck = start + currentCableDirection * (currentCableDirectionDistance * 0.91);
 	const FVector end = pastCableStartSocketLoc + pastCableDirection * CableUnwrapDistance;
 
+	if(!bReverseLoc)
+	{
+		DrawDebugDirectionalArrow(GetWorld(), start, end, 20.0f, FColor::Yellow, false, -1, 10, 3);
+	}
+	
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
@@ -597,7 +609,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return false;
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
-		false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
+		false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
 
 	return true;
 }
@@ -610,7 +622,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 
 		//If reverseLoc is true we trace Wrap by First
 		FVector start = cable->GetSocketLocation(SOCKET_CABLE_START);
-		FVector end = bReverseLoc && IsValid(AttachedMesh) ? AttachedMesh->GetComponentLocation() : cable->GetSocketLocation(SOCKET_CABLE_END);
+		FVector end = cable->GetSocketLocation(SOCKET_CABLE_END);
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
@@ -752,7 +764,8 @@ void UPS_HookComponent::HookObject()
 	FirstCable->SetAttachEndToComponent(AttachedMesh);
 	FirstCable->EndLocation = CurrentHookHitResult.GetComponent()->GetComponentTransform().InverseTransformPosition(CurrentHookHitResult.Location);
 	FirstCable->bAttachEnd = true;
-	FirstCable->SetCollisionProfileName(Profile_PhysicActor, true);
+	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
+	FirstCable->bEnableCollision = false;
 	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
 	FirstCable->SetVisibility(true);
 
@@ -798,42 +811,30 @@ void UPS_HookComponent::DettachHook()
 	bObjectHook = false;
 		
 	//----Clear Cable Warp ---
-	int i = 1;
-	for (auto cable : CableAttachedArray)
+	//Destroy Cable
+	for (UCableComponent* cable : CableListArray)
 	{
-		if(!IsValid(cable))
-		{
-			i++;
-			continue;
-		}
+		if(!IsValid(cable)) continue;
 		
-		//Remove and Destroy cable
 		//Prevent to Destroy FirstCable
-		CableListArray.Remove(cable);
-		if(cable != FirstCable)
-			cable->DestroyComponent();
-
-		//Remove and Destroy Cable Cap
-		if(CableCapArray.IsValidIndex(i))
-		{
-			UStaticMeshComponent* currentCap = CableCapArray[i];
-			if(!IsValid(currentCap))
-			{
-				i++;
-				continue;
-			}
-			
-			CableCapArray.Remove(currentCap);
-			currentCap->DestroyComponent();
-		}
-		
+		if(cable != FirstCable) cable->DestroyComponent();		
 	}
 
-	//Reset Cable List
-	if(CableListArray[0] != FirstCable) CableListArray[0]->DestroyComponent();
-	CableListArray[0] = FirstCable;
+	//Destroy Caps
+	for (UStaticMeshComponent* currentCap : CableCapArray)
+	{
+		if(!IsValid(currentCap)) continue;
+		
+		currentCap->DestroyComponent();
+	}
 
-	//Clear Array
+	//Reset CableList && CableCapArray
+	CableListArray.Empty();
+	CableListArray.AddUnique(FirstCable);
+	CableCapArray.Empty();
+	CableCapArray.Add(nullptr);
+	
+	//Clear all other Array
 	CableAttachedArray.Empty();
 	CablePointUnwrapAlphaArray.Empty();
 	CablePointLocations.Empty();
@@ -856,16 +857,15 @@ void UPS_HookComponent::DettachHook()
 
 }
 
-void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* overrideAttachedCable)
-{
-	UCableComponent* cable = IsValid(overrideAttachedCable) ? overrideAttachedCable : FirstCable;
 
-	if(!IsValid(cable)) return;
+void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach) const
+{
+	if(!IsValid(cableToAttach)) return;
 	
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
 	
-	cable->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));
-	cable->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
+	cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK), false, nullptr, ETeleportType::TeleportPhysics);
+	cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
 
 	//OLD
 	//cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
