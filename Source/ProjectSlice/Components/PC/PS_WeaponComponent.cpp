@@ -546,7 +546,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		//Reset last material properties
 		ResetSightRackProperties();
-		if(!_SightHitResult.GetActor()->ActorHasTag(FName("Sliceable")) ) return;
+		if(!_SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) return;
 		_CurrentSightedComponent = _SightHitResult.GetComponent();
 		_CurrentSightedFace = _SightHitResult.FaceIndex;
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)

@@ -12,6 +12,7 @@
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
@@ -254,11 +255,8 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
 
 	//Make lastCable tense
-	if(IsValid(FirstCable) && lastCable != FirstCable)
-	{
-		lastCable->CableLength = 10.0f;
-		lastCable->SubstepTime = 0.005f;
-	}
+	lastCable->CableLength = 5.0f;
+	lastCable->bUseSubstepping = false; 
 
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
@@ -266,8 +264,11 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//GetOwner()->AddInstanceComponent(newCable);
 
 	//Config newCable
+	newCable->bUseSubstepping = true;
+	newCable->bSkipCableUpdateWhenNotVisible = true;
 	newCable->bEnableCollision = false;
 	newCable->SetCollisionProfileName(Profile_NoCollision, true);
+
 	newCable->bAttachEnd = true;
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
 	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
@@ -288,15 +289,10 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	newCable->CableLength = FirstCable->CableLength;
 	newCable->SolverIterations = FirstCable->SolverIterations;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
-	newCable->bUseSubstepping = FirstCable->bUseSubstepping;
-	newCable->SubstepTime = FirstCable->SubstepTime;
 
 	//Force 
 	newCable->CableGravityScale = FirstCable->CableGravityScale;
-
-	//Collision
-	newCable->CollisionFriction = FirstCable->CollisionFriction;
-	newCable->bEnableCollision = FirstCable->bEnableCollision;
+	
 }
 
 void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
@@ -498,6 +494,10 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	}
 	else
 	{
+		//Reset to base stiffness preset
+		firstCable->CableLength = 25.0f;
+		firstCable->bUseSubstepping = true;
+		
 		//Reset to HookAttach default set
 		AttachCableToHookThrower(firstCable);
 	}
@@ -596,7 +596,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 
 	if(!bReverseLoc)
 	{
-		DrawDebugDirectionalArrow(GetWorld(), start, end, 20.0f, FColor::Yellow, false, -1, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), start, end, 20.0f, FColor::Yellow, false, 0.01, 10, 3);
 	}
 	
 	//----Safety Trace-----
@@ -745,9 +745,9 @@ void UPS_HookComponent::HookObject()
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, CurrentHookHitResult, true);
-
+	
 	//If not blocking exit
-	if (!CurrentHookHitResult.bBlockingHit || !IsValid( Cast<UMeshComponent>(CurrentHookHitResult.GetComponent()))) return;
+	if(!CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(CurrentHookHitResult.GetComponent())) || !CurrentHookHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) return;
 		
 	//Hook Move Feedback
 	bObjectHook = true;
@@ -825,6 +825,10 @@ void UPS_HookComponent::DettachHook()
 		
 		currentCap->DestroyComponent();
 	}
+
+	//reset FirstCable stiffness
+	FirstCable->CableLength = 25.0f;
+	FirstCable->bUseSubstepping = true; 
 
 	//Reset CableList && CableCapArray
 	CableListArray.Empty();
