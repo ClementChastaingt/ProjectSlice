@@ -247,7 +247,7 @@ void UPS_HookComponent::CableWraping()
 void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable) const
 {
 	//Init works Variables
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 
 	//Attach Last Cable to Hitted Object, Set his position to it
 	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
@@ -361,7 +361,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	CableListArray.Insert(newCable,1);
 
 	//Attach New Cable to Hitted Object && Set his position to it
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 	newCable->SetWorldLocation(CablePointLocations.IsValidIndex(1) ? CablePointLocations[1] : CablePointLocations[0] );
 	newCable->AttachToComponent(CablePointLocations.IsValidIndex(1) ? CablePointComponents[1] : CablePointComponents[0], AttachmentRule);
 	
@@ -490,7 +490,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	
 	if(CablePointLocations.IsValidIndex(0))
 	{
-		const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+		const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 
 		//Set the latest oldest point as cable active point && attach cable to the latest component point
 		firstCable->SetWorldLocation(CablePointLocations[0], false,nullptr, ETeleportType::TeleportPhysics);
@@ -638,9 +638,7 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 }
 
 void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParams, const bool bIsAddByFirst)
-{
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, true);
-	
+{	
 	FVector rotatedCapTowardTarget = UKismetMathLibrary::GetUpVector(UKismetMathLibrary::FindLookAtRotation(currentTraceParams.CableStart,currentTraceParams.OutHit.Location));
 	const FTransform& capsRelativeTransform = FTransform(rotatedCapTowardTarget.Rotation(),currentTraceParams.OutHit.Location,UKismetMathLibrary::Conv_DoubleToVector(FirstCable->CableWidth * CapsScaleMultiplicator));
 	
@@ -656,7 +654,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
 	newCapMesh->SetCollisionProfileName(Profile_NoCollision);
 	newCapMesh->SetComponentTickEnabled(false);
-	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), AttachmentRule);
+	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	//Get Cable Material and add to Cable
 	if(!bDebugMaterialColors)
@@ -862,7 +860,7 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach)
 {
 	if(!IsValid(cableToAttach)) return;
 	
-	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 	
 	cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK), false, nullptr, ETeleportType::TeleportPhysics);
 	cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
