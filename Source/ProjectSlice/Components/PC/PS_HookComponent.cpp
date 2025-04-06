@@ -348,6 +348,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	//----Caps Sphere---
 	//Add Sphere on Caps
 	if(bCanUseSphereCaps) AddSphereCaps(currentTraceCableWarp, true);
+	
 
 	//Add latest cable to attached cables array && Add this new cable to "cable list array"
 	if(CableAttachedArray.IsEmpty())
@@ -373,7 +374,6 @@ void UPS_HookComponent::WrapCableAddByFirst()
 void UPS_HookComponent::WrapCableAddByLast()
 {
 	//-----Add Wrap Logic-----
-	
 	if(!CableListArray.IsValidIndex(CableListArray.Num()-1) || CableListArray.IsEmpty()) return;
 
 	UCableComponent* lastCable = CableListArray[CableListArray.Num() - 1];
@@ -445,7 +445,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	FHitResult outHit;
 	if(!TraceCableUnwrap(pastCable, currentCable, true, outHit)) return;
 	
-	if(outHit.bBlockingHit && outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
+	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
@@ -479,7 +479,6 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	CablePointComponents.RemoveAt(0);
 	CablePointUnwrapAlphaArray.RemoveAt(0);
 	
-
 	//----Set first cable Loc && Attach----
 	if(!CableListArray.IsValidIndex(0)) return;
 	UCableComponent* firstCable = CableListArray[0];
@@ -533,7 +532,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	FHitResult outHit;
 	if(!TraceCableUnwrap(pastCable, currentCable, false, outHit)) return;
 	
-	if(outHit.bBlockingHit && outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
+	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 	{
 		CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 		return;
@@ -544,7 +543,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] + 1;
 	if (CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] < CableUnwrapLastFrameDelay)
 		return;
-	
+		
 	//----Destroy and remove Last Cable tick-----
 	if(!CableAttachedArray.IsValidIndex(0) || !CableAttachedArray.IsValidIndex(cableAttachedLastIndex) || !CableListArray.IsValidIndex(cableListLastIndex)) return;
 
@@ -560,13 +559,13 @@ void UPS_HookComponent::UnwrapCableByLast()
 		CableCapArray[cableListLastIndex]->DestroyComponent();
 		CableCapArray.RemoveAt(cableListLastIndex);
 	}
-
+	
 	//End Unwrap
 	CableListArray.RemoveAt(cableListLastIndex);
 	CablePointComponents.RemoveAt(cablePointLocationsLastIndex);
 	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
 	CablePointLocations.RemoveAt(cablePointLocationsLastIndex);
-
+		
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
 	if (!CableListArray.IsValidIndex(cableListLastIndex)) return;
@@ -593,12 +592,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	const FVector start = currentCableSocketLoc;
 	const FVector endSafeCheck = start + currentCableDirection * (currentCableDirectionDistance * 0.91);
 	const FVector end = pastCableStartSocketLoc + pastCableDirection * CableUnwrapDistance;
-
-	if(!bReverseLoc)
-	{
-		DrawDebugDirectionalArrow(GetWorld(), start, end, 20.0f, FColor::Yellow, false, 0.01, 10, 3);
-	}
-	
+		
 	//----Safety Trace-----
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
@@ -609,8 +603,8 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return false;
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
-		false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, FColor::Blue);
-
+		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, bReverseLoc ? FColor::Cyan : FColor::Blue);
+		
 	return true;
 }
 
