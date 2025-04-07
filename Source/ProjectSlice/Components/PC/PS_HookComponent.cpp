@@ -1016,17 +1016,41 @@ void UPS_HookComponent::PowerCablePull()
 	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
 	
 	//Determine Pull Direction
-	const UCableComponent* firstCable = CableAttachedArray.IsValidIndex(0) ? CableAttachedArray[0] : CableListArray[0];
-	
-	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(AttachedMesh->GetComponentLocation(),firstCable->GetSocketLocation(SOCKET_CABLE_START));
-	FRotator unRandomRotMesh = rotMeshCable;
-	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
+	FVector start = AttachedMesh->GetComponentLocation();
+	FVector end = (CableAttachedArray.IsValidIndex(0) ? CableAttachedArray[0] : CableListArray[0])->GetSocketLocation(SOCKET_CABLE_START);
+	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 
+	//Debug base Pull dir
+	if(bDebug)
+	{
+		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+	}
+
+	//If attached determine modified trajectory
+	if(CableAttachedArray.IsValidIndex(1))
+	{
+		FVector endNextAttached = CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START);
+		FRotator rotMeshCableNextAttached = UKismetMathLibrary::FindLookAtRotation(start,endNextAttached);
+		rotMeshCable.Yaw = rotMeshCable.Yaw + rotMeshCableNextAttached.Yaw; 
+
+		//Debug modified Pull dir
+		if(bDebug)
+		{
+			DrawDebugPoint(GetWorld(), CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Red, false, 0.1f, 10.0f);
+			DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCableNextAttached.Vector() * 500 , 10.0f,  FColor::Red, false, 0.02f, 10, 3);
+		}
+	}
+	//Else randomized Yaw trajectory
+	else
+	{
+		rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
+	}
+	
+	//Debug modified Pull dir
 	if(bDebugPull)
 	{
-		DrawDebugLine(GetWorld(), AttachedMesh->GetComponentLocation(),AttachedMesh->GetComponentLocation() + unRandomRotMesh.Vector() * 500 , FColor::Orange, false, 0.02f, 10, 3);
-		DrawDebugLine(GetWorld(), AttachedMesh->GetComponentLocation(),AttachedMesh->GetComponentLocation() + rotMeshCable.Vector() * 500 , FColor::Yellow, false, 0.02f, 10, 3);
-		DrawDebugPoint(GetWorld(), firstCable->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Yellow, false, 0.1f, 10.0f);
+		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Yellow, false, 0.02f, 10, 3);
+		DrawDebugPoint(GetWorld(), end, 30.0f, FColor::Yellow, false, 0.1f, 10.0f);
 	}
 	
 	//Pull Force
