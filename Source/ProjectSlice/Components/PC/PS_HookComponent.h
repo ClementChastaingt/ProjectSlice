@@ -361,6 +361,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="0", ClampMin="0", ForceUnits="cm",ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="1", ClampMin="1", ForceUnits="cm",ToolTip="Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))
+	float AttachedMaxDistThreshold = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook",  meta=(UIMin="1", ClampMin="1", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching pull trajectory method"))
+	float AttachedSameLocMaxDuration = 2.0f;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="kg"))
 	float MaxPullWeight = 10000.f;
 
@@ -377,10 +383,24 @@ protected:
 	UCurveFloat* WindePullingCurve;
 	
 	UFUNCTION()
-	void PowerCablePull();	
+	void PowerCablePull();
+
+	UFUNCTION()
+	void OnBlockedTimerEndEventRecevied();	
 	
 private:
-	//------------------
+	UPROPERTY(Transient)
+	FVector _LastAttachedActorLoc;
+	
+	UPROPERTY(Transient)
+	FTimerHandle _AttachedSameLocTimer;
+
+	UPROPERTY(Transient)
+	int32 _AttachedSameLocTimerTriggerCount;
+	
+
+	UPROPERTY(Transient)
+	bool _bAttachObjectIsBlocked;
 
 #pragma endregion Grapple
 

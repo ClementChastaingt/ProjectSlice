@@ -253,13 +253,16 @@ void UPS_PlayerCameraComponent::InitPostProcess()
 	CreatePostProcessMaterial(GlassesMaterial, _GlassesMatInst);
 	CreatePostProcessMaterial(VignetteMaterial, _VignetteMatInst);
 	CreatePostProcessMaterial(OutlineMaterial, _OutlineMatInst);
-	
-	//Dash
-	CreatePostProcessMaterial(SlowmoMaterial, _SlowmoMatInst);
 
 	//Slowmo
+	CreatePostProcessMaterial(SlowmoMaterial, _SlowmoMatInst);
+
+	//Dash
 	CreatePostProcessMaterial(DashMaterial, _DashMatInst);
-	
+
+	//Depth
+	CreatePostProcessMaterial(DepthMaterial, _DepthMatInst);
+	if(_WeightedBlendableArray.IsValidIndex(6)) _WeightedBlendableArray[6].Weight = 1.0f;
 
 	//Update postprocess visibility
 	UpdateWeightedBlendPostProcess();

@@ -164,6 +164,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
 	UMaterialInterface* DashMaterial = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Material")
+	UMaterialInterface* DepthMaterial = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Dash",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
 			
@@ -210,6 +213,9 @@ private:
 	
 	UPROPERTY(Transient)
 	UMaterialInstanceDynamic* _DashMatInst;
+
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* _DepthMatInst;
 	
 	UPROPERTY(Transient)
 	float _DashStartTimestamp;

@@ -264,11 +264,21 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//GetOwner()->AddInstanceComponent(newCable);
 
 	//Config newCable
+
+	//Rendering
+	newCable->SetRenderCustomDepth(true);
+	newCable->SetCustomDepthStencilValue(200.0f);
+	newCable->SetReceivesDecals(false);
+
+	//Opti
 	newCable->bUseSubstepping = true;
 	newCable->bSkipCableUpdateWhenNotVisible = true;
+
+	//Collision
 	newCable->bEnableCollision = false;
 	newCable->SetCollisionProfileName(Profile_NoCollision, true);
 
+	//Attach
 	newCable->bAttachEnd = true;
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
 	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
@@ -650,6 +660,11 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	newCapMesh->SetComponentTickEnabled(false);
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
+	//Setup rendering settings
+	newCapMesh->SetRenderCustomDepth(true);
+	newCapMesh->SetCustomDepthStencilValue(200.0f);
+	newCapMesh->SetReceivesDecals(false);
+	
 	//Get Cable Material and add to Cable
 	if(!bDebugMaterialColors)
 	 {
@@ -1014,8 +1029,24 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Determine force weight
 	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
+
+	//Testing dist to lastLoc
+	if(!GetWorld()->GetTimerManager().IsTimerActive(_AttachedSameLocTimer))
+	{
+		if(UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold)
+		{
+			FTimerDelegate timerDelegate;
+			timerDelegate.BindUObject(this, &UPS_HookComponent::OnBlockedTimerEndEventRecevied);
+			GetWorld()->GetTimerManager().SetTimer(_AttachedSameLocTimer, timerDelegate, AttachedSameLocMaxDuration, false);
+		}
+		else
+		{
+			_bAttachObjectIsBlocked = false;
+		}	
+	}
 	
 	//Determine Pull Direction
+	//1st method for try of unblock object
 	FVector start = AttachedMesh->GetComponentLocation();
 	FVector end = (CableAttachedArray.IsValidIndex(0) ? CableAttachedArray[0] : CableListArray[0])->GetSocketLocation(SOCKET_CABLE_START);
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
@@ -1027,39 +1058,90 @@ void UPS_HookComponent::PowerCablePull()
 	}
 
 	//If attached determine modified trajectory
-	if(CableAttachedArray.IsValidIndex(1))
+	if(CableAttachedArray.IsValidIndex(1) && _bAttachObjectIsBlocked)
 	{
-		FVector endNextAttached = CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START);
-		FRotator rotMeshCableNextAttached = UKismetMathLibrary::FindLookAtRotation(start,endNextAttached);
-		rotMeshCable.Yaw = rotMeshCable.Yaw + rotMeshCableNextAttached.Yaw; 
 
-		//Debug modified Pull dir
-		if(bDebug)
+		//2nd method for try of unblock object
+		if(UKismetMathLibrary::RandomBool())
 		{
-			DrawDebugPoint(GetWorld(), CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Red, false, 0.1f, 10.0f);
-			DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCableNextAttached.Vector() * 500 , 10.0f,  FColor::Red, false, 0.02f, 10, 3);
+			UE_LOG(LogTemp, Error, TEXT("2nd method"));
+			FVector endNextAttached = CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START);
+			FRotator rotMeshCableNextAttached = UKismetMathLibrary::FindLookAtRotation(start,endNextAttached);
+			rotMeshCable.Yaw = rotMeshCableNextAttached.Yaw;
+		
+			if(bDebug)
+			{
+				DrawDebugPoint(GetWorld(), CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Red, false, 0.1f, 10.0f);
+				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCableNextAttached.Vector() * 500 , 10.0f,  FColor::Red, false, 0.02f, 10, 3);
+			}
 		}
+		else
+		{
+			//3rd method for try of unblock object
+			UE_LOG(LogTemp, Error, TEXT("3nd method"));
+			start = end;
+			start.Z = 0.0f;
+			end = CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START);
+			end.Z = 0.0f;
+			rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
+		}		
+		
+		//If unblocking object is impossible break cable
+		// else
+		// {
+		// 	UE_LOG(LogTemp, Warning, TEXT("%S :: Object too much blocked break cable"), __FUNCTION__);
+		// 	DettachHook();
+		// 	return;
+		// }
 	}
-	//Else randomized Yaw trajectory
-	else
-	{
-		rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
-	}
+	
+	//Add a random offset
+	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
+
+	//Stocking current Loc for futur test
+	_LastAttachedActorLoc = AttachedMesh->GetComponentLocation();
 	
 	//Debug modified Pull dir
 	if(bDebugPull)
 	{
-		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Yellow, false, 0.02f, 10, 3);
-		DrawDebugPoint(GetWorld(), end, 30.0f, FColor::Yellow, false, 0.1f, 10.0f);
+		DrawDebugDirectionalArrow(GetWorld(), start, end, 10.0f, FColor::Yellow, false, 0.02f, 10, 3);
 	}
 	
 	//Pull Force
 	if(IsValid(AttachedMesh) && IsValid(GetWorld()))
 	{
 		FVector newVel = AttachedMesh->GetMass() * rotMeshCable.Vector() * ForceWeight;
-		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation);
+		AttachedMesh->AddImpulse((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
+		//AttachedMesh->AddForce((newVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
 	}
 	
+}
+
+void UPS_HookComponent::OnBlockedTimerEndEventRecevied()
+{
+	if(!IsValid(AttachedMesh)) return;
+	
+	_bAttachObjectIsBlocked = UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold;
+	UE_LOG(LogTemp, Error, TEXT("%S :: _bAttachObjectIsBlocked %i"),__FUNCTION__, _bAttachObjectIsBlocked)
+
+	//If stay blocked in secondary methods for multiple time, retry default method && reiterate
+	_AttachedSameLocTimerTriggerCount++;
+	if(_AttachedSameLocTimerTriggerCount > 5)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S ::  stay blocked in secondary methods for multiple time, retry default method"),__FUNCTION__)
+		_bAttachObjectIsBlocked = false;
+		_AttachedSameLocTimerTriggerCount = 0;
+		return;
+	}
+	
+	//If object stay blocked reiterate secondary methods
+	if(_bAttachObjectIsBlocked)
+	{
+		
+		FTimerDelegate timerDelegate;
+		timerDelegate.BindUObject(this, &UPS_HookComponent::OnBlockedTimerEndEventRecevied);
+		GetWorld()->GetTimerManager().SetTimer(_AttachedSameLocTimer, timerDelegate, AttachedSameLocMaxDuration, false);
+	}
 }
 
 #pragma region Swing
