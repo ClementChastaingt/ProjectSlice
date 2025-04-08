@@ -100,7 +100,7 @@ void UPS_WeaponComponent::AttachWeapon(AProjectSliceCharacter* targetPlayerChara
 	targetPlayerCharacter->SetHasRifle(true);
 
 	// Link Hook to Weapon
-	targetPlayerCharacter->GetHookComponent()->OnAttachWeapon();
+	targetPlayerCharacter->GetHookComponent()->InitHookComponent();
 
 	// Link ForceComp to Weapon
 	_ForceComponent = targetPlayerCharacter->GetForceComponent();
