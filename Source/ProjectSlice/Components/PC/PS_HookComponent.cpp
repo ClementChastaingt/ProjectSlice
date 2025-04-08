@@ -141,6 +141,11 @@ void UPS_HookComponent::OnAttachWeapon()
 	//Setup Cable
 	FirstCable->SetupAttachment(HookThrower);
 	FirstCable->SetVisibility(false);
+
+	//Rendering Custom Depth stencil
+	FirstCable->SetRenderCustomDepth(true);
+	FirstCable->SetCustomDepthStencilValue(200);
+	FirstCable->SetCustomDepthStencilWriteMask(ERendererStencilMask::ERSM_Default);
 	
 	CableListArray.AddUnique(FirstCable);
 	CableCapArray.Add(nullptr);
@@ -265,9 +270,14 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 
 	//Config newCable
 
+	//-Material
+	//Debug Cable Color OR use FirstCable material
+	SetupCableMaterial(newCable);
+
 	//Rendering
 	newCable->SetRenderCustomDepth(true);
 	newCable->SetCustomDepthStencilValue(200.0f);
+	newCable->SetCustomDepthStencilWriteMask(ERendererStencilMask::ERSM_Default);
 	newCable->SetReceivesDecals(false);
 
 	//Opti
@@ -375,10 +385,6 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
 	
-	//----Material----
-	//Debug Cable Color OR use FirstCable material
-	SetupCableMaterial(newCable);
-
 }
 
 void UPS_HookComponent::WrapCableAddByLast()
@@ -426,9 +432,6 @@ void UPS_HookComponent::WrapCableAddByLast()
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
 
-	//----Material----
-	//Debug Cable Color OR use FirstCable material
-	SetupCableMaterial(newCable);
 }
 
 void UPS_HookComponent::UnwrapCableByFirst()
