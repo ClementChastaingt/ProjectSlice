@@ -48,7 +48,6 @@
 #define Profile_OverlapOnlyEnemy "OverlapOnlyEnemy"
 #define Profile_GPE "GPE"
 #define Profile_Projectile "Projectile"
-#define Profile_Rope "Rope"
 #define Profile_Parkour "Parkourable"
 
 

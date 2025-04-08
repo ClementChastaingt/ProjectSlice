@@ -167,9 +167,6 @@ protected:
 	TArray<float> CablePointUnwrapAlphaArray;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Default First Cable lenght"))
-	float FirstCableDefaultLenght = 0;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point", meta=(ToolTip="Default First Cable lenght"))
 	UCurveFloat* CableTensCurve = nullptr;
 	
 	//Parameters
@@ -232,7 +229,8 @@ protected:
 	void CableWraping();
 
 	UFUNCTION()
-	void ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable) const;
+	void ConfigLastAndSetupNewCable(UCableComponent* lastCable, const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable, const bool
+		bReverseLoc) const;
 
 	UFUNCTION()
 	void ConfigCableToFirstCableSettings(UCableComponent* newCable) const;
@@ -274,6 +272,9 @@ private:
 	UPROPERTY(Transient)
 	FTimerHandle _SubstepTickHandler;
 
+	UPROPERTY(Transient)
+	float _FirstCableDefaultLenght;
+
 #pragma endregion Rope
 
 #pragma region Grapple
@@ -304,6 +305,9 @@ public:
 	UFUNCTION()
 	void ResetWindeHook();
 	
+	UFUNCTION()
+	void DetermineForceWeight(const float alpha);
+
 	UFUNCTION()
 	void DettachHook();
 	

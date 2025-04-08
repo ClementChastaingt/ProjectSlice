@@ -58,7 +58,7 @@ void UPS_HookComponent::BeginPlay()
 	if(!IsValid(_PlayerController)) return;
 	
 	if(IsValid(FirstCable))
-		FirstCableDefaultLenght = FirstCable->CableLength;
+		_FirstCableDefaultLenght = FirstCable->CableLength;
 
 	//Callback
 	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
@@ -250,18 +250,21 @@ void UPS_HookComponent::CableWraping()
 	//AdaptCableTens();
 }
 
-void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable) const
+void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable, const bool bReverseLoc) const
 {
 	//Init works Variables
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 
-	//Attach Last Cable to Hitted Object, Set his position to it
+	//Attach Last Cable to Hitted Object, Set his position to itS
 	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
-
+	
 	//Make lastCable tense
-	lastCable->CableLength = 5.0f;
-	lastCable->bUseSubstepping = false; 
+	if(bReverseLoc)
+	{
+		lastCable->CableLength = 5.0f;
+		lastCable->bUseSubstepping = false; 
+	}
 
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
@@ -306,7 +309,7 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 
 	//Tense
 	//TODO :: Review this thing for Pull by Tens func
-	newCable->CableLength = FirstCable->CableLength;
+	newCable->CableLength = _FirstCableDefaultLenght;
 	newCable->SolverIterations = FirstCable->SolverIterations;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
@@ -358,7 +361,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
-	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable);
+	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, true);
 	if (!IsValid(newCable))
 	{
 		UE_LOG(LogTemp, Error, TEXT("%S :: localNewCable Invalid"), __FUNCTION__);
@@ -412,7 +415,7 @@ void UPS_HookComponent::WrapCableAddByLast()
 
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
-	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable);
+	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, false);
 	if (!IsValid(newCable))
 	{
 		UE_LOG(LogTemp, Error, TEXT("%S :: localNewCable Invalid"),__FUNCTION__);
@@ -633,10 +636,12 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 
 		out.CableStart = bReverseLoc ? end : start;
 		out.CableEnd = bReverseLoc ? start : end;
-		
+	
 		const TArray<AActor*> actorsToIgnore = {GetOwner()};
 		UKismetSystemLibrary::LineTraceSingle(GetWorld(), out.CableStart, out.CableEnd, UEngineTypes::ConvertToTraceType(ECC_Rope),
 			true, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, out.OutHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple);
+
+		
 
 		return out;
 	}
@@ -782,6 +787,7 @@ void UPS_HookComponent::HookObject()
 	//Setup  new attached component
 	AttachedMesh->SetGenerateOverlapEvents(true);
 	AttachedMesh->SetCollisionProfileName(Profile_GPE);
+	AttachedMesh->SetCollisionResponseToChannel(ECC_Rope,  ECollisionResponse::ECR_Ignore);
 	AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	//TODO :: HookedObject rope wraping
 	AttachedMesh->SetCollisionResponseToChannel(ECC_Rope, ECollisionResponse::ECR_Ignore);
@@ -815,6 +821,7 @@ void UPS_HookComponent::DettachHook()
 	ResetWindeHook();
 	AttachedMesh->SetLinearDamping(0.01f);
 	AttachedMesh->SetAngularDamping(0.0f);
+	AttachedMesh->SetCollisionProfileName(Profile_GPE, false);
 	AttachedMesh = nullptr;
 
 	//----Hook Move Feedback---
@@ -871,7 +878,6 @@ void UPS_HookComponent::DettachHook()
 
 }
 
-
 void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach) const
 {
 	if(!IsValid(cableToAttach)) return;
@@ -884,6 +890,9 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach)
 	//OLD
 	//cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
 }
+
+#pragma region Pull
+//------------------
 
 void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
@@ -927,6 +936,33 @@ void UPS_HookComponent::ResetWindeHook()
 	bCableWinderPull = false;
 }
 
+void UPS_HookComponent::DetermineForceWeight(const float alpha)
+{
+	//MaxForceWeight impacted by object pulled mass
+	float forceWeight = MaxForceWeight;
+
+	//Common Pull logic
+	if(bCableWinderPull || bCablePowerPull)
+	{
+		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
+		float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
+		float objectMassScaled = UPSFl::GetObjectUnifiedMass(AttachedMesh);
+		
+		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
+		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
+
+		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
+		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
+		
+		//if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
+		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
+		// alpha = massAlpha * distAlpha;
+	}
+	
+	//Determine force weight
+	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
+}
+
 void UPS_HookComponent::PowerCablePull()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
@@ -959,6 +995,10 @@ void UPS_HookComponent::PowerCablePull()
 	// 	DettachHook();
 	// 	return;
 	// }
+
+	
+	//Pulling Object
+	if(!AttachedMesh->IsSimulatingPhysics()) return;
 	
 	//Activate Pull if Winde
 	float alpha;
@@ -985,7 +1025,7 @@ void UPS_HookComponent::PowerCablePull()
 		// }
 	}
 	//Else try to Activate Pull On reach Max Distance
-	else if(IsValid(AttachedMesh) && AttachedMesh->IsSimulatingPhysics())
+	else
 	{
 		alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
 		bCablePowerPull = baseToMeshDist > DistanceOnAttach + CablePullSlackDistance;
@@ -1008,30 +1048,9 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//If can't Pull or Swing return
 	if(!bCablePowerPull && !bCableWinderPull && !bPlayerIsSwinging) return;
-	
-	//MaxForceWeight impacted by object pulled mass
-	float forceWeight = MaxForceWeight;
 
-	//Common Pull logic
-	if(bCableWinderPull || bCablePowerPull)
-	{
-		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
-		float objectMassScaled = UPSFl::GetObjectUnifiedMass(AttachedMesh);
-		
-		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
-
-		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
-		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
-		
-		if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
-		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
-		// alpha = massAlpha * distAlpha;
-	}
-	
-	//Determine force weight
-	ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
+	//Setup ForceWeight value
+	DetermineForceWeight(alpha);
 
 	//Testing dist to lastLoc
 	if(!GetWorld()->GetTimerManager().IsTimerActive(_AttachedSameLocTimer))
@@ -1045,6 +1064,9 @@ void UPS_HookComponent::PowerCablePull()
 		else
 		{
 			_bAttachObjectIsBlocked = false;
+			
+			//Stocking current Loc for futur test
+			_LastAttachedActorLoc = AttachedMesh->GetComponentLocation();
 		}	
 	}
 	
@@ -1054,11 +1076,6 @@ void UPS_HookComponent::PowerCablePull()
 	FVector end = (CableAttachedArray.IsValidIndex(0) ? CableAttachedArray[0] : CableListArray[0])->GetSocketLocation(SOCKET_CABLE_START);
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 
-	//Debug base Pull dir
-	if(bDebug)
-	{
-		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
-	}
 
 	//If attached determine modified trajectory
 	if(CableAttachedArray.IsValidIndex(1) && _bAttachObjectIsBlocked)
@@ -1070,12 +1087,12 @@ void UPS_HookComponent::PowerCablePull()
 			UE_LOG(LogTemp, Error, TEXT("2nd method"));
 			FVector endNextAttached = CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START);
 			FRotator rotMeshCableNextAttached = UKismetMathLibrary::FindLookAtRotation(start,endNextAttached);
-			rotMeshCable.Yaw = rotMeshCableNextAttached.Yaw;
+			rotMeshCable.Yaw = -rotMeshCableNextAttached.Yaw;
 		
 			if(bDebug)
 			{
 				DrawDebugPoint(GetWorld(), CableAttachedArray[1]->GetSocketLocation(SOCKET_CABLE_START), 30.0f, FColor::Red, false, 0.1f, 10.0f);
-				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCableNextAttached.Vector() * 500 , 10.0f,  FColor::Red, false, 0.02f, 10, 3);
+				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f,  FColor::Red, false, 0.02f, 10, 3);
 			}
 		}
 		else
@@ -1088,21 +1105,20 @@ void UPS_HookComponent::PowerCablePull()
 			end.Z = 0.0f;
 			rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 		}		
-		
-		//If unblocking object is impossible break cable
-		// else
-		// {
-		// 	UE_LOG(LogTemp, Warning, TEXT("%S :: Object too much blocked break cable"), __FUNCTION__);
-		// 	DettachHook();
-		// 	return;
-		// }
+	}
+	else
+	{
+		//Debug base Pull dir
+		if(bDebug)
+		{
+			DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+		}
+
 	}
 	
 	//Add a random offset
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-50, 50);
-
-	//Stocking current Loc for futur test
-	_LastAttachedActorLoc = AttachedMesh->GetComponentLocation();
+	
 	
 	//Debug modified Pull dir
 	if(bDebugPull)
@@ -1129,9 +1145,9 @@ void UPS_HookComponent::OnBlockedTimerEndEventRecevied()
 
 	//If stay blocked in secondary methods for multiple time, retry default method && reiterate
 	_AttachedSameLocTimerTriggerCount++;
-	if(_AttachedSameLocTimerTriggerCount > 5)
+	if(_AttachedSameLocTimerTriggerCount > 2)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%S ::  stay blocked in secondary methods for multiple time, retry default method"),__FUNCTION__)
+		UE_LOG(LogTemp, Warning, TEXT("%S ::  stay blocked in secondary methods for multiple time, retry default method and slow substeptick iteration"),__FUNCTION__)
 		_bAttachObjectIsBlocked = false;
 		_AttachedSameLocTimerTriggerCount = 0;
 		return;
@@ -1140,12 +1156,13 @@ void UPS_HookComponent::OnBlockedTimerEndEventRecevied()
 	//If object stay blocked reiterate secondary methods
 	if(_bAttachObjectIsBlocked)
 	{
-		
 		FTimerDelegate timerDelegate;
 		timerDelegate.BindUObject(this, &UPS_HookComponent::OnBlockedTimerEndEventRecevied);
 		GetWorld()->GetTimerManager().SetTimer(_AttachedSameLocTimer, timerDelegate, AttachedSameLocMaxDuration, false);
 	}
 }
+
+#pragma endregion Pull
 
 #pragma region Swing
 //------------------
