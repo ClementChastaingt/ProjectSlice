@@ -456,6 +456,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching pull trajectory method"))
 	float AttachedSameLocMaxDuration = 2.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="When object is blocked, this vari is the multiplier of ForceWeight to use for move away  push"))
+	float MoveAwayForceDivider= 2.0f;
+
 private:
 	UPROPERTY(Transient)
 	FHitResult _CurrentHookHitResult;

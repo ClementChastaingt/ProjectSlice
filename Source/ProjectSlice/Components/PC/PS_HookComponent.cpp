@@ -758,7 +758,7 @@ void UPS_HookComponent::AdaptCableTens()
 void UPS_HookComponent::HookObject()
 {
 	//If FirstCable is not in CableList return
-	if(!IsValid(FirstCable) || !IsValid(HookThrower) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
+	if(!IsValid(_PlayerCharacter) || !IsValid(FirstCable) || !IsValid(HookThrower) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
 		
 	//Break Hook constraint if already exist Or begin Winding
 	if(IsValid(GetAttachedMesh()))
@@ -1086,7 +1086,7 @@ void UPS_HookComponent::PowerCablePull()
 		FVector moveAwayDir = rotMeshCableNextAttached.Vector();
 		moveAwayDir.Z = 0.0f;
 		
-		const FVector moveAwayVel = _AttachedMesh->GetMass() * moveAwayDir * (_ForceWeight / 3);
+		const FVector moveAwayVel = _AttachedMesh->GetMass() * moveAwayDir * (_ForceWeight / MoveAwayForceDivider);
 		_AttachedMesh->AddImpulse((moveAwayVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
 
 		//Move Away Pull debug
