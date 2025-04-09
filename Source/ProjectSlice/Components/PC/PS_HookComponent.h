@@ -435,10 +435,16 @@ protected:
 	float CalculatePullAlpha(const float baseToMeshDist, const float distanceOnAttachByTensorCount);
 
 	UFUNCTION()
+	void CheckingIfObjectIsBlocked();
+
+	UFUNCTION()
 	void PowerCablePull();
 	
 	UFUNCTION()
-	void OnBlockedTimerEndEventRecevied();
+	void OnAttachedSameLocTimerEndEventReceived();
+
+	UFUNCTION()
+	void OnUnblockPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel);
 
 	//Parameters	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="10", ClampMin="10", ForceUnits="cm/s", ToolTip="Max Force Weight for Pulling object to Player"))
@@ -450,14 +456,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Distance for reach Max Force Weight by distance to object"))
 	float MaxForcePullingDistance = 1000.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
+	float PullingMaxRandomYawOffset = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Unblock Push Latency"))
+	float UnblockPushLatency = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="1", ClampMin="1", ForceUnits="cm", ToolTip= "Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))
-	float AttachedMaxDistThreshold = 50.0f;
+	float AttachedMaxDistThreshold = 200.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching pull trajectory method"))
-	float AttachedSameLocMaxDuration = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
+	float AttachedSameLocMaxDuration = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="When object is blocked, this vari is the multiplier of ForceWeight to use for move away  push"))
-	float MoveAwayForceDivider= 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.1", ClampMin="0.1", ToolTip="When object is blocked, this var is the multiplier of ForceWeight to use for move away push"))
+	float MoveAwayForceMultiplicator= 5.0f;
 
 private:
 	UPROPERTY(Transient)
@@ -474,15 +486,15 @@ private:
 	
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
 	bool _bAttachObjectIsBlocked;
-
-	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
-	int32 _AttachedSameLocTimerTriggerCount;
-
+	
 	UPROPERTY(Transient)
 	FVector _LastAttachedActorLoc;
 
 	UPROPERTY(Transient)
 	FTimerHandle _AttachedSameLocTimer;
+
+	UPROPERTY(Transient)
+	TArray<FTimerHandle> _UnblockTimerTimerArray;
 	
 	//------------------
 #pragma endregion Pull
