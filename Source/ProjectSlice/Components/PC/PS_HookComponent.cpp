@@ -481,6 +481,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
 	}
+	
 
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
@@ -534,7 +535,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 }
 
 void UPS_HookComponent::UnwrapCableByLast()
-{	
+{
 	//-----Unwrap Logic-----
 	//Init works Variables
 	int32 cableListLastIndex = CableListArray.Num()-1;
@@ -889,15 +890,14 @@ void UPS_HookComponent::DettachHook()
 
 void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach) const
 {
-	if(!IsValid(cableToAttach)) return;
+	if(!IsValid(cableToAttach) || !IsValid(HookThrower)) return;
 	
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
-	
+		
 	cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK), false, nullptr, ETeleportType::TeleportPhysics);
-	cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
+	const bool test = cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
 
-	//OLD
-	//cable->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
+	UE_LOG(LogTemp, Error, TEXT("test %i"),test);
 }
 
 #pragma region Pull
@@ -1071,7 +1071,7 @@ void UPS_HookComponent::PowerCablePull()
 	}
 	
 	//If can't Pull or Swing return
-	if(!_bCablePowerPull && !_bCableWinderPull) return;
+	if(!_bCablePowerPull && !_bCableWinderPull && alpha == 0.0f) return;
 
 	//Setup ForceWeight value
 	DetermineForceWeight(alpha);
@@ -1101,7 +1101,8 @@ void UPS_HookComponent::PowerCablePull()
 			//Setup start && endd loc
 			FVector start =  (i == 1) ? _AttachedMesh->GetComponentLocation() : CableAttachedElement->GetSocketLocation(SOCKET_CABLE_END);
 			FVector end = CableAttachedElement->GetSocketLocation(SOCKET_CABLE_START);
-			
+
+			//TODO :: Test by change end to Obstacle Extent Origin 
 			FRotator inverseRotCable = UKismetMathLibrary::FindLookAtRotation(end, start);
 			FVector pushDir = inverseRotCable.Vector();
 			pushDir.Z = FMath::Abs(pushDir.Z);
@@ -1179,6 +1180,8 @@ void UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived()
 
 void UPS_HookComponent::OnUnblockPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel)
 {
+	if(!IsValid(_AttachedMesh) || !IsValid(GetWorld())) return;
+	
 	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S (%f)"),__FUNCTION__,GetWorld()->GetTimeSeconds());
 	
 	FVector inverseNewVel = _AttachedMesh->GetMass() * currentPushDir * pushAccel;
