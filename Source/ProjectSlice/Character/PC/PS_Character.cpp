@@ -86,6 +86,9 @@ AProjectSliceCharacter::AProjectSliceCharacter()
 
 	//Create ForceComponent
 	ForceComponent = CreateDefaultSubobject<UPS_ForceComponent>(TEXT("ForceComponent"));
+
+	//Create PhysicAnimComponent
+	PhysicAnimComponent = CreateDefaultSubobject<UPhysicalAnimationComponent>(TEXT("PhysicAnimComponent"));
 	
 	//Attach Weapon Componenet on begin play
 	WeaponComponent->AttachWeapon(this);

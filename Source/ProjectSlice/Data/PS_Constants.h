@@ -85,11 +85,16 @@
 #define SOCKET_HOOK "HookAttach"
 #define SOCKET_CABLE_START "CableStart"
 #define SOCKET_CABLE_END "CableEnd"
+
 #define SOCKET_HAND_LEFT "middle_01_l"
 #define SOCKET_SCREW_INDEX "SC_Index_01_Screw"
 #define SOCKET_SCREW_MIDDLE "SC_Middle_01_Screw"
 #define SOCKET_SCREW_PINKY "SC_Pinky_01_Screw"
 #define SOCKET_SCREW_RING "SC_Ring_01_Screw"
+
+#define BONE_PElVIS "pelvis"
+#define BONE_SPINE "Spine"
+#define BONE_SPINE_02 "Spine2"
 
 //__________________________________________________
 #pragma endregion SocketName

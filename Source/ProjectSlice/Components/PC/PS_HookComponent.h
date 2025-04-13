@@ -6,6 +6,7 @@
 #include "InputAction.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_HookComponent.generated.h"
@@ -42,7 +43,7 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 
 	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* HookThrower = nullptr;
-
+	
 	UPROPERTY(VisibleAnywhere, Category="Component", meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* HookCollider = nullptr;
 
@@ -94,9 +95,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
-
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
-	bool bDebugTick = false;
+	bool bDebugArm = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugCable = false;
@@ -122,8 +123,6 @@ public:
 	void InitHookComponent();
 
 protected:
-	UFUNCTION()
-	void OnInitWeaponEventReceived();
 
 	UFUNCTION()
 	void OnSlowmoTriggerEventReceived(const bool bIsSlowed);
@@ -148,8 +147,27 @@ protected:
 	void OnHookBoxEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 		UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Arm")
-	float ArmRepulseStrenght = 10.0f;
+	UFUNCTION()
+	void InitArmPhysicalAnimation();
+
+	UFUNCTION()
+	void ToggleArmPhysicalAnimation(const bool bActivate);
+
+	UFUNCTION()
+	void ArmTick();
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Arm", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	float ArmPhysicAnimRecoveringDuration = 0.5f;
+
+private:
+	UPROPERTY(Transient)
+	UPhysicalAnimationComponent* _PhysicAnimComp;
+
+	UPROPERTY(Transient)
+	bool _bBlendOutToUnphysicalized;
+
+	UPROPERTY(Transient)
+	float _ArmTogglePhysicAnimTimestamp;
 
 #pragma endregion Arm
 
@@ -451,7 +469,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Unblock Push Latency"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Latency between unblock Push steps"))
 	float UnblockPushLatency = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="1", ClampMin="1", ForceUnits="cm", ToolTip= "Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))

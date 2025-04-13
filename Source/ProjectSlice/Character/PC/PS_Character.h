@@ -6,6 +6,7 @@
 #include "PS_PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Logging/LogMacros.h"
+#include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "ProjectSlice/Character/PS_CharacterBase.h"
 #include "ProjectSlice/Components/PC/PS_WeaponComponent.h"
 #include "ProjectSlice/Components/Common/PS_ProceduralAnimComponent.h"
@@ -49,7 +50,7 @@ class PROJECTSLICE_API AProjectSliceCharacter : public APS_CharacterBase
 	UPS_ProceduralAnimComponent* ProceduralAnimComponent;
 
 	/** ParkourComponent */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleDefaultsOnly, Category=Manager, meta = (AllowPrivateAccess = "true"))
 	UPS_SlowmoComponent* SlowmoComponent;
 
 	/** ParkourComponent */
@@ -65,8 +66,12 @@ class PROJECTSLICE_API AProjectSliceCharacter : public APS_CharacterBase
 	UPS_HookComponent* HookComponent;
 	
 	/** ForceComponent */
-	UPROPERTY(VisibleInstanceOnly, Category=Mesh, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, Category=Manager, meta = (AllowPrivateAccess = "true"))
 	UPS_ForceComponent* ForceComponent;
+
+	/** PhysicalAnimComponent */
+	UPROPERTY(VisibleAnywhere, Category=Manager, meta = (AllowPrivateAccess = "true"))
+	UPhysicalAnimationComponent* PhysicAnimComponent;
 
 	
 public:
@@ -115,7 +120,11 @@ public:
 	/** Returns ForceComponent **/
 	UFUNCTION(BlueprintCallable)
 	UPS_ForceComponent* GetForceComponent() const{return ForceComponent;}
-		
+
+	/** Returns PhysicAnimComponent **/
+	UFUNCTION(BlueprintCallable)
+	UPhysicalAnimationComponent* GetPhysicAnimComponent() const{return PhysicAnimComponent;}
+
 protected:
 	virtual void BeginPlay();
 	

@@ -26,11 +26,8 @@ UPS_HookComponent::UPS_HookComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	HookThrower = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HookThrower"));
-	HookThrower->SetCollisionProfileName(Profile_NoCollision);
-	
+	HookThrower = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HookThrower"));	
 	HookCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("HookCollider"));
-	HookCollider->SetCollisionProfileName(Profile_NoCollision);
 	
 	FirstCable = CreateDefaultSubobject<UCableComponent>(TEXT("FirstCable"));
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
@@ -62,10 +59,6 @@ void UPS_HookComponent::BeginPlay()
 		_FirstCableDefaultLenght = FirstCable->CableLength;
 
 	//Callback
-	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
-	{
-		_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.AddUniqueDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
-	}
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
@@ -79,8 +72,7 @@ void UPS_HookComponent::BeginPlay()
 		HookCollider->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookBoxBeginOverlapEvent);
 		HookCollider->OnComponentEndOverlap.AddUniqueDynamic(this,  &UPS_HookComponent::OnHookBoxEndOverlapEvent);
 	}
-
-
+	
 	//Custom tick - substep to tick at 120 fps (more stable but cable can flicker on unwrap)
 	if(bCanUseSubstepTick)
 	{
@@ -92,7 +84,7 @@ void UPS_HookComponent::BeginPlay()
 	//Constraint display
 	GetConstraintAttachMaster()->SetVisibility(bDebugSwing);
 	GetConstraintAttachSlave()->SetVisibility(bDebugSwing);
-	
+		
 }
 
 void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -100,10 +92,6 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 	
 	//Callback
-	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
-	{
-		_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.RemoveDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
-	}
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.RemoveDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
@@ -125,15 +113,10 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	//Force attach when arm use physic
-	if (IsValid(HookThrower) && HookThrower->IsSimulatingPhysics())
-	{
-		FVector TargetLocation = GetComponentLocation();
-		FQuat TargetRotation = GetComponentQuat();
-		HookThrower->SetWorldLocationAndRotation(TargetLocation, TargetRotation, false, nullptr, ETeleportType::TeleportPhysics);
-	}
-
-	//CableLogics
+	//Arm
+	ArmTick();
+	
+	//Cable
 	if(!bCanUseSubstepTick) CableWraping();
 
 	//Swing
@@ -152,7 +135,6 @@ void UPS_HookComponent::InitHookComponent()
 	//Setup HookThrower
 	HookThrower->SetupAttachment(this);
 	HookCollider->SetupAttachment(this);
-	HookCollider->SetCollisionProfileName(Profile_NoCollision);
 	
 	//Setup Cable
 	FirstCable->SetupAttachment(HookThrower);
@@ -170,17 +152,11 @@ void UPS_HookComponent::InitHookComponent()
 	HookPhysicConstraint->SetupAttachment(this);
 	ConstraintAttachSlave->SetupAttachment(this);
 	ConstraintAttachMaster->SetupAttachment(this);
-				
+	
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
 	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));
 }
-
-void UPS_HookComponent::OnInitWeaponEventReceived()
-{
-	
-}
-
 
 void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 {
@@ -197,7 +173,7 @@ void UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveCom
 {	
 	if(bPlayerIsSwinging)
 	{
-		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: ForceInvertSwingDirection"), __FUNCTION__);
+		if(bDebugSwing) UE_LOG(LogTemp, Log, TEXT("%S :: ForceInvertSwingDirection"), __FUNCTION__);
 		ForceInvertSwingDirection();
 	}
 	
@@ -212,12 +188,70 @@ void UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveCom
 void UPS_HookComponent::OnHookBoxBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 	UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("%S ta"), __FUNCTION__);
+	if(otherActor == _PlayerCharacter) return;
+	
+	InitArmPhysicalAnimation();
+	ToggleArmPhysicalAnimation(true);
 }
 
 void UPS_HookComponent::OnHookBoxEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
-	UE_LOG(LogTemp, Warning, TEXT("%S ti"), __FUNCTION__);
+	if(otherActor == _PlayerCharacter) return;
+	
+	ToggleArmPhysicalAnimation(false);
+}
+
+void UPS_HookComponent::InitArmPhysicalAnimation()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(HookThrower)) return;
+
+	_PhysicAnimComp = _PlayerCharacter->GetPhysicAnimComponent();
+	
+	if(!IsValid(_PhysicAnimComp)) return;
+	
+	if(bDebugArm) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+
+	//Set mesh with Arm
+	_PlayerCharacter->GetPhysicAnimComponent()->SetSkeletalMeshComponent(GetHookThrower());
+}
+
+void UPS_HookComponent::ToggleArmPhysicalAnimation(const bool bActivate)
+{
+	if(!IsValid(_PhysicAnimComp) || !IsValid(HookThrower) || !IsValid(GetWorld())) return;
+
+	if(bDebugArm) UE_LOG(LogTemp, Log, TEXT("%S :: bActivate %i"), __FUNCTION__, bActivate);
+	
+	//Tweak PhysicAnimComp
+	if(bActivate)
+	{
+		HookThrower->SetAllBodiesBelowSimulatePhysics(BONE_SPINE, true, false);
+		_PhysicAnimComp->ApplyPhysicalAnimationProfileBelow(BONE_SPINE, FName("StayAtLoc"), false, false);
+	}
+	
+	//Setup work var
+	_bBlendOutToUnphysicalized = !bActivate;
+	_ArmTogglePhysicAnimTimestamp = GetWorld()->GetTimeSeconds();
+	
+}
+
+void UPS_HookComponent::ArmTick()
+{
+	if(!IsValid(GetWorld())) return;
+
+	//Blend out during time when _bArmIsUsingPhysicAnim
+	if(_bBlendOutToUnphysicalized)
+	{
+		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _ArmTogglePhysicAnimTimestamp, _ArmTogglePhysicAnimTimestamp + ArmPhysicAnimRecoveringDuration, 0.0f, 1.0f);
+		HookThrower->SetAllBodiesBelowPhysicsBlendWeight(BONE_SPINE,1 - alpha, false, true);
+
+		//Stop 
+		if(alpha >= 1.0f)
+		{
+			HookThrower->SetAllBodiesBelowSimulatePhysics(BONE_SPINE, false, false);
+			_bBlendOutToUnphysicalized = false;
+		}
+	}
+	
 }
 
 //------------------
@@ -319,7 +353,7 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 
 void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
 {
-	if (bDebug && bDebugMaterialColors)
+	if (bDebugCable && bDebugMaterialColors)
 	{
 		if (!IsValid(CableDebugMaterialInst)) return;
 	
@@ -619,7 +653,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return false;
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
-		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, bReverseLoc ? FColor::Cyan : FColor::Blue);
+		false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, bReverseLoc ? FColor::Cyan : FColor::Blue);
 		
 	return true;
 }
@@ -795,10 +829,6 @@ void UPS_HookComponent::HookObject()
 	
 	//Determine max distance for Pull
 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
-
-	//Activate HookThrower collision
-	HookCollider->SetCollisionProfileName(Profile_CharacterMesh);
-	HookThrower->SetCollisionProfileName(Profile_CharacterMesh);
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -863,10 +893,7 @@ void UPS_HookComponent::DettachHook()
 	FirstCable->AttachEndTo = FComponentReference();
 	FirstCable->SetVisibility(false);
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
-	
-	//Desactivate HookThrower collision
-	HookCollider->SetCollisionProfileName(Profile_NoCollision);
-	
+		
 	//Callback
 	OnHookObject.Broadcast(false);
 
@@ -1001,7 +1028,7 @@ void UPS_HookComponent::CheckingIfObjectIsBlocked()
 	{
 		if(UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, _AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("%S :: AttachedObject is under Dist2D Threshold"), __FUNCTION__);
+			if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: AttachedObject is under Dist2D Threshold"), __FUNCTION__);
 			
 			FTimerDelegate timerDelegate;
 			timerDelegate.BindUObject(this, &UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived);
@@ -1013,8 +1040,8 @@ void UPS_HookComponent::CheckingIfObjectIsBlocked()
 			
 			//Stocking current Loc for futur test
 			_LastAttachedActorLoc = _AttachedMesh->GetComponentLocation();
-			_UnblockTimerTimerArray.Empty();
-		}	
+		}
+		_UnblockTimerTimerArray.Empty();
 	}
 }
 
@@ -1064,7 +1091,6 @@ void UPS_HookComponent::PowerCablePull()
 	CheckingIfObjectIsBlocked();
 	
 	//Pull Object
-	
 	//If attached determine additional Unblock push
 	if(_bAttachObjectIsBlocked)
 	{
@@ -1104,39 +1130,18 @@ void UPS_HookComponent::PowerCablePull()
 			GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, i * UnblockPushLatency, false);
 			_UnblockTimerTimerArray.AddUnique(unblockPushTimerHandle);
 			
-			if (bDebug)
+			if (bDebugPull)
 			{
 				DrawDebugDirectionalArrow(GetWorld(), end, end + pushDir * UKismetMathLibrary::Vector_Distance(end, start), 10.0f, FColor::Red, false, 1.0f, 10, 3);
 			}
 			
 			i++;
 		}
-
-		// //Move away Object
-		// //--------------
-		// if(CableAttachedArray.IsValidIndex(0))
-		// {
-		// 	FVector endNextAttached = CableAttachedArray[0]->GetSocketLocation(SOCKET_CABLE_START);
-		// 	FRotator rotMeshCableNextAttached = UKismetMathLibrary::FindLookAtRotation(endNextAttached, start);
-		//
-		// 	FVector moveAwayDir = rotMeshCableNextAttached.Vector();
-		// 	moveAwayDir.Z = FMath::Abs(moveAwayDir.Z);
-		//
-		// 	const FVector moveAwayVel = _AttachedMesh->GetMass() * moveAwayDir * (_ForceWeight / MoveAwayForceDivider);
-		// 	_AttachedMesh->AddImpulse((moveAwayVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
-		//
-		// 	//Move Away Pull debug
-		// 	if (bDebug)
-		// 	{
-		// 		DrawDebugDirectionalArrow(GetWorld(), start, start + moveAwayDir * 500, 10.0f, FColor::Red, false,
-		// 			0.02f, 10, 3);
-		// 	}
-		// }
-		
 	}
 	
 	//Default Pull Force
-	FVector start = _AttachedMesh->GetComponentLocation();
+	//FVector start = _AttachedMesh->GetComponentLocation();
+	FVector start = CableListArray[0]->GetSocketLocation(SOCKET_CABLE_END);
 	FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
@@ -1145,7 +1150,7 @@ void UPS_HookComponent::PowerCablePull()
 	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
 	
 	//Debug base Pull dir
-	if(bDebug)
+	if(bDebugPull)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
 	}
@@ -1158,7 +1163,7 @@ void UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived()
 	if(!IsValid(_AttachedMesh)) return;
 	
 	_bAttachObjectIsBlocked = UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, _AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold;
-	UE_LOG(LogTemp, Error, TEXT("%S :: _bAttachObjectIsBlocked %i"),__FUNCTION__, _bAttachObjectIsBlocked);
+	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _bAttachObjectIsBlocked %i"),__FUNCTION__, _bAttachObjectIsBlocked);
 	
 }
 
@@ -1171,7 +1176,7 @@ void UPS_HookComponent::OnUnblockPushTimerEndEventReceived(const FTimerHandle se
 	FVector inverseNewVel = _AttachedMesh->GetMass() * currentPushDir * pushAccel;
 	_AttachedMesh->AddImpulse((inverseNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
 
-	_UnblockTimerTimerArray.RemoveSingle(selfHandler);
+	_UnblockTimerTimerArray.Remove(selfHandler);
 }
 
 #pragma endregion Pull
@@ -1409,7 +1414,7 @@ void UPS_HookComponent::OnSwingForce()
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
 	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (alphaCurve / SwingInputScaleDivider));
 
-	if(bDebugTick && bDebugSwing)
+	if(bDebugSwing)
 		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
 
 	//Stop by time
