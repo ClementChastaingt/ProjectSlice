@@ -141,19 +141,11 @@ protected:
 
 protected:
 	UFUNCTION()
-	void OnHookThrowerOverlapReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
+	void OnHookBoxBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 		UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
 
 	UFUNCTION()
-	void OnHookThrowerHitReceived(UPrimitiveComponent* hitComponent, AActor* otherActor, UPrimitiveComponent* otherComp,
-		FVector normalImpulse, const FHitResult& hit);
-
-	UFUNCTION()
-	void OnHookCapsuleBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
-		UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
-
-	UFUNCTION()
-	void OnHookCapsuleEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
+	void OnHookBoxEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 		UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Arm")

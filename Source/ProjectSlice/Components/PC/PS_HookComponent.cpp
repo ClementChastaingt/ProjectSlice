@@ -74,6 +74,12 @@ void UPS_HookComponent::BeginPlay()
 	{
 		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
 	}
+	if(IsValid(HookCollider))
+	{
+		HookCollider->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookBoxBeginOverlapEvent);
+		HookCollider->OnComponentEndOverlap.AddUniqueDynamic(this,  &UPS_HookComponent::OnHookBoxEndOverlapEvent);
+	}
+
 
 	//Custom tick - substep to tick at 120 fps (more stable but cable can flicker on unwrap)
 	if(bCanUseSubstepTick)
@@ -94,7 +100,6 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 	
 	//Callback
-	GetHookThrower()->OnComponentHit.RemoveDynamic(this, &UPS_HookComponent::OnHookThrowerHitReceived);
 	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
 	{
 		_PlayerCharacter->GetWeaponComponent()->OnWeaponInit.RemoveDynamic(this, &UPS_HookComponent::OnInitWeaponEventReceived);
@@ -106,6 +111,11 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if(IsValid(_PlayerCharacter->GetParkourComponent()))
 	{
 		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.RemoveDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
+	}
+	if(IsValid(HookCollider))
+	{
+		HookCollider->OnComponentBeginOverlap.RemoveDynamic(this, &UPS_HookComponent::OnHookBoxBeginOverlapEvent);
+		HookCollider->OnComponentEndOverlap.RemoveDynamic(this, &UPS_HookComponent::OnHookBoxEndOverlapEvent);
 	}
 
 }
@@ -164,13 +174,6 @@ void UPS_HookComponent::InitHookComponent()
 	// //Setup HookMesh
 	// HookMesh->SetCollisionProfileName(FName("NoCollision"), true);
 	// HookMesh->SetupAttachment(CableMesh, FName("RopeEnd"));
-
-	//Callback
-	HookThrower->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookThrowerOverlapReceived);
-	HookThrower->OnComponentHit.AddUniqueDynamic(this, &UPS_HookComponent::OnHookThrowerHitReceived);
-
-	HookCollider->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookCapsuleBeginOverlapEvent);
-	HookCollider->OnComponentEndOverlap.AddUniqueDynamic(this,  &UPS_HookComponent::OnHookCapsuleEndOverlapEvent);
 }
 
 void UPS_HookComponent::OnInitWeaponEventReceived()
@@ -191,11 +194,10 @@ void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 }
 
 void UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp,int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
-{
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	
+{	
 	if(bPlayerIsSwinging)
 	{
+		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: ForceInvertSwingDirection"), __FUNCTION__);
 		ForceInvertSwingDirection();
 	}
 	
@@ -207,29 +209,13 @@ void UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitiveCom
 #pragma region Arm
 //------------------
 
-void UPS_HookComponent::OnHookThrowerHitReceived(UPrimitiveComponent* hitComponent, AActor* otherActor,
-	UPrimitiveComponent* otherComp, FVector normalImpulse, const FHitResult& hit)
-{
-	UE_LOG(LogTemp, Error, TEXT("%S to"), __FUNCTION__);
-	if(!IsValid(otherActor) || !IsValid(otherComp) || !IsValid(HookThrower)) return;
-	//-hit.ImpactNormal 
-	// Calculate repulsive force
-	//HookThrower->AddImpulse(-normalImpulse * ArmRepulseStrenght, NAME_None, false);
-}
-
-void UPS_HookComponent::OnHookThrowerOverlapReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
-	UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
-{
-	UE_LOG(LogTemp, Error, TEXT("%S te "), __FUNCTION__);
-}
-
-void UPS_HookComponent::OnHookCapsuleBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
+void UPS_HookComponent::OnHookBoxBeginOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
 	UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("%S ta"), __FUNCTION__);
 }
 
-void UPS_HookComponent::OnHookCapsuleEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
+void UPS_HookComponent::OnHookBoxEndOverlapEvent(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
 	UE_LOG(LogTemp, Warning, TEXT("%S ti"), __FUNCTION__);
 }
@@ -278,16 +264,14 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	if(bReverseLoc)
 	{
 		lastCable->CableLength = 5.0f;
-		lastCable->bUseSubstepping = false; 
 	}
 
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
-	//Necessary for appear in 
+	//Necessary for appear in BP
 	//GetOwner()->AddInstanceComponent(newCable);
 
 	//Config newCable
-
 	//-Material
 	//Debug Cable Color OR use FirstCable material
 	SetupCableMaterial(newCable);
@@ -323,7 +307,7 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	newCable->TileMaterial = FirstCable->TileMaterial;
 
 	//Tense
-	//TODO :: Review this thing for Pull by Tens func
+	//TODO :: Review this thing for Pull by Tens func*
 	newCable->CableLength = _FirstCableDefaultLenght;
 	newCable->SolverIterations = FirstCable->SolverIterations;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
@@ -460,8 +444,8 @@ void UPS_HookComponent::UnwrapCableByFirst()
 
 	UCableComponent* pastCable = CableListArray[1];
 	UCableComponent* currentCable = CableListArray[0];
-
-	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
+ 
+	if(!IsValid(currentCable) || !IsValid(pastCable) || currentCable == pastCable) return;
 	
 	//----Unwrap Trace-----
 	//If no hit, or hit very close to trace end then process unwrap
@@ -548,7 +532,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	UCableComponent* pastCable = CableAttachedArray[cableAttachedLastIndex];
 	UCableComponent* currentCable = CableListArray[cableListLastIndex];
 	
-	if(!IsValid(currentCable) || !IsValid(pastCable)) return;
+	if(!IsValid(currentCable) || !IsValid(pastCable) || currentCable == pastCable) return;
 	
 	//----Unwrap Trace-----
 	//If no hit, or hit very close to trace end then process unwrap
@@ -894,7 +878,7 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach)
 	
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepRelative, true);
 		
-	cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK), false, nullptr, ETeleportType::TeleportPhysics);
+	cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));
 	const bool test = cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
 
 	UE_LOG(LogTemp, Error, TEXT("test %i"),test);
@@ -1047,7 +1031,7 @@ void UPS_HookComponent::PowerCablePull()
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Distance On Attach By point number weight
-	float distanceOnAttachByTensorWeight = CableCapArray.Num() > 0 ? (_DistanceOnAttach/CablePointLocations.Num()) : _DistanceOnAttach;
+	float distanceOnAttachByTensorWeight = CableCapArray.Num() > 1 ? (_DistanceOnAttach/(CablePointLocations.Num()-1)) : _DistanceOnAttach;
 
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist, distanceOnAttachByTensorWeight);
