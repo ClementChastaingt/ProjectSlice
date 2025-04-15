@@ -285,9 +285,11 @@ void UPS_HookComponent::CableWraping()
 
 void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,const FSCableWarpParams& currentTraceCableWarp, UCableComponent*& newCable, const bool bReverseLoc) const
 {
+	//Init works Variables
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false);
 	
 	//Attach Last Cable to Hitted Object, Set his position to it
-	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), FAttachmentTransformRules::KeepWorldTransform);
+	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
 	
 	//Make lastCable tense
@@ -411,8 +413,10 @@ void UPS_HookComponent::WrapCableAddByFirst()
 
 	//Attach New Cable to Hitted Object && Set his position to it
 	if(!CablePointLocations.IsValidIndex(1) || !CablePointComponents.IsValidIndex(1)) return;
+
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false);
 	newCable->SetWorldLocation(CablePointLocations[1]);
-	newCable->AttachToComponent(CablePointComponents[1], FAttachmentTransformRules::KeepWorldTransform);
+	newCable->AttachToComponent(CablePointComponents[1], AttachmentRule);
 	
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
@@ -531,10 +535,11 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	
 	if(CablePointLocations.IsValidIndex(0))
 	{
-		UE_LOG(LogTemp, Error, TEXT("ERROR Snap"));
+		const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false);
+		
 		//Set the latest oldest point as cable active point && attach cable to the latest component point
 		firstCable->SetWorldLocation(CablePointLocations[0], false,nullptr, ETeleportType::TeleportPhysics);
-		firstCable->AttachToComponent(CablePointComponents[0],FAttachmentTransformRules::KeepWorldTransform);
+		firstCable->AttachToComponent(CablePointComponents[0],AttachmentRule);
 	}
 	else
 	{
@@ -709,6 +714,8 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
 	newCapMesh->SetCollisionProfileName(Profile_NoCollision);
 	newCapMesh->SetComponentTickEnabled(false);
+
+	//Set loc and scale
 	const int32 index = bIsAddByFirst ? 0 : CablePointLocations.Num() - 1;
 	if(CablePointLocations.IsValidIndex(index)) newCapMesh->SetWorldLocation(CablePointLocations[index]);
 	newCapMesh->AttachToComponent(currentTraceParams.OutHit.GetComponent(), FAttachmentTransformRules::KeepWorldTransform);
@@ -913,12 +920,9 @@ void UPS_HookComponent::DettachHook()
 void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach) const
 {
 	if(!IsValid(cableToAttach) || !IsValid(HookThrower)) return;
-	 	
-	// cableToAttach->SetWorldLocation(HookThrower->GetSocketLocation(SOCKET_HOOK));
-	// const bool test = cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
-	
-	const bool test = cableToAttach->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SOCKET_HOOK);
-	UE_LOG(LogTemp, Error, TEXT("test %i"),test);
+
+	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::KeepWorld, false);
+	cableToAttach->AttachToComponent(HookThrower, AttachmentRule, SOCKET_HOOK);
 }
 
 #pragma region Pull
