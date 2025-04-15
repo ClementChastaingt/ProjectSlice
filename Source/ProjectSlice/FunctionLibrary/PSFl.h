@@ -16,7 +16,15 @@ public:
 	//------------------
 
 public:
-
+	/*
+	 * @brief Find closest point on acotr mesh collision
+	 * @param actorToTest: actor to test collision
+	 * @param fromWorldLocation: world loc to test on collision
+	 * @param outClosestPoint: the outpoint find
+	 * @return the Vecotr loc of the closest point on actorToTest collision 
+	*/
+	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
+	
 	/*
 	 * @brief Check and Clamp a Velocity Target vector to MaxVelocity
 	 * @param currentVelocity: movement current velocitu to check

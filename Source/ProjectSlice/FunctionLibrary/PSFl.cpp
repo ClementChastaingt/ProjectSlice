@@ -15,6 +15,37 @@ class AProjectSliceCharacter;
 
 #pragma region Utilities
 
+bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
+{
+	bool bFoundPoint = false;
+
+	if(IsValid(actorToTest))
+	{
+		float bestDist = TNumericLimits<float>().Max();
+		
+		TArray<UActorComponent*> outComps;
+		actorToTest->GetComponents(UMeshComponent::StaticClass(),outComps,true);
+		for (UActorComponent* currentComp : outComps)
+		{
+			if (UMeshComponent* meshComp = Cast<UMeshComponent>(currentComp))
+			{
+				FVector currentPoint;
+				const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
+
+				if ((currentDist >= 0) && (currentDist < bestDist))
+				{
+					bestDist = currentDist;
+					outClosestPoint = currentPoint;
+					bFoundPoint = true;
+				}
+			}
+		}
+	}
+	
+	return bFoundPoint;
+}
+
+
 FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
 	FVector clampedVel = currentVelocity;
