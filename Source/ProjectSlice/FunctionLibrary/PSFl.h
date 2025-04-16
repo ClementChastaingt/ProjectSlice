@@ -17,15 +17,6 @@ public:
 
 public:
 	/*
-	 * @brief Find closest point on acotr mesh collision
-	 * @param actorToTest: actor to test collision
-	 * @param fromWorldLocation: world loc to test on collision
-	 * @param outClosestPoint: the outpoint find
-	 * @return the Vecotr loc of the closest point on actorToTest collision 
-	*/
-	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
-	
-	/*
 	 * @brief Check and Clamp a Velocity Target vector to MaxVelocity
 	 * @param currentVelocity: movement current velocitu to check
 	 * @param targetVelocity: movement target max velocity 
@@ -47,11 +38,27 @@ public:
 	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
 
 	/*
-	 * @brief Return Input direction by Camera orientation
-	 * @param cameraInstance: camera instance used
-	 * @param moveInput: input of the current movement
-	 * @return the world input direction
-	*/
+	 * @brief Get an Object unified mass. Return Mass scaled by Mass Scale, Object Scale and by Physical Material density
+	 * @param comp UPrimitiveComponent to check mass
+	 * @param bDebug: display returned mass
+	 * @return the Vector velocity Clamped
+	 */
+	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
+
+	UFUNCTION()
+	UStaticMesh* CreateMeshFromProcMesh(UProceduralMeshComponent* procMesh);
+
+#pragma endregion Utilities
+
+#pragma region Camera
+	//------------------
+
+	/*
+ * @brief Return Input direction by Camera orientation
+ * @param cameraInstance: camera instance used
+ * @param moveInput: input of the current movement
+ * @return the world input direction
+*/
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
 	/*
@@ -70,20 +77,10 @@ public:
 	*/
 	static FVector GetWorldPointInFrontOfCamera(const APlayerController* PlayerController, float Distance);
 
-	/*
-	 * @brief Get an Object unified mass. Return Mass scaled by Mass Scale, Object Scale and by Physical Material density
-	 * @param comp UPrimitiveComponent to check mass
-	 * @param bDebug: display returned mass
-	 * @return the Vector velocity Clamped
-	 */
-	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
+	//------------------
+#pragma endregion Camera
 
-	UFUNCTION()
-	UStaticMesh* CreateMeshFromProcMesh(UProceduralMeshComponent* procMesh);
-
-#pragma endregion Utilities
-
-#pragma region Trace
+#pragma region Detection
 	//------------------
 
 public:
@@ -146,7 +143,25 @@ public:
 		const TArray<AActor*>& ActorsToIgnore,
 		bool bDebug);
 
-#pragma endregion Trace
+	/*
+ * @brief Find closest point on acotr mesh collision
+ * @param actorToTest: actor to test collision
+ * @param fromWorldLocation: world loc to test on collision
+ * @param outClosestPoint: the outpoint find
+ * @return the Vecotr loc of the closest point on actorToTest collision 
+*/
+	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
+
+	/*
+	 * @brief Find nearest point on a component collision bound surface
+	 * @param targetComponent: component to use for projection
+	 * @param insideLocation: current inside loc point
+	 * @param sweepDistance: sweep distance use for reach the collision bound outward 
+	 * @return the pint project on the input component collision bound surface 
+	*/
+	static FVector FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation, const float sweepDistance = 50.0f);
+
+#pragma endregion Detection
 
 #pragma region Cooldown
 	//------------------

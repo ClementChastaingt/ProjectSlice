@@ -660,7 +660,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	{
 		FVector outClosestPoint;
 		UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.Location,outClosestPoint);
-		if(!outClosestPoint.IsZero()) outHit.Location = outClosestPoint;
+		if(!outClosestPoint.IsZero()){outHit.Location = outClosestPoint;}
 	}
 		
 	return true;
@@ -686,9 +686,14 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 		//Find the closest loc on the actor hit collision
 		if(IsValid(out.OutHit.GetActor()))
 		{
+			DrawDebugPoint(GetWorld(), out.OutHit.Location, 20.0f, FColor::Purple, false, 2.0f,10.0f);
 			FVector outClosestPoint;
 			UPSFl::FindClosestPointOnActor(out.OutHit.GetActor(),out.OutHit.Location,outClosestPoint);
-			if(!outClosestPoint.IsZero()) out.OutHit.Location = outClosestPoint;
+			if(!outClosestPoint.IsZero())
+			{
+				DrawDebugPoint(GetWorld(), outClosestPoint, 10.0f, FColor::Orange, false, 2.0f, 10.0f);
+				out.OutHit.Location = outClosestPoint;
+			}
 		}
 		
 		return out;
@@ -1012,7 +1017,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist,const flo
 		const float inputalpha = FMath::Clamp(_CableWindeInputValue,-1.0f,1.0f);
 		
 		alpha = windeAlpha * inputalpha;
-		UE_LOG(LogTemp, Error, TEXT("Winder alpha %f"), alpha);
+		//UE_LOG(LogTemp, Error, TEXT("Winder alpha %f"), alpha);
 		
 		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(FMath::Abs(alpha));
 		if(IsValid(WindePullingCurve))
@@ -1118,7 +1123,8 @@ void UPS_HookComponent::PowerCablePull()
 				continue;
 			}
 
-			if(i > 3) break;
+			//If reach max iteration count exit
+			if(i > UnblockMaxIterationCount) break;
 
 			UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
 
@@ -1135,8 +1141,9 @@ void UPS_HookComponent::PowerCablePull()
 			// inverseRotCable.Yaw = inverseRotCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-randOffset, randOffset);
 
 			//Push accel by iteraction
-			const float currentPushAccel = _ForceWeight * MoveAwayForceMultiplicator;
-
+			const float currentPushAccel = _ForceWeight + (pushDir * UKismetMathLibrary::Vector_Distance(end, start)).Length();
+			//const float currentPushAccel = _ForceWeight * MoveAwayCommonForceMultiplicator;
+			
 			//Push one after other
 			FTimerHandle unblockPushTimerHandle;
 			FTimerDelegate unblockPushTimerDelegate;

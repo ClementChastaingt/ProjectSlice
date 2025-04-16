@@ -284,7 +284,7 @@ void UPS_ProceduralAnimComponent::ApplyWindingVibration(const float alpha)
 	const float maxHookOffset = UKismetMathLibrary::MapRangeClamped(alpha, 0.0f, 1.0f, 0.0, HookLocMaxOffset);
 	HookLocOffset = FVector(0.0f, FMath::RandRange(-maxHookOffset, maxHookOffset), FMath::RandRange(-maxHookOffset, maxHookOffset));
 
-	UE_LOG(LogTemp, Error, TEXT("HookLocOffset %f"), HookLocOffset.Length());
+	//UE_LOG(LogTemp, Error, TEXT("HookLocOffset %f"), HookLocOffset.Length());
 }
 
 #pragma endregion Hook

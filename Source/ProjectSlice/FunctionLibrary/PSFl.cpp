@@ -31,18 +31,60 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 			{
 				FVector currentPoint;
 				const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-
+				
 				if ((currentDist >= 0) && (currentDist < bestDist))
 				{
 					bestDist = currentDist;
 					outClosestPoint = currentPoint;
 					bFoundPoint = true;
+				}else if(currentDist == 0)
+				{
+					FindNearestSurfacePoint(meshComp, currentPoint);
+					return FindClosestPointOnActor(actorToTest, currentPoint, outClosestPoint);
 				}
 			}
 		}
 	}
 	
 	return bFoundPoint;
+}
+
+FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation,const float sweepDistance)
+{
+	if (!IsValid(targetComponent)) return FVector::ZeroVector;
+	
+	// Add diagonals for better accuracy if needed
+	const FVector directions[] = {
+		FVector(1,0,0), FVector(-1,0,0),
+		FVector(0,1,0), FVector(0,-1,0),
+		FVector(0,0,1), FVector(0,0,-1)
+	};
+
+	FVector closestHit = FVector::ZeroVector;
+	float minDistance = FLT_MAX;
+
+	for (const FVector& dir : directions)
+	{
+		FHitResult Hit;
+		FVector start = insideLocation;
+		FVector end = start + dir * sweepDistance;
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredComponent(targetComponent);
+
+		if (targetComponent->GetWorld()->LineTraceSingleByChannel(
+				Hit, start, end, ECC_Visibility, Params))
+		{
+			float Dist = FVector::Dist(Hit.ImpactPoint, insideLocation);
+			if (Dist < minDistance)
+			{
+				minDistance = Dist;
+				closestHit = Hit.ImpactPoint;
+			}
+		}
+	}
+
+	return (minDistance < FLT_MAX) ? closestHit : FVector::ZeroVector;
 }
 
 
