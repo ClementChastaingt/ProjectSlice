@@ -334,7 +334,7 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	if(!IsValid(FirstCable) || !IsValid(newCable)) return;
 	
 	//Rendering
-	newCable->CableWidth = FirstCable->CableWidth;
+	newCable->CableWidth = FirstCable->CableWidth / 2.85;
 	newCable->NumSides = FirstCable->NumSides;
 	newCable->TileMaterial = FirstCable->TileMaterial;
 
@@ -1072,7 +1072,7 @@ void UPS_HookComponent::PowerCablePull()
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Distance On Attach By point number weight
-	float distanceOnAttachByTensorWeight = CableCapArray.Num() > 1 ? (_DistanceOnAttach/(CablePointLocations.Num()-1)) : _DistanceOnAttach;
+	float distanceOnAttachByTensorWeight = CableCapArray.Num() > PointNumThresholdForStartUsingTensorWeight ? (_DistanceOnAttach/(CablePointLocations.Num() - PointNumThresholdForStartUsingTensorWeight)) : _DistanceOnAttach;
 
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist, distanceOnAttachByTensorWeight);
@@ -1154,8 +1154,7 @@ void UPS_HookComponent::PowerCablePull()
 	}
 	
 	//Default Pull Force
-	//FVector start = _AttachedMesh->GetComponentLocation();
-	FVector start = CableListArray[0]->GetSocketLocation(SOCKET_CABLE_END);
+	FVector start =  CableListArray.IsValidIndex(0) && FMath::RandBool() ? CableListArray[0]->GetSocketLocation(SOCKET_CABLE_END) : _AttachedMesh->GetComponentLocation();
 	FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);

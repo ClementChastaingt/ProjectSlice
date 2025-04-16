@@ -466,6 +466,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Distance for reach Max Force Weight by distance to object"))
 	float MaxForcePullingDistance = 1000.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="1", ClampMin="1", ToolTip="Distance On Attach By point number weight minus this variable. Basicly is the threshold factor for start use point number in tensor weight calcul for pull force "))
+	int32 PointNumThresholdForStartUsingTensorWeight = 3;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
 
