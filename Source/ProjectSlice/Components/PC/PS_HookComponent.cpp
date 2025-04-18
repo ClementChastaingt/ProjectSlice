@@ -686,12 +686,10 @@ FSCableWarpParams UPS_HookComponent::TraceCableWrap(const UCableComponent* cable
 		//Find the closest loc on the actor hit collision
 		if(IsValid(out.OutHit.GetActor()))
 		{
-			DrawDebugPoint(GetWorld(), out.OutHit.Location, 20.0f, FColor::Purple, false, 2.0f,10.0f);
 			FVector outClosestPoint;
 			UPSFl::FindClosestPointOnActor(out.OutHit.GetActor(),out.OutHit.Location,outClosestPoint);
 			if(!outClosestPoint.IsZero())
 			{
-				DrawDebugPoint(GetWorld(), outClosestPoint, 10.0f, FColor::Orange, false, 2.0f, 10.0f);
 				out.OutHit.Location = outClosestPoint;
 			}
 		}
@@ -1113,6 +1111,42 @@ void UPS_HookComponent::PowerCablePull()
 	//If attached determine additional Unblock push
 	if(_bAttachObjectIsBlocked)
 	{
+		// int i = 0;
+		// for(UCableComponent* CableAttachedElement : CableListArray)
+		// {
+		// 	//Iteration exception
+		// 	if(!IsValid(CableAttachedElement) || _UnblockTimerTimerArray.IsValidIndex(i))
+		// 	{
+		// 		i++;
+		// 		continue;
+		// 	}
+		//
+		// 	//If reach max iteration count exit
+		// 	if(i > UnblockMaxIterationCount) break;
+		//
+		// 	UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
+		// 	
+		// 	//Dir
+		// 	FVector start = CableListArray[i]->GetSocketLocation(SOCKET_CABLE_END);
+		// 	FVector end =  CableListArray[i]->GetSocketLocation(SOCKET_CABLE_START);
+		// 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
+		// 	
+		// 	//Push one after other
+		// 	FTimerHandle unblockPushTimerHandle;
+		// 	FTimerDelegate unblockPushTimerDelegate;
+		// 	unblockPushTimerDelegate.BindUFunction(this, FName("OnUnblockPushTimerEndEventReceived"), unblockPushTimerHandle, rotMeshCable.Vector(), _ForceWeight);
+		// 	GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, UnblockPushLatency, false);
+		// 	_UnblockTimerTimerArray.AddUnique(unblockPushTimerHandle);
+		// 		
+		// 	if (bDebugPull)
+		// 	{
+		// 		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
+		// 	}
+		//
+		// 	i++;
+		// }
+			
+		//----OLD----
 		int i = 0;
 		for(UCableComponent* CableAttachedElement : CableAttachedArray)
 		{
@@ -1122,16 +1156,16 @@ void UPS_HookComponent::PowerCablePull()
 				i++;
 				continue;
 			}
-
+		
 			//If reach max iteration count exit
 			if(i > UnblockMaxIterationCount) break;
-
+		
 			UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
-
+		
 			//Setup start && endd loc
 			FVector start =  (i == 1) ? _AttachedMesh->GetComponentLocation() : CableAttachedElement->GetSocketLocation(SOCKET_CABLE_END);
 			FVector end = CableAttachedElement->GetSocketLocation(SOCKET_CABLE_START);
-
+		
 			//TODO :: Test by change end to Obstacle Extent Origin 
 			FRotator inverseRotCable = UKismetMathLibrary::FindLookAtRotation(end, start);
 			FVector pushDir = inverseRotCable.Vector();
@@ -1139,7 +1173,7 @@ void UPS_HookComponent::PowerCablePull()
 			
 			// const float randOffset = PullingMaxRandomYawOffset / MoveAwayForceDivider;
 			// inverseRotCable.Yaw = inverseRotCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-randOffset, randOffset);
-
+		
 			//Push accel by iteraction
 			const float currentPushAccel = _ForceWeight + (pushDir * UKismetMathLibrary::Vector_Distance(end, start)).Length();
 			//const float currentPushAccel = _ForceWeight * MoveAwayCommonForceMultiplicator;
@@ -1161,7 +1195,7 @@ void UPS_HookComponent::PowerCablePull()
 	}
 	
 	//Default Pull Force
-	FVector start =  CableListArray.IsValidIndex(0) && FMath::RandBool() ? CableListArray[0]->GetSocketLocation(SOCKET_CABLE_END) : _AttachedMesh->GetComponentLocation();
+	FVector start = _AttachedMesh->GetComponentLocation();
 	FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
