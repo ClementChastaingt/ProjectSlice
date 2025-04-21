@@ -76,7 +76,8 @@ void UPS_HookComponent::BeginPlay()
 	{
 		FTimerDelegate TimerDelegate;
         TimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTick);
-		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/360.0f, true);
+		// 1/360 for 120 FPS 
+		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/90.0f, true);
 	}
 	
 	//Constraint display
@@ -647,7 +648,7 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	//This trace is used as a safety checks if there is no blocking towards the past cable loc.
 	FHitResult outHitSafeCheck;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, endSafeCheck,UEngineTypes::ConvertToTraceType(ECC_Rope),
-		false, actorsToIgnore, false ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
+		false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHitSafeCheck, true);
 
 	//If no hit, or hit very close to trace end then continue unwrap
 	if(outHitSafeCheck.bBlockingHit && !outHitSafeCheck.Location.Equals(outHitSafeCheck.TraceEnd, CableUnwrapErrorMultiplier)) return false;
@@ -981,26 +982,12 @@ void UPS_HookComponent::ResetWindeHook()
 
 void UPS_HookComponent::DetermineForceWeight(const float alpha)
 {
-	//MaxForceWeight impacted by object pulled mass
-	float forceWeight = MaxForceWeight;
-
 	//Common Pull logic
-	if(_bCableWinderPull || _bCablePowerPull)
-	{
-		// float playerMassScaled = UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetCharacterMovement()->Mass, _PlayerCharacter->GetMesh()->GetMassScale());
-		float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
-		float objectMassScaled = UPSFl::GetObjectUnifiedMass(_AttachedMesh);
-		
-		// float distAlpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist - DistanceOnAttachByTensorCount, 0, MaxForcePullingDistance,0 ,1);
-		// float massAlpha = UKismetMathLibrary::MapRangeClamped(playerMassScaled,0,objectMassScaled,0,1);
+	float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
+	float objectMassScaled = UPSFl::GetObjectUnifiedMass(_AttachedMesh);
 
-		const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
-		forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
-		
-		//if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: playerMassScaled %f, objectMassScaled %f, alphaMass %f, forceWeight %f"), __FUNCTION__, playerMassScaled, objectMassScaled, alphaMass, forceWeight);
-		//if(bDebugPull && bDebugTick) UE_LOG(LogTemp, Log, TEXT("%S :: reach Max dist massAlpha %f, distAlpha %f"), __FUNCTION__, massAlpha, distAlpha);
-		// alpha = massAlpha * distAlpha;
-	}
+	const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
+	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
 	
 	//Determine force weight
 	_ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
@@ -1075,11 +1062,14 @@ void UPS_HookComponent::PowerCablePull()
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Distance On Attach By point number weight
-	float distanceOnAttachByTensorWeight = CableCapArray.Num() > PointNumThresholdForStartUsingTensorWeight ? (_DistanceOnAttach/(CablePointLocations.Num() - PointNumThresholdForStartUsingTensorWeight)) : _DistanceOnAttach;
+	float distanceOnAttachByTensorWeight = _DistanceOnAttach / (CableCapArray.IsEmpty() ? 1 : CableCapArray.Num());
 
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist, distanceOnAttachByTensorWeight);
 	
+	//If can't Pull or Swing return
+	if(!_bCablePowerPull && !_bCableWinderPull) return;
+
 	//Try Auto Break Rope if tense is too high
 	if(_bCablePowerPull)
 	{
@@ -1097,9 +1087,6 @@ void UPS_HookComponent::PowerCablePull()
 		//Init for the first time _LastAttachedActorLc
 		if(_LastAttachedActorLoc.IsZero()) _LastAttachedActorLoc = _AttachedMesh->GetComponentLocation();
 	}
-	
-	//If can't Pull or Swing return
-	if(!_bCablePowerPull && !_bCableWinderPull && alpha == 0.0f) return;
 
 	//Setup ForceWeight value
 	DetermineForceWeight(alpha);
@@ -1111,104 +1098,147 @@ void UPS_HookComponent::PowerCablePull()
 	//If attached determine additional Unblock push
 	if(_bAttachObjectIsBlocked)
 	{
-		// int i = 0;
-		// for(UCableComponent* CableAttachedElement : CableListArray)
+		//---Inverse For ---
+		// int32 UnblockPushLatencyMultiplier = 0;
+		// for(int i = CableListArray.Num(); i >= 0; i--)
 		// {
 		// 	//Iteration exception
-		// 	if(!IsValid(CableAttachedElement) || _UnblockTimerTimerArray.IsValidIndex(i))
+		// 	if(i > UnblockMaxIterationCount
+		// 		|| !CableListArray.IsValidIndex(i)
+		// 		|| !IsValid(CableListArray[i])
+		// 		|| _UnblockTimerTimerArray.IsValidIndex(i))
 		// 	{
-		// 		i++;
 		// 		continue;
 		// 	}
 		//
-		// 	//If reach max iteration count exit
-		// 	if(i > UnblockMaxIterationCount) break;
-		//
+		// 	//Setup variable
+		// 	UCableComponent* cableListElement = CableListArray[i];
+		// 	UnblockPushLatencyMultiplier++;
+		// 			
 		// 	UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
+		//
+		// 	//Setup start && endd loc
+		// 	const bool bInversePush = i != 1;
 		// 	
-		// 	//Dir
-		// 	FVector start = CableListArray[i]->GetSocketLocation(SOCKET_CABLE_END);
-		// 	FVector end =  CableListArray[i]->GetSocketLocation(SOCKET_CABLE_START);
-		// 	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
+		// 	FVector start = bInversePush ? cableListElement->GetSocketLocation(SOCKET_CABLE_START) : cableListElement->GetSocketLocation(SOCKET_CABLE_END) ;
+		// 	FVector end =  bInversePush ? cableListElement->GetSocketLocation(SOCKET_CABLE_END) :  cableListElement->GetSocketLocation(SOCKET_CABLE_START) ;
+		// 	
+		// 	FRotator rotCable = UKismetMathLibrary::FindLookAtRotation(start, end);
+		// 	FVector pushDir = rotCable.Vector();
+		// 	pushDir.Z = FMath::Abs(pushDir.Z);
+		// 	
+		// 	// const float randOffset = PullingMaxRandomYawOffset / MoveAwayForceDivider;
+		// 	// inverseRotCable.Yaw = inverseRotCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-randOffset, randOffset);
+		//
+		// 	//Push accel by iteraction
+		// 	const float alphaUnblock = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, 0, MaxForcePullingDistance,0 ,1);
+		//  	const float currentPushAccel = FMath::Lerp(_ForceWeight, MaxForceWeight, alphaUnblock);
+		// 	//const float currentPushAccel = _ForceWeight * MoveAwayCommonForceMultiplicator;
 		// 	
 		// 	//Push one after other
 		// 	FTimerHandle unblockPushTimerHandle;
 		// 	FTimerDelegate unblockPushTimerDelegate;
-		// 	unblockPushTimerDelegate.BindUFunction(this, FName("OnUnblockPushTimerEndEventReceived"), unblockPushTimerHandle, rotMeshCable.Vector(), _ForceWeight);
-		// 	GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, UnblockPushLatency, false);
+		// 	unblockPushTimerDelegate.BindUFunction(this, FName("OnUnblockPushTimerEndEventReceived"), unblockPushTimerHandle, pushDir, currentPushAccel);
+		// 	GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, UnblockPushLatencyMultiplier * UnblockPushLatency, false);
 		// 	_UnblockTimerTimerArray.AddUnique(unblockPushTimerHandle);
-		// 		
+		// 	
 		// 	if (bDebugPull)
 		// 	{
-		// 		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
+		// 		DrawDebugDirectionalArrow(GetWorld(), start, start + pushDir * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
 		// 	}
 		//
-		// 	i++;
 		// }
-			
-		//----OLD----
+
+		//---Using bound origin version---
 		int i = 0;
-		for(UCableComponent* CableAttachedElement : CableAttachedArray)
+		for(UCableComponent* cableAttachedElement : CableAttachedArray)
 		{
 			//Iteration exception
-			if(i == 0 || !IsValid(CableAttachedElement) || _UnblockTimerTimerArray.IsValidIndex(i))
+			if( i == 0
+				|| i > UnblockMaxIterationCount
+				|| !CableAttachedArray.IsValidIndex(i)
+				|| !IsValid(CableAttachedArray[i])
+				|| !CablePointComponents.IsValidIndex(i)
+				|| !IsValid(CablePointComponents[i])
+				|| _UnblockTimerTimerArray.IsValidIndex(i))
 			{
 				i++;
 				continue;
 			}
-		
-			//If reach max iteration count exit
-			if(i > UnblockMaxIterationCount) break;
-		
-			UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
-		
-			//Setup start && endd loc
-			FVector start =  (i == 1) ? _AttachedMesh->GetComponentLocation() : CableAttachedElement->GetSocketLocation(SOCKET_CABLE_END);
-			FVector end = CableAttachedElement->GetSocketLocation(SOCKET_CABLE_START);
-		
-			//TODO :: Test by change end to Obstacle Extent Origin 
-			FRotator inverseRotCable = UKismetMathLibrary::FindLookAtRotation(end, start);
-			FVector pushDir = inverseRotCable.Vector();
-			pushDir.Z = FMath::Abs(pushDir.Z);
 			
-			// const float randOffset = PullingMaxRandomYawOffset / MoveAwayForceDivider;
-			// inverseRotCable.Yaw = inverseRotCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-randOffset, randOffset);
-		
+			//Setup variable
+			FVector origin, boxExtent;
+			CablePointComponents[i]->GetOwner()->GetActorBounds(true,origin,boxExtent);
+								
+			UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
+			
+			//Setup start && endd loc
+			FVector start = origin;
+			start.Z =  cableAttachedElement->GetSocketLocation(SOCKET_CABLE_START).Z;
+			FVector end = cableAttachedElement->GetSocketLocation(SOCKET_CABLE_END);
+			
+			FRotator rotCable = UKismetMathLibrary::FindLookAtRotation(start, end);
+			FVector pushDir = rotCable.Vector();
+			pushDir.Z = FMath::Abs(pushDir.Z);
+					
 			//Push accel by iteraction
-			const float currentPushAccel = _ForceWeight + (pushDir * UKismetMathLibrary::Vector_Distance(end, start)).Length();
-			//const float currentPushAccel = _ForceWeight * MoveAwayCommonForceMultiplicator;
+			const float alphaUnblock = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, 0, MaxForcePullingDistance,0 ,1);
+		 	const float currentPushAccel = FMath::Lerp(_ForceWeight, MaxForceWeight, alphaUnblock);
 			
 			//Push one after other
 			FTimerHandle unblockPushTimerHandle;
 			FTimerDelegate unblockPushTimerDelegate;
-			unblockPushTimerDelegate.BindUFunction(this, FName("OnUnblockPushTimerEndEventReceived"), unblockPushTimerHandle, pushDir, currentPushAccel);
-			GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, i * UnblockPushLatency, false);
+			unblockPushTimerDelegate.BindUFunction(this, FName("OnPushTimerEndEventReceived"), unblockPushTimerHandle, pushDir, currentPushAccel);
+			GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, (i == 0 ? 1 : i) * UnblockPushLatency, false);
 			_UnblockTimerTimerArray.AddUnique(unblockPushTimerHandle);
 			
 			if (bDebugPull)
 			{
-				DrawDebugDirectionalArrow(GetWorld(), end, end + pushDir * UKismetMathLibrary::Vector_Distance(end, start), 10.0f, FColor::Red, false, 1.0f, 10, 3);
+				DrawDebugDirectionalArrow(GetWorld(), start, start + pushDir * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
 			}
-			
+
+			//Increment 
 			i++;
+
+			//Default Pull Force
+			FVector startDefault = _AttachedMesh->GetComponentLocation();
+			FVector endDefault =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
+			FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(startDefault,endDefault);
+	
+			//Object isn't blocked add a random range offset
+			rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
+
+			FTimerHandle defaultPushTimerHandle;
+			FTimerDelegate defaultPushTimerDelegate;
+			defaultPushTimerDelegate.BindUFunction(this, FName("OnPushTimerEndEventReceived"), nullptr, pushDir, currentPushAccel);
+			GetWorld()->GetTimerManager().SetTimer(defaultPushTimerHandle, defaultPushTimerDelegate, UnblockPushLatency, false);
+
+			//Debug base Pull dir
+			if(bDebugPull)
+			{
+				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(start, end) , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+			}
 		}
 	}
-	
-	//Default Pull Force
-	FVector start = _AttachedMesh->GetComponentLocation();
-	FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
-	FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
-	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
-	
-	FVector defaultNewVel = _AttachedMesh->GetMass() * rotMeshCable.Vector() * _ForceWeight;
-	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
-	
-	//Debug base Pull dir
-	if(bDebugPull)
+	else
 	{
-		DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * 500 , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+		//Default Pull Force
+		FVector start = _AttachedMesh->GetComponentLocation();
+		FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
+		FRotator rotMeshCable = UKismetMathLibrary::FindLookAtRotation(start,end);
+	
+		//Object isn't blocked add a random range offset
+		rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
+	
+		FVector defaultNewVel = _AttachedMesh->GetMass() * rotMeshCable.Vector() * _ForceWeight;
+		_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
+	
+		//Debug base Pull dir
+		if(bDebugPull)
+		{
+			DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(start, end) , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+		}
 	}
-
 	
 }
 
@@ -1221,7 +1251,7 @@ void UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived()
 	
 }
 
-void UPS_HookComponent::OnUnblockPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel)
+void UPS_HookComponent::OnPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel)
 {
 	if(!IsValid(_AttachedMesh) || !IsValid(GetWorld())) return;
 	
@@ -1230,7 +1260,7 @@ void UPS_HookComponent::OnUnblockPushTimerEndEventReceived(const FTimerHandle se
 	FVector inverseNewVel = _AttachedMesh->GetMass() * currentPushDir * pushAccel;
 	_AttachedMesh->AddImpulse((inverseNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
 
-	_UnblockTimerTimerArray.Remove(selfHandler);
+	if(selfHandler.IsValid())_UnblockTimerTimerArray.Remove(selfHandler);
 }
 
 #pragma endregion Pull

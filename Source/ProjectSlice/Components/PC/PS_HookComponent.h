@@ -454,7 +454,7 @@ protected:
 	void OnAttachedSameLocTimerEndEventReceived();
 
 	UFUNCTION()
-	void OnUnblockPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel);
+	void OnPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel);
 
 	//Parameters	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="10", ClampMin="10", ForceUnits="cm/s", ToolTip="Max Force Weight for Pulling object to Player"))
@@ -465,9 +465,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Distance for reach Max Force Weight by distance to object"))
 	float MaxForcePullingDistance = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="1", ClampMin="1", ToolTip="Distance On Attach By point number weight minus this variable. Basicly is the threshold factor for start use point number in tensor weight calcul for pull force "))
-	int32 PointNumThresholdForStartUsingTensorWeight = 3;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
@@ -483,9 +480,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
 	float AttachedSameLocMaxDuration = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.1", ClampMin="0.1", ToolTip="When object is blocked, this var is the multiplier of ForceWeight to use for move away push"))
-	float MoveAwayCommonForceMultiplicator= 5.0f;
 
 private:
 	UPROPERTY(Transient)
