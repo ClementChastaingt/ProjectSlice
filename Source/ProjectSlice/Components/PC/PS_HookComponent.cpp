@@ -228,6 +228,7 @@ void UPS_HookComponent::ToggleArmPhysicalAnimation(const bool bActivate)
 	}
 	
 	//Setup work var
+	_bArmIsRagdolled = bActivate;
 	_bBlendOutToUnphysicalized = !bActivate;
 	_ArmTogglePhysicAnimTimestamp = GetWorld()->GetTimeSeconds();
 	
@@ -371,6 +372,8 @@ void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
 
 void UPS_HookComponent::WrapCableAddByFirst()
 {
+	if(_bArmIsRagdolled) return;
+	
 	//-----Add Wrap Logic-----
 	//Add By First
 	if(!CableListArray.IsValidIndex(0) || CableListArray.IsEmpty()) return;
@@ -492,21 +495,25 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	}
 
 	//Trace
-	FHitResult outHit;
+	FHitResult outHit, outInboundCheck;
+
 	if(!TraceCableUnwrap(pastCable, currentCable, true, outHit)) return;
+	if(CableAttachedArray.IsValidIndex(2) && CableAttachedArray.IsValidIndex(1)) TraceCableUnwrap(pastCable,CableListArray[2], true, outInboundCheck);
 	
-	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
+	if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier) && !outInboundCheck.bBlockingHit)
 	{
 		CablePointUnwrapAlphaArray[0] = 0.0f;
 		return;
 	}
-	
 
 	//----Custom tick-----
 	//Unwrap with delay frames to prevent flickering of wrap/unwrap cycles.Basically increase point alpha value by 1 each frame, if it's more than custom value then process. Use subtle values for responsive unwrap.
 	CablePointUnwrapAlphaArray[0] = CablePointUnwrapAlphaArray[0] + 1;
 	if(CablePointUnwrapAlphaArray[0] < CableUnwrapFirstFrameDelay)
+	{
 		return;
+	}
+
 
 	//----Destroy and remove Last Cable tick-----
 	if(!CableListArray.IsValidIndex(1)) return;
@@ -1098,69 +1105,25 @@ void UPS_HookComponent::PowerCablePull()
 	//If attached determine additional Unblock push
 	if(_bAttachObjectIsBlocked)
 	{
-		//---Inverse For ---
-		// int32 UnblockPushLatencyMultiplier = 0;
-		// for(int i = CableListArray.Num(); i >= 0; i--)
-		// {
-		// 	//Iteration exception
-		// 	if(i > UnblockMaxIterationCount
-		// 		|| !CableListArray.IsValidIndex(i)
-		// 		|| !IsValid(CableListArray[i])
-		// 		|| _UnblockTimerTimerArray.IsValidIndex(i))
-		// 	{
-		// 		continue;
-		// 	}
-		//
-		// 	//Setup variable
-		// 	UCableComponent* cableListElement = CableListArray[i];
-		// 	UnblockPushLatencyMultiplier++;
-		// 			
-		// 	UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
-		//
-		// 	//Setup start && endd loc
-		// 	const bool bInversePush = i != 1;
-		// 	
-		// 	FVector start = bInversePush ? cableListElement->GetSocketLocation(SOCKET_CABLE_START) : cableListElement->GetSocketLocation(SOCKET_CABLE_END) ;
-		// 	FVector end =  bInversePush ? cableListElement->GetSocketLocation(SOCKET_CABLE_END) :  cableListElement->GetSocketLocation(SOCKET_CABLE_START) ;
-		// 	
-		// 	FRotator rotCable = UKismetMathLibrary::FindLookAtRotation(start, end);
-		// 	FVector pushDir = rotCable.Vector();
-		// 	pushDir.Z = FMath::Abs(pushDir.Z);
-		// 	
-		// 	// const float randOffset = PullingMaxRandomYawOffset / MoveAwayForceDivider;
-		// 	// inverseRotCable.Yaw = inverseRotCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-randOffset, randOffset);
-		//
-		// 	//Push accel by iteraction
-		// 	const float alphaUnblock = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, 0, MaxForcePullingDistance,0 ,1);
-		//  	const float currentPushAccel = FMath::Lerp(_ForceWeight, MaxForceWeight, alphaUnblock);
-		// 	//const float currentPushAccel = _ForceWeight * MoveAwayCommonForceMultiplicator;
-		// 	
-		// 	//Push one after other
-		// 	FTimerHandle unblockPushTimerHandle;
-		// 	FTimerDelegate unblockPushTimerDelegate;
-		// 	unblockPushTimerDelegate.BindUFunction(this, FName("OnUnblockPushTimerEndEventReceived"), unblockPushTimerHandle, pushDir, currentPushAccel);
-		// 	GetWorld()->GetTimerManager().SetTimer(unblockPushTimerHandle, unblockPushTimerDelegate, UnblockPushLatencyMultiplier * UnblockPushLatency, false);
-		// 	_UnblockTimerTimerArray.AddUnique(unblockPushTimerHandle);
-		// 	
-		// 	if (bDebugPull)
-		// 	{
-		// 		DrawDebugDirectionalArrow(GetWorld(), start, start + pushDir * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
-		// 	}
-		//
-		// }
-
 		//---Using bound origin version---
 		int i = 0;
 		for(UCableComponent* cableAttachedElement : CableAttachedArray)
 		{
-			//Iteration exception
-			if( i == 0
-				|| i > UnblockMaxIterationCount
+			//Iteration exception General
+			if(	i > UnblockMaxIterationCount
 				|| !CableAttachedArray.IsValidIndex(i)
 				|| !IsValid(CableAttachedArray[i])
-				|| !CablePointComponents.IsValidIndex(i)
-				|| !IsValid(CablePointComponents[i])
 				|| _UnblockTimerTimerArray.IsValidIndex(i))
+			{
+				i++;
+				continue;
+			}
+
+			//Iteration exception PointComp
+			if(!CablePointComponents.IsValidIndex(i)
+				|| !IsValid(CablePointComponents[i])
+				|| !IsValid(CablePointComponents[0])
+				|| CablePointComponents[0]->GetOwner() != CablePointComponents[i]->GetOwner())
 			{
 				i++;
 				continue;
@@ -1216,7 +1179,7 @@ void UPS_HookComponent::PowerCablePull()
 			//Debug base Pull dir
 			if(bDebugPull)
 			{
-				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(start, end) , 10.0f, FColor::Orange, false, 0.02f, 10, 3);
+				DrawDebugDirectionalArrow(GetWorld(), start, start + rotMeshCable.Vector() * UKismetMathLibrary::Vector_Distance(startDefault, endDefault) , 10.0f, FColor::Orange, false, 1.0f, 10, 3);
 			}
 		}
 	}

@@ -164,6 +164,9 @@ private:
 	UPhysicalAnimationComponent* _PhysicAnimComp;
 
 	UPROPERTY(Transient)
+	bool _bArmIsRagdolled;
+
+	UPROPERTY(Transient)
 	bool _bBlendOutToUnphysicalized;
 
 	UPROPERTY(Transient)
@@ -473,10 +476,10 @@ protected:
 	float UnblockPushLatency = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Unblock maximum iteration steps"))
-	int32 UnblockMaxIterationCount = 6;
+	int32 UnblockMaxIterationCount = 3;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ForceUnits="cm", ToolTip= "Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))
-	float AttachedMaxDistThreshold = 200.0f;
+	float AttachedMaxDistThreshold = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
 	float AttachedSameLocMaxDuration = 1.0f;

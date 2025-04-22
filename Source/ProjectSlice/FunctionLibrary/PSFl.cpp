@@ -87,7 +87,6 @@ FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponen
 	return (minDistance < FLT_MAX) ? closestHit : FVector::ZeroVector;
 }
 
-
 FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
 	FVector clampedVel = currentVelocity;
