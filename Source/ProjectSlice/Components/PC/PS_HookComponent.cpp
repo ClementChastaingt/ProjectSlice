@@ -393,6 +393,9 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	CablePointLocations.Insert(currentTraceCableWarp.OutHit.Location,0);
 	CablePointComponents.Insert(currentTraceCableWarp.OutHit.GetComponent(),0);
 	CablePointUnwrapAlphaArray.Insert(0.0f,0);
+
+	//Update location of physiced PointComp 
+	UpdatePointLocation(0);
 	
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
@@ -449,6 +452,9 @@ void UPS_HookComponent::WrapCableAddByLast()
 	CablePointLocations.Add(currentTraceCableWarp.OutHit.Location);
 	CablePointComponents.Add(currentTraceCableWarp.OutHit.GetComponent());
 	CablePointUnwrapAlphaArray.Add(0.0f);
+
+	//Update location of physiced PointComp 
+	UpdatePointLocation(CablePointComponents.Num());
 
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
@@ -535,7 +541,11 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	CableListArray.RemoveAt(1);
 	CablePointLocations.RemoveAt(0);
 	CablePointComponents.RemoveAt(0);
+;
 	CablePointUnwrapAlphaArray.RemoveAt(0);
+
+	//AttachPoint Reset
+	ResetPointLocation(0);
 	
 	//----Set first cable Loc && Attach----
 	if(!CableListArray.IsValidIndex(0)) return;
@@ -621,9 +631,12 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//End Unwrap
 	CableListArray.RemoveAt(cableListLastIndex);
 	CablePointComponents.RemoveAt(cablePointLocationsLastIndex);
-	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
 	CablePointLocations.RemoveAt(cablePointLocationsLastIndex);
-		
+	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
+
+	//AttachPoint Reset
+	ResetPointLocation(cablePointLocationsLastIndex);
+	
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
 	if (!CableListArray.IsValidIndex(cableListLastIndex)) return;
@@ -797,26 +810,58 @@ void UPS_HookComponent::AdaptCableTens()
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
 }
 
-void UPS_HookComponent::UpdatePointLocation()
+void UPS_HookComponent::UpdatePointLocation(const int32 index)
 {
-	if(CablePointComponents.IsEmpty() || CablePointLocations.IsEmpty()) return;
+	if (CablePointComponents.IsEmpty() || CablePointLocations.IsEmpty()) return;
 
-	int i = 0;
-	for (USceneComponent* const cablePointComponentElement : CablePointComponents)
+	if (!CablePointComponents.IsValidIndex(index) || !CablePointLocations.IsValidIndex(index)) return;
+
+	USceneComponent* const cablePointComponentElement = CablePointComponents[index];
+	if (!IsValid(cablePointComponentElement) || !cablePointComponentElement->IsSimulatingPhysics() || !CablePointAttach.IsValidIndex(index))
 	{
-		if(!IsValid(cablePointComponentElement) || !cablePointComponentElement->IsSimulatingPhysics() || !CablePointLocations.IsValidIndex(i))
-		{
-			i++;
-			continue;
-		}
-
-		// //Spawn SceneComp
-		// GetWorld()->SpawnActor(USceneComponent::StaticClass(), CablePointLocations[i], FRotator::ZeroRotator);
-		// CablePointComponents
-		//
-		//
-		// i++;
+		if(CablePointAttach.IsValidIndex(index))
+			CablePointAttach.Insert(nullptr, index);
+		else
+			CablePointAttach.Add(nullptr);
+		return;
 	}
+
+	if (!IsValid(CablePointAttach[index]))
+	{
+		//Spawn SceneComp
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		AActor* newPointAttach = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), CablePointLocations[index],
+			FRotator::ZeroRotator, SpawnParams);
+
+		UE_LOG(LogTemp, Error, TEXT("CablePointAttach %i"), index);
+
+		//TODO :: bad placement
+		DrawDebugPoint(GetWorld(), newPointAttach->GetActorLocation(), 10.0f, FColor::Turquoise, false, 1.0f);
+
+		newPointAttach->AttachToComponent(cablePointComponentElement, FAttachmentTransformRules::KeepRelativeTransform);
+		CablePointAttach.Insert(newPointAttach, index);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Update"));
+		CablePointLocations[index] = CablePointAttach[index]->GetActorLocation();
+		DrawDebugPoint(GetWorld(), CablePointLocations[index], 10.0f, FColor::Magenta, false, 1.0f);
+	}
+	
+}
+
+void UPS_HookComponent::ResetPointLocation(const int32 index)
+{
+	if(!CablePointAttach.IsValidIndex(index) || !IsValid(CablePointAttach[index]))
+	{
+		return;
+	}
+	
+	CablePointAttach[index]->Destroy();
+	CablePointAttach.RemoveAt(index);
+	
 }
 
 
