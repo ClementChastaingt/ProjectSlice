@@ -345,6 +345,9 @@ protected:
 	UFUNCTION()
 	void AdaptCableTens();
 
+	UFUNCTION()
+	void UpdatePointLocation();
+
 private:
 	UPROPERTY(Transient)
 	float _AlphaTense;

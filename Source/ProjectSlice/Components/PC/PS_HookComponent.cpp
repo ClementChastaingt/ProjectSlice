@@ -797,6 +797,28 @@ void UPS_HookComponent::AdaptCableTens()
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
 }
 
+void UPS_HookComponent::UpdatePointLocation()
+{
+	if(CablePointComponents.IsEmpty() || CablePointLocations.IsEmpty()) return;
+
+	int i = 0;
+	for (USceneComponent* const cablePointComponentElement : CablePointComponents)
+	{
+		if(!IsValid(cablePointComponentElement) || !cablePointComponentElement->IsSimulatingPhysics() || !CablePointLocations.IsValidIndex(i))
+		{
+			i++;
+			continue;
+		}
+
+		// //Spawn SceneComp
+		// GetWorld()->SpawnActor(USceneComponent::StaticClass(), CablePointLocations[i], FRotator::ZeroRotator);
+		// CablePointComponents
+		//
+		//
+		// i++;
+	}
+}
+
 
 //------------------
 #pragma endregion Cable
