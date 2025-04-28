@@ -203,10 +203,6 @@ protected:
 	TArray<USceneComponent*> CablePointComponents;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point",
-	meta=(ToolTip="Cable points attach, Use when attach point component is physiced"))
-	TArray<AActor*> CablePointAttach;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point",
 		meta=(ToolTip="Cable points array, each attached point will be stored here."))
 	TArray<FVector> CablePointLocations;
 
@@ -350,10 +346,7 @@ protected:
 	void AdaptCableTens();
 
 	UFUNCTION()
-	void UpdatePointLocation(const int32 index);
-
-	UFUNCTION()
-	void ResetPointLocation(const int32 index);
+	void UpdatePointLocation();
 
 private:
 	UPROPERTY(Transient)

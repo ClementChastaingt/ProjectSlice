@@ -280,6 +280,9 @@ void UPS_HookComponent::CableWraping()
 	
 	UnwrapCableByLast();
 	UnwrapCableByFirst();
+
+	//Update location if object is physical with caps loc 
+	UpdatePointLocation();
 	
 	//Rope Adaptation
 	//AdaptCableTens();
@@ -393,10 +396,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	CablePointLocations.Insert(currentTraceCableWarp.OutHit.Location,0);
 	CablePointComponents.Insert(currentTraceCableWarp.OutHit.GetComponent(),0);
 	CablePointUnwrapAlphaArray.Insert(0.0f,0);
-
-	//Update location of physiced PointComp 
-	UpdatePointLocation(0);
-	
+		
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
 	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, true);
@@ -410,7 +410,6 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	//Add Sphere on Caps
 	if(bCanUseSphereCaps) AddSphereCaps(currentTraceCableWarp, true);
 	
-
 	//Add latest cable to attached cables array && Add this new cable to "cable list array"
 	if(CableAttachedArray.IsEmpty())
 		CableAttachedArray.Add(newCable);
@@ -452,10 +451,7 @@ void UPS_HookComponent::WrapCableAddByLast()
 	CablePointLocations.Add(currentTraceCableWarp.OutHit.Location);
 	CablePointComponents.Add(currentTraceCableWarp.OutHit.GetComponent());
 	CablePointUnwrapAlphaArray.Add(0.0f);
-
-	//Update location of physiced PointComp 
-	UpdatePointLocation(CablePointComponents.Num());
-
+	
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
 	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, false);
@@ -543,9 +539,6 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	CablePointComponents.RemoveAt(0);
 ;
 	CablePointUnwrapAlphaArray.RemoveAt(0);
-
-	//AttachPoint Reset
-	ResetPointLocation(0);
 	
 	//----Set first cable Loc && Attach----
 	if(!CableListArray.IsValidIndex(0)) return;
@@ -633,9 +626,6 @@ void UPS_HookComponent::UnwrapCableByLast()
 	CablePointComponents.RemoveAt(cablePointLocationsLastIndex);
 	CablePointLocations.RemoveAt(cablePointLocationsLastIndex);
 	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
-
-	//AttachPoint Reset
-	ResetPointLocation(cablePointLocationsLastIndex);
 	
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
@@ -810,57 +800,30 @@ void UPS_HookComponent::AdaptCableTens()
 	currentCable->CableLength =  FMath::Lerp(0,MaxForceWeight, curveAlpha);
 }
 
-void UPS_HookComponent::UpdatePointLocation(const int32 index)
+void UPS_HookComponent::UpdatePointLocation()
 {
-	if (CablePointComponents.IsEmpty() || CablePointLocations.IsEmpty()) return;
-
-	if (!CablePointComponents.IsValidIndex(index) || !CablePointLocations.IsValidIndex(index)) return;
-
-	USceneComponent* const cablePointComponentElement = CablePointComponents[index];
-	if (!IsValid(cablePointComponentElement) || !cablePointComponentElement->IsSimulatingPhysics() || !CablePointAttach.IsValidIndex(index))
+	int index = 0;
+	for (USceneComponent* cablePointComponentElement : CablePointComponents)
 	{
-		if(CablePointAttach.IsValidIndex(index))
-			CablePointAttach.Insert(nullptr, index);
-		else
-			CablePointAttach.Add(nullptr);
-		return;
-	}
-
-	if (!IsValid(CablePointAttach[index]))
-	{
-		//Spawn SceneComp
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		AActor* newPointAttach = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), CablePointLocations[index],
-			FRotator::ZeroRotator, SpawnParams);
-
-		UE_LOG(LogTemp, Error, TEXT("CablePointAttach %i"), index);
-
-		//TODO :: bad placement
-		DrawDebugPoint(GetWorld(), newPointAttach->GetActorLocation(), 10.0f, FColor::Turquoise, false, 1.0f);
-
-		newPointAttach->AttachToComponent(cablePointComponentElement, FAttachmentTransformRules::KeepRelativeTransform);
-		CablePointAttach.Insert(newPointAttach, index);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Update"));
-		CablePointLocations[index] = CablePointAttach[index]->GetActorLocation();
-		DrawDebugPoint(GetWorld(), CablePointLocations[index], 10.0f, FColor::Magenta, false, 1.0f);
-	}
+		if (!CablePointLocations.IsValidIndex(index) || !CableCapArray.IsValidIndex(index))
+		{
+			index++;
+			continue;
+		}
+		
+		USceneComponent* const cablePointCapsElement = CableCapArray[index];
 	
-}
-
-void UPS_HookComponent::ResetPointLocation(const int32 index)
-{
-	if(!CablePointAttach.IsValidIndex(index) || !IsValid(CablePointAttach[index]))
-	{
-		return;
-	}
+		if (!IsValid(cablePointComponentElement) || !IsValid(cablePointCapsElement) || !cablePointComponentElement->IsSimulatingPhysics())
+		{
+			index++;
+			continue;
+		}
 	
-	CablePointAttach[index]->Destroy();
-	CablePointAttach.RemoveAt(index);
+		CablePointLocations[index] = CableCapArray[index]->GetComponentLocation();
+		DrawDebugPoint(GetWorld(), CablePointLocations[index], 30.0f, FColor::Blue, false, 0.1f, 10.0f);
+
+		index++;
+	}
 	
 }
 
