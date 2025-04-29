@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "Components/BoxComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
@@ -201,11 +200,7 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point",
 		meta=(ToolTip="Cable points array, each hit component with the location will be stored here."))
 	TArray<USceneComponent*> CablePointComponents;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point",
-		meta=(ToolTip="Cable points array, each attached point will be stored here."))
-	TArray<FVector> CablePointLocations;
-
+	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Point",
 		meta=(ToolTip="Cable points alphas, alpha value to detach for each point."))
 	TArray<float> CablePointUnwrapAlphaArray;
@@ -220,13 +215,7 @@ protected:
 			"Enable using of substep constant timer ticks instead of event tick, more stable tracing but issues like cable flickering"
 		))
 	bool bCanUseSubstepTick = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point",
-		meta=(ToolTip=
-			"Use cable sphere caps, basically spawns dynamic mesh points on corners with new cable points to make smoother looks"
-		))
-	bool bCanUseSphereCaps = true;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Point",
 		meta=(ToolTip="Static Mesh use for Caps, basically sphere"))
 	UStaticMesh* CapsMesh = nullptr;
@@ -339,14 +328,11 @@ protected:
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION(BlueprintCallable)
-	bool CheckPointLocation(const TArray<FVector>& pointsLocation, const FVector& targetLoc,
+	bool CheckPointLocation(const FVector& targetLoc,
 		const float& errorTolerance);
 
 	UFUNCTION()
 	void AdaptCableTens();
-
-	UFUNCTION()
-	void UpdatePointLocation();
 
 private:
 	UPROPERTY(Transient)
@@ -486,6 +472,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
 	float AttachedSameLocMaxDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Divider of the default pull force weight when unblock logic is running"))
+	float UnblockDefaultPullforceDivider = 3.0f;
 
 private:
 	UPROPERTY(Transient)
