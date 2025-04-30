@@ -116,13 +116,15 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	ArmTick();
 	
 	//Cable
-	if(!bCanUseSubstepTick) CableWraping();
+	if(!bCanUseSubstepTick)
+	{
+		CableWraping();
+
+		PowerCablePull();
+	}
 
 	//Swing
 	SwingTick();
-
-	//Pull
-	PowerCablePull();
 
 }
 
@@ -264,6 +266,8 @@ void UPS_HookComponent::SubstepTick()
 	if(!bCanUseSubstepTick) return;
 	
 	CableWraping();
+
+	PowerCablePull();
 }
 
 void UPS_HookComponent::CableWraping()
@@ -1107,7 +1111,7 @@ void UPS_HookComponent::PowerCablePull()
 		for(UCableComponent* cableAttachedElement : CableAttachedArray)
 		{
 			//Iteration exception General
-			if(	i > UnblockMaxIterationCount
+			if(	i > (UnblockMaxIterationCount - 1)
 				|| !CableAttachedArray.IsValidIndex(i)
 				|| !IsValid(CableAttachedArray[i])
 				|| _UnblockTimerTimerArray.IsValidIndex(i))
@@ -1139,13 +1143,14 @@ void UPS_HookComponent::PowerCablePull()
 			
 			FRotator rotCable = UKismetMathLibrary::FindLookAtRotation(start, end);
 			FVector pushDir = rotCable.Vector();
-			//pushDir.Z *= -1;
-			pushDir.Z *= FMath::Abs(pushDir.Z);
+			pushDir.Z *= -1;
+			//pushDir.Z = FMath::Abs(pushDir.Z);
 					
 			//Push accel by iteraction
 			const float alphaUnblock = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, 0, MaxForcePullingDistance,0 ,1);
 		 	currentPushAccel = FMath::Lerp(_ForceWeight, MaxForceWeight, alphaUnblock);
-			//currentPushAccel *= 2.0f;
+			// if(i > 0) currentPushAccel /= i;
+			//currentPushAccel *= 1.5f;
 			
 			//Push one after other
 			FTimerHandle unblockPushTimerHandle;
@@ -1156,7 +1161,7 @@ void UPS_HookComponent::PowerCablePull()
 			
 			if (bDebugPull)
 			{
-				DrawDebugDirectionalArrow(GetWorld(), start, start + pushDir * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 1.0f, 10, 3);
+				DrawDebugDirectionalArrow(GetWorld(), start, start + pushDir * UKismetMathLibrary::Vector_Distance(start, end), 10.0f, FColor::Red, false, 0.02f, 10, 3);
 			}
 
 			//Increment 
