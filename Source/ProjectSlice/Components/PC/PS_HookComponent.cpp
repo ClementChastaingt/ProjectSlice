@@ -252,7 +252,6 @@ void UPS_HookComponent::ArmTick()
 			_bBlendOutToUnphysicalized = false;
 		}
 	}
-	
 }
 
 //------------------
@@ -828,7 +827,12 @@ void UPS_HookComponent::HookObject()
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
 	
 	//If not blocking exit
-	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass())) return;
+	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass()))
+	{
+		OnHookObjectFailed.Broadcast();
+		return;
+	}
+	
 	
 	//Define new attached component
 	_AttachedMesh = Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent());

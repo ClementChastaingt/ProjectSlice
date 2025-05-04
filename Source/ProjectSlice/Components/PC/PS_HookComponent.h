@@ -361,15 +361,24 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE bool IsObjectHooked() const { return IsValid(_AttachedMesh); }
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnHookObjectFailed;
 	
 protected:
 	UFUNCTION()
 	void AttachCableToHookThrower(UCableComponent* cableToAttach = nullptr) const;
 
+	UPROPERTY(VisibleInstanceOnly, Transient, Category="Parameter|Hook", meta=(UIMin=0.0f, ClampMin=0.0f, ForceUnits="cm"))
+	float LaserActivationDistanceThreshold = 100.0f;
+
 private:
 	//Status
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook")
 	UMeshComponent* _AttachedMesh;
+
+	UPROPERTY(Transient)
+	bool _bHookTrajectoryImpactIsBad;
 
 #pragma region Pull
 	//------------------
