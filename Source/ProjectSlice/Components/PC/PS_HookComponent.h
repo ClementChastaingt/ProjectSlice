@@ -177,14 +177,12 @@ private:
 	//------------------
 
 public:
+
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE float GetAlphaTense() const { return _AlphaTense; }
+	FORCEINLINE float GetAlphaTense() const{return _AlphaTense;}
 
 protected:
 	//Status	
-	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Cable|Rope", meta=(ToolTip="start adding from first cable only if there is more than one cable. Basically the next cable should be added from end first, then we can start extending also from start, by inserting points between."))
-	// bool bIsAddByFirst = false;
-
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope",
 		meta=(ToolTip="Cable list array, each added cable including the first one will be stored here"))
 	TArray<UCableComponent*> CableListArray;
@@ -265,13 +263,9 @@ protected:
 	float CableUnwrapLastFrameDelay = 4.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
-	float CablePullSlackDistance = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance from Cable was max tense"))
-	float CableBreakTensDistance = 500.0f;
-
+		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
+	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(100.0f,500.0f);
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
 	float CableMaxTensVelocityThreshold = 1000.0f;
@@ -302,6 +296,8 @@ protected:
 
 	UFUNCTION()
 	void ConfigCableToFirstCableSettings(UCableComponent* newCable) const;
+	
+	UFUNCTION()
 	void SetupCableMaterial(UCableComponent* newCable) const;
 
 	UFUNCTION()
@@ -331,18 +327,22 @@ protected:
 	bool CheckPointLocation(const FVector& targetLoc,
 		const float& errorTolerance);
 
-	UFUNCTION()
-	void AdaptCableTens();
-
 private:
-	UPROPERTY(Transient)
-	float _AlphaTense;
 
 	UPROPERTY(Transient)
 	FTimerHandle _SubstepTickHandler;
 
 	UPROPERTY(Transient)
 	float _FirstCableDefaultLenght;
+
+	UPROPERTY(DuplicateTransient)
+	float _CablePullSlackDistance = CablePullSlackDistanceRange.Min;
+
+	UPROPERTY(Transient)
+	float _DistOnAttachWithRange;
+
+	UPROPERTY(Transient)
+	float _AlphaTense;
 
 #pragma endregion Cable
 
@@ -392,36 +392,27 @@ public:
 
 	UFUNCTION()
 	void StopWindeHook();
-	
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE bool IsCableWinderPull() const { return _bCableWinderPull; }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsCableWinderInUse() const{return _bCableWinderIsActive;}
+
 protected:
 
 	UFUNCTION()
 	void ResetWindeHook();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="s", ToolTip=
-			"Duration for reach Max Force Winde Weight by winde holding"))
-	float MaxWindePullingDuration = 1.0f;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="s", ToolTip="Max Force Winde Weight curve"))
 	UCurveFloat* WindePullingCurve;
 
 private:
+
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
-	bool _bCableWinderPull;
+	bool _bCableWinderIsActive;
 
 	UPROPERTY(Transient)
 	float _CableWindeInputValue;
-
-	UPROPERTY(Transient)
-	float _CableStartWindeTimestamp;
-
-	UPROPERTY(Transient)
-	FTimerHandle _CableWindeMouseCooldown;
-
+		
 	//------------------
 #pragma endregion Winde
 
@@ -443,7 +434,7 @@ protected:
 	void DetermineForceWeight(const float alpha);
 
 	UFUNCTION()
-	float CalculatePullAlpha(const float baseToMeshDist, const float distanceOnAttachByTensorCount);
+	float CalculatePullAlpha(const float baseToMeshDist);
 
 	UFUNCTION()
 	void CheckingIfObjectIsBlocked();
@@ -464,9 +455,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Hook|Pull", meta=(UIMin="100", ClampMin="100", ForceUnits="kg"))
 	float MaxPullWeight = 10000.f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Distance for reach Max Force Weight by distance to object"))
-	float MaxForcePullingDistance = 1000.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
 
@@ -483,7 +471,7 @@ protected:
 	float AttachedSameLocMaxDuration = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Divider of the default pull force weight when unblock logic is running"))
-	float UnblockDefaultPullforceDivider = 3.0f;
+	float UnblockDefaultPullforceDivider = 6.0f;
 
 private:
 	UPROPERTY(Transient)
