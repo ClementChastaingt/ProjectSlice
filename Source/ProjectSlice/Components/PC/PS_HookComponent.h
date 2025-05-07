@@ -264,10 +264,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
-	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(100.0f,500.0f);
+	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(50.0f,500.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance threshold support by Cable before break, must be superior to CablePullSlackDistanceRange max range for work properly"))
+	float CablePullDistanceBreakThreshold = 800;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max mass threshold support by Cable before break"))
+		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max object velocity  support by Cable before break"))
 	float CableMaxTensVelocityThreshold = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug",
@@ -400,6 +403,10 @@ protected:
 
 	UFUNCTION()
 	void ResetWindeHook();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
+		meta=(UIMin="0", ClampMin="0", ToolTip="Max input Winde iteration to do for reach max tense or slack"))
+	float WindeMaxInputWeight = 10;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="s", ToolTip="Max Force Winde Weight curve"))
