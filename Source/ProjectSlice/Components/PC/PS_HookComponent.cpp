@@ -298,12 +298,10 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//Attach Last Cable to Hitted Object, Set his position to it
 	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
-	
+
 	//Make lastCable tense
-	if(bReverseLoc)
-	{
-		lastCable->CableLength = 5.0f;
-	}
+	lastCable->CableLength = 2.0f;
+	lastCable->SolverIterations = 1;
 
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
@@ -320,6 +318,12 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	newCable->SetCustomDepthStencilValue(200.0f);
 	newCable->SetCustomDepthStencilWriteMask(ERendererStencilMask::ERSM_Default);
 	newCable->SetReceivesDecals(false);
+
+	//Tense
+	newCable->CableLength = _FirstCableDefaultLenght;
+	newCable->SolverIterations = FirstCable->SolverIterations;
+	newCable->NumSegments = FM::Lerp
+	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
 	//Opti
 	newCable->bUseSubstepping = true;
@@ -553,7 +557,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	else
 	{
 		//Reset to base stiffness preset
-		firstCable->CableLength = 25.0f;
+		firstCable->CableLength = 2.0f;
 		firstCable->bUseSubstepping = true;
 		
 		//Reset to HookAttach default set
@@ -765,6 +769,25 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 	return !bLocalPointFound;
 }
 
+
+void UPS_HookComponent::AdaptCableTense(const float alphaTense)
+{
+	if(!CableListArray.IsValidIndex(CableListArray.Num() - 1)) return;
+	
+	UCableComponent* characterCable = CableListArray[CableListArray.Num() - 1];
+	if(!IsValid(characterCable)) return;
+	
+	//CableLength for Character Cable
+
+	const float newbaseToMeshDist = UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END));
+	const float minLenght =  newbaseToMeshDist - CablePullSlackDistanceRange.Min > 0 ? newbaseToMeshDist - CablePullSlackDistanceRange.Min : 2.0f;
+	const float newLenght = FMath::Lerp(newbaseToMeshDist + CablePullSlackDistanceRange.Min, minLenght, alphaTense);
+	characterCable->CableLength = newLenght;
+	characterCable->SolverIterations = FMath::Lerp(8.0f, 1.0f, alphaTense);
+
+	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable length %f, alphaTense %f"),__FUNCTION__, newLenght,alphaTense); 
+}
+
 //------------------
 #pragma endregion Cable
 
@@ -870,7 +893,8 @@ void UPS_HookComponent::DettachHook()
 	}
 
 	//reset FirstCable stiffness
-	FirstCable->CableLength = 25.0f;
+	FirstCable->CableLength = 2.0f;
+	FirstCable->SolverIterations = 1.0f;
 	FirstCable->bUseSubstepping = true; 
 
 	//Reset CableList && CableCapArray
@@ -917,33 +941,25 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
 	
 	//On wheel axis change reset
-	// if ((FMath::Sign(_CableWindeInputValue) != FMath::Sign(inputActionInstance.GetValue().Get<float>())) && _CableWindeInputValue != 0.0f)
-	// {
-	// 	_CableWindeInputValue = 0.0f;
-	// 	return;
-	// }
+	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_UnclampedWindeInputValue) && _bCableWinderIsActive)
+	{
+		ResetWindeHook();
+		return;
+	}
 	
 	_bCableWinderIsActive = true;
-	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_CableWindeInputValue + inputActionInstance.GetValue().Get<float>(),-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
-
-	UE_LOG(LogTemp, Warning, TEXT("_CableWindeInputValue %f, inputActionInstance %f"), _CableWindeInputValue, inputActionInstance.GetValue().Get<float>());
-
-	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	_UnclampedWindeInputValue += inputActionInstance.GetValue().Get<float>();
+	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_UnclampedWindeInputValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
 	
-}
-
-void UPS_HookComponent::StopWindeHook()
-{
-	if(!_PlayerController->bIsUsingGamepad) return;
-
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
 	
-	//ResetWindeHook();
 }
 
 void UPS_HookComponent::ResetWindeHook()
 {
+	_UnclampedWindeInputValue = 0.0f;
 	_CableWindeInputValue = 0.0f;
+	
 	_CablePullSlackDistance = CablePullSlackDistanceRange.Min;
 	_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(0);
 
@@ -982,21 +998,22 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		_CablePullSlackDistance = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, alphaWinde) * FMath::Sign(_CableWindeInputValue);
 
 		//TODO :: If want to activate Winde during swing don't forget to reactivate SetLinearLimitZ
-		// //Winde on swing
-		// if(bPlayerIsSwinging)
-		// {
-		// 	HookPhysicConstraint->SetLinearZLimit(LCM_Limited, FMath::Lerp(SwingMaxDistance, MinLinearLimitZ,alpha));
-		// }
+		//Winde on swing
+		if(bPlayerIsSwinging)
+		{
+			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, FMath::Lerp(MinLinearLimitZ, SwingMaxDistance, alphaWinde));
+		}
 	}
 	
 	//Distance On Attach By point number weight
 	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
 	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
+	//float distanceOnAttachByTensorWeight = _CablePullSlackDistance * CableCapArray.Num();
 
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistOnAttachWithRange,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistOnAttachWithRange;
 
-	UE_LOG(LogTemp, Error, TEXT("baseToMeshDist %f, _CablePullSlackDistance %f, distanceOnAttachByTensorWeight %f,_DistOnAttachWithRange %f,  alpha %f"), baseToMeshDist, _CablePullSlackDistance, distanceOnAttachByTensorWeight,_DistOnAttachWithRange, alpha);
+	UE_LOG(LogTemp, Error, TEXT("baseToMeshDist %f, _DistanceOnAttach %f, _CablePullSlackDistance %f, distanceOnAttachByTensorWeight %f,_DistOnAttachWithRange %f,  alpha %f"), baseToMeshDist, _DistanceOnAttach, _CablePullSlackDistance, distanceOnAttachByTensorWeight,_DistOnAttachWithRange, alpha);
 	
 	return alpha; 
 }
@@ -1038,20 +1055,21 @@ void UPS_HookComponent::PowerCablePull()
 
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist);
+
+	//Try Auto Break Rope if tense is too high Else Adapt Cable tense render
+	_AlphaTense = UKismetMathLibrary::MapRangeClamped(_DistOnAttachWithRange - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
+	AdaptCableTense(_AlphaTense);
+	if(_AlphaTense >= 1)
+	{
+		// DettachHook();
+		// return;
+	}
 	
 	//If can't Pull or Swing return
 	if(!_bCablePowerPull) return;
 
 	//Init for the first time _LastAttachedActorLc
 	if(_LastAttachedActorLoc.IsZero()) _LastAttachedActorLoc = _AttachedMesh->GetComponentLocation();
-	
-	//Try Auto Break Rope if tense is too high
-	_AlphaTense = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, _DistOnAttachWithRange, _DistOnAttachWithRange + CablePullDistanceBreakThreshold ,0.0f,1.0f);
-	if(_AlphaTense >= 1)
-	{
-		// DettachHook();
-		// return;
-	}
 
 	//Setup ForceWeight value
 	DetermineForceWeight(alpha);
@@ -1144,8 +1162,8 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Object isn't blocked add a random range offset
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
-
-	if(_bAttachObjectIsBlocked) currentPushAccel = currentPushAccel / UnblockDefaultPullforceDivider;
+	if(_bAttachObjectIsBlocked) currentPushAccel = (currentPushAccel / UnblockDefaultPullforceDivider);
+	
 	FVector defaultNewVel = _AttachedMesh->GetMass() * rotMeshCable.Vector() * currentPushAccel;
 	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation, NAME_None, false);
 

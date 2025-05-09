@@ -268,6 +268,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance threshold support by Cable before break, must be superior to CablePullSlackDistanceRange max range for work properly"))
 	float CablePullDistanceBreakThreshold = 800;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
+		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max dist authorize between caps to alter solver itération"))
+	float CableMaxDistanceBetweenCable = 500.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max object velocity  support by Cable before break"))
@@ -329,6 +333,9 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	bool CheckPointLocation(const FVector& targetLoc,
 		const float& errorTolerance);
+	
+	UFUNCTION()
+	void AdaptCableTense(const float alphaTense);
 
 private:
 
@@ -393,9 +400,6 @@ public:
 	UFUNCTION()
 	void WindeHook(const FInputActionInstance& inputActionInstance);
 
-	UFUNCTION()
-	void StopWindeHook();
-
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsCableWinderInUse() const{return _bCableWinderIsActive;}
 
@@ -417,8 +421,11 @@ private:
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
 	bool _bCableWinderIsActive;
 
-	UPROPERTY(Transient)
+	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
 	float _CableWindeInputValue;
+	
+	UPROPERTY(Transient)
+	float _UnclampedWindeInputValue;
 		
 	//------------------
 #pragma endregion Winde

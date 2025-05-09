@@ -223,7 +223,6 @@ void AProjectSlicePlayerController::SetupWeaponInputComponent()
 		
 		//Winder Launch 
 		EnhancedInputComponent->BindAction(IA_WinderPull, ETriggerEvent::Triggered, _HookComp, &UPS_HookComponent::WindeHook);
-		EnhancedInputComponent->BindAction(IA_WinderPull, ETriggerEvent::Completed, _HookComp, &UPS_HookComponent::StopWindeHook);
 
 		// EnhancedInputComponent->BindAction(IA_WinderPush, ETriggerEvent::Triggered, _HookComp, &UPS_HookComponent::WindeHook);
 		// EnhancedInputComponent->BindAction(IA_WinderPush, ETriggerEvent::Completed, _HookComp, &UPS_HookComponent::WindeHook);
