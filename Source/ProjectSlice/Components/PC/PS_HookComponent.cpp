@@ -74,10 +74,15 @@ void UPS_HookComponent::BeginPlay()
 	//Custom tick - substep to tick at 120 fps (more stable but cable can flicker on unwrap)
 	if(bCanUseSubstepTick)
 	{
-		FTimerDelegate TimerDelegate;
-        TimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTick);
-		// 1/360 for 120 FPS 
-		GetWorld()->GetTimerManager().SetTimer(_SubstepTickHandler, TimerDelegate, 1/90.0f, true);
+		FTimerDelegate LowTimerDelegate;
+        LowTimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTickLowLatency);
+		// 1/90 for extra low latency 
+		GetWorld()->GetTimerManager().SetTimer(_LowSubstepTickHandler, LowTimerDelegate, 1/90.0f, true);
+
+		// 1/360 for 120 FPS
+		FTimerDelegate HighTimerDelegate;
+		HighTimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTickHighLatency);
+		GetWorld()->GetTimerManager().SetTimer(_HighSubstepTickHandler, HighTimerDelegate, 1/360.0f, true);
 	}
 	
 	//Constraint display
@@ -260,13 +265,18 @@ void UPS_HookComponent::ArmTick()
 #pragma region Cable
 //------------------
 
-void UPS_HookComponent::SubstepTick()
+void UPS_HookComponent::SubstepTickLowLatency()
+{
+	if(!bCanUseSubstepTick) return;
+
+	PowerCablePull();
+}
+
+void UPS_HookComponent::SubstepTickHighLatency()
 {
 	if(!bCanUseSubstepTick) return;
 	
 	CableWraping();
-
-	PowerCablePull();
 }
 
 void UPS_HookComponent::CableWraping()
@@ -322,7 +332,8 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//Tense
 	newCable->CableLength = _FirstCableDefaultLenght;
 	newCable->SolverIterations = FirstCable->SolverIterations;
-	newCable->NumSegments = FM::Lerp
+
+	newCable->NumSegments = 1;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
 	//Opti
@@ -772,20 +783,38 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 
 void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 {
-	if(!CableListArray.IsValidIndex(CableListArray.Num() - 1)) return;
+	const int32 lastIndex = CableListArray.Num() - 1;
+
+	if(!CableListArray.IsValidIndex(lastIndex)) return;
 	
-	UCableComponent* characterCable = CableListArray[CableListArray.Num() - 1];
+	UCableComponent* characterCable = CableListArray[lastIndex];
 	if(!IsValid(characterCable)) return;
 	
 	//CableLength for Character Cable
-
 	const float newbaseToMeshDist = UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END));
 	const float minLenght =  newbaseToMeshDist - CablePullSlackDistanceRange.Min > 0 ? newbaseToMeshDist - CablePullSlackDistanceRange.Min : 2.0f;
 	const float newLenght = FMath::Lerp(newbaseToMeshDist + CablePullSlackDistanceRange.Min, minLenght, alphaTense);
-	characterCable->CableLength = newLenght;
-	characterCable->SolverIterations = FMath::Lerp(8.0f, 1.0f, alphaTense);
+	// characterCable->CableLength = newLenght;
+	// characterCable->SolverIterations = FMath::Lerp(8.0f, 1.0f, alphaTense);
 
-	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable length %f, alphaTense %f"),__FUNCTION__, newLenght,alphaTense); 
+	//CableLength for Character Cable
+	int32 index = 1;
+	for (int i = lastIndex; i > lastIndex - CablePullTenseIteration; i--)
+	{
+		if(!CableListArray.IsValidIndex(i) || !IsValid(CableListArray[i]))
+		{
+			index++;
+			continue;
+		}
+
+		CableListArray[i]->CableLength = newLenght / index;
+		const int32 newSolverIterations = FMath::InterpStep(static_cast<float>(CableMaxSolverIteration), 1.0f, alphaTense / index, 7);
+		if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
+
+		index++;
+	}; 
+
+	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense); 
 }
 
 //------------------
@@ -940,19 +969,24 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	//Break Hook constraint if already exist Or begin Winding
 	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
 	
-	//On wheel axis change reset
-	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_UnclampedWindeInputValue) && _bCableWinderIsActive)
-	{
-		ResetWindeHook();
-		return;
-	}
-	
+	//Update Winde vars
 	_bCableWinderIsActive = true;
 	_UnclampedWindeInputValue += inputActionInstance.GetValue().Get<float>();
 	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_UnclampedWindeInputValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
 	
 	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
 	
+}
+
+void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstance)
+{
+	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+	
+	//On wheel axis change reset
+	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_UnclampedWindeInputValue) && _bCableWinderIsActive)
+	{
+		ResetWindeHook();
+	}
 }
 
 void UPS_HookComponent::ResetWindeHook()
@@ -989,7 +1023,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	if(_CableWindeInputValue != 0.0f)
 	{
 		//Applicate curve to winde alpha input
-		float alphaWinde = FMath::Abs(_CableWindeInputValue);
+		float alphaWinde = _CableWindeInputValue;
 		if(IsValid(WindePullingCurve))
 		{
 			alphaWinde = WindePullingCurve->GetFloatValue(alphaWinde);
@@ -1008,12 +1042,14 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	//Distance On Attach By point number weight
 	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
 	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
-	//float distanceOnAttachByTensorWeight = _CablePullSlackDistance * CableCapArray.Num();
 
+	// float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, distanceOnAttachByTensorWeight, _DistOnAttachWithRange - CablePullSlackDistanceRange.Min, 0 ,1);
+	// _bCablePowerPull = alpha > 0;
+	
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistOnAttachWithRange,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistOnAttachWithRange;
 
-	UE_LOG(LogTemp, Error, TEXT("baseToMeshDist %f, _DistanceOnAttach %f, _CablePullSlackDistance %f, distanceOnAttachByTensorWeight %f,_DistOnAttachWithRange %f,  alpha %f"), baseToMeshDist, _DistanceOnAttach, _CablePullSlackDistance, distanceOnAttachByTensorWeight,_DistOnAttachWithRange, alpha);
+	UE_LOG(LogTemp, Error, TEXT("baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"), baseToMeshDist, _DistanceOnAttach, _DistOnAttachWithRange, distanceOnAttachByTensorWeight, alpha);
 	
 	return alpha; 
 }
@@ -1053,11 +1089,16 @@ void UPS_HookComponent::PowerCablePull()
 	//Current dist to attach loc
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 
+	//Override _DistanceOnAttach
+	// if(baseToMeshDist < _DistanceOnAttach + CablePullSlackDistanceRange.Min)
+	// 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
+
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist);
 
-	//Try Auto Break Rope if tense is too high Else Adapt Cable tense render
+	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
 	_AlphaTense = UKismetMathLibrary::MapRangeClamped(_DistOnAttachWithRange - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
+	//_AlphaTense = alpha;
 	AdaptCableTense(_AlphaTense);
 	if(_AlphaTense >= 1)
 	{

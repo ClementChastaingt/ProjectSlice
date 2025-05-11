@@ -384,11 +384,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
 	
 	//Setup or stop if no slideable object was sighted
-	if(!_bSightMeshIsInUse)
-	{
-		StopTurnRackTargetting();
-		return;
-	}else if(!_bTurnRackTargetSetuped)
+	if(!_bTurnRackTargetSetuped)
 	{
 		SetupTurnRackTargetting();
 	}
@@ -429,10 +425,19 @@ void UPS_WeaponComponent::TurnRackTarget()
 void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if(!IsValid(SightMesh)) return;
-	
-	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushLoading();
-	SightMesh->SetVisibility(_bSightMeshIsInUse);
 
+	//Setup
+	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushLoading();
+	
+	//Sleep Targeting
+	if(!IsValid(_CurrentSightedComponent))
+	{
+		SightMesh->SetRelativeScale3D(RackDefaultRelativeTransform.GetScale3D());
+		SightMesh->SetRelativeLocation(RackDefaultRelativeTransform.GetLocation());
+		return;
+	};
+
+	//Active Targetting
 	if(!_bSightMeshIsInUse) return;
 
 	//Setup variables
@@ -532,7 +537,7 @@ void UPS_WeaponComponent::SightShaderTick()
 	if(_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetActor()))
 	{
 		if(!IsValid(sliceTarget)) return;
-		
+				
 		if(bDebugSightShader)
 		{
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
@@ -546,7 +551,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		//Reset last material properties
 		ResetSightRackProperties();
-		if(!_SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) return;
+		if(!_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass())) return;
 		_CurrentSightedComponent = _SightHitResult.GetComponent();
 		_CurrentSightedFace = _SightHitResult.FaceIndex;
 		for (int i =0 ; i<_CurrentSightedComponent->GetNumMaterials(); i++)
@@ -595,9 +600,6 @@ void UPS_WeaponComponent::SightShaderTick()
 	//If don't Lbock reset old mat properties
 	else if(!_SightHitResult.bBlockingHit && IsValid(_CurrentSightedComponent))
 	{
-		//Reset SightRack display
-		SightMesh->SetVisibility(false);
-
 		//Reset sight shader
 		ResetSightRackProperties();
 	}
@@ -661,7 +663,7 @@ void UPS_WeaponComponent::ResetSightRackProperties()
 		_CurrentSightedBaseMats.Empty();
 
 		//Unactive sight
-		SightMesh->SetVisibility(false);
+		//SightMesh->SetVisibility(false);
 		
 	}
 }

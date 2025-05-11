@@ -262,6 +262,12 @@ protected:
 		))
 	float CableUnwrapLastFrameDelay = 4.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0",  ToolTip="Max layer depth of Adapt cable tense"))
+	float CablePullTenseIteration = 6;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
+	int32 CableMaxSolverIteration = 8;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
 	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(50.0f,500.0f);
@@ -291,7 +297,10 @@ protected:
 
 	//Functions
 	UFUNCTION()
-	void SubstepTick();
+	void SubstepTickLowLatency();
+
+	UFUNCTION()
+	void SubstepTickHighLatency();
 
 	UFUNCTION()
 	void CableWraping();
@@ -340,7 +349,10 @@ protected:
 private:
 
 	UPROPERTY(Transient)
-	FTimerHandle _SubstepTickHandler;
+	FTimerHandle _LowSubstepTickHandler;
+
+	UPROPERTY(Transient)
+	FTimerHandle _HighSubstepTickHandler;
 
 	UPROPERTY(Transient)
 	float _FirstCableDefaultLenght;
@@ -350,7 +362,7 @@ private:
 
 	UPROPERTY(Transient)
 	float _DistOnAttachWithRange;
-
+	
 	UPROPERTY(Transient)
 	float _AlphaTense;
 
@@ -399,6 +411,9 @@ private:
 public:
 	UFUNCTION()
 	void WindeHook(const FInputActionInstance& inputActionInstance);
+
+	UFUNCTION()
+	void ResetWinde(const FInputActionInstance& inputActionInstance);
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsCableWinderInUse() const{return _bCableWinderIsActive;}

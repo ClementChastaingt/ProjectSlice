@@ -10,6 +10,7 @@
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "ProjectSlice/Data/PS_GlobalType.h"
 
+//TODO :: Harmonize for futur common usage with NME_Character
 
 // Sets default values for this component's properties
 UPS_ProceduralAnimComponent::UPS_ProceduralAnimComponent()
