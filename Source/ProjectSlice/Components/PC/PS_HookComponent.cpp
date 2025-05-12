@@ -10,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Materials/MaterialExpressionSkyAtmosphereLightIlluminance.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
@@ -308,11 +309,7 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//Attach Last Cable to Hitted Object, Set his position to it
 	lastCable->AttachToComponent(currentTraceCableWarp.OutHit.GetComponent(), AttachmentRule);
 	lastCable->SetWorldLocation(currentTraceCableWarp.OutHit.Location, false, nullptr,ETeleportType::TeleportPhysics);
-
-	//Make lastCable tense
-	lastCable->CableLength = 2.0f;
-	lastCable->SolverIterations = 1;
-
+	
 	newCable = Cast<UCableComponent>(GetOwner()->AddComponentByClass(UCableComponent::StaticClass(), false, FTransform(), false));
 	if(!IsValid(newCable)) return;
 	//Necessary for appear in BP
@@ -332,8 +329,12 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//Tense
 	newCable->CableLength = _FirstCableDefaultLenght;
 	newCable->SolverIterations = FirstCable->SolverIterations;
-
-	newCable->NumSegments = 1;
+	
+	const float dist = UKismetMathLibrary::Vector_Distance(newCable->GetComponentLocation(), lastCable->GetComponentLocation());
+	const float alpha = UKismetMathLibrary::MapRangeClamped(dist, 0.0f, CablePullSlackDistanceRange.Max ,0.0f,1.0f);
+	newCable->NumSegments = FMath::InterpStep(1.0f, static_cast<float>(CableMaxSolverIteration), alpha, CableMaxSolverIteration);
+	//newCable->NumSegments = 1;
+	
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
 	//Opti
@@ -791,11 +792,9 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 	if(!IsValid(characterCable)) return;
 	
 	//CableLength for Character Cable
-	const float newbaseToMeshDist = UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END));
-	const float minLenght =  newbaseToMeshDist - CablePullSlackDistanceRange.Min > 0 ? newbaseToMeshDist - CablePullSlackDistanceRange.Min : 2.0f;
-	const float newLenght = FMath::Lerp(newbaseToMeshDist + CablePullSlackDistanceRange.Min, minLenght, alphaTense);
-	// characterCable->CableLength = newLenght;
-	// characterCable->SolverIterations = FMath::Lerp(8.0f, 1.0f, alphaTense);
+	const float baseToMeshDist = UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END));
+	const float minLenght =  baseToMeshDist / 2 > 0 ? baseToMeshDist / 2 : 1.0f;
+	const float newLenght = FMath::Lerp(baseToMeshDist + _CablePullSlackDistance, minLenght, alphaTense);
 
 	//CableLength for Character Cable
 	int32 index = 1;
@@ -806,7 +805,6 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 			index++;
 			continue;
 		}
-
 		CableListArray[i]->CableLength = newLenght / index;
 		const int32 newSolverIterations = FMath::InterpStep(static_cast<float>(CableMaxSolverIteration), 1.0f, alphaTense / index, 7);
 		if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
@@ -814,7 +812,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		index++;
 	}; 
 
-	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense); 
+	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f, newLenght %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense, newLenght); 
 }
 
 //------------------
@@ -971,8 +969,12 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	
 	//Update Winde vars
 	_bCableWinderIsActive = true;
-	_UnclampedWindeInputValue += inputActionInstance.GetValue().Get<float>();
-	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_UnclampedWindeInputValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
+	_WindeInputAxis1DValue += inputActionInstance.GetValue().Get<float>();
+	_WindeInputAxis1DValue = FMath::Clamp(_WindeInputAxis1DValue,-WindeMaxInputWeight, WindeMaxInputWeight);
+	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_WindeInputAxis1DValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
+
+	
+	UE_LOG(LogTemp, Warning, TEXT(" _CableWindeInputValue %f, _UnclampedWindeInputValue %f"), _CableWindeInputValue, _WindeInputAxis1DValue);
 	
 	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
 	
@@ -983,7 +985,7 @@ void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstan
 	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
 	//On wheel axis change reset
-	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_UnclampedWindeInputValue) && _bCableWinderIsActive)
+	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_WindeInputAxis1DValue) && _bCableWinderIsActive)
 	{
 		ResetWindeHook();
 	}
@@ -991,7 +993,7 @@ void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstan
 
 void UPS_HookComponent::ResetWindeHook()
 {
-	_UnclampedWindeInputValue = 0.0f;
+	_WindeInputAxis1DValue = 0.0f;
 	_CableWindeInputValue = 0.0f;
 	
 	_CablePullSlackDistance = CablePullSlackDistanceRange.Min;
@@ -1028,9 +1030,13 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		{
 			alphaWinde = WindePullingCurve->GetFloatValue(alphaWinde);
 		}
-		_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alphaWinde);
-		_CablePullSlackDistance = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, alphaWinde) * FMath::Sign(_CableWindeInputValue);
 
+		//Winde anim only in pull not slack
+		if(alphaWinde < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alphaWinde);
+
+		//Determine current slack distance
+		_CablePullSlackDistance = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, alphaWinde) * FMath::Sign(_CableWindeInputValue);
+		
 		//TODO :: If want to activate Winde during swing don't forget to reactivate SetLinearLimitZ
 		//Winde on swing
 		if(bPlayerIsSwinging)
@@ -1038,14 +1044,15 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, FMath::Lerp(MinLinearLimitZ, SwingMaxDistance, alphaWinde));
 		}
 	}
-	
-	//Distance On Attach By point number weight
-	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
-	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
 
-	// float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist, distanceOnAttachByTensorWeight, _DistOnAttachWithRange - CablePullSlackDistanceRange.Min, 0 ,1);
-	// _bCablePowerPull = alpha > 0;
+	//Override _DistanceOnAttach
+	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
+		_DistanceOnAttach = baseToMeshDist;
+	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
+	//Distance On Attach By point number weight
+	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
 	
+	//Calculate Pull alpha && activate pull
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistOnAttachWithRange,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistOnAttachWithRange;
 
@@ -1097,8 +1104,8 @@ void UPS_HookComponent::PowerCablePull()
 	const float alpha = CalculatePullAlpha(baseToMeshDist);
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
-	_AlphaTense = UKismetMathLibrary::MapRangeClamped(_DistOnAttachWithRange - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
-	//_AlphaTense = alpha;
+	//_AlphaTense = UKismetMathLibrary::MapRangeClamped(_DistOnAttachWithRange - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
+	_AlphaTense = alpha;
 	AdaptCableTense(_AlphaTense);
 	if(_AlphaTense >= 1)
 	{

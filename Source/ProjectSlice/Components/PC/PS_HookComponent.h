@@ -440,7 +440,7 @@ private:
 	float _CableWindeInputValue;
 	
 	UPROPERTY(Transient)
-	float _UnclampedWindeInputValue;
+	float _WindeInputAxis1DValue;
 		
 	//------------------
 #pragma endregion Winde
