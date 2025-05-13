@@ -792,10 +792,9 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 	if(!IsValid(characterCable)) return;
 	
 	//CableLength for Character Cable
-	const float baseToMeshDist = UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END));
-	const float minLenght =  baseToMeshDist / 2 > 0 ? baseToMeshDist / 2 : 1.0f;
-	const float newLenght = FMath::Lerp(baseToMeshDist + _CablePullSlackDistance, minLenght, alphaTense);
-
+	const float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END)));
+	const float newLenght = FMath::Lerp(baseToMeshDist + ((CablePullSlackDistanceRange.Max - CablePullSlackDistanceRange.Min) / 2),  baseToMeshDist / 2, alphaTense);
+		
 	//CableLength for Character Cable
 	int32 index = 1;
 	for (int i = lastIndex; i > lastIndex - CablePullTenseIteration; i--)
@@ -806,13 +805,13 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 			continue;
 		}
 		CableListArray[i]->CableLength = newLenght / index;
-		const int32 newSolverIterations = FMath::InterpStep(static_cast<float>(CableMaxSolverIteration), 1.0f, alphaTense / index, 7);
+		const int32 newSolverIterations = FMath::InterpStep(static_cast<float>(CableMaxSolverIteration), 3.0f, alphaTense / index, 7);
 		if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
 
 		index++;
 	}; 
 
-	if(bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f, newLenght %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense, newLenght); 
+	if(bDebugCableTense) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f, newLenght %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense, newLenght); 
 }
 
 //------------------
@@ -1047,7 +1046,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 
 	//Override _DistanceOnAttach
 	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
-		_DistanceOnAttach = baseToMeshDist;
+	_DistanceOnAttach = baseToMeshDist;
 	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
 	//Distance On Attach By point number weight
 	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());

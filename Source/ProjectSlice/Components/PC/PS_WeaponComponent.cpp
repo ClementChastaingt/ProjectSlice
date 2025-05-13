@@ -163,7 +163,6 @@ void UPS_WeaponComponent::FireTriggered()
 #pragma region Fire
 //------------------
 
-
 void UPS_WeaponComponent::Fire()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
@@ -182,17 +181,22 @@ void UPS_WeaponComponent::Fire()
 	ResetSightRackProperties();
 	UMaterialInstanceDynamic* matInst = SetupMeltingMat(parentProcMeshComponent);
 
-	//Slice mesh
+	//Slice mesh setup
+	_LastSliceOutput = FSCustomSliceOutput();
+	_LastSliceOutput.bDebug = bDebugSlice;
+	
 	UProceduralMeshComponent* outHalfComponent;
-	FVector sliceLocation = _SightHitResult.Location;
+	//FVector sliceLocation = _SightHitResult.Location;
+	FVector sliceLocation = SightTarget;
 	FVector sliceDir = SightMesh->GetUpVector();
 	// UMeshComponent* sliceTarget = Cast<UMeshComponent>(CurrentFireHitResult.GetComponent());
 	// FVector sliceDir = SightMesh->GetUpVector() / (sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale());
 	sliceDir.Normalize();
-	
+
+	//Slice
 	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
 		sliceDir, true,
-		outHalfComponent, _sliceOutput,
+		outHalfComponent, _LastSliceOutput,
 		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
 		matInst);
 	if(!IsValid(outHalfComponent)) return;
@@ -215,9 +219,9 @@ void UPS_WeaponComponent::Fire()
 	//Debug trace
 	if(bDebugSlice)
 	{
-		DrawDebugLine(GetWorld(), _SightHitResult.Location,  _SightHitResult.Location + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(), sliceLocation, sliceLocation + sliceDir * 500, FColor::Magenta, false, 2, 10, 3);
 		DrawDebugLine(GetWorld(),GetMuzzlePosition(), GetMuzzlePosition() +  SightMesh->GetUpVector() * 500, FColor::Yellow, false, 2, 10, 3);
-		DrawDebugLine(GetWorld(),GetMuzzlePosition() + SightMesh->GetUpVector() * 500 , _SightHitResult.Location + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
+		DrawDebugLine(GetWorld(),GetMuzzlePosition() + SightMesh->GetUpVector() * 500 , sliceLocation + sliceDir  * 500, FColor::Green, false, 2, 10, 3);
 	}
 
 	//Register and instanciate
@@ -264,8 +268,10 @@ void UPS_WeaponComponent::Fire()
 		{
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
-	
 	}
+
+	//Callback
+	OnFireEvent.Broadcast();
 }
 
 //------------------

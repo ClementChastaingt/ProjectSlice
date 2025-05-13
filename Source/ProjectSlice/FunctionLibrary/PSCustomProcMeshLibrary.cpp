@@ -301,6 +301,11 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 							int32 SlicedVertIndex = NewSection.ProcVertexBuffer.Add(BaseVert);
 							// Update section bounds
 							NewSection.SectionLocalBox += BaseVert.Position;
+							
+							// UE_LOG(LogTemp, Log, TEXT("Point in %S"), __FUNCTION__);
+							// const FVector loc = ProcCompToWorld.TransformPosition(BaseVert.Position);
+							// DrawDebugPoint(InProcMesh->GetWorld(), loc, 10.0f, FColor::Cyan, false, 0.5f);
+							
 							// Add to map
 							BaseToSlicedVertIndex.Add(BaseVertIndex, SlicedVertIndex);
 						}
@@ -310,6 +315,10 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 							int32 SlicedVertIndex = NewOtherSection->ProcVertexBuffer.Add(BaseVert);
 							NewOtherSection->SectionLocalBox += BaseVert.Position;
 							BaseToOtherSlicedVertIndex.Add(BaseVertIndex, SlicedVertIndex);
+							
+							// UE_LOG(LogTemp, Log, TEXT("Point in %S"), __FUNCTION__);
+							// const FVector loc = ProcCompToWorld.TransformPosition(BaseVert.Position);
+							// DrawDebugPoint(InProcMesh->GetWorld(), loc, 10.0f, FColor::Blue, false, 0.5f);
 						}
 					}
 
@@ -404,6 +413,12 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 									// Update bounds
 									NewSection.SectionLocalBox += InterpVert.Position;
 
+									//Stock Cap cut point for differed usage (feedback)
+									const FVector caploc = ProcCompToWorld.TransformPosition(InterpVert.Position);
+									outSlicingData.ClipCapPointLoc.Add(caploc);
+									
+									if(outSlicingData.bDebug)DrawDebugPoint(InProcMesh->GetWorld(), caploc, 10.0f, FColor::Blue, false, 0.5f);
+					
 									// Save vert index for this poly
 									check(NumFinalVerts < 4);
 									FinalVerts[NumFinalVerts++] = InterpVertIndex;

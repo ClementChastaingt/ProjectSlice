@@ -86,6 +86,9 @@ public:
 	UFUNCTION()
 	void Fire();
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnFireEvent;
+
 protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
@@ -108,7 +111,9 @@ protected:
 	//__________________________________________________
 
 public:
-	//__________________________________________________
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FSCustomSliceOutput GetLastSliceOutput() const{return _LastSliceOutput;}
 
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Slice")
@@ -131,7 +136,7 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	FSCustomSliceOutput _sliceOutput;
+	FSCustomSliceOutput _LastSliceOutput;
 
 	UPROPERTY(Transient)
 	TArray<UMaterialInstanceDynamic*> _HalfSectionMatInst;

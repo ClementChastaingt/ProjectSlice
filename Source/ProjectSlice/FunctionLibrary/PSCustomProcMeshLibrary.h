@@ -17,16 +17,20 @@ struct FSCustomSliceOutput
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY()
+	bool bDebug = false;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material")
 	UMaterialInterface* InProcMeshDefaultMat = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material")
 	int32 InProcMeshCapIndex = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cap Material")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material")
 	int32 OutProcMeshCapIndex = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClipCap")
+	TArray<FVector> ClipCapPointLoc;
 };
 
 

@@ -102,6 +102,9 @@ protected:
 	bool bDebugCable = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugCableTense = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSwing = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
