@@ -319,7 +319,7 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	//-Material
 	//Debug Cable Color OR use FirstCable material
 	SetupCableMaterial(newCable);
-
+	
 	//Rendering
 	newCable->SetRenderCustomDepth(true);
 	newCable->SetCustomDepthStencilValue(200.0f);
@@ -328,15 +328,17 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 
 	//Tense
 	newCable->CableLength = _FirstCableDefaultLenght;
-	newCable->SolverIterations = FirstCable->SolverIterations;
-	
-	const float dist = UKismetMathLibrary::Vector_Distance(newCable->GetComponentLocation(), lastCable->GetComponentLocation());
-	const float alpha = UKismetMathLibrary::MapRangeClamped(dist, 0.0f, CablePullSlackDistanceRange.Max ,0.0f,1.0f);
-	newCable->NumSegments = FMath::InterpStep(1.0f, static_cast<float>(CableMaxSolverIteration), alpha, CableMaxSolverIteration);
-	//newCable->NumSegments = 1;
-	
+	newCable->SolverIterations = 1;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
+	//TODO :: finish using new MaxNumSegments setup by dist 
+	newCable->NumSegments = 10; // BE CAREFULL: num segment is involved in CableSocketEnd loc calculation need to stay superior of 1;
+	newCable->MarkRenderStateDirty(); // Necessary for Update cable, otherwise can cause crash
+	
+	// const float dist = UKismetMathLibrary::Vector_Distance(newCable->GetComponentLocation(), lastCable->GetComponentLocation());
+	// const float alpha = UKismetMathLibrary::MapRangeClamped(dist, 0.0f, CablePullSlackDistanceRange.Max ,0.0f,1.0f);	
+	//newCable->NumSegments = FMath::InterpStep(CableSegmentRange.Min, CableSegmentRange.Max, alpha, CableSolverRange.Max);
+	
 	//Opti
 	newCable->bUseSubstepping = true;
 	newCable->bSkipCableUpdateWhenNotVisible = true;
@@ -349,7 +351,6 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	newCable->bAttachEnd = true;
 	newCable->SetAttachEndToComponent(currentTraceCableWarp.OutHit.GetComponent());
 	newCable->EndLocation = currentTraceCableWarp.OutHit.GetComponent()->GetComponentTransform().InverseTransformPosition(currentTraceCableWarp.OutHit.Location);
-
 }
 
 void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCable) const
@@ -364,7 +365,6 @@ void UPS_HookComponent::ConfigCableToFirstCableSettings(UCableComponent* newCabl
 	//Tense
 	//TODO :: Review this thing for Pull by Tens func*
 	newCable->CableLength = _FirstCableDefaultLenght;
-	newCable->SolverIterations = FirstCable->SolverIterations;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 
 	//Force 
@@ -569,7 +569,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	else
 	{
 		//Reset to base stiffness preset
-		firstCable->CableLength = 2.0f;
+		firstCable->CableLength = _FirstCableDefaultLenght;
 		firstCable->bUseSubstepping = true;
 		
 		//Reset to HookAttach default set
@@ -797,15 +797,23 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		
 	//CableLength for Character Cable
 	int32 index = 1;
-	for (int i = lastIndex; i > lastIndex - CablePullTenseIteration; i--)
+	for (int i = lastIndex; i >= 0; i--)
 	{
-		if(!CableListArray.IsValidIndex(i) || !IsValid(CableListArray[i]))
+		if(index > CableSolverRange.Max) return;
+		
+		if(!CableListArray.IsValidIndex(i) || !IsValid(CableListArray[i]) )
 		{
 			index++;
 			continue;
 		}
+
+		//Lenght
 		CableListArray[i]->CableLength = newLenght / index;
-		const int32 newSolverIterations = FMath::InterpStep(static_cast<float>(CableMaxSolverIteration), 3.0f, alphaTense / index, 7);
+
+		//Solver
+		const float start = CableSolverRange.Max;
+		const float end = CableSolverRange.Min;
+		const int32 newSolverIterations = FMath::InterpStep(start, end, alphaTense / index, CableSolverRange.Max);
 		if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
 
 		index++;
@@ -919,7 +927,7 @@ void UPS_HookComponent::DettachHook()
 	}
 
 	//reset FirstCable stiffness
-	FirstCable->CableLength = 2.0f;
+	FirstCable->CableLength = _FirstCableDefaultLenght;
 	FirstCable->SolverIterations = 1.0f;
 	FirstCable->bUseSubstepping = true; 
 
@@ -1055,7 +1063,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistOnAttachWithRange,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistOnAttachWithRange;
 
-	UE_LOG(LogTemp, Error, TEXT("baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"), baseToMeshDist, _DistanceOnAttach, _DistOnAttachWithRange, distanceOnAttachByTensorWeight, alpha);
+	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistOnAttachWithRange, distanceOnAttachByTensorWeight, alpha);
 	
 	return alpha; 
 }

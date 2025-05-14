@@ -269,7 +269,10 @@ protected:
 	float CablePullTenseIteration = 6;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
-	int32 CableMaxSolverIteration = 8;
+	FFloatInterval CableSegmentRange = FFloatInterval(4,20);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
+	FFloatInterval CableSolverRange = FFloatInterval(8,16);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
