@@ -330,14 +330,9 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 	newCable->CableLength = _FirstCableDefaultLenght;
 	newCable->SolverIterations = 1;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
-
-	//TODO :: finish using new MaxNumSegments setup by dist 
-	newCable->NumSegments = 10; // BE CAREFULL: num segment is involved in CableSocketEnd loc calculation need to stay superior of 1;
-	newCable->MarkRenderStateDirty(); // Necessary for Update cable, otherwise can cause crash
 	
-	// const float dist = UKismetMathLibrary::Vector_Distance(newCable->GetComponentLocation(), lastCable->GetComponentLocation());
-	// const float alpha = UKismetMathLibrary::MapRangeClamped(dist, 0.0f, CablePullSlackDistanceRange.Max ,0.0f,1.0f);	
-	//newCable->NumSegments = FMath::InterpStep(CableSegmentRange.Min, CableSegmentRange.Max, alpha, CableSolverRange.Max);
+	newCable->NumSegments = 10; // BE CAREFULL: num segment is involved in CableSocketEnd loc calculation need to stay superior of 1;
+	//newCable->MarkRenderStateDirty(); // Necessary for Update cable, otherwise can cause crash
 	
 	//Opti
 	newCable->bUseSubstepping = true;
@@ -793,7 +788,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 	
 	//CableLength for Character Cable
 	const float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END)));
-	const float newLenght = FMath::Lerp(baseToMeshDist + ((CablePullSlackDistanceRange.Max - CablePullSlackDistanceRange.Min) / 2),  baseToMeshDist / 2, alphaTense);
+	float newLenght = 0.0f;
 		
 	//CableLength for Character Cable
 	int32 index = 1;
@@ -808,6 +803,12 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		}
 
 		//Lenght
+		if(CableListArray.IsValidIndex(i-1))
+		{
+			const float max = FMath::Abs(UKismetMathLibrary::Vector_Distance(CableListArray[i-1]->GetComponentLocation(), CableListArray[i]->GetComponentLocation()));
+			const float min = baseToMeshDist;
+			newLenght = FMath::Lerp(min, max, alphaTense);
+		}
 		CableListArray[i]->CableLength = newLenght / index;
 
 		//Solver
