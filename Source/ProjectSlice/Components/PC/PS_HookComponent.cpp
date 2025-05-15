@@ -788,7 +788,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 	
 	//CableLength for Character Cable
 	const float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END)));
-	float newLenght = 0.0f;
+	float newLenght = FMath::Lerp(baseToMeshDist + ((CablePullSlackDistanceRange.Max - CablePullSlackDistanceRange.Min) / 2),  baseToMeshDist / 2, alphaTense);
 		
 	//CableLength for Character Cable
 	int32 index = 1;
