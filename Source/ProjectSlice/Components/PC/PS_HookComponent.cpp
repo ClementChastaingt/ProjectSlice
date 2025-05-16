@@ -66,6 +66,10 @@ void UPS_HookComponent::BeginPlay()
 	{
 		_PlayerCharacter->GetParkourComponent()->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnParkourDetectorBeginOverlapEventReceived);
 	}
+	if(IsValid(_PlayerCharacter->GetCharacterMovement()))
+	{
+		_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_HookComponent::OnMovementModeChangedEventReceived);
+	}
 	if(IsValid(HookCollider))
 	{
 		HookCollider->OnComponentBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnHookBoxBeginOverlapEvent);
@@ -112,6 +116,7 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 }
+
 // Called every frame
 void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                       FActorComponentTickFunction* ThisTickFunction)
@@ -132,6 +137,23 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	//Swing
 	SwingTick();
 
+}
+
+
+void UPS_HookComponent::OnMovementModeChangedEventReceived(ACharacter* Character, EMovementMode PrevMovementMode,
+	uint8 PreviousCustomMode)
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement())) return;
+
+	switch (_PlayerCharacter->GetCharacterMovement()->MovementMode)
+	{
+		case MOVE_Falling:
+			ForceDettachByFall();
+			break;
+		
+		default:
+			break;
+	}
 }
 
 #pragma region Event_Receiver
@@ -888,11 +910,14 @@ void UPS_HookComponent::HookObject()
 }
 
 void UPS_HookComponent::DettachHook()
-{
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	
+{	
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(_AttachedMesh)) return;
+
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+
+	//----Reset Var---
+	bHasTriggerBreakByFall = false;
 
 	//----Reset Swing---
 	OnTriggerSwing(false);
@@ -1016,11 +1041,19 @@ void UPS_HookComponent::DetermineForceWeight(const float alpha)
 	float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
 	float objectMassScaled = UPSFl::GetObjectUnifiedMass(_AttachedMesh);
 
-	//TODO :: Need Affine usage of CableCapArray.Num()
+	//CableCaps num PullForce bonus
 	const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
-	const float multiplicator =  CableCapArray.IsEmpty() ? 1.0f : CableCapArray.Num();
-	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight * multiplicator, alphaMass);
+	const float capsBonus = ForceCapsWeight * CableCapArray.Num();
+	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight + capsBonus, alphaMass);
 	forceWeight = FMath::Clamp(forceWeight, 0.0f,ForceWeightMaxThreshold);
+
+	//Auto detttach object when on player
+	const bool bObjectIsNearPlayer = UKismetMathLibrary::Vector_Distance2D(_PlayerCharacter->GetActorLocation(), _AttachedMesh->GetComponentLocation()) < 2000.0f;
+	if(_AttachedMesh->GetComponentVelocity().Length() >= ForceWeightMaxThreshold
+		&& bObjectIsNearPlayer)
+	{
+		DettachHook();
+	}
 	
 	//Determine force weight
 	_ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
@@ -1091,6 +1124,32 @@ void UPS_HookComponent::CheckingIfObjectIsBlocked()
 		_UnblockTimerTimerArray.Empty();
 	}
 }
+
+void UPS_HookComponent::ForceDettachByFall()
+{
+	if(!IsValid(_PlayerCharacter)
+		|| !IsValid(_AttachedMesh)
+		|| !_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
+
+	//If First time trigger timer
+	if(!bHasTriggerBreakByFall)
+	{
+		FTimerHandle timerHandle;
+		FTimerDelegate timerDelegate;
+
+		timerDelegate.BindUObject(this, &UPS_HookComponent::ForceDettachByFall);
+		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, UnblockPushLatency, false);
+				
+		return;
+	}
+
+	//If ti's second time DettachHook
+	if(UKismetMathLibrary::NearlyEqual_FloatFloat(_PlayerCharacter->GetVelocity().Z, _AttachedMesh->GetComponentVelocity().Z, VelocityZToleranceTOBreak))
+	{
+		DettachHook();
+	}
+}
+
 
 void UPS_HookComponent::PowerCablePull()
 {

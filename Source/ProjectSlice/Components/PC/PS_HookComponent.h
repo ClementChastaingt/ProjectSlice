@@ -86,11 +86,14 @@ public:
 	/** Returnss Swing system ConstraintAttachMaster subobject  **/
 	FORCEINLINE UStaticMeshComponent* GetConstraintAttachMaster() const { return ConstraintAttachMaster; }
 
-protected:
+protected:	
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UFUNCTION()
+	void OnMovementModeChangedEventReceived(ACharacter* Character, EMovementMode PrevMovementMode, uint8 PreviousCustomMode);
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
@@ -461,6 +464,9 @@ protected:
 	void CheckingIfObjectIsBlocked();
 
 	UFUNCTION()
+	void ForceDettachByFall();
+
+	UFUNCTION()
 	void PowerCablePull();
 	
 	UFUNCTION()
@@ -473,14 +479,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="10", ClampMin="10", ForceUnits="cm/s", ToolTip="Max Force Weight for Pulling object to Player"))
 	float MaxForceWeight = 10000.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="10", ClampMin="10", ForceUnits="cm/s", ToolTip="Caps weight multply by CapsNum for add to MaxForceWeight"))
+	float ForceCapsWeight = 1000.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="10", ClampMin="10", ForceUnits="cm/s", ToolTip="Maximum Force authorized"))
-	float ForceWeightMaxThreshold = 100000.0f;
+	float ForceWeightMaxThreshold = 150000.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Hook|Pull", meta=(UIMin="100", ClampMin="100", ForceUnits="kg"))
 	float MaxPullWeight = 10000.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ToolTip="Player VelocityZ to ObjectHooked VelocityZ ToleranceToBreak"))
+	float VelocityZToleranceTOBreak = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Player VelocityZ to ObjectHooked VelocityZ check lactency"))
+	float BreakByFalseLatency = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Latency between unblock Push steps"))
 	float UnblockPushLatency = 0.2f;
@@ -521,6 +536,9 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FTimerHandle> _UnblockTimerTimerArray;
+
+	UPROPERTY(Transient)
+	bool bHasTriggerBreakByFall;
 	
 	//------------------
 #pragma endregion Pull
