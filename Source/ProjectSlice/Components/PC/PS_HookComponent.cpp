@@ -1012,12 +1012,15 @@ void UPS_HookComponent::ResetWindeHook()
 
 void UPS_HookComponent::DetermineForceWeight(const float alpha)
 {
-	//Common Pull logic
+	//Common Pull logic*
 	float playerMassScaled = UPSFl::GetObjectUnifiedMass(_PlayerCharacter->GetMesh());
 	float objectMassScaled = UPSFl::GetObjectUnifiedMass(_AttachedMesh);
 
+	//TODO :: Need Affine usage of CableCapArray.Num()
 	const float alphaMass = UKismetMathLibrary::MapRangeClamped(objectMassScaled, playerMassScaled, playerMassScaled * MaxPullWeight, 1.0f, 0.0f);
-	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight, alphaMass);
+	const float multiplicator =  CableCapArray.IsEmpty() ? 1.0f : CableCapArray.Num();
+	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight * multiplicator, alphaMass);
+	forceWeight = FMath::Clamp(forceWeight, 0.0f,ForceWeightMaxThreshold);
 	
 	//Determine force weight
 	_ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
