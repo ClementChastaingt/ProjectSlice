@@ -328,8 +328,8 @@ void UPS_HookComponent::ConfigLastAndSetupNewCable(UCableComponent* lastCable,co
 
 	//Tense
 	newCable->CableLength = _FirstCableDefaultLenght;
-	//newCable->SolverIterations = 1;
-	newCable->SolverIterations = 8;
+	newCable->SolverIterations = 1;
+	//newCable->SolverIterations = 8;
 	newCable->bEnableStiffness = FirstCable->bEnableStiffness;
 	
 	newCable->NumSegments = 10; // BE CAREFULL: num segment is involved in CableSocketEnd loc calculation need to stay superior of 1;
@@ -783,53 +783,39 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 	const int32 lastIndex = CableListArray.Num() - 1;
 
 	if(!CableListArray.IsValidIndex(lastIndex)) return;
-	
-	UCableComponent* characterCable = CableListArray[lastIndex];
-	if(!IsValid(characterCable)) return;
-
-	//CableLength for Character Cable
-	const float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(characterCable->GetSocketLocation(SOCKET_CABLE_START),characterCable->GetSocketLocation(SOCKET_CABLE_END)));
-	//float newLenght = FMath::Lerp(baseToMeshDist + ((CablePullSlackDistanceRange.Max - CablePullSlackDistanceRange.Min) / 2),  baseToMeshDist / 2, alphaTense);
-	float newLenght = baseToMeshDist + (_CablePullSlackDistance / 6);
 		
-	//CableLength for Character Cable
+	//CableLength iterate from last(characterCable) to last +
 	int32 index = 1;
 	for (int i = lastIndex; i >= 0; i--)
 	{
-		if(index > CableSolverRange.Max) return;
-		
 		if(!CableListArray.IsValidIndex(i) || !IsValid(CableListArray[i]) )
 		{
 			index++;
 			continue;
 		}
+		
+		//Solver
+		const float start = CableSolverRange.Max;
+		const float end = CableSolverRange.Min;
+		const int32 newSolverIterations = FMath::InterpStep(start, end, alphaTense / index, CableSolverRange.Max);
+		if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
 
 		//Lenght
-		if(CableListArray.IsValidIndex(i-1))
-		{
-			// const float max = FMath::Abs(UKismetMathLibrary::Vector_Distance(CableListArray[i-1]->GetComponentLocation(), CableListArray[i]->GetComponentLocation()));
-			// const float min = baseToMeshDist;
-			// newLenght = FMath::Lerp(min, max, alphaTense);
-			
-			const float distBetCable = FMath::Abs(UKismetMathLibrary::Vector_Distance(CableListArray[i-1]->GetComponentLocation(), CableListArray[i]->GetComponentLocation()));
-			const float min = distBetCable;
-			const float max = distBetCable + baseToMeshDist;
-			newLenght = FMath::Lerp(max, min, alphaTense);
+		const float distBetCable = FMath::Abs(UKismetMathLibrary::Vector_Distance(CableListArray[i]->GetSocketLocation(SOCKET_CABLE_START),CableListArray[i]->GetSocketLocation(SOCKET_CABLE_END)));
+		
+		const float min = distBetCable / CableMinLengthDivider;
+		const float max = distBetCable * CableMaxLengthMultiplicator;
+		const float newLenght = FMath::Lerp(max, min, (alphaTense / index));
 
-			UE_LOG(LogTemp, Error, TEXT("%S :: max %f min %f, newLenght %f"),__FUNCTION__, max,min, newLenght); 
-		}
-		CableListArray[i]->CableLength = newLenght / index;
+		//UE_LOG(LogTemp, Error, TEXT("%S :: index %i, distBetCable %f, max %f min %f, newLenght %f, solverIterations %i"),__FUNCTION__, i,distBetCable, max,min, newLenght, newSolverIterations); 
+		
+		CableListArray[i]->CableLength = newLenght;
 
-		//Solver
-		// const float start = CableSolverRange.Max;
-		// const float end = CableSolverRange.Min;
-		// const int32 newSolverIterations = FMath::InterpStep(start, end, alphaTense / index, CableSolverRange.Max);
-		// if(CableListArray[i]->SolverIterations != newSolverIterations) CableListArray[i]->SolverIterations = newSolverIterations;
-
+		//Iterate
 		index++;
 	}; 
 
-	if(bDebugCableTense) UE_LOG(LogTemp, Log, TEXT("%S :: CharacterCable solverIterations %i, alphaTense %f, newLenght %f"),__FUNCTION__, characterCable->SolverIterations,alphaTense, newLenght); 
+	//UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f"),__FUNCTION__, alphaTense); 
 }
 
 //------------------
@@ -1064,8 +1050,11 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 
 	//Override _DistanceOnAttach
 	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
-	_DistanceOnAttach = baseToMeshDist;
-	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
+	{
+		_DistanceOnAttach = baseToMeshDist;
+		_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
+	}
+	
 	//Distance On Attach By point number weight
 	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
 	
@@ -1112,23 +1101,13 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Current dist to attach loc
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
-
-	//Override _DistanceOnAttach
-	// if(baseToMeshDist < _DistanceOnAttach + CablePullSlackDistanceRange.Min)
-	// 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
-
+	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist);
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
 	_AlphaTense = UKismetMathLibrary::MapRangeClamped(_DistOnAttachWithRange - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
-	//_AlphaTense = alpha;
 	AdaptCableTense(_AlphaTense);
-	if(_AlphaTense >= 1)
-	{
-		// DettachHook();
-		// return;
-	}
 	
 	//If can't Pull or Swing return
 	if(!_bCablePowerPull) return;

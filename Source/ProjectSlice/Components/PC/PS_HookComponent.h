@@ -102,9 +102,6 @@ protected:
 	bool bDebugCable = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
-	bool bDebugCableTense = false;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSwing = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
@@ -264,30 +261,19 @@ protected:
 			"The delay alpha frames for start/end points, before unwrapping the cable points, to prevent flickering cycles of wrap/unwrap, this should be around 3-7 for effective work."
 		))
 	float CableUnwrapLastFrameDelay = 4.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1",  ToolTip="Min length cable determine by divide Distance Between Cable by it"))
+	float CableMinLengthDivider = 2;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0",  ToolTip="Max layer depth of Adapt cable tense"))
-	float CablePullTenseIteration = 6;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1",  ToolTip="Max length cable determine by multiplie Distance Between Cable by it"))
+	float CableMaxLengthMultiplicator = 1.5;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
-	FFloatInterval CableSegmentRange = FFloatInterval(4,20);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
 	FFloatInterval CableSolverRange = FFloatInterval(8,16);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
 	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(50.0f,500.0f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope", meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max distance threshold support by Cable before break, must be superior to CablePullSlackDistanceRange max range for work properly"))
-	float CablePullDistanceBreakThreshold = 800;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max dist authorize between caps to alter solver itération"))
-	float CableMaxDistanceBetweenCable = 500.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Max object velocity  support by Cable before break"))
-	float CableMaxTensVelocityThreshold = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug",
 		meta=(ToolTip="Change New Cable Material color randomly"))
