@@ -1049,11 +1049,10 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	}
 
 	//Override _DistanceOnAttach
+
 	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
-	{
 		_DistanceOnAttach = baseToMeshDist;
-		_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
-	}
+	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
 	
 	//Distance On Attach By point number weight
 	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistOnAttachWithRange, CableCapArray.Num());
