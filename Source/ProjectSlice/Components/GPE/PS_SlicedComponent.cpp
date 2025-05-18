@@ -5,7 +5,9 @@
 
 #include "Editor.h"
 #include "KismetProceduralMeshLibrary.h"
+#include "Components/AudioComponent.h"
 #include "Components/BrushComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
@@ -20,11 +22,10 @@ UPS_SlicedComponent::UPS_SlicedComponent(const FObjectInitializer& objectInitial
 
 	//Init ProcMeshCompo Collision
 	bUseComplexAsSimpleCollision = false;
-	SetCollisionProfileName(Profile_PhysicActor, false);
-	SetGenerateOverlapEvents(false);
-	SetNotifyRigidBodyCollision(true);
-	SetSimulatePhysics(true);
-		
+	UPrimitiveComponent::SetCollisionProfileName(Profile_PhysicActor, false);
+	SetGenerateOverlapEvents(true);
+	UPrimitiveComponent::SetNotifyRigidBodyCollision(true);
+	UPrimitiveComponent::SetSimulatePhysics(true);
 }
 
 
@@ -32,6 +33,8 @@ UPS_SlicedComponent::UPS_SlicedComponent(const FObjectInitializer& objectInitial
 void UPS_SlicedComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InitComponent();
 	
 }
 
@@ -50,12 +53,11 @@ void UPS_SlicedComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_SlicedComponent::InitSliceObject()
 {
-
 	if(!IsValid(GetOwner())) return;
 	
-	// Cast<UBrushComponent>(GetOwner()->GetRootComponent());
+	Cast<UBrushComponent>(GetOwner()->GetRootComponent());
 	_RootMesh = Cast<UStaticMeshComponent>(GetOwner()->GetRootComponent());
-
+	
 	if(!IsValid(_RootMesh))
 	{
 		UE_LOG(LogTemp, Error, TEXT("%S :: %s _RootMesh invalid"), __FUNCTION__, *GetNameSafe(GetOwner()));
@@ -88,6 +90,40 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetSimulatePhysics(bIsNotFixed);
 	
 }
+
+void UPS_SlicedComponent::InitComponent()
+{
+	OnComponentHit.AddUniqueDynamic(this, &UPS_SlicedComponent::OnSlicedObjectHitEventReceived);
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: hitComp %s"), __FUNCTION__, *this->GetName());
+}
+
+
+void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* HitComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if(OtherComp == this) return;
+	
+	float impactStrength = NormalImpulse.Size(); // Or use HitComp->GetComponentVelocity().Size()
+	
+	if(GetComponentVelocity().Z < MinVelocityZForFeedback) return;
+
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp),impactStrength);
+	
+	// Try and play the sound if specified
+	if (IsValid(CrashSound))
+	{
+		FVector loc = GetComponentLocation();
+		if(Hit.bBlockingHit) loc = Hit.ImpactPoint;
+		
+		float volumeMultiplier = FMath::GetMappedRangeValueClamped(
+			FVector2D(100.0f, 2000.0f),  // Map from this velocity range
+			FVector2D(0.2f, 1.0f),       // To this volume range
+			impactStrength);
+		
+		_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound, loc, FRotator::ZeroRotator, volumeMultiplier);
+	}
+}
+
 
 
 

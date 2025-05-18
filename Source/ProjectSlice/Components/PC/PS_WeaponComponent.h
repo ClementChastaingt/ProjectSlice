@@ -105,6 +105,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
 	UAnimMontage* FireAnimation;
 
+	/** AnimMontage to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	TSubclassOf<UPS_SlicedComponent> SlicedComponent;
+
 #pragma endregion Fire
 
 #pragma region Slice

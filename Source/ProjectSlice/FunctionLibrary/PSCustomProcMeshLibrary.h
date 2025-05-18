@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "KismetProceduralMeshLibrary.h"
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "PSCustomProcMeshLibrary.generated.h"
 
 /**
@@ -53,7 +54,7 @@ public:
 	 */
 	
 	UFUNCTION(BlueprintCallable, Category = "Components|ProceduralMesh")
-	static void SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition, FVector PlaneNormal, bool bCreateOtherHalf, UProceduralMeshComponent
+	static void SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition, FVector PlaneNormal, bool bCreateOtherHalf, TSubclassOf<UPS_SlicedComponent> SlicedClass, UPS_SlicedComponent
 		*& OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData, EProcMeshSliceCapOption CapOption, UMaterialInterface*
-		CapMaterial);
+		CapMaterial, const bool bDiffered = false);
 };

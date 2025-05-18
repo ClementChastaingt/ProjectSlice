@@ -6,6 +6,7 @@
 #include "GeomTools.h"
 #include "ProceduralMeshComponent.h"
 #include "PhysicsEngine/BodySetup.h"
+#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 
 
 struct FUtilEdge3D;
@@ -212,9 +213,9 @@ void SliceConvexElem(const FKConvexElem& InConvex, const FPlane& SlicePlane, TAr
 
 
 void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition,
-	FVector PlaneNormal, bool bCreateOtherHalf,
-	UProceduralMeshComponent*& OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData,
-	EProcMeshSliceCapOption CapOption, UMaterialInterface* CapMaterial)
+	FVector PlaneNormal, bool bCreateOtherHalf, TSubclassOf<UPS_SlicedComponent> SlicedClass, UPS_SlicedComponent*&
+	OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData,
+	EProcMeshSliceCapOption CapOption, UMaterialInterface* CapMaterial, const bool bDiffered)
 {
 	if (InProcMesh != nullptr)
 	{
@@ -661,8 +662,8 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 		if (bCreateOtherHalf)
 		{
 			// Create new component with the same outer as the proc mesh passed in
-			OutOtherHalfProcMesh = NewObject<UProceduralMeshComponent>(InProcMesh->GetOuter());
-
+			OutOtherHalfProcMesh = NewObject<UPS_SlicedComponent>(InProcMesh->GetOuter(), SlicedClass);
+			
 			// Set transform to match source component
 			OutOtherHalfProcMesh->SetWorldTransform(InProcMesh->GetComponentTransform());
 
@@ -681,8 +682,8 @@ void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMes
 			// Assign sliced collision
 			OutOtherHalfProcMesh->SetCollisionConvexMeshes(OtherSlicedCollision);
 
-			// Finally register
-			OutOtherHalfProcMesh->RegisterComponent();
+			// Finally register differed
+			if(!bDiffered) OutOtherHalfProcMesh->RegisterComponent();
 		}
 	}
 }

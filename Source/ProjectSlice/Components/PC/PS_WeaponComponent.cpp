@@ -185,7 +185,7 @@ void UPS_WeaponComponent::Fire()
 	_LastSliceOutput = FSCustomSliceOutput();
 	_LastSliceOutput.bDebug = bDebugSlice;
 	
-	UProceduralMeshComponent* outHalfComponent;
+	UPS_SlicedComponent* outHalfComponent;
 	//FVector sliceLocation = _SightHitResult.Location;
 	FVector sliceLocation = SightTarget;
 	FVector sliceDir = SightMesh->GetUpVector();
@@ -195,10 +195,9 @@ void UPS_WeaponComponent::Fire()
 
 	//Slice
 	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
-		sliceDir, true,
-		outHalfComponent, _LastSliceOutput,
+		sliceDir, true, SlicedComponent, outHalfComponent, _LastSliceOutput,
 		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
-		matInst);
+		matInst, true);
 	if(!IsValid(outHalfComponent)) return;
 	
 	// Ensure collision is generated for both meshes
@@ -226,6 +225,8 @@ void UPS_WeaponComponent::Fire()
 
 	//Register and instanciate
 	outHalfComponent->RegisterComponent();
+	outHalfComponent->InitComponent();
+	
 	if(IsValid(parentProcMeshComponent->GetOwner()))
 	{
 		//Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
@@ -248,7 +249,7 @@ void UPS_WeaponComponent::Fire()
 	{
 		FDamageEvent damageEvent = FDamageEvent();
 		outHalfComponent->ReceiveComponentDamage(10000,damageEvent,_PlayerController,_PlayerCharacter);
-		outHalfComponent->AddImpulse((outHalfComponent->GetUpVector() * -1) * outHalfComponent->GetMass() , NAME_None, false);
+		outHalfComponent->AddImpulse((outHalfComponent->GetUpVector() * -1) * outHalfComponent->GetMass() * 1000, NAME_None, false);
 		
 		//TODO :: Rework Impulse
 		//outHalfComponent->AddImpulse(FVector(500, 0, 500), NAME_None, true);

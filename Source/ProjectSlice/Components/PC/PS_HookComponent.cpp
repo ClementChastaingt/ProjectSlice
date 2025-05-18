@@ -869,7 +869,7 @@ void UPS_HookComponent::HookObject()
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
 	
 	//If not blocking exit
-	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass()))
+	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass()))
 	{
 		OnHookObjectFailed.Broadcast();
 		return;
