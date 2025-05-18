@@ -1046,14 +1046,6 @@ void UPS_HookComponent::DetermineForceWeight(const float alpha)
 	const float capsBonus = ForceCapsWeight * CableCapArray.Num();
 	float forceWeight = FMath::Lerp(0.0f, MaxForceWeight + capsBonus, alphaMass);
 	forceWeight = FMath::Clamp(forceWeight, 0.0f,ForceWeightMaxThreshold);
-
-	//Auto detttach object when on player
-	const bool bObjectIsNearPlayer = UKismetMathLibrary::Vector_Distance2D(_PlayerCharacter->GetActorLocation(), _AttachedMesh->GetComponentLocation()) < 2000.0f;
-	if(_AttachedMesh->GetComponentVelocity().Length() >= ForceWeightMaxThreshold
-		&& bObjectIsNearPlayer)
-	{
-		DettachHook();
-	}
 	
 	//Determine force weight
 	_ForceWeight = FMath::Lerp(0.0f,forceWeight, alpha);
