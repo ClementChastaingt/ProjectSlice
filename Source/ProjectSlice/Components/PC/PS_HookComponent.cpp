@@ -1066,18 +1066,20 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		if(alphaWinde < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(alphaWinde);
 
 		//Determine current slack distance
-		_CablePullSlackDistance = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, alphaWinde) * FMath::Sign(_CableWindeInputValue);
+		const float dist = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, alphaWinde);
+		_CablePullSlackDistance = dist * FMath::Sign(_CableWindeInputValue);
 		
 		//TODO :: If want to activate Winde during swing don't forget to reactivate SetLinearLimitZ
 		//Winde on swing
 		if(bPlayerIsSwinging)
 		{
-			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, FMath::Lerp(MinLinearLimitZ, SwingMaxDistance, alphaWinde));
+			HookPhysicConstraint->SetLinearZLimit(LCM_Limited,FMath::Lerp(500, 1500, alphaWinde) * FMath::Sign(_CableWindeInputValue));
+			//HookPhysicConstraint->SetLinearZLimit(LCM_Limited,dist);
+			UE_LOG(LogTemp, Error, TEXT("SetLinearZLimit %f"),dist);
 		}
 	}
 
 	//Override _DistanceOnAttach
-
 	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
 		_DistanceOnAttach = baseToMeshDist;
 	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
@@ -1130,13 +1132,13 @@ void UPS_HookComponent::ForceDettachByFall()
 		FTimerDelegate timerDelegate;
 
 		timerDelegate.BindUObject(this, &UPS_HookComponent::ForceDettachByFall);
-		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, UnblockPushLatency, false);
+		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, BreakByFallCheckLatency, false);
 				
 		return;
 	}
 
 	//If ti's second time DettachHook
-	if(UKismetMathLibrary::NearlyEqual_FloatFloat(_PlayerCharacter->GetVelocity().Z, _AttachedMesh->GetComponentVelocity().Z, VelocityZToleranceTOBreak))
+	if(UKismetMathLibrary::NearlyEqual_FloatFloat(_PlayerCharacter->GetVelocity().Z, _AttachedMesh->GetComponentVelocity().Z, VelocityZToleranceToBreak))
 	{
 		DettachHook();
 	}
@@ -1351,8 +1353,8 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 				//HookPhysicConstraint->ComponentName2.ComponentName = FName(ConstraintAttachMaster->GetName());
 				
 				//Set Linear Limit				
-				HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-				HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
+				HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
+				HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 				HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
 
 				//Set collision and physic
@@ -1460,83 +1462,83 @@ void UPS_HookComponent::SwingTick()
 
 void UPS_HookComponent::OnSwingForce()
 {
-	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
-	  || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
-	  || _PlayerCharacter->GetParkourComponent()->IsLedging()
-	  || _PlayerCharacter->GetParkourComponent()->IsMantling()
-	/*|| _PlayerCharacter->GetVelocity().Length() <= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched*/)
-	{
-		OnTriggerSwing(false);
-
-		//----Auto break hook if velocity too low----
-		// if(bCablePowerPull &&  _PlayerCharacter->GetVelocity().Length() <= _SwingStartVelocity.Length())
-		// 	DettachHook();
-		return;
-	}
-	
-	//Init alpha
-	FVector dir = (_PlayerCharacter->GetActorLocation() - _AttachedMesh->GetComponentLocation());
-	
-	const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
-	//const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, 0.0f, _SwingStartLoc.Z * (1 - timeWeightAlpha), 0.0f, (1 - timeWeightAlpha));
-	const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, _SwingStartLoc.Z, _SwingStartLoc.Z - SwingMaxDistance, 0.0f, (1 - timeWeightAlpha));
-	const bool bIsGoingDown = alphaCurve > SwingAlpha;
-	SwingAlpha = alphaCurve;
-	
-	dir.Normalize();
-	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0.2, 10, 3);
-	
-	FVector swingVelocity = -1 * dir * (_PlayerCharacter->GetActorLocation() - _AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
-	swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
-
-	//Air Control:
-	// const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
-	const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
-	_PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(_PlayerCharacter->GetDefaultAirControl(), SwingMaxAirControl, airControlAlpha);
-
-	//Braking Deceleration Falling
-	float brakingDecAlpha = bIsGoingDown ? alphaCurve : 1 - alphaCurve;
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking / 2, brakingDecAlpha);
-
-	//Add Force
-	_PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
-	//_PlayerCharacter->GetCharacterMovement()->AddForce(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() *  * _PlayerCharacter->CustomTimeDilation);
-
-
-	_VelocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
-	//Force reset swing vel orientation
-	if(alphaCurve < 0.2 && !_OrientationIsReset)
-	{
-		_VelocityToAbsFwd = _VelocityToAbsFwd * -1;
-		_OrientationIsReset = true;
-	}
-	else
-	{
-		_OrientationIsReset = false;
-	}
-	const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_VelocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
-	float fakeInputAlpha = FMath::Sign(_VelocityToAbsFwd) * alphaWeight;	
-
-	if(bDebugSwing)
-	{
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * 400 , 20.0f, FColor::Cyan, false, 0.1, 10, 3);
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);
-	}
-	
-	//Add movement
-	_PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, UKismetMathLibrary::SafeDivide(alphaCurve,fakeInputAlpha));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
-	_PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (alphaCurve / SwingInputScaleDivider));
-
-	if(bDebugSwing)
-		UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
-
-	//Stop by time
-	if(timeWeightAlpha >= 1)
-	{
-		DettachHook();
-		return;
-	}
+	// if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
+	//   || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
+	//   || _PlayerCharacter->GetParkourComponent()->IsLedging()
+	//   || _PlayerCharacter->GetParkourComponent()->IsMantling()
+	// /*|| _PlayerCharacter->GetVelocity().Length() <= _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeedCrouched*/)
+	// {
+	// 	OnTriggerSwing(false);
+	//
+	// 	//----Auto break hook if velocity too low----
+	// 	// if(bCablePowerPull &&  _PlayerCharacter->GetVelocity().Length() <= _SwingStartVelocity.Length())
+	// 	// 	DettachHook();
+	// 	return;
+	// }
+	//
+	// //Init alpha
+	// FVector dir = (_PlayerCharacter->GetActorLocation() - _AttachedMesh->GetComponentLocation());
+	//
+	// const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
+	// //const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, 0.0f, _SwingStartLoc.Z * (1 - timeWeightAlpha), 0.0f, (1 - timeWeightAlpha));
+	// const float alphaCurve = UKismetMathLibrary::MapRangeClamped(dir.Z, _SwingStartLoc.Z, _SwingStartLoc.Z - SwingMaxDistance, 0.0f, (1 - timeWeightAlpha));
+	// const bool bIsGoingDown = alphaCurve > SwingAlpha;
+	// SwingAlpha = alphaCurve;
+	//
+	// dir.Normalize();
+	// DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + dir * 600, 20.0f, FColor::Blue, false, 0.2, 10, 3);
+	//
+	// FVector swingVelocity = -1 * dir * (_PlayerCharacter->GetActorLocation() - _AttachedMesh->GetComponentLocation()).Dot(_PlayerCharacter->GetVelocity());
+	// swingVelocity = UPSFl::ClampVelocity(swingVelocity, dir * _PlayerCharacter->GetDefaultMaxWalkSpeed(), _PlayerCharacter->GetDefaultMaxWalkSpeed() * 2);
+	//
+	// //Air Control:
+	// // const float targetAirControl = FMath::Lerp(SwingMaxAirControl, DefaultAirControl, timeWeightAlpha);
+	// const float airControlAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_PlayerCharacter->GetVelocity().Length()), 0.0f, _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed(), 0.0f, 1.0f);
+	// _PlayerCharacter->GetCharacterMovement()->AirControl = FMath::Lerp(_PlayerCharacter->GetDefaultAirControl(), SwingMaxAirControl, airControlAlpha);
+	//
+	// //Braking Deceleration Falling
+	// float brakingDecAlpha = bIsGoingDown ? alphaCurve : 1 - alphaCurve;
+	// _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = FMath::Lerp(400.0f, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking / 2, brakingDecAlpha);
+	//
+	// //Add Force
+	// _PlayerCharacter->GetCharacterMovement()->AddForce((swingVelocity) * _PlayerCharacter->CustomTimeDilation);
+	// //_PlayerCharacter->GetCharacterMovement()->AddForce(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() *  * _PlayerCharacter->CustomTimeDilation);
+	//
+	//
+	// _VelocityToAbsFwd = _SwingStartFwd.Dot(_PlayerCharacter->GetVelocity());
+	// //Force reset swing vel orientation
+	// if(alphaCurve < 0.2 && !_OrientationIsReset)
+	// {
+	// 	_VelocityToAbsFwd = _VelocityToAbsFwd * -1;
+	// 	_OrientationIsReset = true;
+	// }
+	// else
+	// {
+	// 	_OrientationIsReset = false;
+	// }
+	// const float alphaWeight = UKismetMathLibrary::MapRangeClamped(FMath::Abs(_VelocityToAbsFwd), 0.0f,_PlayerCharacter->GetCharacterMovement()->MaxFlySpeed, 0.1f, 1.0f);
+	// float fakeInputAlpha = FMath::Sign(_VelocityToAbsFwd) * alphaWeight;	
+	//
+	// if(bDebugSwing)
+	// {
+	// 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetArrowComponent()->GetForwardVector() * 400 , 20.0f, FColor::Cyan, false, 0.1, 10, 3);
+	// 	DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetVelocity() * 400, 20.0f, FColor::Green, false, 0.1, 10, 3);
+	// }
+	//
+	// //Add movement
+	// _PlayerCharacter->AddMovementInput( _SwingStartFwd * _PlayerCharacter->CustomTimeDilation, UKismetMathLibrary::SafeDivide(alphaCurve,fakeInputAlpha));
+	// _PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetForwardVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().Y * (alphaCurve / SwingInputScaleDivider));
+	// _PlayerCharacter->AddMovementInput( _PlayerCharacter->GetArrowComponent()->GetRightVector() * _PlayerCharacter->CustomTimeDilation, _PlayerController->GetMoveInput().X * (alphaCurve / SwingInputScaleDivider));
+	//
+	// if(bDebugSwing)
+	// 	UE_LOG(LogTemp, Log, TEXT("fakeInputAlpha %f, alphaCurve %f, FwdScale %f, \n airControlAlpha %f,  BrakingDeceleration %f, \n bIsGoingDown %i, velocityToAbsFwd %f"), fakeInputAlpha, (alphaCurve), alphaCurve * fakeInputAlpha, airControlAlpha, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling, bIsGoingDown, _VelocityToAbsFwd);
+	//
+	// //Stop by time
+	// if(timeWeightAlpha >= 1)
+	// {
+	// 	DettachHook();
+	// 	return;
+	// }
 }
 
 void UPS_HookComponent::OnSwingPhysic()
@@ -1595,14 +1597,14 @@ void UPS_HookComponent::OnSwingPhysic()
 		// HookPhysicConstraint->SetLinearYLimit(LCM_Limited, lineartDistByPoint);
 		//if(!bCableWinderPull)#1# HookPhysicConstraint->SetLinearZLimit(LCM_Limited, lineartDistByPoint);
 
-		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
+		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
+		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 		//if(!bCableWinderPull)*/ HookPhysicConstraint->SetLinearZLimit(LCM_Limited, DistanceOnAttach);
 	}
 	else
 	{		
-		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
+		HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
+		HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 		//if(!bCableWinderPull)*/ HookPhysicConstraint->SetLinearZLimit(LCM_Limited, DistanceOnAttach);
 	}
 	

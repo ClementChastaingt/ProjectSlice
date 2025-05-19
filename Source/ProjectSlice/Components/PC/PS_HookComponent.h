@@ -492,10 +492,10 @@ protected:
 	float PullingMaxRandomYawOffset = 50.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ToolTip="Player VelocityZ to ObjectHooked VelocityZ ToleranceToBreak"))
-	float VelocityZToleranceTOBreak = 1000.0f;
+	float VelocityZToleranceToBreak = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Player VelocityZ to ObjectHooked VelocityZ check lactency"))
-	float BreakByFalseLatency = 0.1f;
+	float BreakByFallCheckLatency = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Latency between unblock Push steps"))
 	float UnblockPushLatency = 0.2f;
@@ -589,12 +589,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Use physic constraint swing or force"))
 	bool bSwingIsPhysical = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ForceUnits="cm", ToolTip="Swing distance on the lower position of the trajectory", EditCondition=
-			"!bSwingIsPhysical", EditConditionHides))
-	float SwingMaxDistance = 1500.0f;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ForceUnits="s", ToolTip=
 			"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
@@ -611,10 +606,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Swing input weight divider", EditCondition="!bSwingIsPhysical", EditConditionHides))
 	float SwingInputScaleDivider = 2.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Use physic constraint swing or force", EditCondition="bSwingIsPhysical", EditConditionHides))
-	float MinLinearLimitZ = 500.0f;
 
 private:
 	UPROPERTY(Transient)
