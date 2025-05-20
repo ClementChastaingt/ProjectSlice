@@ -433,6 +433,9 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
 	float _CableWindeInputValue;
+
+	UPROPERTY(Transient)
+	float _AlphaWinde;
 	
 	UPROPERTY(Transient)
 	float _WindeInputAxis1DValue;
@@ -555,12 +558,12 @@ public:
 
 	UFUNCTION()
 	void OnTriggerSwing(const bool bActivate);
-
-	UFUNCTION()
-	void OnSwingForce();
-
+	
 	UFUNCTION()
 	void OnSwingPhysic();
+	
+	UFUNCTION()
+	void ForceUpdateMasterConstraint();
 
 	UFUNCTION()
 	void ImpulseConstraintAttach() const;
@@ -568,52 +571,39 @@ public:
 	UFUNCTION()
 	void ForceInvertSwingDirection() { _VelocityToAbsFwd = _VelocityToAbsFwd * -1; };
 
-	FORCEINLINE bool IsPlayerSwinging() const { return bPlayerIsSwinging; }
+	FORCEINLINE bool IsPlayerSwinging() const { return _bPlayerIsSwinging; }
 
 	UFUNCTION()
 	void SetSwingPlayerLastLoc(const FVector& swingPlayerLastLoc) { _SwingPlayerLastLoc = swingPlayerLastLoc; }
 
-protected:
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",
-		meta=(ToolTip="Is player currently swinging"))
-	bool bPlayerIsSwinging = false;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",
-		meta=(ToolTip="Swing force multiplicator"))
-	float SwingStartTimestamp = TNumericLimits<float>::Min();
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Hook|Swing",
-		meta=(ToolTip="Swing input force alpha"))
-	float SwingAlpha = 0.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Use physic constraint swing or force"))
-	bool bSwingIsPhysical = false;
-	
+protected:	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ForceUnits="s", ToolTip=
 			"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
 	float SwingMaxDuration = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(ToolTip="Swing force multiplicator"))
+	float SwingCustomAirControlMultiplier = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Swing force multiplicator"))
 	float SwingMaxAirControl = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Swing force multiplicator"))
-	float SwingCustomAirControlMultiplier = 2.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Swing input weight divider", EditCondition="!bSwingIsPhysical", EditConditionHides))
-	float SwingInputScaleDivider = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing", meta=(UIMin="1.0", ClampMin="1.0",
+		ToolTip="Swing impluse force multiplicator. It multiplcate the enter velocity for exit swing by jump launch OR enter in Swing"))
+	float SwingImpulseMultiplier = 2.0f;
 
 private:
-	UPROPERTY(Transient)
-	FVector _SwingStartLoc;
+	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
+	bool _bPlayerIsSwinging = false;
 
-	UPROPERTY(Transient)
-	FVector _SwingStartFwd;
+	UPROPERTY(Transient, meta=(ToolTip="Swing force multiplicator"))
+	float _SwingStartTimestamp = TNumericLimits<float>::Min();
 
+	UPROPERTY(Transient, meta=(ToolTip="Swing input force alpha"))
+	float _SwingAlpha = 0.0f;
+	
 	UPROPERTY(Transient)
 	bool _OrientationIsReset;
 
