@@ -1485,7 +1485,6 @@ void UPS_HookComponent::OnSwingPhysic()
 	GetConstraintAttachMaster()->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
 
 	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
-	HookPhysicConstraint->UpdateConstraintFrames();
 	
 	//Update Linearlimit if update cable point
 	float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
@@ -1524,6 +1523,9 @@ void UPS_HookComponent::OnSwingPhysic()
 	// 	DettachHook();
 	// 	return;
 	// }
+
+	//Update constraint
+	HookPhysicConstraint->UpdateConstraintFrames();
 
 	//Debug
 	if(bDebugSwing) DrawDebugPoint(GetWorld(), GetConstraintAttachMaster()->GetComponentLocation(), 20.f, FColor::Red, true);
