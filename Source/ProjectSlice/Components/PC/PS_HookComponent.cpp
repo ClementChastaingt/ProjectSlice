@@ -1542,6 +1542,8 @@ void UPS_HookComponent::ForceUpdateMasterConstraint()
 	FVector masterLoc = bMustAttachtoLastPoint && CableCapArray.IsValidIndex(0) ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
 	ConstraintAttachMaster->SetWorldLocation(masterLoc);
 	ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+
+	HookPhysicConstraint->UpdateConstraintFrames();
 }
 
 void UPS_HookComponent::ImpulseConstraintAttach() const
