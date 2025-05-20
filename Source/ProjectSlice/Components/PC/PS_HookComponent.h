@@ -494,8 +494,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ToolTip="Player VelocityZ to ObjectHooked VelocityZ ToleranceToBreak"))
-	float VelocityZToleranceToBreak = 1000.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMax="0.0", ClampMax="0.0", ToolTip="Player VelocityZ Or ObjectHooked VelocityZ Min falling velocityZ to Break"))
+	float VelocityZToleranceToBreak = -150.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Player VelocityZ to ObjectHooked VelocityZ check lactency"))
 	float BreakByFallCheckLatency = 1.0f;
@@ -581,6 +581,11 @@ protected:
 		meta=(ForceUnits="s", ToolTip=
 			"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
 	float SwingMaxDuration = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(ForceUnits="s", ToolTip=
+		"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
+	FFloatInterval SwingLinearLimitRange = FFloatInterval(15,750);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(ToolTip="Swing force multiplicator"))

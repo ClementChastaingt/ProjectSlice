@@ -659,12 +659,8 @@ void UPS_HookComponent::UnwrapCableByLast()
 	CablePointUnwrapAlphaArray.RemoveAt(cablePointLocationsLastIndex);
 
 	//If Swinging reset linearZ
-	//TODO :: Swing lineaeZ on unwrap
-	// if(_bPlayerIsSwinging)
-	// {
-	// 	HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-	// 	UE_LOG(LogTemp, Error, TEXT("%S :: SetLinearZLimit %f"),__FUNCTION__,  _DistanceOnAttach + _CablePullSlackDistance);
-	// }
+	if (IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling())
+		ForceUpdateMasterConstraint();
 	
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
@@ -1132,14 +1128,26 @@ void UPS_HookComponent::ForceDettachByFall()
 
 		timerDelegate.BindUObject(this, &UPS_HookComponent::ForceDettachByFall);
 		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, BreakByFallCheckLatency, false);
+
+		bHasTriggerBreakByFall = true;
 				
 		return;
 	}
 
 	//If ti's second time DettachHook
-	if(UKismetMathLibrary::NearlyEqual_FloatFloat(_PlayerCharacter->GetVelocity().Z, _AttachedMesh->GetComponentVelocity().Z, VelocityZToleranceToBreak))
+	if(UKismetMathLibrary::Max(_PlayerCharacter->GetVelocity().Z, _AttachedMesh->GetComponentVelocity().Z) < VelocityZToleranceToBreak)
 	{
 		DettachHook();
+	}
+	else
+	{
+		FTimerHandle timerHandle;
+		FTimerDelegate timerDelegate;
+
+		timerDelegate.BindUObject(this, &UPS_HookComponent::ForceDettachByFall);
+		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, BreakByFallCheckLatency, false);
+
+		bHasTriggerBreakByFall = false;
 	}
 }
 
@@ -1350,6 +1358,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
+			UE_LOG(LogTemp, Log, TEXT("LinearZTrigger %f"), _DistanceOnAttach + _CablePullSlackDistance);
 
 			//Set collision and physic
 			ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
@@ -1458,17 +1467,17 @@ void UPS_HookComponent::OnSwingPhysic()
 	}
 
 	//Fake AirControl for influence swing
-	if(!_PlayerController->GetMoveInput().IsNearlyZero())
-	{
-		FVector swingControlDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
-		swingControlDir.Normalize();
+	 if(!_PlayerController->GetMoveInput().IsNearlyZero())
+	 {
+	 	FVector swingControlDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
+	 	swingControlDir.Normalize();
 	
-		float airControlSpeed = _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed * _PlayerCharacter->GetCharacterMovement()->AirControl;
-		FVector swingAirControlVel = swingControlDir * GetWorld()->DeltaTimeSeconds * airControlSpeed * SwingCustomAirControlMultiplier;
-
-		GetConstraintAttachSlave()->AddForce(swingAirControlVel, NAME_None, true);
-	}
-		
+	 	float airControlSpeed = _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed * _PlayerCharacter->GetCharacterMovement()->AirControl;
+	 	FVector swingAirControlVel = swingControlDir * GetWorld()->DeltaTimeSeconds * airControlSpeed * SwingCustomAirControlMultiplier;
+	
+	 	GetConstraintAttachSlave()->AddForce(swingAirControlVel, NAME_None, true);
+	 }
+	
 	//Set actor location to ConstraintAttach
 	FTimerDelegate setLastLocDel;
 	FTimerHandle setLastLocHandle;
@@ -1484,37 +1493,38 @@ void UPS_HookComponent::OnSwingPhysic()
 	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	GetConstraintAttachMaster()->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
 
-	HookPhysicConstraint->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation(), false);
+	const FVector constraintLoc = GetConstraintAttachSlave()->GetComponentLocation();
+	HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
 	
 	//Update Linearlimit if update cable point
-	float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
-	if(lastCablePointIsValid)
-	{
-		 const FVector firstCableEndLocation = _CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
-		 float lineartDistByPoint = FMath::Max(_DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CableCapArray[lastIndex]->GetComponentLocation(), firstCableEndLocation), 500.0f);
-		currentZLinearLimit = lineartDistByPoint;
-		
-	     HookPhysicConstraint->SetLinearZLimit(LCM_Limited, lineartDistByPoint * 4);
-
-		 UE_LOG(LogTemp, Log, TEXT("lineartDistByPoint %f"), lineartDistByPoint);
-	}
-	else
-	{		
-		HookPhysicConstraint->SetLinearZLimit(LCM_Limited, currentZLinearLimit);
-
-		UE_LOG(LogTemp, Log, TEXT("default"));
-	}
+	// float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
+	// if(lastCablePointIsValid)
+	// {
+	// 	 const FVector firstCableEndLocation = _CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
+	// 	 float lineartDistByPoint = FMath::Max(_DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CableCapArray[lastIndex]->GetComponentLocation(), firstCableEndLocation), 500.0f);
+	// 	currentZLinearLimit = lineartDistByPoint;
+	// 	
+	//      HookPhysicConstraint->SetLinearZLimit(LCM_Limited, lineartDistByPoint * 4);
+	//
+	// 	 UE_LOG(LogTemp, Log, TEXT("lineartDistByPoint %f"), lineartDistByPoint);
+	// }
+	// else
+	// {		
+	// 	HookPhysicConstraint->SetLinearZLimit(LCM_Limited, currentZLinearLimit);
+	//
+	// 	UE_LOG(LogTemp, Log, TEXT("default"));
+	// }
 
 	//Winde
 	if(_bCableWinderIsActive)
 	{
-		currentZLinearLimit = FMath::Lerp(500, 1500, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);
+		float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde);
 		HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
+		
+		//ImpulseConstraintAttach();
 
-		UE_LOG(LogTemp, Log, TEXT("winde"));
+		UE_LOG(LogTemp, Error, TEXT("%S :: SetLinearZLimit %f"),__FUNCTION__, currentZLinearLimit);
 	}
-	
-	UE_LOG(LogTemp, Error, TEXT("%S :: SetLinearZLimit %f"),__FUNCTION__, currentZLinearLimit);
 
 	
 	//Stop by time
@@ -1526,6 +1536,7 @@ void UPS_HookComponent::OnSwingPhysic()
 
 	//Update constraint
 	HookPhysicConstraint->UpdateConstraintFrames();
+	
 
 	//Debug
 	if(bDebugSwing) DrawDebugPoint(GetWorld(), GetConstraintAttachMaster()->GetComponentLocation(), 20.f, FColor::Red, true);
