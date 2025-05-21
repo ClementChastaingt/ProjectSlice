@@ -1358,13 +1358,13 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-			UE_LOG(LogTemp, Log, TEXT("LinearZTrigger %f"), _DistanceOnAttach + _CablePullSlackDistance);
 
 			//Set collision and physic
 			ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			if(bMustAttachtoLastPoint) ConstraintAttachMaster->AttachToComponent(CableCapArray[0], FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 			ConstraintAttachMaster->SetWorldLocation(masterLoc);
 
+			UE_LOG(LogTemp, Log, TEXT("LinearZTrigger %f, AttachRot %s"), _DistanceOnAttach + _CablePullSlackDistance, *ConstraintAttachMaster->GetComponentRotation().ToString());
 			//Set collision and activate physics				
 			GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			GetConstraintAttachSlave()->SetSimulatePhysics(true);
@@ -1372,6 +1372,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 
 			//Init constraint
 			HookPhysicConstraint->InitComponentConstraint();
+			HookPhysicConstraint->UpdateConstraintFrames();
 
 			//Impulse Slave for preserve player enter velocity
 			_SwingImpulseForce = _PlayerCharacter->GetVelocity().Length() * SwingImpulseMultiplier;
@@ -1496,34 +1497,23 @@ void UPS_HookComponent::OnSwingPhysic()
 	const FVector constraintLoc = GetConstraintAttachSlave()->GetComponentLocation();
 	HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
 	
-	//Update Linearlimit if update cable point
-	// float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
-	// if(lastCablePointIsValid)
-	// {
-	// 	 const FVector firstCableEndLocation = _CurrentHookHitResult.GetComponent()->GetComponentTransform().TransformPosition(FirstCable->EndLocation);
-	// 	 float lineartDistByPoint = FMath::Max(_DistanceOnAttach - UKismetMathLibrary::Vector_Distance(CableCapArray[lastIndex]->GetComponentLocation(), firstCableEndLocation), 500.0f);
-	// 	currentZLinearLimit = lineartDistByPoint;
-	// 	
-	//      HookPhysicConstraint->SetLinearZLimit(LCM_Limited, lineartDistByPoint * 4);
-	//
-	// 	 UE_LOG(LogTemp, Log, TEXT("lineartDistByPoint %f"), lineartDistByPoint);
-	// }
-	// else
-	// {		
-	// 	HookPhysicConstraint->SetLinearZLimit(LCM_Limited, currentZLinearLimit);
-	//
-	// 	UE_LOG(LogTemp, Log, TEXT("default"));
-	// }
-
 	//Winde
 	if(_bCableWinderIsActive)
 	{
-		float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde);
-		HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
-		
+		// float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde);
+		// HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
+
 		//ImpulseConstraintAttach();
 
-		UE_LOG(LogTemp, Error, TEXT("%S :: SetLinearZLimit %f"),__FUNCTION__, currentZLinearLimit);
+		// Assume you have a valid UPhysicsConstraintComponent* Constraint
+		FConstraintInstance ConstraintInstance = HookPhysicConstraint->ConstraintInstance;
+		FVector newOffset = FVector(0.0f, 0.0f, _CablePullSlackDistance);
+		ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform(newOffset));
+		HookPhysicConstraint->UpdateConstraintFrames();
+
+		DrawDebugPoint(GetWorld(), ConstraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation(), 10.0f, FColor::Red, false, 0.1f);
+
+		UE_LOG(LogTemp, Error, TEXT("%S :: newOffsetZ %f"),__FUNCTION__, newOffset.Z);
 	}
 
 	
