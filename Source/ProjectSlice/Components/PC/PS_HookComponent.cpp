@@ -1075,7 +1075,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	}
 
 	//Override _DistanceOnAttach
-	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min)
+	if(_DistOnAttachWithRange + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min /*&& !_bPlayerIsSwinging*/)
 		_DistanceOnAttach = baseToMeshDist;
 	_DistOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
 	
@@ -1172,7 +1172,7 @@ void UPS_HookComponent::PowerCablePull()
 	AdaptCableTense(_AlphaTense);
 	
 	//If can't Pull or Swing return
-	if(!_bCablePowerPull) return;
+	if(!_bCablePowerPull || _bPlayerIsSwinging) return;
 
 	//Init for the first time _LastAttachedActorLc
 	if(_LastAttachedActorLoc.IsZero()) _LastAttachedActorLoc = _AttachedMesh->GetComponentLocation();
@@ -1357,14 +1357,15 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			//Set Linear Limit
 			HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
-			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
+			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistOnAttachWithRange);
 
 			//Set collision and physic
 			ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			if(bMustAttachtoLastPoint) ConstraintAttachMaster->AttachToComponent(CableCapArray[0], FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 			ConstraintAttachMaster->SetWorldLocation(masterLoc);
-
-			UE_LOG(LogTemp, Log, TEXT("LinearZTrigger %f, AttachRot %s"), _DistanceOnAttach + _CablePullSlackDistance, *ConstraintAttachMaster->GetComponentRotation().ToString());
+			ConstraintAttachMaster->SetWorldRotation(FRotator::ZeroRotator);
+			
+			UE_LOG(LogTemp, Log, TEXT("LinearZTrigger %f"),_DistOnAttachWithRange);
 			//Set collision and activate physics				
 			GetConstraintAttachSlave()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			GetConstraintAttachSlave()->SetSimulatePhysics(true);
@@ -1381,8 +1382,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	}
 	else
 	{
-		FVector directionToCenterMass = GetConstraintAttachMaster()->GetComponentLocation() - GetConstraintAttachSlave()
-			->GetComponentLocation();
+		FVector directionToCenterMass = GetConstraintAttachMaster()->GetComponentLocation() - GetConstraintAttachSlave()->GetComponentLocation();
 		directionToCenterMass.Normalize();
 		_SwingImpulseForce = GetConstraintAttachSlave()->GetComponentVelocity().Length() * SwingImpulseMultiplier;
 
@@ -1494,26 +1494,41 @@ void UPS_HookComponent::OnSwingPhysic()
 	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
 	GetConstraintAttachMaster()->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
 
-	const FVector constraintLoc = GetConstraintAttachSlave()->GetComponentLocation();
+	FVector constraintLoc = GetConstraintAttachMaster()->GetComponentLocation();
 	HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
+
+	//Setup custom center of mass
+	FVector newCenterOfMass = ConstraintAttachMaster->GetComponentLocation();
+	newCenterOfMass.Z =	ConstraintAttachSlave->GetComponentLocation().Z;
+	ConstraintAttachSlave->SetCenterOfMass(newCenterOfMass);
 	
 	//Winde
+	//HookPhysicConstraint->SetLinearPositionDrive(false, false, _bCableWinderIsActive);
+	HookPhysicConstraint->SetLinearVelocityDrive(false, false, true);
 	if(_bCableWinderIsActive)
 	{
+		// FVector newLoc = HookThrower->GetComponentLocation();
+		// newLoc.Z = _DistOnAttachWithRange;
+		// GetConstraintAttachSlave()->SetWorldLocation(newLoc);
+		
 		// float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde);
 		// HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
 
 		//ImpulseConstraintAttach();
 
 		// Assume you have a valid UPhysicsConstraintComponent* Constraint
-		FConstraintInstance ConstraintInstance = HookPhysicConstraint->ConstraintInstance;
-		FVector newOffset = FVector(0.0f, 0.0f, _CablePullSlackDistance);
-		ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform(newOffset));
-		HookPhysicConstraint->UpdateConstraintFrames();
+		 FConstraintInstance constraintInstance = HookPhysicConstraint->ConstraintInstance;
+		 FVector currentFrame = constraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation();
+		 FVector newOffset = currentFrame + FVector(0.0f, 0.0f, _CablePullSlackDistance);
+		 // constraintInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform(newOffset));
+		 // HookPhysicConstraint->UpdateConstraintFrames();
+		 // DrawDebugPoint(GetWorld(), constraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation(), 10.0f, FColor::Red, false, 0.1f);
+		HookPhysicConstraint->SetLinearPositionTarget(newOffset);
 
-		DrawDebugPoint(GetWorld(), ConstraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation(), 10.0f, FColor::Red, false, 0.1f);
+		// HookPhysicConstraint->SetLinearVelocityDrive(false, false, true);
+		HookPhysicConstraint->SetLinearVelocityTarget(FVector(0.0f, 0.0f, _CablePullSlackDistance));
 
-		UE_LOG(LogTemp, Error, TEXT("%S :: newOffsetZ %f"),__FUNCTION__, newOffset.Z);
+		UE_LOG(LogTemp, Error, TEXT("%S :: newOffset %f, _CablePullSlackDistance %f"),__FUNCTION__, newOffset.Z, _CablePullSlackDistance);
 	}
 
 	
@@ -1544,6 +1559,7 @@ void UPS_HookComponent::ForceUpdateMasterConstraint()
 	
 	FVector masterLoc = bMustAttachtoLastPoint && CableCapArray.IsValidIndex(0) ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
 	ConstraintAttachMaster->SetWorldLocation(masterLoc);
+	ConstraintAttachMaster->SetWorldRotation(FRotator::ZeroRotator);
 	ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 
 	HookPhysicConstraint->UpdateConstraintFrames();
