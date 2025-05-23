@@ -354,9 +354,6 @@ private:
 
 	UPROPERTY(DuplicateTransient)
 	float _CablePullSlackDistance = CablePullSlackDistanceRange.Min;
-
-	UPROPERTY(Transient)
-	float _DistOnAttachWithRange;
 	
 	UPROPERTY(Transient)
 	float _AlphaTense;
