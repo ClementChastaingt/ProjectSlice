@@ -422,7 +422,7 @@ void UPS_PlayerCameraComponent::DisplayOutlineOnSightedComp(const bool bRenderCu
 	
 	if(IsValid(sightedComp))
 	{
-		_PlayerCharacter->GetWeaponComponent()->GetCurrentSightedComponent()->SetRenderCustomDepth(bRenderCustomDepth);
+		sightedComp->SetRenderCustomDepth(bRenderCustomDepth);
 		_bGlassesRenderCustomDepth = bRenderCustomDepth;
 	}
 	
