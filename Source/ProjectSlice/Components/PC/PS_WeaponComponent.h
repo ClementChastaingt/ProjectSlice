@@ -7,6 +7,7 @@
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Field/FieldSystemActor.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "PS_WeaponComponent.generated.h"
@@ -86,6 +87,7 @@ public:
 	UFUNCTION()
 	void Fire();
 
+
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnFireEvent;
 
@@ -110,6 +112,21 @@ protected:
 	TSubclassOf<UPS_SlicedComponent> SlicedComponent;
 
 #pragma endregion Fire
+
+#pragma region Destruction
+	//------------------
+
+public:
+	// UPROPERTY(BlueprintAssignable)
+	// FOnPSDelegate_FieldSystemActor OnImpulseChaosEvent;
+
+protected:
+	
+	UFUNCTION()
+	bool ImpulseChaos();
+
+	
+#pragma endregion Destruction
 
 #pragma region Slice
 	//__________________________________________________

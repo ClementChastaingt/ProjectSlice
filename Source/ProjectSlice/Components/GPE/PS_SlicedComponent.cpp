@@ -94,7 +94,7 @@ void UPS_SlicedComponent::InitSliceObject()
 void UPS_SlicedComponent::InitComponent()
 {
 	OnComponentHit.AddUniqueDynamic(this, &UPS_SlicedComponent::OnSlicedObjectHitEventReceived);
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: hitComp %s"), __FUNCTION__, *this->GetName());
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: hitComp %s"), __FUNCTION__, *this->GetName());	
 }
 
 
@@ -103,9 +103,14 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 {
 	if(OtherComp == this) return;
 	
-	float impactStrength = NormalImpulse.Size(); // Or use HitComp->GetComponentVelocity().Size()
-	
-	if(GetComponentVelocity().Z < MinVelocityZForFeedback) return;
+	//float impactStrength = NormalImpulse.Size(); 
+	float impactStrength = HitComponent->GetComponentVelocity().Size();
+	if(GetComponentVelocity().Z < MinVelocityZForFeedback || impactStrength < VelocityRangeSound.Min) return;
+
+	//Cooldown
+	float currentTime = GetWorld()->GetTimeSeconds();
+	if (currentTime - _LastImpactSoundTime < _ImpactSoundCooldown) return;
+	_LastImpactSoundTime = currentTime;
 
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp),impactStrength);
 	
@@ -113,14 +118,28 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	if (IsValid(CrashSound))
 	{
 		FVector loc = GetComponentLocation();
-		if(Hit.bBlockingHit) loc = Hit.ImpactPoint;
+		if (Hit.bBlockingHit) loc = Hit.ImpactPoint;
+
+		//volumeMultiplier
+		float volumeMultiplier = FMath::Clamp(
+			FMath::GetMappedRangeValueClamped(
+				FVector2D(VelocityRangeSound.Min, VelocityRangeSound.Max),
+				FVector2D(VolumeRangeMin, 1.0f),
+				impactStrength),
+			VolumeRangeMin, 1.0f);
 		
-		float volumeMultiplier = FMath::GetMappedRangeValueClamped(
-			FVector2D(100.0f, 2000.0f),  // Map from this velocity range
-			FVector2D(0.2f, 1.0f),       // To this volume range
-			impactStrength);
-		
-		_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound, loc, FRotator::ZeroRotator, volumeMultiplier);
+		//Sound Attenuation
+		if (IsValid(CrashSoundAttenuation))
+		{
+			_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,
+				loc,
+				FRotator::ZeroRotator,
+				volumeMultiplier,
+				1.0f,                    // Pitch multiplier
+				0.0f,                    // Start time
+				CrashSoundAttenuation); // <-- assign your attenuation asset here
+		}
+
 	}
 }
 

@@ -45,6 +45,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
 	USoundBase* CrashSound = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
+	USoundAttenuation* CrashSoundAttenuation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max volume multiplier"))
+	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(UIMin="0", ClampMin="0", Tooltip="Velocity Range to max volume multiplier"))
+	float VolumeRangeMin = 0.2f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(ForceUnits="cm/s", UIMin="1", ClampMin="1"))
 	float MinVelocityZForFeedback = 100.0f;
 
@@ -57,6 +66,14 @@ private:
 
 	UPROPERTY(Transient)
 	UAudioComponent* _FallingAudio;
+
+	UPROPERTY(DuplicateTransient)
+	float _LastImpactSoundTime = -1.0f;
+
+	// 100ms between sounds
+	UPROPERTY(DuplicateTransient)
+	float _ImpactSoundCooldown = 0.1f;
+	
 //------------------	
 #pragma endregion General
 

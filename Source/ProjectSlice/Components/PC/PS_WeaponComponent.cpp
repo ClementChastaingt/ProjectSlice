@@ -12,6 +12,7 @@
 #include "PS_PlayerCameraComponent.h"
 #include "..\GPE\PS_SlicedComponent.h"
 #include "Engine/DamageEvents.h"
+// #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
@@ -174,7 +175,12 @@ void UPS_WeaponComponent::Fire()
 	//Cut ProceduralMesh
 	UProceduralMeshComponent* parentProcMeshComponent = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(_SightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
+	// UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
 
+	//If it's a destructible give it to Chaos
+	if(ImpulseChaos()) return;
+
+	//Check object validity
 	if (!IsValid(parentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 	
 	//Setup material
@@ -278,6 +284,27 @@ void UPS_WeaponComponent::Fire()
 //------------------
 
 #pragma endregion Fire
+
+#pragma region Destruction
+//------------------
+
+bool UPS_WeaponComponent::ImpulseChaos()
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return false;
+
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+
+	FActorSpawnParameters SpawnInfo;
+	
+	// AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(this->GetClass(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	// OnImpulseChaosEvent.Broadcast(impactField);
+	
+	return true;
+}
+
+//------------------
+
+#pragma endregion Destruction
 
 #pragma region Sight
 //------------------
