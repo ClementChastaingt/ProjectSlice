@@ -4,15 +4,13 @@
 #include "PS_WeaponComponent.h"
 
 #include "GameFramework/PlayerController.h"
-#include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputSubsystems.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "PS_HookComponent.h"
 #include "PS_PlayerCameraComponent.h"
-#include "..\GPE\PS_SlicedComponent.h"
 #include "Engine/DamageEvents.h"
-// #include "GeometryCollection/GeometryCollectionComponent.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
@@ -171,14 +169,18 @@ void UPS_WeaponComponent::Fire()
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
 	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetComponent()->GetOwner())) return;
+
+	//Check if it's a destructible
+	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
+	 if(IsValid(currentChaosComponent))
+	 {
+	 	GenerateImpactField();
+	 	return;
+	 }
 	
-	//Cut ProceduralMesh
+	//Init var
 	UProceduralMeshComponent* parentProcMeshComponent = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
 	UPS_SlicedComponent* currentSlicedComponent = Cast<UPS_SlicedComponent>(_SightHitResult.GetActor()->GetComponentByClass(UPS_SlicedComponent::StaticClass()));
-	// UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
-
-	//If it's a destructible give it to Chaos
-	if(ImpulseChaos()) return;
 
 	//Check object validity
 	if (!IsValid(parentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
@@ -192,11 +194,8 @@ void UPS_WeaponComponent::Fire()
 	_LastSliceOutput.bDebug = bDebugSlice;
 	
 	UPS_SlicedComponent* outHalfComponent;
-	//FVector sliceLocation = _SightHitResult.Location;
 	FVector sliceLocation = SightTarget;
 	FVector sliceDir = SightMesh->GetUpVector();
-	// UMeshComponent* sliceTarget = Cast<UMeshComponent>(CurrentFireHitResult.GetComponent());
-	// FVector sliceDir = SightMesh->GetUpVector() / (sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale());
 	sliceDir.Normalize();
 
 	//Slice
@@ -288,18 +287,17 @@ void UPS_WeaponComponent::Fire()
 #pragma region Destruction
 //------------------
 
-bool UPS_WeaponComponent::ImpulseChaos()
+void UPS_WeaponComponent::GenerateImpactField()
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return false;
-
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+	
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
 	FActorSpawnParameters SpawnInfo;
 	
-	// AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(this->GetClass(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
-	// OnImpulseChaosEvent.Broadcast(impactField);
+	//AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(this->GetClass(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	OnImpulseChaosEvent.Broadcast();
 	
-	return true;
 }
 
 //------------------

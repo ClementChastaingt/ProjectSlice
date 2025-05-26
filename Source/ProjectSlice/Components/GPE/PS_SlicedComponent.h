@@ -45,9 +45,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
 	USoundBase* CrashSound = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
-	USoundAttenuation* CrashSoundAttenuation;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max volume multiplier"))
 	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
 

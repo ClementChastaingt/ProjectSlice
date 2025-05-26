@@ -129,16 +129,8 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 			VolumeRangeMin, 1.0f);
 		
 		//Sound Attenuation
-		if (IsValid(CrashSoundAttenuation))
-		{
-			_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,
-				loc,
-				FRotator::ZeroRotator,
-				volumeMultiplier,
-				1.0f,                    // Pitch multiplier
-				0.0f,                    // Start time
-				CrashSoundAttenuation); // <-- assign your attenuation asset here
-		}
+		_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,loc,FRotator::ZeroRotator,volumeMultiplier);
+		_FallingAudio->Play();
 
 	}
 }

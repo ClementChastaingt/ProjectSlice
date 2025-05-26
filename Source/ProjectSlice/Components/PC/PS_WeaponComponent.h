@@ -117,13 +117,13 @@ protected:
 	//------------------
 
 public:
-	// UPROPERTY(BlueprintAssignable)
-	// FOnPSDelegate_FieldSystemActor OnImpulseChaosEvent;
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnImpulseChaosEvent;
 
 protected:
 	
 	UFUNCTION()
-	bool ImpulseChaos();
+	void GenerateImpactField();
 
 	
 #pragma endregion Destruction
