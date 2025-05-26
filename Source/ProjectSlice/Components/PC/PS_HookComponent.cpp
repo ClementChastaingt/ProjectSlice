@@ -1060,14 +1060,14 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	if(_CableWindeInputValue != 0.0f)
 	{
 		//Applicate curve to winde alpha input
-		_AlphaWinde = _CableWindeInputValue;
+		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
 		if(IsValid(WindePullingCurve))
 		{
 			_AlphaWinde = WindePullingCurve->GetFloatValue(_AlphaWinde);
 		}
 
 		//Winde anim only in pull not slack
-		if(_AlphaWinde < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
+		if(_CableWindeInputValue < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
 
 		//Determine current slack distance
 		const float dist = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, _AlphaWinde);
@@ -1509,8 +1509,7 @@ void UPS_HookComponent::OnSwingPhysic()
 		// FVector newLoc = HookThrower->GetComponentLocation();
 		// newLoc.Z = _DistOnAttachWithRange;
 		// GetConstraintAttachSlave()->SetWorldLocation(newLoc);
-		
-		float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde);
+		float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);
 		//float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
 		HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
 

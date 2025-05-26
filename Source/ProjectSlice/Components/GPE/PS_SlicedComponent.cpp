@@ -120,7 +120,7 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 		FVector loc = GetComponentLocation();
 		if (Hit.bBlockingHit) loc = Hit.ImpactPoint;
 
-		//volumeMultiplier
+		//VolumeMultiplier calculation
 		float volumeMultiplier = FMath::Clamp(
 			FMath::GetMappedRangeValueClamped(
 				FVector2D(VelocityRangeSound.Min, VelocityRangeSound.Max),
@@ -128,9 +128,8 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 				impactStrength),
 			VolumeRangeMin, 1.0f);
 		
-		//Sound Attenuation
+		//Play sound
 		_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,loc,FRotator::ZeroRotator,volumeMultiplier);
-		_FallingAudio->Play();
 
 	}
 }

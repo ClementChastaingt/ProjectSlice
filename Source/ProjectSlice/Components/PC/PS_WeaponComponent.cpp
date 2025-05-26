@@ -294,7 +294,8 @@ void UPS_WeaponComponent::GenerateImpactField()
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
 	FActorSpawnParameters SpawnInfo;
-	
+
+	//TODO : Can't compile
 	//AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(this->GetClass(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
 	OnImpulseChaosEvent.Broadcast();
 	
