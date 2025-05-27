@@ -1513,6 +1513,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 		//Linear Limit update
 		float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(newSwingZ,0.0f, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
 		//float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
+		//Appears not working propely if use LCM_Limited
 		HookPhysicConstraint->SetLinearZLimit(LCM_Locked,currentZLinearLimit);
 
 		//Frame offset update
