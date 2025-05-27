@@ -551,13 +551,13 @@ private:
 
 public:
 	UFUNCTION()
-	void SwingTick();
+	void SwingTick(const float deltaTime);
 
 	UFUNCTION()
 	void OnTriggerSwing(const bool bActivate);
 	
 	UFUNCTION()
-	void OnSwingPhysic();
+	void OnSwingPhysic(const float deltaTime);
 	
 	UFUNCTION()
 	void ForceUpdateMasterConstraint();
@@ -575,16 +575,6 @@ public:
 
 protected:	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ForceUnits="s", ToolTip=
-			"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
-	float SwingMaxDuration = 60.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-	meta=(ForceUnits="s", ToolTip=
-		"Swing Max duration || In physic context it's tduration of LinearZ Decrementation "))
-	FFloatInterval SwingLinearLimitRange = FFloatInterval(15,750);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(ToolTip="Swing force multiplicator"))
 	float SwingCustomAirControlMultiplier = 4.0f;
 
@@ -596,18 +586,16 @@ protected:
 		ToolTip="Swing impluse force multiplicator. It multiplcate the enter velocity for exit swing by jump launch OR enter in Swing"))
 	float SwingImpulseMultiplier = 2.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
+	float SwingZVaritaionSmoothSpeed = 10.0f;
+
 private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
 	bool _bPlayerIsSwinging = false;
 
 	UPROPERTY(Transient, meta=(ToolTip="Swing force multiplicator"))
 	float _SwingStartTimestamp = TNumericLimits<float>::Min();
-
-	UPROPERTY(Transient, meta=(ToolTip="Swing input force alpha"))
-	float _SwingAlpha = 0.0f;
-	
-	UPROPERTY(Transient)
-	bool _OrientationIsReset;
 
 	UPROPERTY(Transient)
 	float _VelocityToAbsFwd;
@@ -618,6 +606,8 @@ private:
 	UPROPERTY(Transient)
 	FVector _SwingPlayerLastLoc;
 
+	UPROPERTY(Transient)
+	float _LastSwingZ;
 
 #pragma endregion Swing
 };

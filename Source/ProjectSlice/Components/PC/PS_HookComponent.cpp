@@ -135,7 +135,7 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 
 	//Swing
-	SwingTick();
+	SwingTick(DeltaTime);
 
 }
 
@@ -1075,7 +1075,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	}
 
 	//Override _DistanceOnAttach
-	if(_DistanceOnAttach + _CablePullSlackDistance + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min /*&& !_bPlayerIsSwinging*/)
+	if(_DistanceOnAttach + _CablePullSlackDistance + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min && !_bPlayerIsSwinging)
 		_DistanceOnAttach = baseToMeshDist;
 	
 	//Distance On Attach By point number weight
@@ -1322,6 +1322,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 
 	_bPlayerIsSwinging = bActivate;
 	_SwingStartTimestamp = GetWorld()->GetTimeSeconds();
+	_LastSwingZ = 0.0f;
 	//_PlayerController->SetCanMove(!bActivate);
 	//_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 	//_PlayerCharacter->GetCharacterMovement()->GravityScale = bActivate ? SwingGravityScale : _DefaultGravityScale;
@@ -1357,7 +1358,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			HookPhysicConstraint->SetLinearXLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearYLimit(LCM_Limited, _DistanceOnAttach);
 			HookPhysicConstraint->SetLinearZLimit(LCM_Limited, _DistanceOnAttach + _CablePullSlackDistance);
-
+	
 			//Set collision and physic
 			ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			if(bMustAttachtoLastPoint) ConstraintAttachMaster->AttachToComponent(CableCapArray[0], FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -1417,7 +1418,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	}
 }
 
-void UPS_HookComponent::SwingTick()
+void UPS_HookComponent::SwingTick(const float deltaTime)
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 			
@@ -1427,18 +1428,12 @@ void UPS_HookComponent::SwingTick()
 		OnTriggerSwing(true);
 	}
 	
-	// if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling()  && AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
-	// {
-	// 	// float baseToAttachDist =  CablePointComponents.IsValidIndex(0) ? FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),CablePointComponents[0]->GetComponentLocation())) : baseToMeshDist;
-	// 	// if(baseToAttachDist > DistanceOnAttach || !AttachedMesh->IsSimulatingPhysics()) OnTriggerSwing(true);
-	// }
-
 	//Swing Tick
 	if(_bPlayerIsSwinging)
 	{
-		OnSwingPhysic();
+		OnSwingPhysic(deltaTime);
 	}
-
+	
 	//Dettach if falling with his attached actor
 	// FVector gravityVelocity = FVector(0.0f, 0.0f,  GetWorld()->GetGravityZ()) * GetWorld()->GetDeltaSeconds();;
 	// if(CablePointLocations.Num() == 0 && _PlayerCharacter->GetCharacterMovement()->IsFalling() && AttachedMesh->)
@@ -1449,7 +1444,7 @@ void UPS_HookComponent::SwingTick()
 
 }
 
-void UPS_HookComponent::OnSwingPhysic()
+void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 {
 	if(_PlayerCharacter->GetCharacterMovement()->IsMovingOnGround()
 	  || _PlayerCharacter->GetParkourComponent()->IsWallRunning()
@@ -1485,16 +1480,22 @@ void UPS_HookComponent::OnSwingPhysic()
 	
 	//Move physic constraint to match player position (attached element) && //Update constraint position on component
 	const float lastIndex = CableCapArray.Num() - 1;
-	//const float timeWeightAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), SwingStartTimestamp, SwingStartTimestamp + SwingMaxDuration, 0.0f, 1.0f);
-
-	//Update slave, master and constraint physic loc
+	
+	//Update player to slave loc
+	//TODO :: Determine good relative offset for HookThrower good position player take real position of socket
 	const bool lastCablePointIsValid = CableCapArray.IsValidIndex(lastIndex);
-	_PlayerCharacter->GetRootComponent()->SetWorldLocation(GetConstraintAttachSlave()->GetComponentLocation());
-	GetConstraintAttachMaster()->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
+	const FVector newPlayerLoc = ConstraintAttachSlave->GetComponentLocation()/*+ UKismetMathLibrary::InverseTransformLocation(_PlayerCharacter->GetTransform(),HookThrower->GetSocketLocation(FName(SOCKET_HOOK))) */;
+	_PlayerCharacter->GetRootComponent()->SetWorldLocation(newPlayerLoc);
 
+	//Update master and constraint physic loc
+	ConstraintAttachMaster->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
 	FVector constraintLoc = GetConstraintAttachMaster()->GetComponentLocation();
 	HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
 
+	//Update slave rot
+	const FRotator newSlaveRot = UKismetMathLibrary::FindLookAtRotation(ConstraintAttachSlave->GetComponentLocation(), ConstraintAttachMaster->GetComponentLocation());
+	ConstraintAttachSlave->SetWorldRotation(newSlaveRot);
+	
 	//Setup custom center of mass
 	FVector newCenterOfMass = ConstraintAttachMaster->GetComponentLocation();
 	newCenterOfMass.Z =	ConstraintAttachSlave->GetComponentLocation().Z;
@@ -1503,50 +1504,35 @@ void UPS_HookComponent::OnSwingPhysic()
 	//Winde
 	if(_bCableWinderIsActive)
 	{
-		//TODO :: Invert Winde action when swing
+		//Determine newZ smoothed
+		const float targetZ = _DistanceOnAttach + _CablePullSlackDistance;
+		const float newSwingZ = targetZ;
+		// const float newSwingZ = UKismetMathLibrary::FInterpTo_Constant(_LastSwingZ, targetZ, deltaTime, SwingZVaritaionSmoothSpeed);
+		// _LastSwingZ = newSwingZ;
 		
-		//---Linear Limit
-		// FVector newLoc = HookThrower->GetComponentLocation();
-		// newLoc.Z = _DistOnAttachWithRange;
-		// GetConstraintAttachSlave()->SetWorldLocation(newLoc);
-		float currentZLinearLimit = FMath::Lerp(SwingLinearLimitRange.Min, SwingLinearLimitRange.Max, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);
+		//Linear Limit update
+		float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(newSwingZ,0.0f, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
 		//float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
-		HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
+		HookPhysicConstraint->SetLinearZLimit(LCM_Locked,currentZLinearLimit);
 
-		//ImpulseConstraintAttach();
-
-		//---Frame
-		// Assume you have a valid UPhysicsConstraintComponent* Constraint
+		//Frame offset update
 		 FConstraintInstance constraintInstance = HookPhysicConstraint->ConstraintInstance;
 		 FVector currentFrame = constraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation();
-		 FVector newOffset = FVector(0.0f, 0.0f, _DistanceOnAttach + _CablePullSlackDistance);
-		 //FVector newOffset = currentFrame + FVector(0.0f, 0.0f, _CablePullSlackDistance);
+		 FVector newOffset = FVector(0.0f, 0.0f, newSwingZ);
 		 constraintInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform(newOffset));
-		// HookPhysicConstraint->UpdateConstraintFrames();
-		// DrawDebugPoint(GetWorld(), constraintInstance.GetRefFrame(EConstraintFrame::Frame1).GetLocation(), 10.0f, FColor::Red, false, 0.1f);
 
-		//--- Linear Motor 
-		//HookPhysicConstraint->SetLinearPositionDrive(false, false, _bCableWinderIsActive);
-		// HookPhysicConstraint->SetLinearPositionTarget(newOffset);
-		//
-		// HookPhysicConstraint->SetLinearVelocityDrive(false, false, true);
-		// HookPhysicConstraint->SetLinearVelocityTarget(FVector(0.0f, 0.0f, _CablePullSlackDistance));
-
+		 // FVector currentFrame = constraintInstance.GetLinearPositionTarget();
+		 // FVector newOffset = currentFrame;
+		 // newOffset.Z = newSwingZ;
+		 // constraintInstance.SetLinearPositionTarget(newOffset);
+		
 		UE_LOG(LogTemp, Error, TEXT("%S :: newOffset %f, currentZLinearLimit %f, _CablePullSlackDistance %f, _CableWindeInputValue %f"),__FUNCTION__, newOffset.Z, currentZLinearLimit, _CablePullSlackDistance, _CableWindeInputValue);
+
 	}
-
 	
-	//Stop by time
-	// if(timeWeightAlpha >= 1)
-	// {
-	// 	DettachHook();
-	// 	return;
-	// }
-
 	//Update constraint
 	HookPhysicConstraint->UpdateConstraintFrames();
 	
-
 	//Debug
 	if(bDebugSwing) DrawDebugPoint(GetWorld(), GetConstraintAttachMaster()->GetComponentLocation(), 20.f, FColor::Red, true);
 			
