@@ -590,6 +590,10 @@ protected:
 		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
 	float SwingZVaritaionSmoothSpeed = 10.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(ToolTip="_DistanceOnAttach + _CablePullSlackDistance multiplicator"))
+	float AutoBreakByDistMultiplicator = 10.0f;
+
 private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
 	bool _bPlayerIsSwinging = false;
@@ -607,7 +611,7 @@ private:
 	FVector _SwingPlayerLastLoc;
 
 	UPROPERTY(Transient)
-	float _LastSwingZ;
+	float _DistOnAttachMasterConstraint;
 
 #pragma endregion Swing
 };
