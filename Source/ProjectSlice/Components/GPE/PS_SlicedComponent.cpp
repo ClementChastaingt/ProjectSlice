@@ -8,6 +8,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BrushComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
@@ -101,37 +102,54 @@ void UPS_SlicedComponent::InitComponent()
 void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if(OtherComp == this) return;
-	
-	//float impactStrength = NormalImpulse.Size(); 
-	float impactStrength = HitComponent->GetComponentVelocity().Size();
-	if(GetComponentVelocity().Z < MinVelocityZForFeedback || impactStrength < VelocityRangeSound.Min) return;
+	if(OtherActor == GetOwner() || OtherComp == this) return;
 
+	//Bounds
+	 FVector origin; 
+     FVector boxExtent;
+	 float radius;
+	 UKismetSystemLibrary::GetComponentBounds(this, origin, boxExtent, radius);
+	const float extent = UKismetMathLibrary::Vector_Distance(origin,boxExtent);
+
+	//Mass scale factoring
+	float objectMassScaled =UPSFl::GetObjectUnifiedMass(this);
+	if(FMath::IsNearlyZero(objectMassScaled)) objectMassScaled = 1.0f;
+	const float impactStrength = UKismetMathLibrary::SafeDivide((GetComponentVelocity() * objectMassScaled).Length(), extent);
+	if(impactStrength < MinVelocityZForFeedback) return;
+	
 	//Cooldown
 	float currentTime = GetWorld()->GetTimeSeconds();
 	if (currentTime - _LastImpactSoundTime < _ImpactSoundCooldown) return;
 	_LastImpactSoundTime = currentTime;
-
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp),impactStrength);
 	
 	// Try and play the sound if specified
+	const float alpha = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeSound.Min, VelocityRangeSound.Max, 0.0f, 1.0f);
+	_LastImpactFeedbackForce = FMath::InterpStep(0,4,alpha,5);
 	if (IsValid(CrashSound))
 	{
 		FVector loc = GetComponentLocation();
 		if (Hit.bBlockingHit) loc = Hit.ImpactPoint;
 
 		//VolumeMultiplier calculation
-		float volumeMultiplier = FMath::Clamp(
-			FMath::GetMappedRangeValueClamped(
-				FVector2D(VelocityRangeSound.Min, VelocityRangeSound.Max),
-				FVector2D(VolumeRangeMin, 1.0f),
-				impactStrength),
-			VolumeRangeMin, 1.0f);
+		float volumeMultiplier = FMath::Lerp(VolumeRange.Min, VolumeRange.Max,alpha);
+
+		//PitchMultiplier calculation
+		float pitchMultiplier = FMath::Lerp(PitchRange.Min, PitchRange.Max,alpha);
 		
 		//Play sound
-		_FallingAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,loc,FRotator::ZeroRotator,volumeMultiplier);
+		_CollideAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,loc,FRotator::ZeroRotator,volumeMultiplier, pitchMultiplier);
+		if(IsValid(_CollideAudio))
+		{
+			_CollideAudio->SetIntParameter(FName("Intensity"), _LastImpactFeedbackForce);
+			_CollideAudio->Play();
+		}
 
 	}
+	
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f,alpha %f, _LastImpactFeedbackForce %i, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength,alpha, _LastImpactFeedbackForce, extent, objectMassScaled);
+
+	//Callback
+	OnSlicedObjectHitEvent.Broadcast();
 }
 
 

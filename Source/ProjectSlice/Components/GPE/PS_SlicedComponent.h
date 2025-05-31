@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/MeshComponent.h"
 #include "ProceduralMeshComponent.h"
+#include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_SlicedComponent.generated.h"
 
 
@@ -36,7 +37,13 @@ public:
 	void InitComponent();
 	
 	//Getters && Setters
-	UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
+	FORCEINLINE UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnSlicedObjectHitEvent;
 
 protected:
 	UFUNCTION()
@@ -45,11 +52,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
 	USoundBase* CrashSound = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max volume multiplier"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max ultiplier"))
 	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Volume multiplier Range"))
+	FFloatInterval VolumeRange = FFloatInterval(0.9, 1.25f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(UIMin="0", ClampMin="0", Tooltip="Velocity Range to max volume multiplier"))
-	float VolumeRangeMin = 0.2f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Pitch multiplier Range"))
+	FFloatInterval PitchRange = FFloatInterval(0.5, 1.25f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(ForceUnits="cm/s", UIMin="1", ClampMin="1"))
 	float MinVelocityZForFeedback = 100.0f;
@@ -60,16 +70,18 @@ protected:
 private:
 	UPROPERTY(Transient)
 	UStaticMeshComponent* _RootMesh = nullptr;
-
-	UPROPERTY(Transient)
-	UAudioComponent* _FallingAudio;
-
 	UPROPERTY(DuplicateTransient)
 	float _LastImpactSoundTime = -1.0f;
 
 	// 100ms between sounds
 	UPROPERTY(DuplicateTransient)
 	float _ImpactSoundCooldown = 0.1f;
+
+	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	int32 _LastImpactFeedbackForce;
+
+	UPROPERTY(VisibleInstanceOnly, Transient)
+	UAudioComponent* _CollideAudio;
 	
 //------------------	
 #pragma endregion General

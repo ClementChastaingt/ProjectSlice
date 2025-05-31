@@ -552,8 +552,9 @@ void UPS_WeaponComponent::SightShaderTick()
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
+	
 	//Laser
-	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 100.0f : MaxFireDistance);
+	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
 	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
 
 	//Stop if in can't slice situation

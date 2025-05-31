@@ -876,6 +876,7 @@ void UPS_HookComponent::HookObject()
 	//If not blocking exit
 	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass()))
 	{
+		UE_LOG(LogTemp, Error, TEXT("Error"));
 		OnHookObjectFailed.Broadcast();
 		return;
 	}
@@ -1547,12 +1548,12 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 		 currentFrame.SetLocation(newOffset);
 
 		//TODO :: not working properly 
-		currentFrame.SetLocation(FVector(0.0f,0.0f,newSwingZ));
+		//currentFrame.SetLocation(FVector(0.0f,0.0f,newSwingZ));
 		currentFrame.SetScale3D(FVector(1.0f));
 		
 		HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, currentFrame);
 
-		DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, false);
+		DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, true);
 
 		UE_LOG(LogTemp, Error, TEXT("%S :: newSwingZ %f, currentZLinearLimit %f, _CableWindeInputValue %f"),__FUNCTION__, newSwingZ, currentZLinearLimit, _CableWindeInputValue);
 	}
