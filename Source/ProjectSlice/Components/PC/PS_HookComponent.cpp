@@ -1387,8 +1387,6 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			//Impulse Slave for preserve player enter velocity
 			_SwingImpulseForce = _PlayerCharacter->GetVelocity().Length() * SwingImpulseMultiplier;
 
-			_DistOnAttachMasterConstraint = UKismetMathLibrary::Vector_Distance(ConstraintAttachMaster->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation());
-
 			//TODO :: Chack if ImpulseConstraintAttach is still use
 			//ImpulseConstraintAttach();
 		}
@@ -1514,6 +1512,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 	ConstraintAttachMaster->SetWorldLocation(lastCablePointIsValid ? CableCapArray[lastIndex]->GetComponentLocation() : _CurrentHookHitResult.Location);
 	FVector constraintLoc = GetConstraintAttachMaster()->GetComponentLocation();
 	HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
+	DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->GetComponentLocation(), 25.f, FColor::Green, true);
 
 	//Update Attach and Constraint physic rot
 	const FRotator newSlaveRot = UKismetMathLibrary::FindLookAtRotation(ConstraintAttachSlave->GetComponentLocation(), ConstraintAttachMaster->GetComponentLocation());
@@ -1530,32 +1529,30 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 	{
 		//Determine newZ smoothed
 		const float distOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
-		// const float alpha = UKismetMathLibrary::MapRangeClamped(_CableWindeInputValue, -1.0f, 1.0f, 0.0f ,1.0f);
-		const float newSwingZ = _CablePullSlackDistance;
-		// const float newSwingZ = UKismetMathLibrary::Lerp(_DistanceOnAttach, _DistOnAttachMasterConstraint, alpha);
+		const float newSwingZ = (_CablePullSlackDistance * -1) - _DefaultInvertedSlackDist;
 		
-		//Linear Limit update
-		float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(distOnAttachWithRange, CablePullSlackDistanceRange.Min, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
-		//float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
-		HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
+		//Linear Limit update //TODO :: not working properly 
+		float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(distOnAttachWithRange,_DistanceOnAttach + CablePullSlackDistanceRange.Min, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
+	    //float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
+		//HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
 
 		//Frame offset update
-		//FTransform currentFrame = HookPhysicConstraint->ConstraintInstance.GetRefFrame(EConstraintFrame::Frame1);
-		FTransform currentFrame = FTransform();
+		FTransform newFrame = FTransform();
 
-		 FVector newOffset = GetConstraintAttachMaster()->GetComponentLocation();
-		 newOffset.Z =+ _CablePullSlackDistance;
-		 currentFrame.SetLocation(newOffset);
-
-		//TODO :: not working properly 
-		//currentFrame.SetLocation(FVector(0.0f,0.0f,newSwingZ));
-		currentFrame.SetScale3D(FVector(1.0f));
+		newFrame.SetLocation(FVector(0,0,newSwingZ));
+		newFrame.SetRotation(newSlaveRot.Quaternion());
+		newFrame.SetScale3D(FVector(1.0f));
+	
+		//HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, newFrame);
+	    HookPhysicConstraint->SetConstraintReferenceFrame(EConstraintFrame::Frame1,newFrame);
+		//HookPhysicConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1,FVector(0.0f,0.0f,newSwingZ));
 		
-		HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, currentFrame);
-
-		DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, true);
-
-		UE_LOG(LogTemp, Error, TEXT("%S :: newSwingZ %f, currentZLinearLimit %f, _CableWindeInputValue %f"),__FUNCTION__, newSwingZ, currentZLinearLimit, _CableWindeInputValue);
+		DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, true);		
+		UE_LOG(LogTemp, Error, TEXT("%S :: newSwingZ %f, currentZLinearLimit %f, _CableWindeInputValue %f"),__FUNCTION__, newSwingZ,  currentZLinearLimit, _CableWindeInputValue);
+	}
+	else
+	{
+		_DefaultInvertedSlackDist = UKismetMathLibrary::Vector_Distance(ConstraintAttachMaster->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation());
 	}
 	
 	//Update constraint

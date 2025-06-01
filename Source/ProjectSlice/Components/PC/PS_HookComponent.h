@@ -611,7 +611,7 @@ private:
 	FVector _SwingPlayerLastLoc;
 
 	UPROPERTY(Transient)
-	float _DistOnAttachMasterConstraint;
+	float _DefaultInvertedSlackDist;
 
 #pragma endregion Swing
 };
