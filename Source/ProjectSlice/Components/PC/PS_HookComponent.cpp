@@ -1323,7 +1323,6 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 
 
 	_bPlayerIsSwinging = bActivate;
-	_SwingStartTimestamp = GetWorld()->GetTimeSeconds();
 	
 	//_PlayerController->SetCanMove(!bActivate);
 	//_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
@@ -1534,34 +1533,35 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 		const FVector dirToMaster = UKismetMathLibrary::GetDirectionUnitVector(_PlayerCharacter->GetActorLocation(), ConstraintAttachMaster->GetComponentLocation());
 		
 		//Linear Limit update //TODO :: not working properly 
-		float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(distOnAttachWithRange,_DistanceOnAttach + CablePullSlackDistanceRange.Min, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
-	    //float currentZLinearLimit = _DistanceOnAttach + _CablePullSlackDistance;
+		//float currentZLinearLimit = FMath::Lerp(_DistanceOnAttach, FMath::Clamp(distOnAttachWithRange,_DistanceOnAttach + CablePullSlackDistanceRange.Min, _DistanceOnAttach + CablePullSlackDistanceRange.Max), _AlphaWinde);
+	    //float currentZLinearLimit = distOnAttachWithRange;
 		//HookPhysicConstraint->SetLinearZLimit(LCM_Limited,currentZLinearLimit);
 
-		//Frame offset update
+		//Frame offset update for slack //TODO :: Work for stack cable but not while winde it 
 		FTransform newFrame = FTransform();
 
 		//newFrame.SetLocation(FVector(ConstraintAttachSlave->GetComponentLocation().X, ConstraintAttachSlave->GetComponentLocation().Y, newSwingZ));
 		newFrame.SetLocation(FVector(0,0,newSwingZ));
 		newFrame.SetRotation(newSlaveRot.Quaternion());
 		newFrame.SetScale3D(FVector(1.0f));
-
-		//TODO :: Work for stack cable but not while winde it 
-		//HookPhysicConstraint->ConstraintInstance.SetRefFrame(EConstraintFrame::Frame1, newFrame);
 	    HookPhysicConstraint->SetConstraintReferenceFrame(EConstraintFrame::Frame1,newFrame);
-		//HookPhysicConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1,FVector(0.0f,0.0f,newSwingZ));
-		
-		
-		UE_LOG(LogTemp, Error, TEXT("distOnAttachWithRange %f"), distOnAttachWithRange);
-		ConstraintAttachSlave->AddImpulse(dirToMaster * distOnAttachWithRange * _CableWindeInputValue * -1);
-		DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation() ,ConstraintAttachSlave->GetComponentLocation() + dirToMaster * distOnAttachWithRange * _CableWindeInputValue , 5.0f, FColor::Blue, false, 2, 10, 2);
+
+		//Move slave object for winde
+		ConstraintAttachSlave->AddWorldOffset(FVector(0.0f,0.0f, _LastSwingZ - newSwingZ));
 		
 		// ConstraintAttachSlave->AddImpulse(dirToMaster + newSwingZ);
-		// ConstraintAttachSlave->SetWorldLocation(HookPhysicConstraint->ConstraintInstance.GetConstraintLocation());
-		// _PlayerCharacter->GetRootComponent()->SetWorldLocation(ConstraintAttachSlave->GetComponentLocation());
-
-		DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, true);		
+		//ConstraintAttachSlave->AddImpulse(dirToMaster * distOnAttachWithRange * _CableWindeInputValue * -1);
 		//UE_LOG(LogTemp, Error, TEXT("%S :: newSwingZ %f, currentZLinearLimit %f, _CableWindeInputValue %f, distToplayer %f"),__FUNCTION__, newSwingZ,  currentZLinearLimit, _CableWindeInputValue,  UKismetMathLibrary::Vector_Distance(ConstraintAttachMaster->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation()) );
+
+		//Debug
+		if(bDebugSwing)
+		{
+			DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation() ,ConstraintAttachSlave->GetComponentLocation() + dirToMaster * distOnAttachWithRange * _CableWindeInputValue , 5.0f, FColor::Blue, false, 0.2f, 10, 2);
+			DrawDebugPoint(GetWorld(), 	HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, true);
+			UE_LOG(LogTemp, Error, TEXT("%S :: newSwingZ %f, slaveOffset %f, distOnAttachWithRange %f,"),__FUNCTION__, newSwingZ, _LastSwingZ - newSwingZ, distOnAttachWithRange);
+		}
+
+		_LastSwingZ = newSwingZ;
 	}
 	else
 	{

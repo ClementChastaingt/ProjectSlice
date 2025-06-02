@@ -598,9 +598,6 @@ private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
 	bool _bPlayerIsSwinging = false;
 
-	UPROPERTY(Transient, meta=(ToolTip="Swing force multiplicator"))
-	float _SwingStartTimestamp = TNumericLimits<float>::Min();
-
 	UPROPERTY(Transient)
 	float _VelocityToAbsFwd;
 
@@ -612,6 +609,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _WindeStartSlackDist;
+
+	UPROPERTY(Transient)
+	float _LastSwingZ;
 
 #pragma endregion Swing
 };
