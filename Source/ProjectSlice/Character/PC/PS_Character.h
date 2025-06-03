@@ -166,6 +166,9 @@ public:
 
 	FORCEINLINE FTimerHandle GetCoyoteTimerHandle() const{ return CoyoteTimerHandle;}
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetCapsuleVelocity() const{return _CapsuleVelocity;}
+
 	/** Called for Crouch input */
 	void Crouching();
 
@@ -229,6 +232,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _DefaultAirControl;
+
+	UPROPERTY(Transient)
+	FVector _CapsuleVelocity;
 	
 #pragma endregion Move
 

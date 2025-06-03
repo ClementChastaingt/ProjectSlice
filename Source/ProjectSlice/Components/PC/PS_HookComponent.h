@@ -430,7 +430,7 @@ private:
 
 	UPROPERTY(VisibleInstanceOnly, Transient, Category="Status|Hook|Pull")
 	float _CableWindeInputValue;
-
+	
 	UPROPERTY(Transient)
 	float _AlphaWinde;
 	
@@ -588,11 +588,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
-	float SwingZVaritaionSmoothSpeed = 10.0f;
+	float SwingWindeForceMultiplier = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-	meta=(ToolTip="_DistanceOnAttach + _CablePullSlackDistance multiplicator"))
-	float AutoBreakByDistMultiplicator = 10.0f;
+	meta=(UIMin=0, ClampMin=0, ForceUnits="cm", ToolTip="Offset added to maximum dist authorized (DistanceOnAttach + CableSlackRangeMax. It's the max threshold authorized before break attach if reached)"))
+	float OffsetToMaximumDistAuthorized = 3000.0f;
 
 private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
@@ -606,12 +606,9 @@ private:
 
 	UPROPERTY(Transient)
 	FVector _SwingPlayerLastLoc;
-
+	
 	UPROPERTY(Transient)
-	float _WindeStartSlackDist;
-
-	UPROPERTY(Transient)
-	float _LastSwingZ;
+	float _SwingLastDistOnAttachWithRange;
 
 #pragma endregion Swing
 };
