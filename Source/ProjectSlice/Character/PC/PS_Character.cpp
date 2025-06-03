@@ -110,7 +110,7 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false, MovementTrailDuration);
 
 	//-- Capsule vel --
-	SetCapsuleVelocity(GetCapsuleComponent()->GetComponentLocation() - GetPredCapsuleLocation() / DeltaTime);
+	SetCapsuleVelocity((GetCapsuleComponent()->GetComponentLocation() - GetPredCapsuleLocation()) / DeltaTime);
 	SetPredCapsuleLocation(GetCapsuleComponent()->GetComponentLocation());
 }
 

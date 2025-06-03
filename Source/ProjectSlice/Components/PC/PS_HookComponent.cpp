@@ -876,7 +876,6 @@ void UPS_HookComponent::HookObject()
 	//If not blocking exit
 	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass()))
 	{
-		UE_LOG(LogTemp, Error, TEXT("Error"));
 		OnHookObjectFailed.Broadcast();
 		return;
 	}
@@ -1386,14 +1385,13 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 			//Impulse Slave for preserve player enter velocity
 			_SwingImpulseForce = _PlayerCharacter->GetVelocity().Length() * SwingImpulseMultiplier;
 			ImpulseConstraintAttach();
+			
 		}
 	}
 	else
 	{
 		FVector directionToCenterMass = ConstraintAttachSlave->GetComponentLocation() - ConstraintAttachSlave->GetComponentLocation();
 		directionToCenterMass.Normalize();
-		
-		_SwingImpulseForce = _PlayerCharacter->GetCapsuleVelocity().Length() * SwingImpulseMultiplier;
 
 		ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		ConstraintAttachMaster->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName(SOCKET_HOOK));
@@ -1417,19 +1415,13 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetCapsuleVelocity();
 
 		//Launch if Stop swing by jump			
-		// if (_PlayerCharacter->GetCharacterMovement()->IsFalling())
-		// {
-		// 	FVector impulseDirection = UKismetMathLibrary::GetDirectionUnitVector(_SwingPlayerLastLoc, _PlayerCharacter->GetActorLocation());
-		// 	_PlayerCharacter->LaunchCharacter(impulseDirection * _SwingImpulseForce, true, true);
-		//
-		// 	if (bDebugSwing)
-		// 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + impulseDirection * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
-		// }
+		if (_PlayerCharacter->GetCharacterMovement()->IsFalling())
+		{
+			_PlayerCharacter->LaunchCharacter(_PlayerCharacter->GetCapsuleVelocity() * SwingImpulseMultiplier * _PlayerCharacter->CustomTimeDilation, true, true);
 		
-		// FVector dir = _PlayerCharacter->GetCapsuleVelocity();
-		// dir.Normalize();
-		// _PlayerCharacter->GetCharacterMovement()->AddImpulse(dir * _SwingImpulseForce * _PlayerCharacter->CustomTimeDilation, true);
-		// UE_LOG(LogTemp, Log, TEXT("%S :: ConstraintAttachSlaveVel %f"),__FUNCTION__, dir.Length());
+			if (bDebugSwing)
+				DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetCapsuleVelocity() * SwingImpulseMultiplier, 10.0f, FColor::Yellow, false, 2, 10, 3);
+		}
 	}
 }
 

@@ -584,7 +584,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing", meta=(UIMin="1.0", ClampMin="1.0",
 		ToolTip="Swing impluse force multiplicator. It multiplcate the enter velocity for exit swing by jump launch OR enter in Swing"))
-	float SwingImpulseMultiplier = 2.0f;
+	float SwingImpulseMultiplier = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
