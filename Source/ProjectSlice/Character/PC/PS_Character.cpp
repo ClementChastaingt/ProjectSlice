@@ -108,6 +108,10 @@ void AProjectSliceCharacter::TickActor(float DeltaTime, ELevelTick TickType, FAc
 	if(GEngine && bDebugVelocity) GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan,FString::Printf(TEXT("Player Velocity: %f"), GetVelocity().Length()));
 	
 	if(bDebugMovementTrail) DrawDebugPoint(GetWorld(), GetActorLocation(), 5.0f, FColor::Cyan, false, MovementTrailDuration);
+
+	//-- Capsule vel --
+	SetCapsuleVelocity(GetCapsuleComponent()->GetComponentLocation() - GetPredCapsuleLocation() / DeltaTime);
+	SetPredCapsuleLocation(GetCapsuleComponent()->GetComponentLocation());
 }
 
 void AProjectSliceCharacter::BeginPlay()

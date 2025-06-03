@@ -1392,9 +1392,8 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	{
 		FVector directionToCenterMass = ConstraintAttachSlave->GetComponentLocation() - ConstraintAttachSlave->GetComponentLocation();
 		directionToCenterMass.Normalize();
-
-		//TODO ::  ConstraintAttachSlave->GetComponentVelocity() equal to 0 need finish _CapsuleVelocity import for use it
-		_SwingImpulseForce = ConstraintAttachSlave->GetComponentVelocity().Length() * SwingImpulseMultiplier;
+		
+		_SwingImpulseForce = _PlayerCharacter->GetCapsuleVelocity().Length() * SwingImpulseMultiplier;
 
 		ConstraintAttachMaster->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		ConstraintAttachMaster->AttachToComponent(HookThrower, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName(SOCKET_HOOK));
@@ -1415,7 +1414,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		_ForceWeight = 0.0f;
 
 		//Set Player velocity to slave velocity
-		//_PlayerCharacter->GetCharacterMovement()->Velocity = ConstraintAttachSlave->GetComponentVelocity();
+		_PlayerCharacter->GetCharacterMovement()->Velocity = _PlayerCharacter->GetCapsuleVelocity();
 
 		//Launch if Stop swing by jump			
 		// if (_PlayerCharacter->GetCharacterMovement()->IsFalling())
@@ -1426,12 +1425,11 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		// 	if (bDebugSwing)
 		// 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + impulseDirection * 500, 10.0f, FColor::Yellow, false, 2, 10, 3);
 		// }
-
-		//TODO ::  ConstraintAttachSlave->GetComponentVelocity() equal to 0 need finish _CapsuleVelocity import for use it
-		FVector dir = ConstraintAttachSlave->GetComponentVelocity();
-		dir.Normalize();
-		_PlayerCharacter->GetCharacterMovement()->AddImpulse(dir * _SwingImpulseForce * _PlayerCharacter->CustomTimeDilation, true);
-		UE_LOG(LogTemp, Log, TEXT("%S :: ConstraintAttachSlaveVel %f"),__FUNCTION__, dir.Length());
+		
+		// FVector dir = _PlayerCharacter->GetCapsuleVelocity();
+		// dir.Normalize();
+		// _PlayerCharacter->GetCharacterMovement()->AddImpulse(dir * _SwingImpulseForce * _PlayerCharacter->CustomTimeDilation, true);
+		// UE_LOG(LogTemp, Log, TEXT("%S :: ConstraintAttachSlaveVel %f"),__FUNCTION__, dir.Length());
 	}
 }
 

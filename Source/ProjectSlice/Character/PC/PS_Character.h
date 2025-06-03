@@ -169,6 +169,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetCapsuleVelocity() const{return _CapsuleVelocity;}
 
+	FORCEINLINE FVector GetPredCapsuleLocation() const { return _PredCapsuleLocation; }
+
+	FORCEINLINE void SetPredCapsuleLocation(const FVector& predCapsuleLocation) { _PredCapsuleLocation = predCapsuleLocation; }
+	
+	FORCEINLINE void SetCapsuleVelocity(const FVector& capsuleVelocity) { _CapsuleVelocity = capsuleVelocity; }
+
 	/** Called for Crouch input */
 	void Crouching();
 
@@ -235,6 +241,9 @@ private:
 
 	UPROPERTY(Transient)
 	FVector _CapsuleVelocity;
+	
+	UPROPERTY(Transient)
+	FVector _PredCapsuleLocation;
 	
 #pragma endregion Move
 
