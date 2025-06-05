@@ -588,7 +588,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
-	float SwingWindeForceMultiplier = 10.0f;
+	float SwingWindeForceMultiplier = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(UIMin=0, ClampMin=0, ToolTip="Interp speed use for smoothing player loc transition during winde"))
+	float SwingWindeLocInterpSpeed = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(UIMin=0, ClampMin=0, ForceUnits="cm", ToolTip="Offset added to maximum dist authorized (DistanceOnAttach + CableSlackRangeMax. It's the max threshold authorized before break attach if reached)"))
