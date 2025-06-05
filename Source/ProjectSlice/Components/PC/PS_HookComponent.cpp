@@ -1520,7 +1520,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 			ConstraintAttachSlave->SetWorldLocation(newLocAfterWinde);
 			//ConstraintAttachSlave->SetWorldLocation(ConstraintAttachSlave->GetComponentLocation() + dirToMaster * offsetZ);
 			//ConstraintAttachSlave->AddWorldOffset(dirToMaster * offsetZ);
-			ConstraintAttachSlave->AddImpulse((_PlayerCharacter->GetActorForwardVector() + dirToMaster) * offsetZ * SwingWindeForceMultiplier, NAME_None, false);
+			ConstraintAttachSlave->AddImpulse((_PlayerCharacter->GetCapsuleVelocity().GetSafeNormal() + dirToMaster) * offsetZ * SwingWindeForceMultiplier, NAME_None, false);
 			
 			// if(offsetZ > 0.0f)ConstraintAttachSlave->AddImpulse(dirToMaster * offsetZ * SwingWindeForceMultiplier, NAME_None, true);
 			// else ConstraintAttachSlave->AddWorldOffset(dirToMaster * offsetZ);
