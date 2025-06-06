@@ -129,11 +129,6 @@ protected:
 	UFUNCTION()
 	void OnSlowmoTriggerEventReceived(const bool bIsSlowed);
 
-	UFUNCTION()
-	void OnParkourDetectorBeginOverlapEventReceived(UPrimitiveComponent* overlappedComponent, AActor* otherActor,
-		UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool
-		bFromSweep, const FHitResult& sweepResult);
-
 	//------------------
 #pragma endregion Event_Receiver
 
@@ -565,13 +560,7 @@ public:
 	UFUNCTION()
 	void ImpulseConstraintAttach() const;
 
-	UFUNCTION()
-	void ForceInvertSwingDirection() { _VelocityToAbsFwd = _VelocityToAbsFwd * -1; };
-
 	FORCEINLINE bool IsPlayerSwinging() const { return _bPlayerIsSwinging; }
-
-	UFUNCTION()
-	void SetSwingPlayerLastLoc(const FVector& swingPlayerLastLoc) { _SwingPlayerLastLoc = swingPlayerLastLoc; }
 
 protected:	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
@@ -587,8 +576,8 @@ protected:
 	float SwingImpulseMultiplier = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Interp speed of smoothing SwingZ when winde variation during swing"))
-	float SwingWindeForceMultiplier = 100.0f;
+		meta=(ToolTip="Force multiplier apply to slave Constraint Impulse on start swing"))
+	float SwingEnterForceMultiplier = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(UIMin=0, ClampMin=0, ToolTip="Interp speed use for smoothing player loc transition during winde"))
@@ -601,18 +590,15 @@ protected:
 private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
 	bool _bPlayerIsSwinging = false;
-
-	UPROPERTY(Transient)
-	float _VelocityToAbsFwd;
-
+	
 	UPROPERTY(Transient)
 	float _SwingImpulseForce;
-
-	UPROPERTY(Transient)
-	FVector _SwingPlayerLastLoc;
 	
 	UPROPERTY(Transient)
 	float _SwingLastDistOnAttachWithRange;
+
+	UPROPERTY(Transient)
+	float _SwingWindeLastOffsetZ;
 
 #pragma endregion Swing
 };
