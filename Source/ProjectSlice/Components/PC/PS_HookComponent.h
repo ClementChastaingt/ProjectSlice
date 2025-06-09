@@ -558,6 +558,9 @@ public:
 	void ForceUpdateMasterConstraint();
 
 	UFUNCTION()
+	void UpdateMasterConstraint(const FVector& targetLoc, const float deltaTime = 0.0f);
+
+	UFUNCTION()
 	void ImpulseConstraintAttach() const;
 
 	FORCEINLINE bool IsPlayerSwinging() const { return _bPlayerIsSwinging; }
@@ -569,36 +572,38 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 		meta=(ToolTip="Swing force multiplicator"))
-	float SwingMaxAirControl = 2.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing", meta=(UIMin="1.0", ClampMin="1.0",
-		ToolTip="Swing impluse force multiplicator. It multiplcate the enter velocity for exit swing by jump launch OR enter in Swing"))
-	float SwingImpulseMultiplier = 1.5f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-		meta=(ToolTip="Force multiplier apply to slave Constraint Impulse on start swing"))
-	float SwingEnterForceMultiplier = 100.0f;
+	float SwingMaxAirControl = 2.0f;;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(UIMin=0, ClampMin=0, ToolTip="Interp speed use for smoothing player loc transition during winde"))
 	float SwingWindeLocInterpSpeed = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-	meta=(UIMin=0, ClampMin=0, ForceUnits="cm", ToolTip="Offset added to maximum dist authorized (DistanceOnAttach + CableSlackRangeMax. It's the max threshold authorized before break attach if reached)"))
+	meta=(UIMin=0, ClampMin=0, ForceUnits="cm", ToolTip="Offset added to maximum dist authorized (DistanceOnAttach + CableSlackRangeMax). It's the max threshold authorized before break attach if reached"))
 	float OffsetToMaximumDistAuthorized = 3000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(UIMin=0, ClampMin=0, ForceUnits="sec", ToolTip="UpdateMasterConstraint custom tick rate, use for interpolation"))
+	float UpdateMasterConstraintRate = 0.02f;
 
 private:
 	UPROPERTY(Transient, meta=(ToolTip="Is player currently swinging"))
 	bool _bPlayerIsSwinging = false;
-	
-	UPROPERTY(Transient)
-	float _SwingImpulseForce;
-	
+		
 	UPROPERTY(Transient)
 	float _SwingLastDistOnAttachWithRange;
 
 	UPROPERTY(Transient)
 	float _SwingWindeLastOffsetZ;
+
+	UPROPERTY(Transient)
+	float _SwingWindeSmoothedOffsetZ;
+
+	UPROPERTY(Transient)
+	float _SwingWindeStarSlaveLoc;
+
+	UPROPERTY(Transient)
+	bool _bUpdateMasterContraintByTime;
 
 #pragma endregion Swing
 };
