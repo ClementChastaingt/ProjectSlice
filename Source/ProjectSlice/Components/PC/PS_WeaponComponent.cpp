@@ -290,15 +290,29 @@ void UPS_WeaponComponent::Fire()
 void UPS_WeaponComponent::GenerateImpactField()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
-	
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
+	//Spawn param
 	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = _PlayerCharacter;
+	SpawnInfo.Instigator = _PlayerCharacter;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	impactField->SetLifeSpan(FieldSystemActorLifeSpan);
 
-	//TODO : Can't compile
-	//AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(this->GetClass(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	//Debug
+	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(impactField));
+
+	//Callback
 	OnImpulseChaosEvent.Broadcast();
 	
+}
+
+void UPS_WeaponComponent::DestroyImpactField(AFieldSystemActor* impactField)
+{
+	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
+	impactField->Destroy();
 }
 
 //------------------

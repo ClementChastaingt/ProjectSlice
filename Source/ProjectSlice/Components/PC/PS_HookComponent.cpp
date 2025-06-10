@@ -1063,7 +1063,8 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		_DistanceOnAttach = baseToMeshDist;
 	
 	//Distance On Attach By point number weight
-	float distanceOnAttachByTensorWeight = UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num());
+	const float max = FMath::Max(_DistanceOnAttach + CablePullSlackDistanceRange.Max, _DistanceOnAttach - CablePullSlackDistanceRange.Max);
+	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num()), 0.0f, max);
 	
 	//Calculate Pull alpha && activate pull
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
@@ -1486,7 +1487,8 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 	//Update player to slave loc
 	const float distMasterToConstraintInstLoc = UKismetMathLibrary::Vector_Distance(ConstraintAttachMaster->GetComponentLocation(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation());
 	const float switchLocAlpha = distOnAttachWithRange < 0 ? 1.0f : UKismetMathLibrary::MapRangeClamped(distMasterToConstraintInstLoc, 0.0f, distOnAttachWithRange / 2.0f, 0.0f, 1.0f);
-	const float targetDist = distOnAttachWithRange < 0 ? 0.0f : distOnAttachWithRange;
+	const float targetDist = UKismetMathLibrary::FInterpTo(_SwingLastDistOnAttachWithRange, distOnAttachWithRange < 0 ? 0.0f : distOnAttachWithRange, deltaTime, SwingWindeTargetLocInterpSpeed);
+
 	FVector newPlayerLoc = FMath::Lerp(ConstraintAttachSlave->GetComponentLocation(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation() + dirToConstInst * targetDist, switchLocAlpha);
 	_PlayerCharacter->SetActorLocation(newPlayerLoc);
 	DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation() + dirToConstInst * distOnAttachWithRange, 20.f, FColor::Cyan, false, 1.0f);
@@ -1498,10 +1500,10 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 		const float offsetZ = (distOnAttachWithRange - _SwingLastDistOnAttachWithRange) * -1;
 
 		//Interp Offset Move
-		_SwingWindeSmoothedOffsetZ = UKismetMathLibrary::FInterpTo(_SwingWindeSmoothedOffsetZ, _SwingWindeLastOffsetZ, deltaTime, SwingWindeLocInterpSpeed);
+		_SwingWindeSmoothedOffsetZ = UKismetMathLibrary::FInterpTo(_SwingWindeSmoothedOffsetZ, _SwingWindeLastOffsetZ, deltaTime, SwingWindeOffsetInterpSpeed);
 		if(!FMath::IsNearlyEqual(_SwingWindeSmoothedOffsetZ, _SwingWindeLastOffsetZ, 1.0f))
 		{
-			const FVector newLocAfterWinde = UKismetMathLibrary::VInterpTo(ConstraintAttachSlave->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation() + dirToMaster * _SwingWindeSmoothedOffsetZ, deltaTime, SwingWindeLocInterpSpeed);
+			const FVector newLocAfterWinde = UKismetMathLibrary::VInterpTo(ConstraintAttachSlave->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation() + dirToMaster * _SwingWindeSmoothedOffsetZ, deltaTime, SwingWindeOffsetInterpSpeed);
 			ConstraintAttachSlave->SetWorldLocation(newLocAfterWinde);
 			
 			if(bDebugSwing)UE_LOG(LogTemp,Log, TEXT("%S :: _SwingWindeLastOffsetZ %f, offsetZ %f, smoothedOffset %f"),__FUNCTION__, _SwingWindeLastOffsetZ, offsetZ, _SwingWindeSmoothedOffsetZ);
@@ -1592,7 +1594,7 @@ void UPS_HookComponent::UpdateMasterConstraint(const FVector& targetLoc, const f
 {
 	FVector newLoc;
 	if(deltaTime == 0.0f) newLoc = targetLoc;
-	else newLoc = UKismetMathLibrary::VInterpTo(ConstraintAttachMaster->GetComponentLocation(), targetLoc, deltaTime, SwingWindeLocInterpSpeed);
+	else newLoc = UKismetMathLibrary::VInterpTo(ConstraintAttachMaster->GetComponentLocation(), targetLoc, deltaTime, UpdateMasterConstrainInterpSpeed);
 	
 	ConstraintAttachMaster->SetWorldLocation(newLoc);
 	ConstraintAttachMaster->SetWorldRotation(FRotator::ZeroRotator);

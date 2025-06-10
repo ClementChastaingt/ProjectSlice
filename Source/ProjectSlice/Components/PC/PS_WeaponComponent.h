@@ -56,6 +56,9 @@ protected:
 	bool bDebugSlice = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugChaos = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSightRack = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Shader")
@@ -121,10 +124,18 @@ public:
 	FOnPSDelegate OnImpulseChaosEvent;
 
 protected:
-	
+		
 	UFUNCTION()
 	void GenerateImpactField();
 
+	UFUNCTION()
+	void DestroyImpactField(AFieldSystemActor* impactField);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	TSoftClassPtr<AFieldSystemActor> FieldSystemActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
+	float FieldSystemActorLifeSpan = 1.0f;
 	
 #pragma endregion Destruction
 

@@ -83,8 +83,8 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	_CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
+	
+	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	UpdatePushTargetLoc();
 }

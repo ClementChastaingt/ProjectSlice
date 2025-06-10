@@ -575,15 +575,23 @@ protected:
 	float SwingMaxAirControl = 2.0f;;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+	meta=(UIMin=0, ClampMin=0, ToolTip="Interp speed use for smoothing player loc offset transition during winde"))
+	float SwingWindeOffsetInterpSpeed = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(UIMin=0, ClampMin=0, ToolTip="Interp speed use for smoothing player loc transition during winde"))
-	float SwingWindeLocInterpSpeed = 10.0f;
+	float SwingWindeTargetLocInterpSpeed = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
 	meta=(UIMin=0, ClampMin=0, ForceUnits="cm", ToolTip="Offset added to maximum dist authorized (DistanceOnAttach + CableSlackRangeMax). It's the max threshold authorized before break attach if reached"))
 	float OffsetToMaximumDistAuthorized = 3000.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
+    meta=(UIMin=0, ClampMin=0, ToolTip="UpdateMasterConstrain interp speed use for smoothing master loc transition"))
+    float UpdateMasterConstrainInterpSpeed = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Swing",
-	meta=(UIMin=0, ClampMin=0, ForceUnits="sec", ToolTip="UpdateMasterConstraint custom tick rate, use for interpolation"))
+	meta=(UIMin=0, ClampMin=0, ForceUnits="s", ToolTip="UpdateMasterConstraint custom tick rate, use for interpolation"))
 	float UpdateMasterConstraintRate = 0.02f;
 
 private:
