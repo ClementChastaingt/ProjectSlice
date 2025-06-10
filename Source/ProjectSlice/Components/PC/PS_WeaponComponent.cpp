@@ -305,7 +305,6 @@ void UPS_WeaponComponent::GenerateImpactField()
 
 	//Callback
 	OnImpulseChaosEvent.Broadcast(impactField);
-	
 }
 
 //------------------
