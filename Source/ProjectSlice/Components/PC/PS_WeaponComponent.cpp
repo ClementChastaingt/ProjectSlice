@@ -297,22 +297,15 @@ void UPS_WeaponComponent::GenerateImpactField()
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
-	impactField->SetLifeSpan(FieldSystemActorLifeSpan);
-
+	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemParams.FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	impactField->SetLifeSpan(FieldSystemParams.LifeSpan);
+	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(impactField));
 
 	//Callback
-	OnImpulseChaosEvent.Broadcast();
+	OnImpulseChaosEvent.Broadcast(impactField);
 	
-}
-
-void UPS_WeaponComponent::DestroyImpactField(AFieldSystemActor* impactField)
-{
-	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-	
-	impactField->Destroy();
 }
 
 //------------------

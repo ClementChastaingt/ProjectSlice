@@ -15,6 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Float, const float, fl
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector, const FVector&, vectorValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector2D,const FVector2D&, vectorValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Transform,const FTransform&, transformValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Field,const AFieldSystemActor*, fieldActor);
 
 
 // 2 params
