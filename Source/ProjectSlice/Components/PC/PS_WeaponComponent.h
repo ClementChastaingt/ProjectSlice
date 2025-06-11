@@ -8,8 +8,10 @@
 #include "PS_PlayerCameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Field/FieldSystemActor.h"
+#include "GeometryCollection/GeometryCollectionActor.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
+#include "ProjectSlice/GPE/PS_Projectile.h"
 #include "PS_WeaponComponent.generated.h"
 
 class AProjectSlicePlayerController;

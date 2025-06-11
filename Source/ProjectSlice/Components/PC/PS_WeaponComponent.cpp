@@ -19,6 +19,7 @@
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
+#include "ProjectSlice/GPE/PS_Projectile.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -289,15 +290,19 @@ void UPS_WeaponComponent::Fire()
 
 void UPS_WeaponComponent::GenerateImpactField()
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !_SightHitResult.bBlockingHit) return;
+	
 
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.Owner = _PlayerCharacter;
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_SightHitResult.ImpactPoint, _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100);
+	rot.Pitch = rot.Pitch - 90.0f;
 	
-	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint, FRotator::ZeroRotator, SpawnInfo);
+	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100, rot, SpawnInfo);
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(impactField));
