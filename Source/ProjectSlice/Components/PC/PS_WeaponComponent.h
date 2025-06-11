@@ -16,24 +16,6 @@ class AProjectSlicePlayerController;
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
-USTRUCT(BlueprintType, Category = "Struct")
-struct FSChaosFieldParams
-{
-	GENERATED_BODY()
-
-	FSChaosFieldParams(){};
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
-	TSoftClassPtr<AFieldSystemActor> FieldSystemActor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
-	float LifeSpan = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0"))
-	float RadialMagnitude = 200.0f;
-};
-
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
 {
@@ -147,7 +129,7 @@ protected:
 	void GenerateImpactField();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
-	FSChaosFieldParams FieldSystemParams;
+	TSoftClassPtr<AFieldSystemActor> FieldSystemActor;
 	
 #pragma endregion Destruction
 
