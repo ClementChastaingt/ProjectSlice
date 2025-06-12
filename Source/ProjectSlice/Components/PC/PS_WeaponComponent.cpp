@@ -174,7 +174,7 @@ void UPS_WeaponComponent::Fire()
 	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
 	 if(IsValid(currentChaosComponent))
 	 {
-	 	GenerateImpactField();
+	 	GenerateImpactField(_SightHitResult);
 	 	return;
 	 }
 	
@@ -287,9 +287,12 @@ void UPS_WeaponComponent::Fire()
 #pragma region Destruction
 //------------------
 
-void UPS_WeaponComponent::GenerateImpactField()
+#pragma region CanGenerateImpactField
+//------------------
+
+void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit)
 {
-	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !_SightHitResult.bBlockingHit) return;
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 	
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
@@ -297,21 +300,24 @@ void UPS_WeaponComponent::GenerateImpactField()
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_SightHitResult.ImpactPoint, _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100);
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint + targetHit.ImpactNormal * -100);
 	rot.Pitch = rot.Pitch - 90.0f;
 	rot.Yaw = TargetRackRotation.Roll;
 	
-	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100, rot, SpawnInfo);
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.ImpactPoint + targetHit.ImpactNormal * -100, rot, SpawnInfo);
 	
 	//Debug
-	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(impactField));
+	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
 
 	//Callback
-	OnImpulseChaosEvent.Broadcast(impactField);
+	OnSliceImpulseChaosEvent.Broadcast(_ImpactField);
 }
 
 //------------------
 
+#pragma endregion CanGenerateImpactField
+
+//------------------
 #pragma endregion Destruction
 
 #pragma region Sight

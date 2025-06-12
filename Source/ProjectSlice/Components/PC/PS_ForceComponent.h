@@ -7,13 +7,14 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_ForceComponent.generated.h"
 
 
 class AProjectSliceCharacter;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_ForceComponent : public UActorComponent
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
+class PROJECTSLICE_API UPS_ForceComponent : public UActorComponent, public IPS_CanGenerateImpactField
 {
 	GENERATED_BODY()
 
@@ -28,6 +29,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bDebugPush = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugChaos = false;
 
 public:
 	// Called every frame
@@ -182,4 +186,36 @@ private:
 	
 	//------------------
 #pragma endregion Cooldown
+
+#pragma region Destruction
+	//------------------
+
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Field OnForceImpulseChaosEvent;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+
+private:
+	UPROPERTY(Transient)
+	AFieldSystemActor* _ImpactField;
+
+
+#pragma region IPS_CanGenerateImpactField
+	//------------------
+
+protected:
+	UFUNCTION()
+	virtual void GenerateImpactField(const FHitResult& targetHit) override;
+
+	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+
+	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+
+#pragma endregion IPS_CanGenerateImpactField
+
+	//------------------
+#pragma endregion Destruction
 };

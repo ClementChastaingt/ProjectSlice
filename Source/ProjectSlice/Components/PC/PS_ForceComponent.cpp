@@ -3,6 +3,7 @@
 
 #include "PS_ForceComponent.h"
 
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "PhysicsEngine/PhysicsSettings.h"
@@ -171,6 +172,15 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		return A.Distance < B.Distance;
 	});
+
+	//TODO :: Made Chaos Imoulse
+	//Check if it's a destructible
+	// UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
+	// if(IsValid(currentChaosComponent))
+	// {
+	// 	GenerateImpactField(_SightHitResult);
+	// 	return;
+	// }
 	
 	//Impulse
 	for (FHitResult outHitResult : filteredHitResult)
@@ -302,6 +312,42 @@ void UPS_ForceComponent::AttachScrew()
 
 //------------------
 #pragma endregion Screw
+
+
+#pragma region Destruction
+//------------------
+
+#pragma region CanGenerateImpactField
+//------------------
+
+void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit)
+{
+	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
+	
+	//Spawn param
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = _PlayerCharacter;
+	SpawnInfo.Instigator = _PlayerCharacter;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint + targetHit.ImpactNormal * -100);
+	rot.Pitch = rot.Pitch - 90.0f;
+	
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.ImpactPoint + targetHit.ImpactNormal * -100, rot, SpawnInfo);
+	
+	//Debug
+	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
+
+	//Callback
+	OnForceImpulseChaosEvent.Broadcast(_ImpactField);
+}
+
+//------------------
+
+#pragma endregion CanGenerateImpactField
+
+//------------------
+#pragma endregion Destruction
 	
 	
 	

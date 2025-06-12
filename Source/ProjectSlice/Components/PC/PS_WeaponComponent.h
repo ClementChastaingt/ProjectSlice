@@ -124,16 +124,31 @@ protected:
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Field OnImpulseChaosEvent;
+	FOnPSDelegate_Field OnSliceImpulseChaosEvent;
 
 protected:
-		
-	UFUNCTION()
-	void GenerateImpactField();
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
-	TSoftClassPtr<AFieldSystemActor> FieldSystemActor;
-	
+	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+
+private:
+	UPROPERTY(Transient)
+	AFieldSystemActor* _ImpactField;
+
+
+#pragma region IPS_CanGenerateImpactField
+	//------------------
+
+protected:
+	UFUNCTION()
+	virtual void GenerateImpactField(const FHitResult& targetHit) override;
+
+	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+
+	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+
+#pragma endregion IPS_CanGenerateImpactField
+
+	//------------------
 #pragma endregion Destruction
 
 #pragma region Slice

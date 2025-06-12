@@ -8,6 +8,7 @@
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_HookComponent.generated.h"
 
 
@@ -35,8 +36,8 @@ public:
 	FVector CableEnd = FVector::ZeroVector;
 };
 
-UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
+UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
+class PROJECTSLICE_API UPS_HookComponent : public USceneComponent, public IPS_CanGenerateImpactField
 {
 	GENERATED_BODY()
 
@@ -53,10 +54,10 @@ class PROJECTSLICE_API UPS_HookComponent : public USceneComponent
 	UPhysicsConstraintComponent* HookPhysicConstraint = nullptr;
 
 	/** FirstPerson ConstraintAttach */
-	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	UPROPERTY(VisibleDefaultsOnly, Category="Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* ConstraintAttachSlave;
 
-	UPROPERTY(VisibleDefaultsOnly, Category=Root)
+	UPROPERTY(VisibleDefaultsOnly, Category="Component", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* ConstraintAttachMaster;
 
 	// UPROPERTY(VisibleInstanceOnly, Category="Parameters|Component", meta = (AllowPrivateAccess = "true"))
@@ -110,6 +111,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugPull = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugChaos = false;
+	
 private:
 	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
@@ -614,4 +618,36 @@ private:
 	bool _bUpdateMasterContraintByTime;
 
 #pragma endregion Swing
+
+#pragma region Destruction
+	//------------------
+
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Field OnHookImpulseChaosEvent;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+
+private:
+	UPROPERTY(Transient)
+	AFieldSystemActor* _ImpactField;
+
+
+#pragma region IPS_CanGenerateImpactField
+	//------------------
+
+protected:
+	UFUNCTION()
+	virtual void GenerateImpactField(const FHitResult& targetHit) override;
+
+	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+
+	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+
+#pragma endregion IPS_CanGenerateImpactField
+
+	//------------------
+#pragma endregion Destruction
 };

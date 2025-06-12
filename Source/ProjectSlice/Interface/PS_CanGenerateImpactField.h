@@ -30,18 +30,7 @@ public:
 	virtual AFieldSystemActor* GetImpactField_Implementation() const { return nullptr; }
 
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const = 0;
-
-	virtual void GenerateImpactField() const;
-
-	// UPROPERTY(BlueprintAssignable)
-	// FOnPSDelegate_Field OnImpulseChaosEvent;
-
-protected:
-	// UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
-	// bool bDebugChaos = false;
 	
-private:
-	// UPROPERTY(DuplicateTransient)
-	// AFieldSystemActor* _ImpactField = nullptr;
+	virtual void GenerateImpactField(const FHitResult& targetHit);
 	
 };

@@ -6,7 +6,7 @@
 
 
 // Add default functionality here for any IPS_CanGenerateImpactField functions that are not pure virtual.
-void IPS_CanGenerateImpactField::GenerateImpactField() const
+void IPS_CanGenerateImpactField::GenerateImpactField(const FHitResult& targetHit)
 {
 	// if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !_SightHitResult.bBlockingHit) return;
 	//
