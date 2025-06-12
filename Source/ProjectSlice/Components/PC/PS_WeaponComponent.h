@@ -12,6 +12,7 @@
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "ProjectSlice/GPE/PS_Projectile.h"
+#include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_WeaponComponent.generated.h"
 
 class AProjectSlicePlayerController;
@@ -19,7 +20,7 @@ class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
-class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent
+class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent, public IPS_CanGenerateImpactField
 {
 	GENERATED_BODY()
 	

@@ -19,7 +19,6 @@
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
-#include "ProjectSlice/GPE/PS_Projectile.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -292,7 +291,6 @@ void UPS_WeaponComponent::GenerateImpactField()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !_SightHitResult.bBlockingHit) return;
 	
-
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.Owner = _PlayerCharacter;
@@ -301,6 +299,7 @@ void UPS_WeaponComponent::GenerateImpactField()
 
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_SightHitResult.ImpactPoint, _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100);
 	rot.Pitch = rot.Pitch - 90.0f;
+	rot.Yaw = TargetRackRotation.Roll;
 	
 	AFieldSystemActor* impactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100, rot, SpawnInfo);
 	

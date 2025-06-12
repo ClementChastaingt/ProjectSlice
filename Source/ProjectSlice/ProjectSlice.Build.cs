@@ -9,6 +9,6 @@ public class ProjectSlice : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "PhysicsCore", "ProceduralMeshComponent", "EnhancedInput", "CableComponent", "GeometryCollectionEngine", "FieldSystemEngine"});
-		PrivateDependencyModuleNames.AddRange(new string[] { "CableComponent"});
+		PrivateDependencyModuleNames.AddRange(new string[] { "CableComponent", "AITestSuite" });
 	}
 }
