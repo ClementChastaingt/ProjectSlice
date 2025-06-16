@@ -293,6 +293,12 @@ void UPS_WeaponComponent::Fire()
 void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
+
+	if(!IsValid(FieldSystemActor.Get()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
+		return;
+	}
 	
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
@@ -300,11 +306,11 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit)
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint + targetHit.ImpactNormal * -100);
-	rot.Pitch = rot.Pitch - 90.0f;
-	rot.Yaw = TargetRackRotation.Roll;
-	
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.ImpactPoint + targetHit.ImpactNormal * -100, rot, SpawnInfo);
+	FVector loc =  targetHit.ImpactPoint + UKismetMathLibrary::GetDirectionUnitVector(targetHit.ImpactPoint, targetHit.TraceStart) * -100;
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.TraceStart);
+	rot.Roll = -TargetRackRotation.Roll;
+
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));

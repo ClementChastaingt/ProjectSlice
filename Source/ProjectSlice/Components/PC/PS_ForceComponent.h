@@ -27,7 +27,7 @@ protected:
 	virtual void BeginPlay() override;
 	void UpdatePushTargetLoc();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bDebugPush = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")

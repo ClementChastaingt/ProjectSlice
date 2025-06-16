@@ -172,37 +172,49 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		return A.Distance < B.Distance;
 	});
-
-	//TODO :: Made Chaos Imoulse
-	//Check if it's a destructible
-	// UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
-	// if(IsValid(currentChaosComponent))
-	// {
-	// 	GenerateImpactField(_SightHitResult);
-	// 	return;
-	// }
+	
 	
 	//Impulse
 	for (FHitResult outHitResult : filteredHitResult)
 	{
-		UMeshComponent* outComp = Cast<UMeshComponent>(outHitResult.GetComponent());
-		if(!IsValid(outComp)) continue;
-			
-		//Calculate mass for weight force 
-		mass = UPSFl::GetObjectUnifiedMass(outComp);
+		//Check comp type
+		UMeshComponent* outMeshComp = Cast<UMeshComponent>(outHitResult.GetComponent());
+		UGeometryCollectionComponent* outGeometryComp = Cast<UGeometryCollectionComponent>(outHitResult.GetComponent());
+		
+		if(!IsValid(outMeshComp) || !IsValid(outGeometryComp)) continue;
 
-		//Impulse with delay
-		FTimerHandle timerHandle;
-		FTimerDelegate timerDelegate;
-		
+		//Determine response latency 
 		//start start + (dir * ConeLength)
-		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outComp->GetComponentLocation());
+		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
 		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength /** FMath::DegreesToRadians(ConeAngleDegrees)*/);
-			
-		timerDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outComp, start + dir * (force * mass)); 
-		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, duration, false);
+		const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
 		
-		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outComp->GetOwner()->GetActorNameOrLabel(), *outComp->GetName(), force, mass, PushForce, alphaInput, duration);
+		//Chaos
+		if(IsValid(outGeometryComp))
+		{
+			FTimerHandle timerChaosHandle;
+			FTimerDelegate timerChaosDelegate;
+
+			//TODO :: Add radius and spawn at sphere loc not hitloc
+			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult); 
+			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
+		}
+
+		//Impulse
+		if(IsValid(outMeshComp))
+		{
+			//Calculate mass for weight force 
+			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
+
+			//Impulse with delay
+			FTimerHandle timerImpulseHandle;
+			FTimerDelegate timerImpulseDelegate;
+				
+			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, start + dir * (force * mass)); 
+			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
+			
+			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
+		}
 	}
 
 	//---Feedbacks----
@@ -323,6 +335,12 @@ void UPS_ForceComponent::AttachScrew()
 void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
+
+	if(!IsValid(FieldSystemActor.Get()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
+		return;
+	}
 	
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;

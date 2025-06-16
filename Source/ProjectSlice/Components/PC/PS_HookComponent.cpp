@@ -1634,6 +1634,12 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
+
+	if(!IsValid(FieldSystemActor.Get()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
+		return;
+	}
 	
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
