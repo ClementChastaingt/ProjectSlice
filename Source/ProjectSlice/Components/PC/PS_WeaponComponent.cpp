@@ -314,7 +314,6 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 	DrawDebugLine(GetWorld(), loc, loc + rot.Vector() * 500, FColor::Yellow, false, 2, 10, 3);
 
 	_ImpactFieldOrientation = (loc + rot.Vector() * 500);
-	_ImpactFieldOrientation.Normalize();
 
 	// FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.TraceStart);
 	// rot.Roll = -TargetRackRotation.Roll;
