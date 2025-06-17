@@ -290,7 +290,7 @@ void UPS_WeaponComponent::Fire()
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit)
+void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 
@@ -306,10 +306,25 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit)
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FVector loc =  targetHit.ImpactPoint + UKismetMathLibrary::GetDirectionUnitVector(targetHit.ImpactPoint, targetHit.TraceStart) * -100;
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.TraceStart);
+	//Determine base loc && rot
+	FVector loc =  targetHit.ImpactPoint + UKismetMathLibrary::GetDirectionUnitVector(targetHit.TraceStart, targetHit.ImpactPoint) * 100;
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, targetHit.ImpactPoint);
 	rot.Roll = -TargetRackRotation.Roll;
 
+	DrawDebugLine(GetWorld(), loc, loc + rot.Vector() * 500, FColor::Yellow, false, 2, 10, 3);
+
+	_ImpactFieldOrientation = (loc + rot.Vector() * 500);
+	_ImpactFieldOrientation.Normalize();
+
+	// FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.TraceStart);
+	// rot.Roll = -TargetRackRotation.Roll;
+	// _ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
+
+	//Orient to correspond rack rot
+	// FTransform impactTransform = FTransform(rot, loc, FVector::One());
+	// FRotator localRot= (rot.Quaternion() * impactTransform.GetRotation()).Rotator();
+	//localRot.Roll = TargetRackRotation.Roll;
+		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	
 	//Debug

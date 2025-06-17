@@ -25,6 +25,7 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	
 	void UpdatePushTargetLoc();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
@@ -201,14 +202,16 @@ protected:
 private:
 	UPROPERTY(Transient)
 	AFieldSystemActor* _ImpactField;
-
+	
+	UPROPERTY(Transient)
+	FVector _FieldVelOrientation;
 
 #pragma region IPS_CanGenerateImpactField
 	//------------------
 
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(const FHitResult& targetHit) override;
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
 
 	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

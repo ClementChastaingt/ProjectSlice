@@ -126,6 +126,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Field OnSliceImpulseChaosEvent;
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetImpactFieldOrientation() const{return _ImpactFieldOrientation;}
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
 	TSubclassOf<AFieldSystemActor> FieldSystemActor;
@@ -134,13 +137,15 @@ private:
 	UPROPERTY(Transient)
 	AFieldSystemActor* _ImpactField;
 
-
+	UPROPERTY(Transient)
+	FVector _ImpactFieldOrientation;
+	
 #pragma region IPS_CanGenerateImpactField
 	//------------------
 
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(const FHitResult& targetHit) override;
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
 
 	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

@@ -186,17 +186,19 @@ void UPS_ForceComponent::ReleasePush()
 		//Determine response latency 
 		//start start + (dir * ConeLength)
 		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
-		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength /** FMath::DegreesToRadians(ConeAngleDegrees)*/);
+		const float duration = bIsQuickPush ? 0.01f : UKismetMathLibrary::SafeDivide(dist, ConeLength);
 		const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
+
+		DrawDebugPoint(GetWorld(), outHitResult.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
 		
 		//Chaos
+		//TODO :: Made ImpactField moving ike the VFX
 		if(IsValid(outGeometryComp))
 		{
 			FTimerHandle timerChaosHandle;
 			FTimerDelegate timerChaosDelegate;
-
-			//TODO :: Add radius and spawn at sphere loc not hitloc
-			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult); 
+			
+			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
 		}
 
@@ -325,14 +327,13 @@ void UPS_ForceComponent::AttachScrew()
 //------------------
 #pragma endregion Screw
 
-
 #pragma region Destruction
 //------------------
 
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit)
+void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 
@@ -348,10 +349,11 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit)
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint + targetHit.ImpactNormal * -100);
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, _PlayerCharacter->GetWeaponComponent()->GetSightTarget());
 	rot.Pitch = rot.Pitch - 90.0f;
-	
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.ImpactPoint + targetHit.ImpactNormal * -100, rot, SpawnInfo);
+		
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.Location + targetHit.Normal * -200, rot, SpawnInfo);
+	_ImpactField->SetActorScale3D((extent* 2) / 100);
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));

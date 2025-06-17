@@ -1631,7 +1631,7 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit)
+void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 

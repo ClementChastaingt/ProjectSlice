@@ -28,9 +28,13 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category="CanUseImpactField")
 	AFieldSystemActor* GetImpactField() const;
 	virtual AFieldSystemActor* GetImpactField_Implementation() const { return nullptr; }
-
+	
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const = 0;
 	
-	virtual void GenerateImpactField(const FHitResult& targetHit);
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero());
+
+private:
+	
+	FVector _FieldVelOrientation = FVector::ZeroVector;
 	
 };
