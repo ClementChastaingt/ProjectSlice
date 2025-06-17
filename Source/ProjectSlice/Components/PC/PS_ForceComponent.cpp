@@ -186,7 +186,7 @@ void UPS_ForceComponent::ReleasePush()
 		//Determine response latency 
 		//start start + (dir * ConeLength)
 		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
-		const float duration = bIsQuickPush ? 0.01f : UKismetMathLibrary::SafeDivide(dist, ConeLength);
+		const float duration = /*bIsQuickPush ? 0.01f : */UKismetMathLibrary::SafeDivide(dist, ConeLength);
 		const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
 
 		DrawDebugPoint(GetWorld(), outHitResult.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
