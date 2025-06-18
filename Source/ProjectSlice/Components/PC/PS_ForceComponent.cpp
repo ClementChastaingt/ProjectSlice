@@ -3,12 +3,11 @@
 
 #include "PS_ForceComponent.h"
 
+#include "Field/FieldSystemComponent.h"
 #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
-#include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
@@ -349,11 +348,23 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+	FVector loc = targetHit.Location + targetHit.Normal * -200;
+	//FVector loc = targetHit.TraceStart;
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, _PlayerCharacter->GetWeaponComponent()->GetSightTarget());
 	rot.Pitch = rot.Pitch - 90.0f;
 		
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.Location + targetHit.Normal * -200, rot, SpawnInfo);
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D((extent* 2) / 100);
+
+	// USetField* SetDynamicState = NewObject<USetField>();
+	// SetDynamicState->SetFieldTarget(EFieldPhysicsType::Field_DynamicState);
+	// SetDynamicState->SetMetaData(Chaos::EFieldObjectType::Field_ObjectType_Clustered);
+	//
+	// UStrainField* Strain = NewObject<UStrainField>();
+	// Strain->SetMagnitude(100000.f);
+	//
+	// _ImpactField->GetFieldSystemComponent()->ApplyPhysicsField(true, EFieldPhysicsType::Field_ExternalClusterStrain, nullptr, Strain);
+	// _ImpactField->GetFieldSystemComponent()->ApplyPhysicsField(true, EFieldPhysicsType::Field_DynamicState, nullptr, SetDynamicState);
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
