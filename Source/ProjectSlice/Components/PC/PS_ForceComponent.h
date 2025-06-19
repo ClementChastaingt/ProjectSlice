@@ -152,6 +152,12 @@ private:
 	UPROPERTY(Transient)
 	float _ReleasePushTimestamp;
 
+	UPROPERTY(Transient)
+	FVector _StartForcePushLoc;
+	
+	UPROPERTY(Transient)
+	FVector _DirForcePush;
+
 #pragma endregion Push
 
 #pragma region Screw

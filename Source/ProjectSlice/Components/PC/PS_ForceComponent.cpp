@@ -131,18 +131,17 @@ void UPS_ForceComponent::ReleasePush()
 	float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 	
 	//Determine dir
-	FVector start, dir;
 	if(bIsQuickPush)
 	{
-		dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
-		dir.Normalize();
-		start = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + dir;
+		_DirForcePush = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+		_DirForcePush.Normalize();
+		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush;
 	}
 	else
 	{
-		dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
-		dir.Normalize();
-		start = _CurrentPushHitResult.Location - dir * (ConeLength/3);
+		_DirForcePush = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
+		_DirForcePush.Normalize();
+		_StartForcePushLoc = _CurrentPushHitResult.Location - _DirForcePush * (ConeLength/3);
 	}
 	
 	//Cone raycast
@@ -150,7 +149,7 @@ void UPS_ForceComponent::ReleasePush()
 	TArray<AActor*> actorsToIgnore;
 	actorsToIgnore.AddUnique(_PlayerCharacter);
 	
-	UPSFl::SweepConeMultiByChannel(GetWorld(),start, dir,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
+	UPSFl::SweepConeMultiByChannel(GetWorld(),_StartForcePushLoc, _DirForcePush,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
 	// Remove duplicate components
 	TSet<UPrimitiveComponent*> uniqueComp;
@@ -180,20 +179,19 @@ void UPS_ForceComponent::ReleasePush()
 		UMeshComponent* outMeshComp = Cast<UMeshComponent>(outHitResult.GetComponent());
 		UGeometryCollectionComponent* outGeometryComp = Cast<UGeometryCollectionComponent>(outHitResult.GetComponent());
 		
-		if(!IsValid(outMeshComp) || !IsValid(outGeometryComp)) continue;
+		if(!IsValid(outMeshComp) && !IsValid(outGeometryComp)) continue;
 
 		//Determine response latency 
 		//start start + (dir * ConeLength)
 		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
 		const float duration = /*bIsQuickPush ? 0.01f : */UKismetMathLibrary::SafeDivide(dist, ConeLength);
-		const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
-
-		DrawDebugPoint(GetWorld(), outHitResult.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
 		
 		//Chaos
-		//TODO :: Made ImpactField moving ike the VFX
 		if(IsValid(outGeometryComp))
 		{
+			const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
+
+			//Destruct with delay for match with VFX
 			FTimerHandle timerChaosHandle;
 			FTimerDelegate timerChaosDelegate;
 			
@@ -207,11 +205,11 @@ void UPS_ForceComponent::ReleasePush()
 			//Calculate mass for weight force 
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 
-			//Impulse with delay
+			//Impulse with delay for match with VFX
 			FTimerHandle timerImpulseHandle;
 			FTimerDelegate timerImpulseDelegate;
 				
-			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, start + dir * (force * mass)); 
+			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
 			
 			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
@@ -220,8 +218,8 @@ void UPS_ForceComponent::ReleasePush()
 
 	//---Feedbacks----
 	//Push cone burst feedback
-	_PushForceRotation = UKismetMathLibrary::FindLookAtRotation(start, start + dir * ConeLength).Clamp();
-	OnSpawnPushBurst.Broadcast(start, dir * ConeLength);
+	_PushForceRotation = UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength).Clamp();
+	OnSpawnPushBurst.Broadcast(_StartForcePushLoc, _DirForcePush * ConeLength);
 		
 	//Play the sound if specified
 	if(IsValid(PushSound))
@@ -348,23 +346,17 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FVector loc = targetHit.Location + targetHit.Normal * -200;
+	//FVector loc = targetHit.Location + targetHit.Normal * -200;
+	//FVector loc = targetHit.Location + UKismetMathLibrary::GetDirectionUnitVector(targetHit.TraceStart, targetHit.Location) * 100;
+	FVector loc = targetHit.Location;
 	//FVector loc = targetHit.TraceStart;
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, _PlayerCharacter->GetWeaponComponent()->GetSightTarget());
+	DrawDebugPoint(GetWorld(), targetHit.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
+		
+	FRotator rot = bIsQuickPush ? UKismetMathLibrary::FindLookAtRotation(_PlayerCharacter->GetWeaponComponent()->GetSightStart(), _PlayerCharacter->GetWeaponComponent()->GetSightTarget()) : UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _DirForcePush * ConeLength);
 	rot.Pitch = rot.Pitch - 90.0f;
 		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
-	_ImpactField->SetActorScale3D((extent* 2) / 100);
-
-	// USetField* SetDynamicState = NewObject<USetField>();
-	// SetDynamicState->SetFieldTarget(EFieldPhysicsType::Field_DynamicState);
-	// SetDynamicState->SetMetaData(Chaos::EFieldObjectType::Field_ObjectType_Clustered);
-	//
-	// UStrainField* Strain = NewObject<UStrainField>();
-	// Strain->SetMagnitude(100000.f);
-	//
-	// _ImpactField->GetFieldSystemComponent()->ApplyPhysicsField(true, EFieldPhysicsType::Field_ExternalClusterStrain, nullptr, Strain);
-	// _ImpactField->GetFieldSystemComponent()->ApplyPhysicsField(true, EFieldPhysicsType::Field_DynamicState, nullptr, SetDynamicState);
+	_ImpactField->SetActorScale3D((extent * 2) / 100);
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
