@@ -212,12 +212,18 @@ private:
 	UPROPERTY(Transient)
 	FVector _FieldVelOrientation;
 
+	UPROPERTY(Transient)
+	float _GenerateFieldTimestamp;
+
+
 #pragma region IPS_CanGenerateImpactField
 	//------------------
 
 protected:
 	UFUNCTION()
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
+
+	virtual void MoveImpactField() override;
 
 	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

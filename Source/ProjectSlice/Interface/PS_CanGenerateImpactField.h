@@ -33,6 +33,8 @@ public:
 	
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero());
 
+	virtual void MoveImpactField() {};
+
 private:
 	
 	FVector _FieldVelOrientation = FVector::ZeroVector;

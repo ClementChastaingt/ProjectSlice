@@ -87,6 +87,8 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	
 	UpdatePushTargetLoc();
+
+	MoveImpactField();
 }
 
 
@@ -346,23 +348,49 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+	//Spawn Location
 	//FVector loc = targetHit.Location + targetHit.Normal * -200;
 	//FVector loc = targetHit.Location + UKismetMathLibrary::GetDirectionUnitVector(targetHit.TraceStart, targetHit.Location) * 100;
 	FVector loc = targetHit.Location;
 	//FVector loc = targetHit.TraceStart;
+
 	DrawDebugPoint(GetWorld(), targetHit.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
-		
-	FRotator rot = bIsQuickPush ? UKismetMathLibrary::FindLookAtRotation(_PlayerCharacter->GetWeaponComponent()->GetSightStart(), _PlayerCharacter->GetWeaponComponent()->GetSightTarget()) : UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _DirForcePush * ConeLength);
+
+	//Spawn Rotation
+	FRotator rot = bIsQuickPush ? UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, targetHit.Location)
+	: UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _DirForcePush * ConeLength);
 	rot.Pitch = rot.Pitch - 90.0f;
 		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D((extent * 2) / 100);
+
+	//Start time
+	_GenerateFieldTimestamp = GetWorld()->GetTimeSeconds();
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
 
 	//Callback
 	OnForceImpulseChaosEvent.Broadcast(_ImpactField);
+}
+
+void UPS_ForceComponent::MoveImpactField()
+{
+	if(!IsValid(_ImpactField) || !IsValid(GetWorld())) return;
+
+	const float dist = UKismetMathLibrary::Vector_Distance(_ImpactField->GetActorLocation(), _DirForcePush * ConeLength);
+	const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength);
+
+	UE_LOG(LogTemp, Error, TEXT("duration %f, dist  %f"), duration, dist);
+	
+	//Move
+	//const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _GenerateFieldTimestamp, );
+	//_ImpactField->SetActorLocation(FMath::Lerp(,alpha));
+
+	//Scale
+	const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
+	_ImpactField->SetActorScale3D((FVector::One() * radius * 2) / 100);
+	
 }
 
 //------------------
