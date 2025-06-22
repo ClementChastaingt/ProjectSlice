@@ -8,6 +8,7 @@
 #include "CableComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Materials/MaterialExpressionSkyAtmosphereLightIlluminance.h"
@@ -855,7 +856,7 @@ void UPS_HookComponent::HookObject()
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
 	
 	//If not blocking exit
-	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())) || !_CurrentHookHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass()))
+	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())))
 	{
 		OnHookObjectFailed.Broadcast();
 		return;
@@ -1138,25 +1139,32 @@ void UPS_HookComponent::PowerCablePull()
 {
 	if (!IsValid(_PlayerCharacter)
 		|| !IsValid(_AttachedMesh)
-		|| !_AttachedMesh->IsSimulatingPhysics()
 		|| !CableListArray.IsValidIndex(0)
 		|| !IsValid(GetWorld()))
 		return;
-
-	//TODO :: Made Chaos Imoulse
-	//Check if it's a destructible
-	// UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
-	// if(IsValid(currentChaosComponent))
-	// {
-	// 	GenerateImpactField(_SightHitResult);
-	// 	return;
-	// }
 	
 	//Current dist to attach loc
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	const float alpha = CalculatePullAlpha(baseToMeshDist);
+
+	//Check if it's a destructible and use Chaos logic if it is
+	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
+	if(IsValid(currentChaosComponent))
+	{
+		if(IsValid(_ImpactField)) return;
+
+		if(/*!_bCablePowerPull ||*/ _bPlayerIsSwinging) return;
+		
+		const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, alpha);
+		GenerateImpactField(_CurrentHookHitResult,  FVector::One() * radius);
+		UE_LOG(LogTemp, Warning, TEXT("%S :: radius %f, alpha %f"), __FUNCTION__, radius, alpha);
+		return;
+	}
+
+	//Check if object using physic
+	if (!_AttachedMesh->IsSimulatingPhysics()) return;
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
 	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
@@ -1640,6 +1648,10 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 		UE_LOG(LogTemp, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
 		return;
 	}
+
+	//Work var
+	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0);
+	FVector masterLoc = bMustAttachtoLastPoint && CableCapArray.IsValidIndex(0) ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
 	
 	//Spawn param
 	FActorSpawnParameters SpawnInfo;
@@ -1647,13 +1659,19 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	SpawnInfo.Instigator = _PlayerCharacter;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint + targetHit.ImpactNormal * -100);
+	//Spawn Rotation
+	const FVector dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * 100;
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint - dir);
 	rot.Pitch = rot.Pitch - 90.0f;
 	
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), targetHit.ImpactPoint + targetHit.ImpactNormal * -100, rot, SpawnInfo);
+	//Spawn scale
+	FVector scale = extent;
+	
+	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
+	_ImpactField->SetActorScale3D(scale);
 	
 	//Debug
-	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
+	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i, scale %s"), __FUNCTION__, IsValid(_ImpactField), *scale.ToString());
 
 	//Callback
 	OnHookImpulseChaosEvent.Broadcast(_ImpactField);

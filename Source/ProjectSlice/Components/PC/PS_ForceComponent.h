@@ -202,19 +202,30 @@ public:
 	FOnPSDelegate_Field OnForceImpulseChaosEvent;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="cm", UIMin="0", ClampMin="0"))
+	float FieldSystemMoveTargetLocFwdOffset = 100;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="s", UIMin="0", ClampMin="0"))
+	float FieldSystemDestroyingDelay = 0.2f;
 
 private:
 	UPROPERTY(Transient)
 	AFieldSystemActor* _ImpactField;
-	
+
 	UPROPERTY(Transient)
-	FVector _FieldVelOrientation;
+	FTransform _FieldTransformOnGeneration;
 
 	UPROPERTY(Transient)
 	float _GenerateFieldTimestamp;
 
+	UPROPERTY(Transient)
+	float _MoveFieldDuration;
+
+	UPROPERTY(Transient)
+	bool _bCanMoveField;
 
 #pragma region IPS_CanGenerateImpactField
 	//------------------

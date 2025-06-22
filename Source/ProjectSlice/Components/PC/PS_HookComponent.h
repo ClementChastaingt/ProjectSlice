@@ -627,8 +627,11 @@ public:
 	FOnPSDelegate_Field OnHookImpulseChaosEvent;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
+	float FieldRadiusMulitiplicator = 10.0f;
 
 private:
 	UPROPERTY(Transient)

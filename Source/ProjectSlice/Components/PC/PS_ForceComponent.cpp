@@ -184,14 +184,14 @@ void UPS_ForceComponent::ReleasePush()
 		if(!IsValid(outMeshComp) && !IsValid(outGeometryComp)) continue;
 
 		//Determine response latency 
-		//start start + (dir * ConeLength)
-		const float dist = UKismetMathLibrary::Vector_Distance(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
-		const float duration = /*bIsQuickPush ? 0.01f : */UKismetMathLibrary::SafeDivide(dist, ConeLength);
+		const float dist = UKismetMathLibrary::Vector_DistanceSquared(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
+		//const float dist = UKismetMathLibrary::Vector_Distance(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength);
+		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength * ConeLength);
 		
 		//Chaos
-		if(IsValid(outGeometryComp))
+		if(IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
 		{
-			const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
+			const float radius = FMath::Sqrt(dist) * FMath::DegreesToRadians(ConeAngleDegrees);
 
 			//Destruct with delay for match with VFX
 			FTimerHandle timerChaosHandle;
@@ -199,6 +199,8 @@ void UPS_ForceComponent::ReleasePush()
 			
 			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
+
+			UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);
 		}
 
 		//Impulse
@@ -349,23 +351,22 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	//Spawn Location
-	//FVector loc = targetHit.Location + targetHit.Normal * -200;
-	//FVector loc = targetHit.Location + UKismetMathLibrary::GetDirectionUnitVector(targetHit.TraceStart, targetHit.Location) * 100;
 	FVector loc = targetHit.Location;
-	//FVector loc = targetHit.TraceStart;
-
-	DrawDebugPoint(GetWorld(), targetHit.TraceStart, 20.f, FColor::Orange, true, -1, 10.0f);
-
+		
 	//Spawn Rotation
-	FRotator rot = bIsQuickPush ? UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, targetHit.Location)
-	: UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _DirForcePush * ConeLength);
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength);
 	rot.Pitch = rot.Pitch - 90.0f;
+
+	//Spawn scale
+	FVector scale = (extent * 2) / 100;
 		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
-	_ImpactField->SetActorScale3D((extent * 2) / 100);
-
-	//Start time
+	_ImpactField->SetActorScale3D(scale);
+	
+	//Stock move field var
 	_GenerateFieldTimestamp = GetWorld()->GetTimeSeconds();
+	_FieldTransformOnGeneration = FTransform(rot, loc, scale);
+	_bCanMoveField = true;
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
@@ -378,19 +379,36 @@ void UPS_ForceComponent::MoveImpactField()
 {
 	if(!IsValid(_ImpactField) || !IsValid(GetWorld())) return;
 
-	const float dist = UKismetMathLibrary::Vector_Distance(_ImpactField->GetActorLocation(), _DirForcePush * ConeLength);
-	const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength);
+	if(!_bCanMoveField) return;
 
-	UE_LOG(LogTemp, Error, TEXT("duration %f, dist  %f"), duration, dist);
+	//Init work var
+	const float moveDist = ConeLength + FieldSystemMoveTargetLocFwdOffset;
+	const FVector targetLoc = _StartForcePushLoc + _DirForcePush * moveDist;
+
+	const float distFromStart = UKismetMathLibrary::Vector_DistanceSquared(_FieldTransformOnGeneration.GetLocation(), targetLoc);
+	const float distToTarget = UKismetMathLibrary::Vector_DistanceSquared(_ImpactField->GetActorLocation(),targetLoc);
+	
+	const float moveDuration = UKismetMathLibrary::SafeDivide(FMath::Sqrt(distFromStart), moveDist);
+
+	//Override life span
+	const float newLifeSpan = moveDuration + FieldSystemDestroyingDelay;
+	if(_ImpactField->GetLifeSpan() != newLifeSpan) _ImpactField->SetLifeSpan(moveDuration + FieldSystemDestroyingDelay);
 	
 	//Move
-	//const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _GenerateFieldTimestamp, );
-	//_ImpactField->SetActorLocation(FMath::Lerp(,alpha));
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _GenerateFieldTimestamp, _GenerateFieldTimestamp + moveDuration, 0.0f, 1.0f);
+	_ImpactField->SetActorLocation(FMath::Lerp(_FieldTransformOnGeneration.GetLocation(),targetLoc,alpha));
 
 	//Scale
-	const float radius = dist * FMath::DegreesToRadians(ConeAngleDegrees);
-	_ImpactField->SetActorScale3D((FVector::One() * radius * 2) / 100);
-	
+	const float radius = FMath::Abs((FMath::Sqrt(distToTarget) - FMath::Sqrt(distFromStart)) * FMath::DegreesToRadians(ConeAngleDegrees));
+	_ImpactField->SetActorScale3D(_FieldTransformOnGeneration.GetScale3D() + ((FVector::One() * radius * 2) / 100));
+
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: duration %f, lifespan %f,  distFromStart %f, distToTarget %f, radiusOffset %f, alpha %f"),__FUNCTION__, moveDuration, _ImpactField->GetLifeSpan(),  distFromStart, distToTarget, radius, alpha);
+
+	//Stop moving
+	if (alpha >= 1.0f)
+	{
+		_bCanMoveField = false;
+	}
 }
 
 //------------------
