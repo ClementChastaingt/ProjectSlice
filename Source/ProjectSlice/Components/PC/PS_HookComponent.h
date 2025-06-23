@@ -186,9 +186,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetAlphaPull() const{return _AlphaPull;}
 
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE float GetAlphaChaos() const{return _AlphaChaos;}
-
 protected:
 	//Status	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope",
@@ -366,9 +363,6 @@ private:
 	UPROPERTY(Transient)
 	float _AlphaPull;
 
-	UPROPERTY(Transient)
-    float _AlphaChaos;
-
 #pragma endregion Cable
 
 #pragma region Grapple
@@ -417,6 +411,9 @@ public:
 
 	UFUNCTION()
 	void ResetWinde(const FInputActionInstance& inputActionInstance);
+
+	UFUNCTION(BlueprintCallable)
+	float GetAlphaWinde() const{return _AlphaWinde;}
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsCableWinderInUse() const{return _bCableWinderIsActive;}
@@ -653,6 +650,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	FFloatInterval FieldRadialVelMagnitudeRange = FFloatInterval(0.0f, 750.0f);
+
+	UFUNCTION()
+	void OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor);
 
 private:
 	UPROPERTY(Transient)

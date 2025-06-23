@@ -49,7 +49,7 @@
 #define Profile_GPE "GPE"
 #define Profile_Projectile "Projectile"
 #define Profile_Parkour "Parkourable"
-
+#define Profile_Chaos "ChaosField"
 
 //__________________________________________________
 #pragma endregion ProfilePreset

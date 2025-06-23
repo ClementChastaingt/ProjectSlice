@@ -220,7 +220,7 @@ void UPS_HookComponent::InitArmPhysicalAnimation()
 	
 	if(!IsValid(_PhysicAnimComp)) return;
 	
-	if(bDebugArm) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if(bDebugArm) UE_LOG(LogActorComponent, Log, TEXT("%S"), __FUNCTION__);
 
 	//Set mesh with Arm
 	_PlayerCharacter->GetPhysicAnimComponent()->SetSkeletalMeshComponent(GetHookThrower());
@@ -230,7 +230,7 @@ void UPS_HookComponent::ToggleArmPhysicalAnimation(const bool bActivate)
 {
 	if(!IsValid(_PhysicAnimComp) || !IsValid(HookThrower) || !IsValid(GetWorld())) return;
 
-	if(bDebugArm) UE_LOG(LogTemp, Log, TEXT("%S :: bActivate %i"), __FUNCTION__, bActivate);
+	if(bDebugArm) UE_LOG(LogActorComponent, Log, TEXT("%S :: bActivate %i"), __FUNCTION__, bActivate);
 	
 	//Tweak PhysicAnimComp
 	if(bActivate)
@@ -420,7 +420,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, true);
 	if (!IsValid(newCable))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: localNewCable Invalid"), __FUNCTION__);
+		UE_LOG(LogActorComponent, Error, TEXT("%S :: localNewCable Invalid"), __FUNCTION__);
 		return;
 	}
 
@@ -474,7 +474,7 @@ void UPS_HookComponent::WrapCableAddByLast()
 	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, false);
 	if (!IsValid(newCable))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: localNewCable Invalid"),__FUNCTION__);
+		UE_LOG(LogActorComponent, Error, TEXT("%S :: localNewCable Invalid"),__FUNCTION__);
 		return;
 	}
 
@@ -509,7 +509,7 @@ void UPS_HookComponent::UnwrapCableByFirst()
 	
 	if(!CablePointUnwrapAlphaArray.IsValidIndex(0))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
+		UE_LOG(LogActorComponent, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
 		return;
 	}
 
@@ -600,7 +600,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 	float cablePointUnwrapAlphaLastIndex = CablePointUnwrapAlphaArray.Num()-1;
 	if(!CablePointUnwrapAlphaArray.IsValidIndex(cablePointUnwrapAlphaLastIndex))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
+		UE_LOG(LogActorComponent, Error, TEXT("%S :: CablePointUnwrapAlphaArray[%i] Invalid"),__FUNCTION__, CablePointUnwrapAlphaArray.Num()-1);
 		return;
 	}
 	
@@ -738,7 +738,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	UStaticMeshComponent* newCapMesh = Cast<UStaticMeshComponent>(GetOwner()->AddComponentByClass(UStaticMeshComponent::StaticClass(), true, capsRelativeTransform,false));
 	if (!IsValid(newCapMesh))
 	{
-		UE_LOG(LogTemp, Error, TEXT("PS_HookComponent :: newCapMesh Invalid"));
+		UE_LOG(LogActorComponent, Error, TEXT("PS_HookComponent :: newCapMesh Invalid"));
 		return;
 	}
 
@@ -816,7 +816,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		const float max = distBetCable * CableMaxLengthMultiplicator;
 		const float newLenght = FMath::Lerp(max, min, (alphaTense / index));
 
-		//UE_LOG(LogTemp, Error, TEXT("%S :: index %i, distBetCable %f, max %f min %f, newLenght %f, solverIterations %i"),__FUNCTION__, i,distBetCable, max,min, newLenght, newSolverIterations); 
+		//UE_LOG(LogActorComponent, Error, TEXT("%S :: index %i, distBetCable %f, max %f min %f, newLenght %f, solverIterations %i"),__FUNCTION__, i,distBetCable, max,min, newLenght, newSolverIterations); 
 		
 		CableListArray[i]->CableLength = newLenght;
 
@@ -824,7 +824,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		index++;
 	}; 
 
-	//UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f"),__FUNCTION__, alphaTense); 
+	//UE_LOG(LogActorComponent, Log, TEXT("%S :: alphaTense %f"),__FUNCTION__, alphaTense); 
 }
 
 //------------------
@@ -845,7 +845,7 @@ void UPS_HookComponent::HookObject()
 		return;
 	}
 
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if(bDebug) UE_LOG(LogActorComponent, Log, TEXT("%S"), __FUNCTION__);
 
 	//Get Trace	
 	const FVector start = _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK);
@@ -878,26 +878,28 @@ void UPS_HookComponent::HookObject()
 	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
 	FirstCable->SetVisibility(true);
 
-	//Setup  new attached component
-	_AttachedMesh->SetGenerateOverlapEvents(true);
-	_AttachedMesh->SetCollisionProfileName(Profile_GPE);
-	_AttachedMesh->SetCollisionResponseToChannel(ECC_Rope,  ECollisionResponse::ECR_Ignore);
-	_AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	_AttachedMesh->SetCollisionResponseToChannel(ECC_Rope, ECollisionResponse::ECR_Ignore);
-	//TODO :: Need to define inertia conditioning to false;
-	_AttachedMesh->SetLinearDamping(1.0f);
-	_AttachedMesh->SetAngularDamping(1.0f);
-	_AttachedMesh->WakeRigidBody();
-	
-	//Determine max distance for Pull
-	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
-
 	//Check if it's a destructible and use Chaos logic if it is
 	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
 	if(IsValid(currentChaosComponent) && !IsValid(_ImpactField))
 	{
 		GenerateImpactField(_CurrentHookHitResult,  FVector::One());
 	}
+	//Else setup new attached component and collision
+	else
+	{
+		_AttachedMesh->SetCollisionProfileName(Profile_GPE);
+		_AttachedMesh->SetCollisionResponseToChannel(ECC_Rope,  ECollisionResponse::ECR_Ignore);
+		_AttachedMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		_AttachedMesh->SetCollisionResponseToChannel(ECC_Rope, ECollisionResponse::ECR_Ignore);
+		//TODO :: Need to define inertia conditioning to false;
+		_AttachedMesh->SetLinearDamping(1.0f);
+		_AttachedMesh->SetAngularDamping(1.0f);
+		_AttachedMesh->WakeRigidBody();
+	}
+	_AttachedMesh->SetGenerateOverlapEvents(true);
+	
+	//Determine max distance for Pull
+	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -908,7 +910,7 @@ void UPS_HookComponent::DettachHook()
 	//If FirstCable is not in CableList return
 	if(!IsValid(FirstCable) || !IsValid(_AttachedMesh)) return;
 
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if(bDebug) UE_LOG(LogActorComponent, Log, TEXT("%S"), __FUNCTION__);
 
 	//----Reset Var---
 	bHasTriggerBreakByFall = false;
@@ -998,13 +1000,13 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	_WindeInputAxis1DValue = FMath::Clamp(_WindeInputAxis1DValue,-WindeMaxInputWeight, WindeMaxInputWeight);
 	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_WindeInputAxis1DValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
 	
-	if (bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
+	if (bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
 	
 }
 
 void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstance)
 {
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
 	
 	//On wheel axis change reset
 	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_WindeInputAxis1DValue) && _bCableWinderIsActive)
@@ -1081,7 +1083,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
 
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
 	
 	return alpha; 
 }
@@ -1092,7 +1094,7 @@ void UPS_HookComponent::CheckingIfObjectIsBlocked()
 	{
 		if(UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, _AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold)
 		{
-			if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: AttachedObject is under Dist2D Threshold"), __FUNCTION__);
+			if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: AttachedObject is under Dist2D Threshold"), __FUNCTION__);
 			
 			FTimerDelegate timerDelegate;
 			timerDelegate.BindUObject(this, &UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived);
@@ -1220,7 +1222,7 @@ void UPS_HookComponent::PowerCablePull()
 			FVector origin, boxExtent;
 			CablePointComponents[i]->GetOwner()->GetActorBounds(true,origin,boxExtent);
 								
-			if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
+			if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: Use additional trajectory (%f)"), __FUNCTION__, GetWorld()->GetTimeSeconds());
 			
 			//Setup start && endd loc
 
@@ -1289,7 +1291,7 @@ void UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived()
 	if(!IsValid(_AttachedMesh)) return;
 	
 	_bAttachObjectIsBlocked = UKismetMathLibrary::Vector_Distance2DSquared(_LastAttachedActorLoc, _AttachedMesh->GetComponentLocation()) < AttachedMaxDistThreshold * AttachedMaxDistThreshold;
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S :: _bAttachObjectIsBlocked %i"),__FUNCTION__, _bAttachObjectIsBlocked);
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: _bAttachObjectIsBlocked %i"),__FUNCTION__, _bAttachObjectIsBlocked);
 	
 }
 
@@ -1297,7 +1299,7 @@ void UPS_HookComponent::OnPushTimerEndEventReceived(const FTimerHandle selfHandl
 {
 	if(!IsValid(_AttachedMesh) || !IsValid(GetWorld())) return;
 	
-	if(bDebugPull) UE_LOG(LogTemp, Log, TEXT("%S (%f)"),__FUNCTION__,GetWorld()->GetTimeSeconds());
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S (%f)"),__FUNCTION__,GetWorld()->GetTimeSeconds());
 	
 	FVector inverseNewVel = _AttachedMesh->GetMass() * currentPushDir * pushAccel;
 	_AttachedMesh->AddImpulse((inverseNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
@@ -1321,7 +1323,7 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 		IsValid(_AttachedMesh)) return;
 
 	
-	if (bDebugSwing) UE_LOG(LogTemp, Log, TEXT("%S :: bActivate %i, movemode %s "), __FUNCTION__, bActivate, *UEnum::GetValueAsString(_PlayerCharacter->GetCharacterMovement()->MovementMode));
+	if (bDebugSwing) UE_LOG(LogActorComponent, Log, TEXT("%S :: bActivate %i, movemode %s "), __FUNCTION__, bActivate, *UEnum::GetValueAsString(_PlayerCharacter->GetCharacterMovement()->MovementMode));
 
 
 	_bPlayerIsSwinging = bActivate;
@@ -1525,7 +1527,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 			const FVector newLocAfterWinde = UKismetMathLibrary::VInterpTo(ConstraintAttachSlave->GetComponentLocation(), ConstraintAttachSlave->GetComponentLocation() + dirToMaster * _SwingWindeSmoothedOffsetZ, deltaTime, SwingWindeOffsetInterpSpeed);
 			ConstraintAttachSlave->SetWorldLocation(newLocAfterWinde);
 			
-			if(bDebugSwing)UE_LOG(LogTemp,Log, TEXT("%S :: _SwingWindeLastOffsetZ %f, offsetZ %f, smoothedOffset %f"),__FUNCTION__, _SwingWindeLastOffsetZ, offsetZ, _SwingWindeSmoothedOffsetZ);
+			if(bDebugSwing)UE_LOG(LogActorComponent,Log, TEXT("%S :: _SwingWindeLastOffsetZ %f, offsetZ %f, smoothedOffset %f"),__FUNCTION__, _SwingWindeLastOffsetZ, offsetZ, _SwingWindeSmoothedOffsetZ);
 		}
 
 		//Feedback to movement 
@@ -1542,7 +1544,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 			const FVector gravityVel = _PlayerCharacter->GetGravityDirection().GetSafeNormal() * _PlayerCharacter->GetCharacterMovement()->GetGravityZ();
 			ConstraintAttachSlave->AddImpulse(windeVel + gravityVel, NAME_None, false);
 
-			if(bDebugSwing) UE_LOG(LogTemp,Log, TEXT("%S :: windeVel %f, gravityVel %f"),__FUNCTION__, windeVel.Length(), gravityVel.Length());
+			if(bDebugSwing) UE_LOG(LogActorComponent,Log, TEXT("%S :: windeVel %f, gravityVel %f"),__FUNCTION__, windeVel.Length(), gravityVel.Length());
 			DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation(),  ConstraintAttachSlave->GetComponentLocation() - windeVel, 5.0f, FColor::Blue, false, 2, 10, 2);
 			DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation(),  ConstraintAttachSlave->GetComponentLocation() - gravityVel, 5.0f, FColor::Cyan, false, 2, 10, 2);
 			DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation(),  ConstraintAttachSlave->GetComponentLocation() - (windeVel + gravityVel), 5.0f, FColor::Purple, false, 2, 10, 2);
@@ -1567,7 +1569,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, false, 1.0f);
 		DrawDebugPoint(GetWorld(), ConstraintAttachSlave->GetComponentLocation(), 20.f, FColor::Yellow, false, 1.0f);
 		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation() + dirToConstInst * distOnAttachWithRange, 20.f, FColor::Blue, false, 1.0f);
-		UE_LOG(LogTemp, Log, TEXT("%S :: distBetConstraintComp %f, distMasterToConstraintInstLoc %f, distOnAttachWithRange %f, switchLocAlpha %f"),__FUNCTION__, distBetConstraintComp, distMasterToConstraintInstLoc, distOnAttachWithRange, switchLocAlpha);
+		UE_LOG(LogActorComponent, Log, TEXT("%S :: distBetConstraintComp %f, distMasterToConstraintInstLoc %f, distOnAttachWithRange %f, switchLocAlpha %f"),__FUNCTION__, distBetConstraintComp, distMasterToConstraintInstLoc, distOnAttachWithRange, switchLocAlpha);
 	}
 
 	//Setyp last var
@@ -1580,7 +1582,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 
 void UPS_HookComponent::ForceUpdateMasterConstraint()
 {
-	if(bDebugSwing) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
+	if(bDebugSwing) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
 	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0);
 	_bUpdateMasterContraintByTime = !bMustAttachtoLastPoint;
 	
@@ -1631,7 +1633,7 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking) return;
 	GetConstraintAttachSlave()->AddImpulse(_PlayerCharacter->GetCapsuleVelocity() * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
 	
-	if(bDebugSwing) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if(bDebugSwing) UE_LOG(LogActorComponent, Warning, TEXT("%S"), __FUNCTION__);
 }
 
 //------------------
@@ -1639,6 +1641,20 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 
 #pragma region Destruction
 //------------------
+
+void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor)
+{
+	if(!IsValid(_ImpactField)) return;
+
+	//Check if field overlap anything, if it don't reset current field
+	TArray<AActor*> overlappingActors;
+	_ImpactField->GetOverlappingActors(overlappingActors);
+
+	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S :: overlap %i Actors "),__FUNCTION__, overlappingActors.Num());
+	
+	if(overlappingActors.IsEmpty()) ResetImpactField();
+}
+
 
 #pragma region CanGenerateImpactField
 //------------------
@@ -1649,10 +1665,10 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 
 	if(!IsValid(FieldSystemActor.Get()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
+		UE_LOG(LogActorComponent, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
 		return;
 	}
-
+	
 	//Work var
 	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0);
 	FVector masterLoc = bMustAttachtoLastPoint && CableCapArray.IsValidIndex(0) ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
@@ -1667,20 +1683,20 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	const FVector dir = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * 100;
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint - dir);
 	rot.Pitch = rot.Pitch - 90.0f;
-	
-	//Spawn scale
-	FVector scale = extent;
-	
+		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
-	_ImpactField->SetActorScale3D(scale);
+	_ImpactField->SetActorScale3D(extent);
 
 	if(!IsValid(_ImpactField)) return;
+
+	//Bind to EndOverlap for destroying
+	_ImpactField->OnActorEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 	
 	//Active move logic 
 	_bCanMoveField = true;
 	
 	//Debug
-	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i, scale %s"), __FUNCTION__, IsValid(_ImpactField), *scale.ToString());
+	if(bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S :: success %i, scale %s"), __FUNCTION__, IsValid(_ImpactField), *extent.ToString());
 
 	//Callback
 	OnHookChaosFieldGeneratedEvent.Broadcast(_ImpactField);
@@ -1690,28 +1706,36 @@ void UPS_HookComponent::ResetImpactField()
 {
 	if(!IsValid(_ImpactField)) return;
 
+	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
+
+	//Remove callback
+	_ImpactField->OnActorEndOverlap.RemoveDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
+
+	//Reset variables
 	_bCanMoveField = false;
+
+	//And for end destroy current impact field
 	_ImpactField->Destroy();
-	_AlphaChaos = 0.0f;
 }
 
 void UPS_HookComponent::MoveImpactField()
 {
-	if(_bPlayerIsSwinging || !_bCablePowerPull) return;
+	if(_bPlayerIsSwinging) return;
 
-	//TODO :: add an interp while _bCablePowerPull come true to GetAlphaPull
-	_AlphaChaos = FMath::Lerp(_AlphaChaos, GetAlphaPull(), _AlphaChaos);
+	if (_CableWindeInputValue > 0.0f) return;
 	
-	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, _AlphaChaos);
+	//Update rot
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	rot.Pitch = rot.Pitch - 90.0f;
+	_ImpactField->SetActorRotation(rot);
 
-	//Scale variation
+	//Update Scale
+	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, GetAlphaWinde());
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
 
-	//Callback use for Velocities variatiopn done in BP
+	//Callback use for Velocities variation done in BP
 	OnHookChaosFieldMovingEvent.Broadcast();
-	UE_LOG(LogTemp, Warning, TEXT("radius %f, alpha %f"), radius, _AlphaChaos);
-	
 }
 
 //------------------
