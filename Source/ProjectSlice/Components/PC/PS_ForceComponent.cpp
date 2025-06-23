@@ -362,6 +362,8 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 		
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D(scale);
+
+	if(!IsValid(_ImpactField)) return;
 	
 	//Stock move field var
 	_GenerateFieldTimestamp = GetWorld()->GetTimeSeconds();
@@ -372,7 +374,7 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
 
 	//Callback
-	OnForceImpulseChaosEvent.Broadcast(_ImpactField);
+	OnForceChaosFieldGeneratedEvent.Broadcast(_ImpactField);
 }
 
 void UPS_ForceComponent::MoveImpactField()

@@ -183,6 +183,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetAlphaTense() const{return _AlphaTense;}
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetAlphaPull() const{return _AlphaPull;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetAlphaChaos() const{return _AlphaChaos;}
+
 protected:
 	//Status	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Status|Cable|Rope",
@@ -356,6 +362,12 @@ private:
 	
 	UPROPERTY(Transient)
 	float _AlphaTense;
+
+	UPROPERTY(Transient)
+	float _AlphaPull;
+
+	UPROPERTY(Transient)
+    float _AlphaChaos;
 
 #pragma endregion Cable
 
@@ -624,7 +636,10 @@ private:
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Field OnHookImpulseChaosEvent;
+	FOnPSDelegate_Field OnHookChaosFieldGeneratedEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnHookChaosFieldMovingEvent;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
@@ -633,6 +648,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
 	float FieldRadiusMulitiplicator = 10.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
+	FFloatInterval FieldHorizontalVelMagnitudeRange = FFloatInterval(0.0f, 1200.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
+	FFloatInterval FieldRadialVelMagnitudeRange = FFloatInterval(0.0f, 750.0f);
+
 private:
 	UPROPERTY(Transient)
 	AFieldSystemActor* _ImpactField;
@@ -640,12 +661,19 @@ private:
 	UPROPERTY(Transient)
 	FVector _FieldVelOrientation;
 
+	UPROPERTY(Transient)
+	bool _bCanMoveField;
+
 #pragma region IPS_CanGenerateImpactField
 	//------------------
 
 protected:
 	UFUNCTION()
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
+
+	virtual void ResetImpactField() override;
+
+	virtual void MoveImpactField() override;
 
 	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

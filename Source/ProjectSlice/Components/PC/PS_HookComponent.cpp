@@ -854,11 +854,12 @@ void UPS_HookComponent::HookObject()
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
-	
+		
 	//If not blocking exit
 	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())))
 	{
 		OnHookObjectFailed.Broadcast();
+		
 		return;
 	}
 	
@@ -890,6 +891,13 @@ void UPS_HookComponent::HookObject()
 	
 	//Determine max distance for Pull
 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
+
+	//Check if it's a destructible and use Chaos logic if it is
+	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
+	if(IsValid(currentChaosComponent) && !IsValid(_ImpactField))
+	{
+		GenerateImpactField(_CurrentHookHitResult,  FVector::One());
+	}
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -956,6 +964,9 @@ void UPS_HookComponent::DettachHook()
 	FirstCable->AttachEndTo = FComponentReference();
 	FirstCable->SetVisibility(false);
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
+
+	//Chaos field system rest
+	ResetImpactField();
 		
 	//Callback
 	OnHookObject.Broadcast(false);
@@ -1147,28 +1158,21 @@ void UPS_HookComponent::PowerCablePull()
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
-	const float alpha = CalculatePullAlpha(baseToMeshDist);
-
-	//Check if it's a destructible and use Chaos logic if it is
-	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
-	if(IsValid(currentChaosComponent))
-	{
-		if(IsValid(_ImpactField)) return;
-
-		if(/*!_bCablePowerPull ||*/ _bPlayerIsSwinging) return;
+	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
 		
-		const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, alpha);
-		GenerateImpactField(_CurrentHookHitResult,  FVector::One() * radius);
-		UE_LOG(LogTemp, Warning, TEXT("%S :: radius %f, alpha %f"), __FUNCTION__, radius, alpha);
-		return;
-	}
-
 	//Check if object using physic
 	if (!_AttachedMesh->IsSimulatingPhysics()) return;
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
 	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
 	AdaptCableTense(_AlphaTense);
+
+	//Check if it's destructible and use Chaos logic if it is
+	if(_bCanMoveField)
+	{
+		MoveImpactField();
+		return;
+	}
 	
 	//If can't Pull or Swing return
 	if(!_bCablePowerPull || _bPlayerIsSwinging) return;
@@ -1177,7 +1181,7 @@ void UPS_HookComponent::PowerCablePull()
 	if(_LastAttachedActorLoc.IsZero()) _LastAttachedActorLoc = _AttachedMesh->GetComponentLocation();
 
 	//Setup ForceWeight value
-	DetermineForceWeight(alpha);
+	DetermineForceWeight(_AlphaPull);
 
 	//Testing dist to lastLoc
 	CheckingIfObjectIsBlocked();
@@ -1669,12 +1673,45 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D(scale);
+
+	if(!IsValid(_ImpactField)) return;
+	
+	//Active move logic 
+	_bCanMoveField = true;
 	
 	//Debug
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i, scale %s"), __FUNCTION__, IsValid(_ImpactField), *scale.ToString());
 
 	//Callback
-	OnHookImpulseChaosEvent.Broadcast(_ImpactField);
+	OnHookChaosFieldGeneratedEvent.Broadcast(_ImpactField);
+}
+
+void UPS_HookComponent::ResetImpactField()
+{
+	if(!IsValid(_ImpactField)) return;
+
+	_bCanMoveField = false;
+	_ImpactField->Destroy();
+	_AlphaChaos = 0.0f;
+}
+
+void UPS_HookComponent::MoveImpactField()
+{
+	if(_bPlayerIsSwinging || !_bCablePowerPull) return;
+
+	//TODO :: add an interp while _bCablePowerPull come true to GetAlphaPull
+	_AlphaChaos = FMath::Lerp(_AlphaChaos, GetAlphaPull(), _AlphaChaos);
+	
+	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, _AlphaChaos);
+
+	//Scale variation
+	FVector scale = FVector::One() * radius;
+	_ImpactField->SetActorScale3D(scale);
+
+	//Callback use for Velocities variatiopn done in BP
+	OnHookChaosFieldMovingEvent.Broadcast();
+	UE_LOG(LogTemp, Warning, TEXT("radius %f, alpha %f"), radius, _AlphaChaos);
+	
 }
 
 //------------------

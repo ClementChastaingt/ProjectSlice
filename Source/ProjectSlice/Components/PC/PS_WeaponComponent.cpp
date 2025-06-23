@@ -314,6 +314,7 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 	DrawDebugLine(GetWorld(), loc, loc + rot.Vector() * 500, FColor::Yellow, false, 2, 10, 3);
 	
 	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
+	if(!IsValid(_ImpactField)) return;
 
 	//Rotatation local for plane
 	_ImpactField->AddActorLocalRotation(FRotator(-90, 0, 0));
@@ -322,7 +323,7 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 	if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
 
 	//Callback
-	OnSliceImpulseChaosEvent.Broadcast(_ImpactField);
+	OnSliceChaosFieldGeneratedEvent.Broadcast(_ImpactField);
 }
 
 //------------------

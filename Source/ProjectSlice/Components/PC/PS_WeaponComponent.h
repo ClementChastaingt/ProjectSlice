@@ -124,7 +124,7 @@ protected:
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Field OnSliceImpulseChaosEvent;
+	FOnPSDelegate_Field OnSliceChaosFieldGeneratedEvent;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon")

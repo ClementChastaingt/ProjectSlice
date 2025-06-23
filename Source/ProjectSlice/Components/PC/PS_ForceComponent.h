@@ -199,7 +199,7 @@ private:
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate_Field OnForceImpulseChaosEvent;
+	FOnPSDelegate_Field OnForceChaosFieldGeneratedEvent;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
