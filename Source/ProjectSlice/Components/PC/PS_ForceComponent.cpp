@@ -200,7 +200,7 @@ void UPS_ForceComponent::ReleasePush()
 			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
 
-			UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);
+			//if (bDebugChaos) UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);
 		}
 
 		//Impulse

@@ -1734,6 +1734,20 @@ void UPS_HookComponent::MoveImpactField()
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
 
+	//Auto reset and break rope
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, alphaPull %f, alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, alpha, GetAlphaPull(), GetAlphaTense(), FieldAutoBreakRopeThreshold);
+	if(GetAlphaWinde() > FieldAutoBreakRopeThreshold)
+	{
+		//Start reset impact timer
+		FTimerDelegate timerDelegate;
+		timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField);
+		GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
+
+		//And Dettach rope
+		DettachHook();
+	}
+
+
 	//Callback use for Velocities variation done in BP
 	OnHookChaosFieldMovingEvent.Broadcast();
 }

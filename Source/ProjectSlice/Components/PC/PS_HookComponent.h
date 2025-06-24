@@ -642,6 +642,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	TSubclassOf<AFieldSystemActor> FieldSystemActor;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ToolTip="Auto break winde alpha threshold to reach for start auto break timer. It must correspond to field activation threshold",ClampMin="0.0", UIMin="0.0", ClampMax="1.0", UIMax="1.0"))
+	float FieldAutoBreakRopeThreshold = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="sec", ClampMin="0.0", UIMin="0.0"))
+	float FieldResetDelay= 0.3f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
 	float FieldRadiusMulitiplicator = 10.0f;
 
@@ -654,6 +660,7 @@ protected:
 	UFUNCTION()
 	void OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor);
 
+
 private:
 	UPROPERTY(Transient)
 	AFieldSystemActor* _ImpactField;
@@ -663,6 +670,9 @@ private:
 
 	UPROPERTY(Transient)
 	bool _bCanMoveField;
+	
+	UPROPERTY(Transient)
+	FTimerHandle _ResetFieldTimerHandler;
 
 #pragma region IPS_CanGenerateImpactField
 	//------------------
