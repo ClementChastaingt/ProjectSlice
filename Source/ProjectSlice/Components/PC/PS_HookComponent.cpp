@@ -98,7 +98,7 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 	
 	//Callback
-	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	if(IsValid(_PlayerCharacter) && IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.RemoveDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
@@ -1031,6 +1031,7 @@ void UPS_HookComponent::ResetWindeHook()
 	_bCableWinderIsActive = false;
 	_SwingWindeSmoothedOffsetZ = 0.0f;
 	_SwingWindeLastOffsetZ = 0.0f;
+	_AlphaWinde = 0.0f;
 }
 
 //------------------
@@ -1072,18 +1073,21 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	}
 
 	//Override _DistanceOnAttach
-	if(_DistanceOnAttach + _CablePullSlackDistance + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min && !_bPlayerIsSwinging)
+	const float distOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
+	if(distOnAttachWithRange < _DistanceOnAttach - CablePullSlackDistanceRange.Min
+		&& FMath::Sign(_DistanceOnAttach - CablePullSlackDistanceRange.Min) == FMath::Sign(distOnAttachWithRange)
+		&& !_bPlayerIsSwinging)
 		_DistanceOnAttach = baseToMeshDist;
 	
 	//Distance On Attach By point number weight
 	const float max = FMath::Max(_DistanceOnAttach + CablePullSlackDistanceRange.Max, _DistanceOnAttach - CablePullSlackDistanceRange.Max);
-	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num()), 0.0f, max);
+	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(distOnAttachWithRange, CableCapArray.Num()), 0.0f, max);
 	
 	//Calculate Pull alpha && activate pull
-	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
-	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
-
-	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, FMath::Abs(distOnAttachWithRange),0 ,1);
+	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > distOnAttachWithRange;
+	
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, distOnAttachWithRange, distanceOnAttachByTensorWeight, alpha);
 	
 	return alpha; 
 }
@@ -1642,8 +1646,11 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region Destruction
 //------------------
 
+//TODO :: replace by spherevolcol overlap 
 void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor)
 {
+	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
+	
 	if(!IsValid(_ImpactField)) return;
 
 	//Check if field overlap anything, if it don't reset current field
@@ -1690,6 +1697,7 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	if(!IsValid(_ImpactField)) return;
 
 	//Bind to EndOverlap for destroying
+	_ImpactField->OnActorBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldBeginOverlapEventReceived);
 	_ImpactField->OnActorEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 	
 	//Active move logic 
@@ -1721,31 +1729,30 @@ void UPS_HookComponent::ResetImpactField()
 void UPS_HookComponent::MoveImpactField()
 {
 	if(_bPlayerIsSwinging) return;
-
-	if (_CableWindeInputValue > 0.0f) return;
-	
+		
 	//Update rot
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
 	rot.Pitch = rot.Pitch - 90.0f;
 	_ImpactField->SetActorRotation(rot);
 
 	//Update Scale
-	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, GetAlphaWinde());
+	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, GetAlphaTense());
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
 
 	//Auto reset and break rope
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, alphaPull %f, alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, alpha, GetAlphaPull(), GetAlphaTense(), FieldAutoBreakRopeThreshold);
-	if(GetAlphaWinde() > FieldAutoBreakRopeThreshold)
-	{
-		//Start reset impact timer
-		FTimerDelegate timerDelegate;
-		timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField);
-		GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPull %f, alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, GetAlphaPull(), GetAlphaTense(), FieldAutoBreakRopeThreshold);
 
-		//And Dettach rope
-		DettachHook();
-	}
+	// if(GetAlphaWinde() > FieldAutoBreakRopeThreshold)
+	// {
+	// 	//Start reset impact timer
+	// 	FTimerDelegate timerDelegate;
+	// 	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField);
+	// 	GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
+	//
+	// 	//And Dettach rope
+	// 	DettachHook();
+	// }
 
 
 	//Callback use for Velocities variation done in BP
