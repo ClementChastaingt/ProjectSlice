@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Field/FieldSystemActor.h"
-#include "ProjectSlice/Data/PS_Delegates.h"
 #include "UObject/Interface.h"
 #include "PS_CanGenerateImpactField.generated.h"
 
+class APS_FieldSystemActor;
 // This class does not need to be modified.
 UINTERFACE()
 class UPS_CanGenerateImpactField : public UInterface
@@ -26,19 +26,22 @@ class PROJECTSLICE_API IPS_CanGenerateImpactField
 	
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="CanUseImpactField")
-	AFieldSystemActor* GetImpactField() const;
-	virtual AFieldSystemActor* GetImpactField_Implementation() const { return nullptr; }
+	APS_FieldSystemActor* GetImpactField() const;
+	virtual APS_FieldSystemActor* GetImpactField_Implementation() const { return nullptr; }
 	
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const = 0;
 	
-	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero());
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
 
-	virtual void ResetImpactField() {};
+	virtual void ResetImpactField(const bool bForce = false);
 
-	virtual void MoveImpactField() {};
-
-private:
+	virtual void MoveImpactField(){};
 	
+	virtual void OnChaosFieldStartOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult){};
+	
+	virtual void OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex){};
+	
+private:
 	FVector _FieldVelOrientation = FVector::ZeroVector;
 	
 };

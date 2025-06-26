@@ -132,7 +132,7 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	AFieldSystemActor* _ImpactField;
+	APS_FieldSystemActor* _ImpactField;
 	
 #pragma region IPS_CanGenerateImpactField
 	//------------------
@@ -141,7 +141,7 @@ protected:
 	UFUNCTION()
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
 
-	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
 

@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
+#include "ProjectSlice/Components/GPE/PS_FieldSystemActor.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_HookComponent.generated.h"
@@ -646,7 +647,7 @@ protected:
 	float FieldAutoBreakRopeThreshold = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="sec", ClampMin="0.0", UIMin="0.0"))
-	float FieldResetDelay= 0.3f;
+	float FieldResetDelay = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
 	float FieldRadiusMulitiplicator = 10.0f;
@@ -656,14 +657,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	FFloatInterval FieldRadialVelMagnitudeRange = FFloatInterval(0.0f, 750.0f);
-	
-	UFUNCTION()
-	void OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor);
-
 
 private:
 	UPROPERTY(Transient)
-	AFieldSystemActor* _ImpactField;
+	APS_FieldSystemActor* _ImpactField;
 	
 	UPROPERTY(Transient)
 	FVector _FieldVelOrientation;
@@ -681,13 +678,16 @@ protected:
 	UFUNCTION()
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
 
-	virtual void ResetImpactField() override;
+	virtual void ResetImpactField(bool bForce = false) override;
 
 	virtual void MoveImpactField() override;
 
-	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+
+	UFUNCTION()
+	virtual void OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 
 #pragma endregion IPS_CanGenerateImpactField
 

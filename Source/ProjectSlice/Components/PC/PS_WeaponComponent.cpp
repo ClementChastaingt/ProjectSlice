@@ -313,7 +313,7 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 
 	DrawDebugLine(GetWorld(), loc, loc + rot.Vector() * 500, FColor::Yellow, false, 2, 10, 3);
 	
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
+	_ImpactField = GetWorld()->SpawnActor<APS_FieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	if(!IsValid(_ImpactField)) return;
 
 	//Rotatation local for plane

@@ -1646,23 +1646,6 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region Destruction
 //------------------
 
-//TODO :: replace by spherevolcol overlap 
-void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(AActor* overlappedActor, AActor* otherActor)
-{
-	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
-	
-	if(!IsValid(_ImpactField)) return;
-
-	//Check if field overlap anything, if it don't reset current field
-	TArray<AActor*> overlappingActors;
-	_ImpactField->GetOverlappingActors(overlappingActors);
-
-	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S :: overlap %i Actors "),__FUNCTION__, overlappingActors.Num());
-	
-	if(overlappingActors.IsEmpty()) ResetImpactField();
-}
-
-
 #pragma region CanGenerateImpactField
 //------------------
 
@@ -1691,14 +1674,13 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.ImpactPoint, targetHit.ImpactPoint - dir);
 	rot.Pitch = rot.Pitch - 90.0f;
 		
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
+	_ImpactField = GetWorld()->SpawnActor<APS_FieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D(extent);
 
 	if(!IsValid(_ImpactField)) return;
 
 	//Bind to EndOverlap for destroying
-	_ImpactField->OnActorBeginOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldBeginOverlapEventReceived);
-	_ImpactField->OnActorEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
+	_ImpactField->GetCollider()->OnComponentEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 	
 	//Active move logic 
 	_bCanMoveField = true;
@@ -1710,20 +1692,23 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	OnHookChaosFieldGeneratedEvent.Broadcast(_ImpactField);
 }
 
-void UPS_HookComponent::ResetImpactField()
+void UPS_HookComponent::ResetImpactField(const bool bForce)
 {
 	if(!IsValid(_ImpactField)) return;
 
 	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
-
+	
 	//Remove callback
-	_ImpactField->OnActorEndOverlap.RemoveDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
+	_ImpactField->GetCollider()->OnComponentEndOverlap.RemoveDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 
 	//Reset variables
 	_bCanMoveField = false;
 
 	//And for end destroy current impact field
 	_ImpactField->Destroy();
+
+	//DettachHook if still attach
+	if(IsValid(_AttachedMesh))DettachHook();
 }
 
 void UPS_HookComponent::MoveImpactField()
@@ -1739,24 +1724,27 @@ void UPS_HookComponent::MoveImpactField()
 	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, GetAlphaTense());
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
+	
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, GetAlphaTense(), FieldAutoBreakRopeThreshold);
 
 	//Auto reset and break rope
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPull %f, alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, GetAlphaPull(), GetAlphaTense(), FieldAutoBreakRopeThreshold);
-
-	// if(GetAlphaWinde() > FieldAutoBreakRopeThreshold)
-	// {
-	// 	//Start reset impact timer
-	// 	FTimerDelegate timerDelegate;
-	// 	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField);
-	// 	GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
-	//
-	// 	//And Dettach rope
-	// 	DettachHook();
-	// }
-
-
+	if(GetAlphaTense() > FieldAutoBreakRopeThreshold)
+	{
+		DettachHook();
+	}
+	
 	//Callback use for Velocities variation done in BP
 	OnHookChaosFieldMovingEvent.Broadcast();
+}
+
+void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	FTimerHandle timerHandle;
+	FTimerDelegate timerDelegate;
+
+	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField, true);
+	GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, FieldResetDelay, false);
+	
 }
 
 //------------------

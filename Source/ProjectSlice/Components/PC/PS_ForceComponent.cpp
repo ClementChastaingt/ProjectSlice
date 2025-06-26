@@ -360,7 +360,7 @@ void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const 
 	//Spawn scale
 	FVector scale = (extent * 2) / 100;
 		
-	_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
+	_ImpactField = GetWorld()->SpawnActor<APS_FieldSystemActor>(FieldSystemActor.Get(), loc, rot, SpawnInfo);
 	_ImpactField->SetActorScale3D(scale);
 
 	if(!IsValid(_ImpactField)) return;

@@ -2,28 +2,20 @@
 
 
 #include "PS_CanGenerateImpactField.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Components/ShapeComponent.h"
+#include "ProjectSlice/Components/GPE/PS_FieldSystemActor.h"
 
-
-// Add default functionality here for any IPS_CanGenerateImpactField functions that are not pure virtual.
-void IPS_CanGenerateImpactField::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
+void IPS_CanGenerateImpactField::ResetImpactField(const bool bForce)
 {
-	// if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !_SightHitResult.bBlockingHit) return;
-	//
-	// //Spawn param
-	// FActorSpawnParameters SpawnInfo;
-	// SpawnInfo.Owner = _PlayerCharacter;
-	// SpawnInfo.Instigator = _PlayerCharacter;
-	// SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	//
-	// FRotator rot = UKismetMathLibrary::FindLookAtRotation(_SightHitResult.ImpactPoint, _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100);
-	// rot.Pitch = rot.Pitch - 90.0f;
-	// rot.Roll = TargetRackRotation.Roll;
-	//_ImpactField = GetWorld()->SpawnActor<AFieldSystemActor>(FieldSystemActor.LoadSynchronous(), _SightHitResult.ImpactPoint + _SightHitResult.ImpactNormal * -100, rot, SpawnInfo);
-	
-	//Debug
-	// if(bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: success %i"), __FUNCTION__, IsValid(_ImpactField));
-	//
-	// //Callback
-	// OnImpulseChaosEvent.Broadcast(_ImpactField);
+	if (!IsValid(GetImpactField())) return;
+
+	//Check if overlap already
+	if (!bForce && IsValid(GetImpactField()->GetCollider()))
+	{
+		TArray<AActor*> overlappingActors;
+		GetImpactField()->GetCollider()->GetOverlappingActors(overlappingActors);
+		if(!overlappingActors.IsEmpty()) return;
+	}
+
+	GetImpactField()->Destroy();
 }

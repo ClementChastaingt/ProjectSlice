@@ -11,6 +11,7 @@
 #include "PS_ForceComponent.generated.h"
 
 
+class APS_FieldSystemActor;
 class AProjectSliceCharacter;
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
@@ -213,7 +214,7 @@ protected:
 
 private:
 	UPROPERTY(Transient)
-	AFieldSystemActor* _ImpactField;
+	APS_FieldSystemActor* _ImpactField;
 
 	UPROPERTY(Transient)
 	FTransform _FieldTransformOnGeneration;
@@ -236,7 +237,7 @@ protected:
 
 	virtual void MoveImpactField() override;
 
-	virtual AFieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
+	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 
 	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
 
