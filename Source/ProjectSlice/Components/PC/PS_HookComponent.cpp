@@ -968,7 +968,7 @@ void UPS_HookComponent::DettachHook()
 	FirstCable->SetCollisionProfileName(Profile_NoCollision, true);
 
 	//Chaos field system rest
-	ResetImpactField();
+	if (!GetWorld()->GetTimerManager().IsTimerActive(_ResetFieldTimerHandler))ResetImpactField();
 		
 	//Callback
 	OnHookObject.Broadcast(false);
@@ -1159,15 +1159,13 @@ void UPS_HookComponent::PowerCablePull()
 		|| !CableListArray.IsValidIndex(0)
 		|| !IsValid(GetWorld()))
 		return;
-	
+
+	//Determine Alphas
 	//Current dist to attach loc
 	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
-		
-	//Check if object using physic
-	if (!_AttachedMesh->IsSimulatingPhysics()) return;
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
 	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
@@ -1179,6 +1177,10 @@ void UPS_HookComponent::PowerCablePull()
 		MoveImpactField();
 		return;
 	}
+
+	//Check if we can start default Pull logic
+	//Check if object using physic
+	if (!_AttachedMesh->IsSimulatingPhysics()) return;
 	
 	//If can't Pull or Swing return
 	if(!_bCablePowerPull || _bPlayerIsSwinging) return;
@@ -1675,10 +1677,12 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	rot.Pitch = rot.Pitch - 90.0f;
 		
 	_ImpactField = GetWorld()->SpawnActor<APS_FieldSystemActor>(FieldSystemActor.Get(), masterLoc, rot, SpawnInfo);
+	
+	if(!IsValid(_ImpactField) || !IsValid(_ImpactField->GetCollider())) return;
+
+	//Setup spawned elements
 	_ImpactField->SetActorScale3D(extent);
-
-	if(!IsValid(_ImpactField)) return;
-
+	
 	//Bind to EndOverlap for destroying
 	_ImpactField->GetCollider()->OnComponentEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 	
@@ -1694,7 +1698,7 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 
 void UPS_HookComponent::ResetImpactField(const bool bForce)
 {
-	if(!IsValid(_ImpactField)) return;
+	if(!IsValid(_ImpactField) || !IsValid(_ImpactField->GetCollider())) return;
 
 	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
 	
@@ -1725,13 +1729,7 @@ void UPS_HookComponent::MoveImpactField()
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
 	
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f, FieldAutoBreakRopeThreshold %f"), __FUNCTION__, GetAlphaTense(), FieldAutoBreakRopeThreshold);
-
-	//Auto reset and break rope
-	if(GetAlphaTense() > FieldAutoBreakRopeThreshold)
-	{
-		DettachHook();
-	}
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f"), __FUNCTION__, GetAlphaTense());
 	
 	//Callback use for Velocities variation done in BP
 	OnHookChaosFieldMovingEvent.Broadcast();
@@ -1739,12 +1737,18 @@ void UPS_HookComponent::MoveImpactField()
 
 void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	FTimerHandle timerHandle;
-	FTimerDelegate timerDelegate;
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
+	//Check if Collider have still actor who's overlapped him
+	// TArray<AActor*> actorsOverlapped;
+	// OverlappedComponent->GetOverlappingActors(actorsOverlapped);
+	// if (!actorsOverlapped.IsEmpty()) return;
+		
+	FTimerDelegate timerDelegate;
 	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField, true);
-	GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, FieldResetDelay, false);
-	
+	GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
+
+	DettachHook();
 }
 
 //------------------

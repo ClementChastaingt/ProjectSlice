@@ -204,7 +204,7 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
-	TSubclassOf<AFieldSystemActor> FieldSystemActor;
+	TSubclassOf<APS_FieldSystemActor> FieldSystemActor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="cm", UIMin="0", ClampMin="0"))
 	float FieldSystemMoveTargetLocFwdOffset = 100;
@@ -239,7 +239,7 @@ protected:
 
 	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 
-	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
 
 #pragma endregion IPS_CanGenerateImpactField
 

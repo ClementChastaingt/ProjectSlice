@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "Components/BoxComponent.h"
+#include "Components/SphereComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Components/GPE/PS_FieldSystemActor.h"
@@ -641,16 +642,13 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
-	TSubclassOf<AFieldSystemActor> FieldSystemActor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ToolTip="Auto break winde alpha threshold to reach for start auto break timer. It must correspond to field activation threshold",ClampMin="0.0", UIMin="0.0", ClampMax="1.0", UIMax="1.0"))
-	float FieldAutoBreakRopeThreshold = 0.3f;
-
+	TSubclassOf<APS_FieldSystemActor> FieldSystemActor;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="sec", ClampMin="0.0", UIMin="0.0"))
 	float FieldResetDelay = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
-	float FieldRadiusMulitiplicator = 10.0f;
+	float FieldRadiusMulitiplicator = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	FFloatInterval FieldHorizontalVelMagnitudeRange = FFloatInterval(0.0f, 1200.0f);
@@ -673,7 +671,6 @@ private:
 
 #pragma region IPS_CanGenerateImpactField
 	//------------------
-
 protected:
 	UFUNCTION()
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
@@ -684,7 +681,7 @@ protected:
 
 	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 
-	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
+	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
 
 	UFUNCTION()
 	virtual void OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;

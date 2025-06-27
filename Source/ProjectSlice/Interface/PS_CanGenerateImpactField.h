@@ -29,7 +29,7 @@ public:
 	APS_FieldSystemActor* GetImpactField() const;
 	virtual APS_FieldSystemActor* GetImpactField_Implementation() const { return nullptr; }
 	
-	virtual TSubclassOf<AFieldSystemActor> GetFieldSystemClass() const = 0;
+	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const = 0;
 	
 	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
 
