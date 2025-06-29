@@ -233,7 +233,7 @@ private:
 
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
+	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
 
 	virtual void MoveImpactField() override;
 

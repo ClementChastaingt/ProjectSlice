@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Field/FieldSystemActor.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "UObject/Interface.h"
 #include "PS_CanGenerateImpactField.generated.h"
 
@@ -31,14 +32,16 @@ public:
 	
 	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const = 0;
 	
-	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
+	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
 
 	virtual void ResetImpactField(const bool bForce = false);
 
 	virtual void MoveImpactField(){};
+
+	//GeometryCollection event
+	virtual void OnGeometryCollectBreakEventReceived(const FChaosBreakEvent& BreakEvent) {};
 	
-	virtual void OnChaosFieldStartOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult){};
-	
+	//Collision
 	virtual void OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex){};
 	
 private:

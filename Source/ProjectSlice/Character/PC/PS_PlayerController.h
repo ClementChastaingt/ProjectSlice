@@ -262,10 +262,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Move")
 	bool bIsCrouchInputTrigger = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement|Status|Input|Weapon|Rack")
-	FInputActionInstance TurnRackInputActionInstance = nullptr;
-	
+		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input|TurnRack", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
 	float InputTurnRackHoldThresholdTargetting = 1.0f;
 	

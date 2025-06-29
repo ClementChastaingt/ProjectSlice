@@ -91,12 +91,9 @@ void AProjectSlicePlayerController::OnLookInputCompleted()
 
 void AProjectSlicePlayerController::OnTurnRackInputTriggered(const FInputActionInstance& actionInstance)
 {
-	TurnRackInputActionInstance = actionInstance;
-	
 	if(!IsValid(_WeaponComp) || _bTurnRackTargeted) return;
 	
 	_WeaponComp->TurnRack();
-	
 }
 
 void AProjectSlicePlayerController::OnTurnRackTargetedInputTriggered(const FInputActionInstance& actionInstance)

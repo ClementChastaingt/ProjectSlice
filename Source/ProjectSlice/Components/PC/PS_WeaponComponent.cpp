@@ -174,7 +174,7 @@ void UPS_WeaponComponent::Fire()
 	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
 	 if(IsValid(currentChaosComponent))
 	 {
-	 	GenerateImpactField(_SightHitResult);
+	 	GenerateImpactField(currentChaosComponent, _SightHitResult);
 	 	return;
 	 }
 	
@@ -290,7 +290,7 @@ void UPS_WeaponComponent::Fire()
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
+void UPS_WeaponComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 

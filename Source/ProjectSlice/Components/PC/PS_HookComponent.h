@@ -659,6 +659,9 @@ protected:
 private:
 	UPROPERTY(Transient)
 	APS_FieldSystemActor* _ImpactField;
+
+	UPROPERTY(Transient)
+	UGeometryCollectionComponent* _CurrentGeometryCollection;
 	
 	UPROPERTY(Transient)
 	FVector _FieldVelOrientation;
@@ -673,7 +676,7 @@ private:
 	//------------------
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()) override;
+	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
 
 	virtual void ResetImpactField(bool bForce = false) override;
 
@@ -683,6 +686,9 @@ protected:
 
 	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const override { return FieldSystemActor;};
 
+	UFUNCTION()
+	virtual void OnGeometryCollectBreakEventReceived(const FChaosBreakEvent& BreakEvent) override;
+	
 	UFUNCTION()
 	virtual void OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 

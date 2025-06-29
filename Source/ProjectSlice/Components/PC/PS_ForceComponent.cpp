@@ -197,7 +197,7 @@ void UPS_ForceComponent::ReleasePush()
 			FTimerHandle timerChaosHandle;
 			FTimerDelegate timerChaosDelegate;
 			
-			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
+			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outGeometryComp, outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
 
 			//if (bDebugChaos) UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);
@@ -334,7 +334,7 @@ void UPS_ForceComponent::AttachScrew()
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
+void UPS_ForceComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 

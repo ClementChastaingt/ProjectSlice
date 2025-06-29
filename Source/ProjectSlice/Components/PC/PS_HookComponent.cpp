@@ -880,9 +880,9 @@ void UPS_HookComponent::HookObject()
 
 	//Check if it's a destructible and use Chaos logic if it is
 	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
-	if(IsValid(currentChaosComponent) && !IsValid(_ImpactField))
+	if(IsValid(currentChaosComponent))
 	{
-		GenerateImpactField(_CurrentHookHitResult,  FVector::One());
+		if(!IsValid(_ImpactField)) GenerateImpactField(currentChaosComponent, _CurrentHookHitResult,  FVector::One());
 	}
 	//Else setup new attached component and collision
 	else
@@ -1073,21 +1073,26 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	}
 
 	//Override _DistanceOnAttach
-	const float distOnAttachWithRange = _DistanceOnAttach + _CablePullSlackDistance;
-	if(distOnAttachWithRange < _DistanceOnAttach - CablePullSlackDistanceRange.Min
-		&& FMath::Sign(_DistanceOnAttach - CablePullSlackDistanceRange.Min) == FMath::Sign(distOnAttachWithRange)
+	if(_DistanceOnAttach + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min
+		&& FMath::Sign(_DistanceOnAttach - CablePullSlackDistanceRange.Min) == FMath::Sign(_DistanceOnAttach + _CablePullSlackDistance)
 		&& !_bPlayerIsSwinging)
+	{
 		_DistanceOnAttach = baseToMeshDist;
+	}
 	
 	//Distance On Attach By point number weight
 	const float max = FMath::Max(_DistanceOnAttach + CablePullSlackDistanceRange.Max, _DistanceOnAttach - CablePullSlackDistanceRange.Max);
-	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(distOnAttachWithRange, CableCapArray.Num()), 0.0f, max);
+	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num()), 0.0f, max);
 	
 	//Calculate Pull alpha && activate pull
-	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, FMath::Abs(distOnAttachWithRange),0 ,1);
-	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > distOnAttachWithRange;
+	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, FMath::Abs(_DistanceOnAttach + _CablePullSlackDistance),0 ,1);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
+	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, max,0 ,1);
+	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
+	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
 	
-	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, distOnAttachWithRange, distanceOnAttachByTensorWeight, alpha);
+	
+	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
 	
 	return alpha; 
 }
@@ -1327,7 +1332,6 @@ void UPS_HookComponent::OnTriggerSwing(const bool bActivate)
 	
 	if (!IsValid(GetWorld()) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_PlayerCharacter) || !
 		IsValid(_AttachedMesh)) return;
-
 	
 	if (bDebugSwing) UE_LOG(LogActorComponent, Log, TEXT("%S :: bActivate %i, movemode %s "), __FUNCTION__, bActivate, *UEnum::GetValueAsString(_PlayerCharacter->GetCharacterMovement()->MovementMode));
 
@@ -1446,7 +1450,7 @@ void UPS_HookComponent::SwingTick(const float deltaTime)
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(_AttachedMesh) || !CableListArray.IsValidIndex(0) || !IsValid(GetWorld())) return;
 			
 	//Activate Swing if not active
-	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling()&& _AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
+	if(!IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling() && _AttachedMesh->GetMass() > _PlayerCharacter->GetMesh()->GetMass())
 	{
 		OnTriggerSwing(true);
 	}
@@ -1512,7 +1516,7 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 	if(!FMath::IsNearlyEqual(HookPhysicConstraint->GetComponentLocation().Length(),constraintLoc.Length())) HookPhysicConstraint->SetWorldLocation(constraintLoc, false);
 
 	//Update player to slave loc
-	const float distMasterToConstraintInstLoc = UKismetMathLibrary::Vector_Distance(ConstraintAttachMaster->GetComponentLocation(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation());
+	float distMasterToConstraintInstLoc = FMath::Sqrt(UKismetMathLibrary::Vector_DistanceSquared(ConstraintAttachMaster->GetComponentLocation(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation()));
 	const float switchLocAlpha = distOnAttachWithRange < 0 ? 1.0f : UKismetMathLibrary::MapRangeClamped(distMasterToConstraintInstLoc, 0.0f, distOnAttachWithRange / 2.0f, 0.0f, 1.0f);
 	const float targetDist = UKismetMathLibrary::FInterpTo(_SwingLastDistOnAttachWithRange, distOnAttachWithRange < 0 ? 0.0f : distOnAttachWithRange, deltaTime, SwingWindeTargetLocInterpSpeed);
 
@@ -1572,9 +1576,9 @@ void UPS_HookComponent::OnSwingPhysic(const float deltaTime)
 	{
 		//DrawDebugDirectionalArrow(GetWorld(), ConstraintAttachSlave->GetComponentLocation() ,ConstraintAttachSlave->GetComponentLocation() + dirToMaster * distOnAttachWithRange * _CableWindeInputValue , 5.0f, FColor::Blue, false, 0.2f, 10, 2);
 		DrawDebugPoint(GetWorld(), HookPhysicConstraint->GetComponentLocation(), 30.f, FColor::Red, false, 1.0f);
-		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, false, 1.0f);
-		DrawDebugPoint(GetWorld(), ConstraintAttachSlave->GetComponentLocation(), 20.f, FColor::Yellow, false, 1.0f);
-		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation() + dirToConstInst * distOnAttachWithRange, 20.f, FColor::Blue, false, 1.0f);
+		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation(), 20.f, FColor::Orange, false, 1.0f, 10.0f);
+		DrawDebugPoint(GetWorld(), ConstraintAttachSlave->GetComponentLocation(), 22.f, FColor::Yellow, false, 1.0f);
+		DrawDebugPoint(GetWorld(), HookPhysicConstraint->ConstraintInstance.GetConstraintLocation() + dirToConstInst * distOnAttachWithRange, 23.f, FColor::Blue, false, 1.0f);
 		UE_LOG(LogActorComponent, Log, TEXT("%S :: distBetConstraintComp %f, distMasterToConstraintInstLoc %f, distOnAttachWithRange %f, switchLocAlpha %f"),__FUNCTION__, distBetConstraintComp, distMasterToConstraintInstLoc, distOnAttachWithRange, switchLocAlpha);
 	}
 
@@ -1651,7 +1655,7 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
+void UPS_HookComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 
@@ -1683,7 +1687,12 @@ void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const F
 	//Setup spawned elements
 	_ImpactField->SetActorScale3D(extent);
 	
-	//Bind to EndOverlap for destroying
+	//Bind to EndOverlap && BreakEvent for destroying
+	if (IsValid(geometryCollectionTarget))
+	{
+		_CurrentGeometryCollection = geometryCollectionTarget;
+		_CurrentGeometryCollection->OnChaosBreakEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnGeometryCollectBreakEventReceived);
+	}
 	_ImpactField->GetCollider()->OnComponentEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 	
 	//Active move logic 
@@ -1703,6 +1712,10 @@ void UPS_HookComponent::ResetImpactField(const bool bForce)
 	if (bDebugChaos) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
 	
 	//Remove callback
+	if (IsValid(_CurrentGeometryCollection))
+	{
+		_CurrentGeometryCollection->OnChaosBreakEvent.RemoveDynamic(this, &UPS_HookComponent::OnGeometryCollectBreakEventReceived);
+	}
 	_ImpactField->GetCollider()->OnComponentEndOverlap.RemoveDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
 
 	//Reset variables
@@ -1735,9 +1748,22 @@ void UPS_HookComponent::MoveImpactField()
 	OnHookChaosFieldMovingEvent.Broadcast();
 }
 
+void UPS_HookComponent::OnGeometryCollectBreakEventReceived(const FChaosBreakEvent& BreakEvent)
+{	
+	if (!IsValid(_CurrentGeometryCollection) || !IsValid(_AttachedMesh)) return;
+
+	UE_LOG(LogTemp, Error, TEXT("%S"), __FUNCTION__);
+
+	FTimerDelegate timerDelegate;
+	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField, true);
+	GetWorld()->GetTimerManager().SetTimer(_ResetFieldTimerHandler, timerDelegate, FieldResetDelay, false);
+
+	DettachHook();
+}
+
 void UPS_HookComponent::OnChaosFieldEndOverlapEventReceived(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, OtherComp %s"), __FUNCTION__, *OtherActor->GetName(), *OtherComp->GetName());
 
 	//Check if Collider have still actor who's overlapped him
 	// TArray<AActor*> actorsOverlapped;
