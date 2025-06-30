@@ -444,8 +444,8 @@ private:
 	UPROPERTY(Transient)
 	float _AlphaWinde;
 	
-	UPROPERTY(Transient)
-	float _WindeInputAxis1DValue;
+	UPROPERTY(DuplicateTransient)
+	float _WindeInputAxis1DValue = WindeMaxInputWeight;
 		
 	//------------------
 #pragma endregion Winde
@@ -638,7 +638,7 @@ public:
 	FOnPSDelegate_Field OnHookChaosFieldGeneratedEvent;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate OnHookChaosFieldMovingEvent;s
+	FOnPSDelegate OnHookChaosFieldMovingEvent;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
@@ -658,7 +658,7 @@ protected:
 
 	//Use when Wrap OR unwrap cable for Update field loc
 	UFUNCTION()
-	void ForceUpdateImpactFieldLoc();
+	void ForceUpdateImpactFieldLoc(bool bAttach);
 
 private:
 	UPROPERTY(Transient)

@@ -646,7 +646,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 		ForceUpdateMasterConstraint();
 	// Or if using Chaos system update ImpactField loc
 	else if (_bCanMoveField)
-		ForceUpdateImpactFieldLoc();
+		ForceUpdateImpactFieldLoc(false);
 	
 	
 	//----Set first cable Loc && Attach----
@@ -778,7 +778,7 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 		ForceUpdateMasterConstraint();
 	// Or if using Chaos system update ImpactField loc
 	else if (_bCanMoveField)
-		ForceUpdateImpactFieldLoc();
+		ForceUpdateImpactFieldLoc(true);
 }
 
 bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)
@@ -855,7 +855,7 @@ void UPS_HookComponent::HookObject()
 	if(bDebug) UE_LOG(LogActorComponent, Log, TEXT("%S"), __FUNCTION__);
 
 	//Get Trace	
-	const FVector start = _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK);
+	const FVector start = HookThrower->GetSocketLocation(SOCKET_HOOK);
 	const FVector target = _PlayerCharacter->GetWeaponComponent()->GetLaserTarget();
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -904,7 +904,7 @@ void UPS_HookComponent::HookObject()
 	_AttachedMesh->SetGenerateOverlapEvents(true);
 	
 	//Determine max distance for Pull
-	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(), _AttachedMesh->GetComponentLocation()));
+	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), _AttachedMesh->GetComponentLocation()));
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -1023,7 +1023,7 @@ void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstan
 void UPS_HookComponent::ResetWindeHook()
 {
 	//Reset Input var
-	_WindeInputAxis1DValue = 0.0f;
+	_WindeInputAxis1DValue = WindeMaxInputWeight;
 	_CableWindeInputValue = 0.0f;
 
 	//ResetSlack distance to Minimum
@@ -1060,7 +1060,8 @@ void UPS_HookComponent::DetermineForceWeight(const float alpha)
 
 float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 {
-	if(_CableWindeInputValue != 0.0f)
+	//Winde Alpha
+	if(_CableWindeInputValue != 0.0f && FMath::Abs(_CableWindeInputValue) != _AlphaWinde)
 	{
 		//Applicate curve to winde alpha input
 		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
@@ -1073,8 +1074,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		if(_CableWindeInputValue < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
 
 		//Determine current slack distance
-		const float dist = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde);
-		_CablePullSlackDistance = dist * FMath::Sign(_CableWindeInputValue);
+		_CablePullSlackDistance = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);			
 	}
 	
 	//Override _DistanceOnAttach
@@ -1090,14 +1090,13 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num()), 0.0f, max);
 	
 	//Calculate Pull alpha && activate pull
-	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, FMath::Abs(_DistanceOnAttach + _CablePullSlackDistance),0 ,1);
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, max, 0 ,1);
-	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
-	
-	
+
+	//Debug
 	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
-	
+
+	//Out
 	return alpha; 
 }
 
@@ -1171,7 +1170,7 @@ void UPS_HookComponent::PowerCablePull()
 
 	//Determine Alphas
 	//Current dist to attach loc
-	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetComponentLocation(),_AttachedMesh->GetComponentLocation()));
+	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(),_AttachedMesh->GetComponentLocation()));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
@@ -1611,7 +1610,7 @@ void UPS_HookComponent::ForceUpdateMasterConstraint()
 	}
 
 	//Update dist && Move
-	FVector masterLoc = bMustAttachtoLastPoint ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
+	FVector masterLoc = bMustAttachtoLastPoint && CableCapArray.IsValidIndex(0) ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
 	UpdateMasterConstraint(masterLoc);
 
 	//Activate Custom tick Update
@@ -1656,19 +1655,24 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region Destruction
 //------------------
 
-void UPS_HookComponent::ForceUpdateImpactFieldLoc()
+void UPS_HookComponent::ForceUpdateImpactFieldLoc(const bool bAttach)
 {
 	if (!IsValid(_ImpactField)) return;
+	
+	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0) && CableCapArray.IsValidIndex(0);
+	
+	if (bAttach && !bMustAttachtoLastPoint) return;
 
 	//Update Loc
-	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0);
-	FVector masterLoc = bMustAttachtoLastPoint ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;	
+	FVector masterLoc = bMustAttachtoLastPoint ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
 	_ImpactField->SetActorLocation(masterLoc);
 
 	//Update Rot
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
 	rot.Pitch = rot.Pitch - 90.0f;
 	_ImpactField->SetActorRotation(rot);
+
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: bMustAttachtoLastPoint %i, CableCapArray %i"),__FUNCTION__, bMustAttachtoLastPoint, CableCapArray.IsValidIndex(0));
 }
 
 #pragma region CanGenerateImpactField
@@ -1755,13 +1759,13 @@ void UPS_HookComponent::UpdateImpactField()
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
 	rot.Pitch = rot.Pitch - 90.0f;
 	_ImpactField->SetActorRotation(rot);
-
+	
 	//Update Scale
 	const float radius = FMath::Lerp(1.0f, FieldRadiusMulitiplicator, GetAlphaTense());
 	FVector scale = FVector::One() * radius;
 	_ImpactField->SetActorScale3D(scale);
 	
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: alphaTense %f"), __FUNCTION__, GetAlphaTense());
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: radius %f"), __FUNCTION__, radius);
 	
 	//Callback use for Velocities variation done in BP
 	OnHookChaosFieldMovingEvent.Broadcast();
