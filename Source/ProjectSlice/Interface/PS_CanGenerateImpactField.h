@@ -32,11 +32,11 @@ public:
 	
 	virtual TSubclassOf<APS_FieldSystemActor> GetFieldSystemClass() const = 0;
 	
-	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero()){};
 
 	virtual void ResetImpactField(const bool bForce = false);
 
-	virtual void MoveImpactField(){};
+	virtual void UpdateImpactField(){};
 
 	//GeometryCollection event
 	virtual void OnGeometryCollectBreakEventReceived(const FChaosBreakEvent& BreakEvent) {};

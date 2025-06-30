@@ -88,7 +88,7 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	
 	UpdatePushTargetLoc();
 
-	MoveImpactField();
+	UpdateImpactField();
 }
 
 
@@ -334,7 +334,7 @@ void UPS_ForceComponent::AttachScrew()
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_ForceComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
+void UPS_ForceComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 
@@ -377,7 +377,7 @@ void UPS_ForceComponent::GenerateImpactField(UGeometryCollectionComponent* geome
 	OnForceChaosFieldGeneratedEvent.Broadcast(_ImpactField);
 }
 
-void UPS_ForceComponent::MoveImpactField()
+void UPS_ForceComponent::UpdateImpactField()
 {
 	if(!IsValid(_ImpactField) || !IsValid(GetWorld())) return;
 

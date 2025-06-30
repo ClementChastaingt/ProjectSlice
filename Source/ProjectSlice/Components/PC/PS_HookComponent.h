@@ -280,7 +280,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="cm", ToolTip="Min && Max distance from Cable max tense. Is used by winde to give some soft or hard to rope so is used in (+ and -)"))
-	FFloatInterval CablePullSlackDistanceRange = FFloatInterval(1000.0f,1000.0f);
+	float CablePullSlackMaxDistanceRange = 1000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Debug",
 		meta=(ToolTip="Change New Cable Material color randomly"))
@@ -357,7 +357,7 @@ private:
 	float _FirstCableDefaultLenght;
 
 	UPROPERTY(DuplicateTransient)
-	float _CablePullSlackDistance = CablePullSlackDistanceRange.Min;
+	float _CablePullSlackDistance = CablePullSlackMaxDistanceRange;
 	
 	UPROPERTY(Transient)
 	float _AlphaTense;
@@ -638,14 +638,14 @@ public:
 	FOnPSDelegate_Field OnHookChaosFieldGeneratedEvent;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnPSDelegate OnHookChaosFieldMovingEvent;
+	FOnPSDelegate OnHookChaosFieldMovingEvent;s
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	TSubclassOf<APS_FieldSystemActor> FieldSystemActor;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="sec", ClampMin="0.0", UIMin="0.0"))
-	float FieldResetDelay = 1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ForceUnits="s", ClampMin="0.0", UIMin="0.0"))
+	float FieldResetDelay = 0.75f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction", meta=(ClampMin="1.0", UIMin="1.0"))
 	float FieldRadiusMulitiplicator = 5.0f;
@@ -655,6 +655,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	FFloatInterval FieldRadialVelMagnitudeRange = FFloatInterval(0.0f, 750.0f);
+
+	//Use when Wrap OR unwrap cable for Update field loc
+	UFUNCTION()
+	void ForceUpdateImpactFieldLoc();
 
 private:
 	UPROPERTY(Transient)
@@ -676,11 +680,11 @@ private:
 	//------------------
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
 
 	virtual void ResetImpactField(bool bForce = false) override;
 
-	virtual void MoveImpactField() override;
+	virtual void UpdateImpactField() override;
 
 	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

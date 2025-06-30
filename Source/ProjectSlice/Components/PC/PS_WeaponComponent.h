@@ -139,7 +139,7 @@ private:
 
 protected:
 	UFUNCTION()
-	virtual void GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
+	virtual void GenerateImpactField(const FHitResult& targetHit, const FVector extent = FVector::Zero())override;
 
 	virtual APS_FieldSystemActor* GetImpactField_Implementation() const override { return _ImpactField;};
 

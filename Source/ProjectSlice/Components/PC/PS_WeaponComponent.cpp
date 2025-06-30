@@ -165,16 +165,15 @@ void UPS_WeaponComponent::FireTriggered()
 void UPS_WeaponComponent::Fire()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld())) return;
+	
+	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetActor()) || !IsValid(_SightHitResult.GetComponent()) || !IsValid(_SightHitResult.GetComponent()->GetOwner())) return;
 
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
 	
-	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetComponent()->GetOwner())) return;
-
 	//Check if it's a destructible
-	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
-	 if(IsValid(currentChaosComponent))
+	 if(_SightHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass()))
 	 {
-	 	GenerateImpactField(currentChaosComponent, _SightHitResult);
+	 	GenerateImpactField(_SightHitResult);
 	 	return;
 	 }
 	
@@ -290,7 +289,7 @@ void UPS_WeaponComponent::Fire()
 #pragma region CanGenerateImpactField
 //------------------
 
-void UPS_WeaponComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
+void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 

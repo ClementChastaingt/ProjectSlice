@@ -644,6 +644,10 @@ void UPS_HookComponent::UnwrapCableByLast()
 	//If Swinging reset linearZ
 	if (IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling())
 		ForceUpdateMasterConstraint();
+	// Or if using Chaos system update ImpactField loc
+	else if (_bCanMoveField)
+		ForceUpdateImpactFieldLoc();
+	
 	
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
@@ -772,6 +776,9 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	//Force update swing params on create caps if currently swinging
 	if (IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling())
 		ForceUpdateMasterConstraint();
+	// Or if using Chaos system update ImpactField loc
+	else if (_bCanMoveField)
+		ForceUpdateImpactFieldLoc();
 }
 
 bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)
@@ -824,7 +831,7 @@ void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 		index++;
 	}; 
 
-	//UE_LOG(LogActorComponent, Log, TEXT("%S :: alphaTense %f"),__FUNCTION__, alphaTense); 
+	if (bDebugCable) UE_LOG(LogActorComponent, Log, TEXT("%S :: alphaTense %f"),__FUNCTION__, alphaTense); 
 }
 
 //------------------
@@ -856,10 +863,9 @@ void UPS_HookComponent::HookObject()
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
 		
 	//If not blocking exit
-	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(Cast<UMeshComponent>(_CurrentHookHitResult.GetComponent())))
+	if(!_CurrentHookHitResult.bBlockingHit || !IsValid(_CurrentHookHitResult.GetActor()) || !IsValid(_CurrentHookHitResult.GetComponent()) || !_CurrentHookHitResult.GetComponent()->IsA(UMeshComponent::StaticClass()))
 	{
 		OnHookObjectFailed.Broadcast();
-		
 		return;
 	}
 	
@@ -878,11 +884,10 @@ void UPS_HookComponent::HookObject()
 	FirstCable->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
 	FirstCable->SetVisibility(true);
 
-	//Check if it's a destructible and use Chaos logic if it is
-	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(_CurrentHookHitResult.GetComponent());
-	if(IsValid(currentChaosComponent))
+	//Check if it's a destructible and use Chaos logic if it is;
+	if(_CurrentHookHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass()))
 	{
-		if(!IsValid(_ImpactField)) GenerateImpactField(currentChaosComponent, _CurrentHookHitResult,  FVector::One());
+		if(!IsValid(_ImpactField)) GenerateImpactField(_CurrentHookHitResult,  FVector::One());
 	}
 	//Else setup new attached component and collision
 	else
@@ -1022,7 +1027,7 @@ void UPS_HookComponent::ResetWindeHook()
 	_CableWindeInputValue = 0.0f;
 
 	//ResetSlack distance to Minimum
-	_CablePullSlackDistance = CablePullSlackDistanceRange.Min;
+	_CablePullSlackDistance = CablePullSlackMaxDistanceRange;
 
 	//Reset Arm anim
 	_PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(0);
@@ -1068,26 +1073,25 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 		if(_CableWindeInputValue < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
 
 		//Determine current slack distance
-		const float dist = FMath::Lerp(CablePullSlackDistanceRange.Min, CablePullSlackDistanceRange.Max, _AlphaWinde);
+		const float dist = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde);
 		_CablePullSlackDistance = dist * FMath::Sign(_CableWindeInputValue);
 	}
-
+	
 	//Override _DistanceOnAttach
-	if(_DistanceOnAttach + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackDistanceRange.Min
-		&& FMath::Sign(_DistanceOnAttach - CablePullSlackDistanceRange.Min) == FMath::Sign(_DistanceOnAttach + _CablePullSlackDistance)
+	if(_DistanceOnAttach + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackMaxDistanceRange
+		&& FMath::Sign(_DistanceOnAttach - CablePullSlackMaxDistanceRange) == FMath::Sign(_DistanceOnAttach + _CablePullSlackDistance)
 		&& !_bPlayerIsSwinging)
 	{
 		_DistanceOnAttach = baseToMeshDist;
 	}
 	
 	//Distance On Attach By point number weight
-	const float max = FMath::Max(_DistanceOnAttach + CablePullSlackDistanceRange.Max, _DistanceOnAttach - CablePullSlackDistanceRange.Max);
+	const float max = FMath::Max(_DistanceOnAttach + CablePullSlackMaxDistanceRange, _DistanceOnAttach - CablePullSlackMaxDistanceRange);
 	float distanceOnAttachByTensorWeight = FMath::Clamp(UKismetMathLibrary::SafeDivide(_DistanceOnAttach + _CablePullSlackDistance, CableCapArray.Num()), 0.0f, max);
 	
 	//Calculate Pull alpha && activate pull
 	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, FMath::Abs(_DistanceOnAttach + _CablePullSlackDistance),0 ,1);
-	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
-	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, max,0 ,1);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, max, 0 ,1);
 	//const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, _DistanceOnAttach + _CablePullSlackDistance,0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
 	
@@ -1173,13 +1177,13 @@ void UPS_HookComponent::PowerCablePull()
 	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
-	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, 0.0f, FMath::Abs(CablePullSlackDistanceRange.Max),1.0f,0.0f);
+	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, -CablePullSlackMaxDistanceRange, CablePullSlackMaxDistanceRange,1.0f,0.0f);
 	AdaptCableTense(_AlphaTense);
 
 	//Check if it's destructible and use Chaos logic if it is
 	if(_bCanMoveField)
 	{
-		MoveImpactField();
+		UpdateImpactField();
 		return;
 	}
 
@@ -1652,13 +1656,32 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 #pragma region Destruction
 //------------------
 
+void UPS_HookComponent::ForceUpdateImpactFieldLoc()
+{
+	if (!IsValid(_ImpactField)) return;
+
+	//Update Loc
+	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0);
+	FVector masterLoc = bMustAttachtoLastPoint ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;	
+	_ImpactField->SetActorLocation(masterLoc);
+
+	//Update Rot
+	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
+	rot.Pitch = rot.Pitch - 90.0f;
+	_ImpactField->SetActorRotation(rot);
+}
+
 #pragma region CanGenerateImpactField
 //------------------
-
-void UPS_HookComponent::GenerateImpactField(UGeometryCollectionComponent* geometryCollectionTarget, const FHitResult& targetHit, const FVector extent)
+void UPS_HookComponent::GenerateImpactField(const FHitResult& targetHit, const FVector extent)
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(GetWorld()) || !targetHit.bBlockingHit) return;
 
+	//Check geometrycollection validity && stock it
+	UGeometryCollectionComponent* currentChaosComponent = Cast<UGeometryCollectionComponent>(targetHit.GetComponent());
+	if (!IsValid(currentChaosComponent) || !targetHit.GetComponent()->GetPhysicsLinearVelocity().IsNearlyZero()) return;
+	_CurrentGeometryCollection = currentChaosComponent;
+		
 	if(!IsValid(FieldSystemActor.Get()))
 	{
 		UE_LOG(LogActorComponent, Warning, TEXT("%S :: SpawnActor failed because no class was specified"),__FUNCTION__);
@@ -1688,12 +1711,8 @@ void UPS_HookComponent::GenerateImpactField(UGeometryCollectionComponent* geomet
 	_ImpactField->SetActorScale3D(extent);
 	
 	//Bind to EndOverlap && BreakEvent for destroying
-	if (IsValid(geometryCollectionTarget))
-	{
-		_CurrentGeometryCollection = geometryCollectionTarget;
-		_CurrentGeometryCollection->OnChaosBreakEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnGeometryCollectBreakEventReceived);
-	}
 	_ImpactField->GetCollider()->OnComponentEndOverlap.AddUniqueDynamic(this, &UPS_HookComponent::OnChaosFieldEndOverlapEventReceived);
+	_CurrentGeometryCollection->OnChaosBreakEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnGeometryCollectBreakEventReceived);
 	
 	//Active move logic 
 	_bCanMoveField = true;
@@ -1728,7 +1747,7 @@ void UPS_HookComponent::ResetImpactField(const bool bForce)
 	if(IsValid(_AttachedMesh))DettachHook();
 }
 
-void UPS_HookComponent::MoveImpactField()
+void UPS_HookComponent::UpdateImpactField()
 {
 	if(_bPlayerIsSwinging) return;
 		
