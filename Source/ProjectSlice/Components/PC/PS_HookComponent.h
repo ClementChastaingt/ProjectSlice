@@ -656,10 +656,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Destruction")
 	FFloatInterval FieldRadialVelMagnitudeRange = FFloatInterval(0.0f, 750.0f);
 
-	//Use when Wrap OR unwrap cable for Update field loc
-	UFUNCTION()
-	void ForceUpdateImpactFieldLoc(bool bAttach);
-
 private:
 	UPROPERTY(Transient)
 	APS_FieldSystemActor* _ImpactField;

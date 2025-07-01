@@ -197,7 +197,7 @@ void UPS_ForceComponent::ReleasePush()
 			FTimerHandle timerChaosHandle;
 			FTimerDelegate timerChaosDelegate;
 			
-			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outGeometryComp, outHitResult, FVector::One() * radius); 
+			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
 
 			//if (bDebugChaos) UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);

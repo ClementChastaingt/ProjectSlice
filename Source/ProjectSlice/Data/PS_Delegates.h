@@ -20,8 +20,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Field,const AFieldSyst
 
 // 2 params
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Int_Actor, const int32&, intValue, const AActor*, actor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Int_Bool, const int32&, intValue, const bool, boolValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Vector_Vector, const FVector&, vectorValue1, const FVector&, vectorValue2);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Vector_Rotator, const FVector&, vectorValue, const FRotator&, rotatorValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_ObjectType_Bool, const EPointedObjectType&, intValue, const bool, boolValue);
 
 
 

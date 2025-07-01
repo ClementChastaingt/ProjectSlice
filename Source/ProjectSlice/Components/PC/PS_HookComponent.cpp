@@ -643,11 +643,7 @@ void UPS_HookComponent::UnwrapCableByLast()
 
 	//If Swinging reset linearZ
 	if (IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling())
-		ForceUpdateMasterConstraint();
-	// Or if using Chaos system update ImpactField loc
-	else if (_bCanMoveField)
-		ForceUpdateImpactFieldLoc(false);
-	
+		ForceUpdateMasterConstraint();	
 	
 	//----Set first cable Loc && Attach----
 	cableListLastIndex = CableListArray.Num() - 1;
@@ -776,9 +772,6 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWarpParams& currentTraceParam
 	//Force update swing params on create caps if currently swinging
 	if (IsPlayerSwinging() && _PlayerCharacter->GetCharacterMovement()->IsFalling())
 		ForceUpdateMasterConstraint();
-	// Or if using Chaos system update ImpactField loc
-	else if (_bCanMoveField)
-		ForceUpdateImpactFieldLoc(true);
 }
 
 bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float& errorTolerance)
@@ -1654,26 +1647,6 @@ void UPS_HookComponent::ImpulseConstraintAttach() const
 
 #pragma region Destruction
 //------------------
-
-void UPS_HookComponent::ForceUpdateImpactFieldLoc(const bool bAttach)
-{
-	if (!IsValid(_ImpactField)) return;
-	
-	const bool bMustAttachtoLastPoint = CablePointComponents.IsValidIndex(0) && CableCapArray.IsValidIndex(0);
-	
-	if (bAttach && !bMustAttachtoLastPoint) return;
-
-	//Update Loc
-	FVector masterLoc = bMustAttachtoLastPoint ? CableCapArray[0]->GetComponentLocation() : _CurrentHookHitResult.Location;
-	_ImpactField->SetActorLocation(masterLoc);
-
-	//Update Rot
-	FRotator rot = UKismetMathLibrary::FindLookAtRotation(_ImpactField->GetActorLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation());
-	rot.Pitch = rot.Pitch - 90.0f;
-	_ImpactField->SetActorRotation(rot);
-
-	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S :: bMustAttachtoLastPoint %i, CableCapArray %i"),__FUNCTION__, bMustAttachtoLastPoint, CableCapArray.IsValidIndex(0));
-}
 
 #pragma region CanGenerateImpactField
 //------------------

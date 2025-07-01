@@ -19,6 +19,15 @@ class AProjectSlicePlayerController;
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
 
+UENUM(BlueprintType)
+enum class EPointedObjectType : uint8
+{
+	DEFAULT = 0 UMETA(DisplayName = "Default"),
+	SLICEABLE = 1 UMETA(DisplayName = "Sliceable"),
+	CHAOS = 2 UMETA(DisplayName = "Chaos"),
+	ENEMY = 3 UMETA(DisplayName = "Enemy")
+};
+
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent, public IPS_CanGenerateImpactField
 {
@@ -204,13 +213,17 @@ public:
 	FORCEINLINE int32 GetCurrentSightedFace() const{return _CurrentSightedFace;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetSightStart() const{return SightStart;}
+	FORCEINLINE FVector GetSightStart() const{return _SightStart;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetLaserTarget() const{return LaserTarget;}
+	FORCEINLINE FVector GetLaserTarget() const{return _LaserTarget;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetSightTarget() const{return SightTarget;}
+	FORCEINLINE FVector GetSightTarget() const{return _SightTarget;}
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_ObjectType_Bool OnSwitchLaserMatEvent;
+	
 
 protected:
 		
@@ -242,13 +255,16 @@ private:
 	int32 _CurrentSightedFace;
 
 	UPROPERTY(Transient)
-	FVector SightStart;
+	FVector _SightStart;
 
 	UPROPERTY(Transient)
-	FVector LaserTarget;
+	FVector _LaserTarget;
 
 	UPROPERTY(Transient)
-	FVector SightTarget;
+	FVector _SightTarget;
+
+	UPROPERTY(Transient)
+	EPointedObjectType _SightedObjectType;
 
 #pragma region Rack
 	//------------------

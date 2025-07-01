@@ -193,7 +193,7 @@ void UPS_WeaponComponent::Fire()
 	_LastSliceOutput.bDebug = bDebugSlice;
 	
 	UPS_SlicedComponent* outHalfComponent;
-	FVector sliceLocation = SightTarget;
+	FVector sliceLocation = _SightTarget;
 	FVector sliceDir = SightMesh->GetUpVector();
 	sliceDir.Normalize();
 
@@ -573,17 +573,17 @@ void UPS_WeaponComponent::SightShaderTick()
 
 	//Determine Sight Hit
 	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
+	_SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
 	
 	//Laser
-	LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
-	SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
-
+	_LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	_SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
+	
 	//Stop if in can't slice situation
 	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
 	{
@@ -604,6 +604,16 @@ void UPS_WeaponComponent::SightShaderTick()
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 
+		//Update laser color if necessary
+		const bool bIsAChaosGpe = _SightHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass());
+		//const bool bIsASlicedGpe = _SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass());
+		EPointedObjectType newObjectType = EPointedObjectType::DEFAULT;
+		if (newObjectType != _SightedObjectType)
+		{
+			_SightedObjectType = newObjectType;
+			OnSwitchLaserMatEvent.Broadcast(_SightedObjectType, true);
+		}
+	
 		//Adapt sightMesh scale to sighted object bound
 		AdaptSightMeshBound();
 		
