@@ -36,6 +36,8 @@ const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE
 //__________________________________________________
 #pragma endregion GlobalEnum
 
+#pragma region Gameplay
+//__________________________________________________
 UENUM(BlueprintType)
 enum class EPointedObjectType : uint8
 {
@@ -45,5 +47,5 @@ enum class EPointedObjectType : uint8
 	ENEMY = 3 UMETA(DisplayName = "Enemy")
 };
 
-//------------------
+//__________________________________________________
 #pragma endregion Gameplay
