@@ -16,7 +16,6 @@
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Constants.h"
-#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
@@ -339,22 +338,6 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 #pragma region Rack
 //------------------
 
-void UPS_WeaponComponent::UpdateLaserColor()
-{
-	EPointedObjectType newObjectType = EPointedObjectType::DEFAULT;
-	if (_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetComponent()))
-	{
-		if(_SightHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass())) newObjectType = EPointedObjectType::CHAOS;
-		else if (_SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) newObjectType = EPointedObjectType::SLICEABLE;
-	}
-	
-	if (newObjectType != _SightedObjectType)
-	{
-		_SightedObjectType = newObjectType;
-		OnSwitchLaserMatEvent.Broadcast(_SightedObjectType, true);
-	}
-}
-
 void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
@@ -589,8 +572,8 @@ void UPS_WeaponComponent::SightShaderTick()
 	}
 
 	//Determine Sight Hit
-	_bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
+	const bool bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
+	_SightStart = bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
 	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -611,9 +594,6 @@ void UPS_WeaponComponent::SightShaderTick()
 	//On shoot Bump tick logic 
 	SliceBump();
 
-	//Update laser color if necessary
-	UpdateLaserColor();
-
 	UMeshComponent* sliceTarget = Cast<UMeshComponent>(_SightHitResult.GetComponent());
 	if(_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetActor()))
 	{
@@ -623,9 +603,20 @@ void UPS_WeaponComponent::SightShaderTick()
 		{
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
+
+		//Update laser color if necessary
+		const bool bIsAChaosGpe = _SightHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass());
+		//const bool bIsASlicedGpe = _SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass());
+		EPointedObjectType newObjectType = EPointedObjectType::DEFAULT;
+		if (newObjectType != _SightedObjectType)
+		{
+			_SightedObjectType = newObjectType;
+			OnSwitchLaserMatEvent.Broadcast(_SightedObjectType, true);
+		}
 	
 		//Adapt sightMesh scale to sighted object bound
 		AdaptSightMeshBound();
+		
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent())
 			return;
 		
@@ -674,7 +665,7 @@ void UPS_WeaponComponent::SightShaderTick()
 		
 		//Setup Bump to Old params if effective
 		ForceInitSliceBump();
-		
+
 		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
 	}
 	//If don't Lbock reset old mat properties
