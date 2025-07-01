@@ -5,12 +5,12 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_ForceComponent.generated.h"
 
 
+class AProjectSlicePlayerController;
 class APS_FieldSystemActor;
 class AProjectSliceCharacter;
 
