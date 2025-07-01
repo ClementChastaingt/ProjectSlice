@@ -5,28 +5,16 @@
 #include "CoreMinimal.h"
 #include "PS_ForceComponent.h"
 #include "PS_HookComponent.h"
-#include "PS_PlayerCameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Field/FieldSystemActor.h"
-#include "GeometryCollection/GeometryCollectionActor.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
-#include "ProjectSlice/GPE/PS_Projectile.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_WeaponComponent.generated.h"
 
+class UPS_PlayerCameraComponent;
 class AProjectSlicePlayerController;
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
-
-UENUM(BlueprintType)
-enum class EPointedObjectType : uint8
-{
-	DEFAULT = 0 UMETA(DisplayName = "Default"),
-	SLICEABLE = 1 UMETA(DisplayName = "Sliceable"),
-	CHAOS = 2 UMETA(DisplayName = "Chaos"),
-	ENEMY = 3 UMETA(DisplayName = "Enemy")
-};
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent, public IPS_CanGenerateImpactField
@@ -214,10 +202,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetSightStart() const{return _SightStart;}
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE FVector GetLaserTarget() const{return _LaserTarget;}
-
+	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetSightTarget() const{return _SightTarget;}
 
@@ -226,7 +211,7 @@ public:
 	
 
 protected:
-		
+	
 	/** Gun muzzle's offset from the characters location ::UNUSED:: */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight")
 	FVector MuzzleOffset;
@@ -255,16 +240,33 @@ private:
 	int32 _CurrentSightedFace;
 
 	UPROPERTY(Transient)
-	FVector _SightStart;
-
-	UPROPERTY(Transient)
-	FVector _LaserTarget;
+	FVector _SightStart;	
 
 	UPROPERTY(Transient)
 	FVector _SightTarget;
 
 	UPROPERTY(Transient)
 	EPointedObjectType _SightedObjectType;
+
+#pragma region Laser
+	//------------------
+
+public:
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetLaserTarget() const{return _LaserTarget;}
+
+protected:
+	UFUNCTION()
+	void UpdateLaserColor();
+	
+private:
+	UPROPERTY(Transient)
+	FVector _LaserTarget;
+
+	UPROPERTY(Transient)
+	bool _bUseHookStartForLaser;
+
+#pragma endregion Laser
 
 #pragma region Rack
 	//------------------
