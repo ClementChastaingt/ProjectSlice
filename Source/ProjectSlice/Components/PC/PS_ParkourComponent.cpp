@@ -995,6 +995,8 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| otherActor->ActorHasTag(TAG_UNPARKOURABLE)) return;
 	
 	if(bIsMantling || bIsLedging)  return;
+
+	if (otherComp->IsA(UGeometryCollectionComponent::StaticClass())) return;
 	
 	_ActorOverlap = otherActor;
 	_ComponentOverlap = otherComp;
