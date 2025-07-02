@@ -17,75 +17,104 @@ class AProjectSliceCharacter;
 
 bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
 {
-	bool bFoundPoint = false;
+	if (!IsValid(actorToTest)) return false;
 
-	if(IsValid(actorToTest))
+	bool bFoundPoint = false;
+	float bestDist = TNumericLimits<float>().Max();
+    
+	TArray<UActorComponent*> outComps;
+	actorToTest->GetComponents(UMeshComponent::StaticClass(), outComps, true);
+    
+	for (UActorComponent* currentComp : outComps)
 	{
-		float bestDist = TNumericLimits<float>().Max();
-		
-		TArray<UActorComponent*> outComps;
-		actorToTest->GetComponents(UMeshComponent::StaticClass(),outComps,true);
-		for (UActorComponent* currentComp : outComps)
+		if (UMeshComponent* meshComp = Cast<UMeshComponent>(currentComp))
 		{
-			if (UMeshComponent* meshComp = Cast<UMeshComponent>(currentComp))
+			FVector currentPoint;
+			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
+            
+			if (currentDist >= 0 && currentDist < bestDist)
 			{
-				FVector currentPoint;
-				const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-				
-				if ((currentDist >= 0) && (currentDist < bestDist))
+				bestDist = currentDist;
+				outClosestPoint = currentPoint;
+				bFoundPoint = true;
+			}
+			else if (currentDist == 0)
+			{
+				FVector surfacePoint = FindNearestSurfacePoint(meshComp, fromWorldLocation);
+                
+				if (!surfacePoint.IsZero())
 				{
-					bestDist = currentDist;
-					outClosestPoint = currentPoint;
-					bFoundPoint = true;
-				}else if(currentDist == 0)
-				{
-					FindNearestSurfacePoint(meshComp, currentPoint);
-					return FindClosestPointOnActor(actorToTest, currentPoint, outClosestPoint);
+					const float surfaceDist = FVector::Dist(surfacePoint, fromWorldLocation);
+                    
+					if (surfaceDist < bestDist)
+					{
+						bestDist = surfaceDist;
+						outClosestPoint = surfacePoint;
+						bFoundPoint = true;
+					}
 				}
 			}
 		}
 	}
-	
+    
 	return bFoundPoint;
 }
 
-FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation,const float sweepDistance)
+FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation, const float sweepDistance)
 {
-	if (!IsValid(targetComponent)) return FVector::ZeroVector;
+    if (!IsValid(targetComponent)) return FVector::ZeroVector;
 	
-	// Add diagonals for better accuracy if needed
-	const FVector directions[] = {
-		FVector(1,0,0), FVector(-1,0,0),
-		FVector(0,1,0), FVector(0,-1,0),
-		FVector(0,0,1), FVector(0,0,-1)
+	static const FVector directions[] = {
+		// Cardinal Directions 
+		FVector(1.0f, 0.0f, 0.0f), FVector(-1.0f, 0.0f, 0.0f),
+		FVector(0.0f, 1.0f, 0.0f), FVector(0.0f, -1.0f, 0.0f),
+		FVector(0.0f, 0.0f, 1.0f), FVector(0.0f, 0.0f, -1.0f),
+
+		// Diagonal Directions (pre-normalized)
+		FVector(0.70710678f, 0.70710678f, 0.0f),
+		FVector(-0.70710678f, 0.70710678f, 0.0f),
+		FVector(0.70710678f, -0.70710678f, 0.0f),
+		FVector(-0.70710678f, -0.70710678f, 0.0f)
 	};
-
-	FVector closestHit = FVector::ZeroVector;
-	float minDistance = FLT_MAX;
-
-	for (const FVector& dir : directions)
-	{
-		FHitResult Hit;
-		FVector start = insideLocation;
-		FVector end = start + dir * sweepDistance;
-
-		FCollisionQueryParams Params;
-		Params.AddIgnoredComponent(targetComponent);
-
-		if (targetComponent->GetWorld()->LineTraceSingleByChannel(
-				Hit, start, end, ECC_Visibility, Params))
-		{
-			float Dist = FVector::Dist(Hit.ImpactPoint, insideLocation);
-			if (Dist < minDistance)
-			{
-				minDistance = Dist;
-				closestHit = Hit.ImpactPoint;
-			}
-		}
-	}
-
-	return (minDistance < FLT_MAX) ? closestHit : FVector::ZeroVector;
+	
+    static const FName TraceTag = TEXT("FindNearestSurface");
+    FCollisionQueryParams Params(TraceTag, false);
+    Params.AddIgnoredComponent(targetComponent);
+    
+    FVector closestHit = FVector::ZeroVector;
+    float minDistanceSquared = FLT_MAX;
+	
+    const UWorld* World = targetComponent->GetWorld();
+    if (!World) return FVector::ZeroVector;
+	
+    constexpr float EarlyExitThreshold = 1.0f; // Distance très courte en unités Unreal
+    constexpr float EarlyExitThresholdSquared = EarlyExitThreshold * EarlyExitThreshold;
+    
+    for (const FVector& dir : directions)
+    {
+        FHitResult Hit;
+        const FVector end = insideLocation + dir * sweepDistance;
+        
+        if (World->LineTraceSingleByChannel(Hit, insideLocation, end, ECC_Visibility, Params))
+        {
+            const float distSquared = FVector::DistSquared(Hit.ImpactPoint, insideLocation);
+            
+            if (distSquared < minDistanceSquared)
+            {
+                minDistanceSquared = distSquared;
+                closestHit = Hit.ImpactPoint;
+            	
+                if (distSquared < EarlyExitThresholdSquared)
+                {
+                    break;
+                }
+            }
+        }
+    }
+    
+    return (minDistanceSquared < FLT_MAX) ? closestHit : FVector::ZeroVector;
 }
+
 
 FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
@@ -308,48 +337,71 @@ void UPSFl::SweepConeMultiByChannel(
 		bool bDebug)
 {
 	if (!World) return;
+    
+    //Normaliser && check validity
+    ConeDirection.Normalize();
+    if (ConeDirection.IsNearlyZero() || ConeLength <= 0.0f || StepInterval <= 0.0f) return;
+    
+    //Pré-calculate const var
+    const float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
+    const float StepSize = ConeLength / StepInterval;
+    const int32 NumSteps = FMath::FloorToInt(StepInterval);
+    
+    //Reserve space for avoid reallocation
+    OutHits.Reserve(NumSteps * 8); // Average estimated hits per step
+    
+    // Re-use collision params
+    static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
+    const FCollisionQueryParams QueryParams = CustomConfigureCollisionParams(
+        SphereTraceMultiName, false, ActorsToIgnore, true, World);
+    
+    // Re-use table for avoid multiple allocation
+    TArray<FHitResult> SphereHitResults;
+    SphereHitResults.Reserve(16);
+    
+    //Pre-calculate const var
+    const FQuat Identity = FQuat::Identity;
 
-	// Normalize the cone direction
-	ConeDirection.Normalize();
-
-	// Convert angle to radians
-	float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
-	
 	// Sweep multiple spheres along the cone's length
-	for (int32 Step = 0; Step < StepInterval; ++Step)
-	{
-		// Calculate the distance along the cone
-		float Distance = (ConeLength / StepInterval) * Step;
-
-		// Calculate the radius of the sphere at this distance
-		float Radius = Distance * ConeAngleRadians;
-		
-		// Calculate the sphere's center
-		FVector SphereCenter = ConeApex + (ConeDirection * Distance);
-
-		// Perform the sphere sweep
-		TArray<FHitResult> SphereHitResults;
-		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
-		
-		static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
-		FCollisionQueryParams queryParams = CustomConfigureCollisionParams(SphereTraceMultiName, false, ActorsToIgnore, true, World);
-		
-		if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, FQuat::Identity, TraceChannel, Sphere,queryParams))
-		{
-			// Collect all valid hits
-			OutHits.Append(SphereHitResults);
-		}
-
-		// Optional: Visualize the cone sweep
-		//DrawDebugSphere(World, SphereCenter, Radius, 12, FColor::Red, false, 1.0f);
-	}
+    for (int32 Step = 0; Step < NumSteps; ++Step)
+    {
+    	// Calculate the distance along the cone
+        const float Distance = StepSize * Step;
+        
+        // Skip spheres with radius 0 on begin
+        if (Distance < KINDA_SMALL_NUMBER) continue;
+        
+        const float Radius = Distance * ConeAngleRadians;
+        const FVector SphereCenter = ConeApex + (ConeDirection * Distance);
+        
+        //Make shape
+        const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
+        
+        //Reset Tab
+        SphereHitResults.Reset();
+        
+        if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, 
+            Identity, TraceChannel, Sphere, QueryParams))
+        {
+            OutHits.Append(SphereHitResults);
+        }
+        
+        // Debug
+        if (bDebug)
+        {
+            DrawDebugSphere(World, SphereCenter, Radius, 8, FColor::Red, false, 1.0f);
+        }
+    }
 	
-	// Debug: Draw the cone (optional)
-	if(bDebug)
-	{
-		DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
-		DrawDebugSphere(World, ConeApex + (ConeDirection * ConeLength), ConeLength * ConeAngleRadians, 12, FColor::Green, false, 1.0f);
-	}
+    if (bDebug)
+    {
+        DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, 
+            ConeAngleRadians, ConeAngleRadians, 8, FColor::Green, false, 5.0f);
+        
+        const FVector ConeEnd = ConeApex + (ConeDirection * ConeLength);
+        const float EndRadius = ConeLength * ConeAngleRadians;
+        DrawDebugSphere(World, ConeEnd, EndRadius, 8, FColor::Green, false, 1.0f);
+    }
 }
 
 void UPSFl::SweepConeMultiByChannel(
@@ -364,52 +416,88 @@ void UPSFl::SweepConeMultiByChannel(
 		const TArray<AActor*>& ActorsToIgnore,
 		bool bDebug)
 {	
-	if (!World) return;
+	 if (!World) return;
+    
+	//Normaliser && check validity
+    ConeDirection.Normalize();
+    if (ConeDirection.IsNearlyZero() || ConeLength <= 0.0f || StepInterval <= 0.0f) return;
 
-	// Normalize the cone direction
-	ConeDirection.Normalize();
+	//Pré-calculate const var
+    const float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
+    const float StepSize = ConeLength / StepInterval;
+    const int32 NumSteps = FMath::FloorToInt(StepInterval);
+    
+    // Use TSet for avoid doubles
+    TSet<UPrimitiveComponent*> UniqueComponents;
+    UniqueComponents.Reserve(NumSteps * 4); // Estimation
 
-	// Convert angle to radians
-	float ConeAngleRadians = FMath::DegreesToRadians(ConeAngleDegrees);
-	
+	// Re-use collision params
+    static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
+    const FCollisionQueryParams QueryParams = CustomConfigureCollisionParams(
+        SphereTraceMultiName, false, ActorsToIgnore, true, World);
+
+	// Re-use table for avoid multiple allocation
+    TArray<FHitResult> SphereHitResults;
+    SphereHitResults.Reserve(16);
+
+	//Pre-calculate const var
+    const FQuat Identity = FQuat::Identity;
+
 	// Sweep multiple spheres along the cone's length
-	for (int32 Step = 0; Step < StepInterval; ++Step)
-	{
-		// Calculate the distance along the cone
-		float Distance = (ConeLength / StepInterval) * Step;
+    for (int32 Step = 0; Step < NumSteps; ++Step)
+    {
+    	// Calculate the distance along the cone
+        const float Distance = StepSize * Step;
 
-		// Calculate the radius of the sphere at this distance
-		float Radius = Distance * ConeAngleRadians;
-		
-		// Calculate the sphere's center
-		FVector SphereCenter = ConeApex + (ConeDirection * Distance);
+    	// Skip spheres with radius 0 on begin
+        if (Distance < KINDA_SMALL_NUMBER) continue;
+        
+        const float Radius = Distance * ConeAngleRadians;
+        const FVector SphereCenter = ConeApex + (ConeDirection * Distance);
 
-		// Perform the sphere sweep
-		TArray<FHitResult> SphereHitResults;
-		FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
-		
-		static const FName SphereTraceMultiName(TEXT("SweepTraceCone"));
-		FCollisionQueryParams queryParams = CustomConfigureCollisionParams(SphereTraceMultiName, false, ActorsToIgnore, true, World);
-		
-		if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, FQuat::Identity, TraceChannel, Sphere,queryParams))
-		{
-			// Collect all valid hits
-			for (const FHitResult& Hit : SphereHitResults)
-			{
-				if (IsValid(Hit.GetComponent()))
-				{
-					DrawDebugPoint(World,Hit.ImpactPoint,15.0f,FColor::Purple,false,4.0f, 10.0f);
-					OutHitComponents.AddUnique(Hit.GetComponent()); // Add valid hit comp to the result array
-				}
-			}
-		}
+    	//Make shape
+        const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
 
-		// Optional: Visualize the cone sweep
-		//DrawDebugSphere(World, SphereCenter, Radius, 12, FColor::Red, false, 1.0f);
-	}
-	
-	// Debug: Draw the cone (optional)
-	if(bDebug)DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, ConeAngleRadians, ConeAngleRadians, 12, FColor::Green, false, 5.0f);
+    	//Reset Tab
+        SphereHitResults.Reset();
+        
+        if (World->SweepMultiByChannel(SphereHitResults, SphereCenter, SphereCenter, 
+            Identity, TraceChannel, Sphere, QueryParams))
+        {
+            for (const FHitResult& Hit : SphereHitResults)
+            {
+                if (UPrimitiveComponent* HitComp = Hit.GetComponent())
+                {
+                    if (IsValid(HitComp))
+                    {
+                        UniqueComponents.Add(HitComp);
+
+                    	// Debug
+                        if (bDebug)
+                        {
+                            DrawDebugPoint(World, Hit.ImpactPoint, 10.0f, 
+                                FColor::Purple, false, 2.0f, 5.0f);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    //Convert Set to Array
+    OutHitComponents.Reset();
+    OutHitComponents.Reserve(UniqueComponents.Num());
+    for (UPrimitiveComponent* Comp : UniqueComponents)
+    {
+        OutHitComponents.Add(Comp);
+    }
+    
+    // Debug
+    if (bDebug)
+    {
+        DrawDebugCone(World, ConeApex, ConeDirection, ConeLength, 
+            ConeAngleRadians, ConeAngleRadians, 8, FColor::Green, false, 5.0f);
+    }
 }
 
 #pragma region Cooldown

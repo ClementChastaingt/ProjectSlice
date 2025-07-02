@@ -17,6 +17,87 @@ class AProjectSlicePlayerController;
 class UCableComponent;
 class AProjectSliceCharacter;
 
+//Unblock strategy
+UENUM(BlueprintType)
+enum class EUnblockStrategy : uint8
+{
+	NONE = 0 UMETA(DisplayName = "None"),
+	SIMPLEOFFSET = 1 UMETA(DisplayName = "SimpleOffset"),
+	PATHCORRECTION = 2 UMETA(DisplayName = "PathCorrection"),
+	CABLERESET = 3 UMETA(DisplayName = "CableReset"),
+	FORCEDETACH = 4 UMETA(DisplayName = "ForceDetach")
+};
+
+// Structure pour trace avec cache
+USTRUCT(BlueprintType, Category = "Struct|Cable")
+struct FCableTraceCache
+{
+	GENERATED_BODY()
+
+	FCableTraceCache()
+		: LastStartPoint(FVector::ZeroVector)
+		, LastEndPoint(FVector::ZeroVector)
+		, CachedResult(FHitResult())
+		, CacheTimestamp(0.0f)
+		, bIsValid(false) {}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector LastStartPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector LastEndPoint;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FHitResult CachedResult;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CacheTimestamp;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsValid;
+    
+	static constexpr float CACHE_DURATION = 0.016f; // ~60 FPS
+	static constexpr float POSITION_TOLERANCE = 5.0f; // 5 cm
+};
+
+// Structure pour la validation des points de câble
+USTRUCT(BlueprintType, Category = "Struct|Cable")
+struct FCablePointValidation
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector Point;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector Normal;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SafetyDistance;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsValid;
+};
+
+// Structure pour le diagnostic de blocage
+USTRUCT(BlueprintType, Category = "Struct|Unblock")
+struct FUnblockDiagnostic
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector BlockDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BlockDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<AActor*> BlockingActors;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EUnblockStrategy RecommendedStrategy;
+};
+
 USTRUCT(BlueprintType, Category = "Struct")
 struct FSCableWarpParams
 {
@@ -180,7 +261,6 @@ private:
 	//------------------
 
 public:
-
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetAlphaTense() const{return _AlphaTense;}
 
@@ -366,6 +446,33 @@ private:
 
 #pragma endregion Cable
 
+#pragma region Cable_Optimization
+	//------------------
+	
+protected:
+	UFUNCTION()
+	bool OptimizedCableTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bForceTrace = false);
+
+	UFUNCTION()
+	bool OptimizedTraceCableWrap(UCableComponent* Cable, const FVector& Start, const FVector& End, FSCableWarpParams& OutResult);
+
+	UFUNCTION()
+	FCablePointValidation ValidateAndCorrectCablePoint(const FVector& ProposedPoint, const FVector& PreviousPoint, const FVector& NextPoint);
+
+private:
+	UPROPERTY(Transient)
+	FCableTraceCache _TraceCache;
+    
+	UPROPERTY(Transient)
+	FCableTraceCache _WrapTraceCache;
+    
+	// Timer pour le système de déblocage
+	UPROPERTY(Transient)
+	FTimerHandle _UnblockResetTimer;
+    
+	//------------------
+#pragma endregion Cable_Optimization
+
 #pragma region Grapple
 	//------------------
 
@@ -470,11 +577,8 @@ protected:
 	float CalculatePullAlpha(const float baseToMeshDist);
 
 	UFUNCTION()
-	void CheckingIfObjectIsBlocked();
-
-	UFUNCTION()
 	void ForceDettachByFall();
-
+	
 	UFUNCTION()
 	void PowerCablePull();
 	
@@ -500,27 +604,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull", meta=(UIMin="0", ClampMin="0", ForceUnits="deg",  ToolTip="Maximum random Yaw Offset applicate to the pull direction"))
 	float PullingMaxRandomYawOffset = 50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMax="0.0", ClampMax="0.0", ToolTip="Player VelocityZ Or ObjectHooked VelocityZ Min falling velocityZ to Break"))
-	float VelocityZToleranceToBreak = -150.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Player VelocityZ to ObjectHooked VelocityZ check lactency"))
-	float BreakByFallCheckLatency = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Latency between unblock Push steps"))
-	float UnblockPushLatency = 0.2f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Unblock maximum iteration steps"))
-	int32 UnblockMaxIterationCount = 3;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ForceUnits="cm", ToolTip= "Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))
-	float AttachedMaxDistThreshold = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
-	float AttachedSameLocMaxDuration = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Divider of the default pull force weight when unblock logic is running"))
-	float UnblockDefaultPullforceDivider = 6.0f;
-
 private:
 	UPROPERTY(Transient)
 	FHitResult _CurrentHookHitResult;
@@ -542,15 +625,62 @@ private:
 
 	UPROPERTY(Transient)
 	FTimerHandle _AttachedSameLocTimer;
-
-	UPROPERTY(Transient)
-	TArray<FTimerHandle> _UnblockTimerTimerArray;
-
+	
 	UPROPERTY(Transient)
 	bool bHasTriggerBreakByFall;
 	
 	//------------------
 #pragma endregion Pull
+
+#pragma region Unblock
+	//------------------
+
+public:
+	//------------------
+	
+protected:
+	UFUNCTION()
+	void CheckingIfObjectIsBlocked();
+
+	UFUNCTION()
+	void UnblockObject(float baseToMeshDist, float& currentPushAccel);
+	
+	UFUNCTION()
+	FUnblockDiagnostic DiagnoseBlockage() const;
+	
+	UFUNCTION()
+	void SmartUnblock();
+
+	UFUNCTION()
+	void ApplySimpleOffset(const FUnblockDiagnostic& Diagnostic);
+
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMax="0.0", ClampMax="0.0", ToolTip="Player VelocityZ Or ObjectHooked VelocityZ Min falling velocityZ to Break"))
+	float VelocityZToleranceToBreak = -150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Player VelocityZ to ObjectHooked VelocityZ check lactency"))
+	float BreakByFallCheckLatency = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Latency between unblock Push steps"))
+	float UnblockPushLatency = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Unblock maximum iteration steps"))
+	int32 UnblockMaxIterationCount = 3;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ForceUnits="cm", ToolTip= "Max Distance threshold between old and new attached object loc to consider object is at same location between frames last and actual frame"))
+	float AttachedMaxDistThreshold = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Max duration authorized for Attached to stay at same location before switching to unblocking pull method"))
+	float AttachedSameLocMaxDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Unblock", meta=(UIMin="1", ClampMin="1", ToolTip="Divider of the default pull force weight when unblock logic is running"))
+	float UnblockDefaultPullforceDivider = 6.0f;
+	
+private:
+	UPROPERTY(Transient)
+	TArray<FTimerHandle> _UnblockTimerTimerArray;
+
+#pragma endregion Unblock
 	
 	//------------------
 #pragma endregion Grapple
