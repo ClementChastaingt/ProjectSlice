@@ -56,6 +56,9 @@ public:
 	
 	UFUNCTION()
 	void ReleasePush();
+		
+	UFUNCTION()
+	static void SortPushTargets(const TArray<FHitResult>& hitsToSort, TArray<FHitResult>& outFilteredHitResult);
 	
 	UFUNCTION()
 	void SetupPush();

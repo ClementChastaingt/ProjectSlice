@@ -153,43 +153,31 @@ void UPS_ForceComponent::ReleasePush()
 	
 	UPSFl::SweepConeMultiByChannel(GetWorld(),_StartForcePushLoc, _DirForcePush,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
-	// Remove duplicate components
-	TSet<UPrimitiveComponent*> uniqueComp;
+	//Sort Hits result
 	TArray<FHitResult> filteredHitResult;
-	for (FHitResult outHit : outHits)
-	{
-		if(!IsValid(outHit.GetComponent()) || !outHit.GetComponent()->IsSimulatingPhysics()) continue;
-		
-		if (outHit.GetComponent() && !uniqueComp.Contains(outHit.GetComponent()))
-		{
-			uniqueComp.Add(outHit.GetComponent());
-			filteredHitResult.Add(outHit);
-		}
-	}
-
-	// Sort by distance (nearest to farthest)
-	Algo::Sort(filteredHitResult, [](const FHitResult& A, const FHitResult& B)
-	{
-		return A.Distance < B.Distance;
-	});
-	
+	SortPushTargets(outHits, filteredHitResult);
 	
 	//Impulse
+	int32 iteration = 0;
 	for (FHitResult outHitResult : filteredHitResult)
 	{
 		//Check comp type
 		UMeshComponent* outMeshComp = Cast<UMeshComponent>(outHitResult.GetComponent());
 		UGeometryCollectionComponent* outGeometryComp = Cast<UGeometryCollectionComponent>(outHitResult.GetComponent());
 		
-		if(!IsValid(outMeshComp) && !IsValid(outGeometryComp)) continue;
+		if(!IsValid(outMeshComp) && !IsValid(outGeometryComp))
+		{
+			iteration++;
+			continue;
+		}
 
 		//Determine response latency 
 		const float dist = UKismetMathLibrary::Vector_DistanceSquared(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
 		//const float dist = UKismetMathLibrary::Vector_Distance(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength);
 		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength * ConeLength);
 		
-		//Chaos
-		if(IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
+		//Chaos :: Field is moving so why don't need to create multiple of them
+		if(iteration == 0 && IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
 		{
 			const float radius = FMath::Sqrt(dist) * FMath::DegreesToRadians(ConeAngleDegrees);
 
@@ -199,8 +187,6 @@ void UPS_ForceComponent::ReleasePush()
 			
 			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
-
-			//if (bDebugChaos) UE_LOG(LogTemp, Warning, TEXT("radius %f, duration %f"),radius, duration);
 		}
 
 		//Impulse
@@ -218,6 +204,9 @@ void UPS_ForceComponent::ReleasePush()
 			
 			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
 		}
+
+		//Increment iteration var 
+		iteration++;
 	}
 
 	//---Feedbacks----
@@ -231,6 +220,29 @@ void UPS_ForceComponent::ReleasePush()
 
 	//Stop push
 	StopPush();
+
+}
+
+void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, UPARAM(Ref) TArray<FHitResult>& outFilteredHitResult)
+{
+	// Remove duplicate components
+	TSet<UPrimitiveComponent*> uniqueComp;
+	for (FHitResult outHit : hitsToSort)
+	{
+		if(!IsValid(outHit.GetComponent())) continue;
+		
+		if (outHit.GetComponent() && !uniqueComp.Contains(outHit.GetComponent()))
+		{
+			uniqueComp.Add(outHit.GetComponent());
+			outFilteredHitResult.Add(outHit);
+		}
+	}
+
+	// Sort by distance (nearest to farthest)
+	Algo::Sort(outFilteredHitResult, [](const FHitResult& A, const FHitResult& B)
+	{
+		return A.Distance < B.Distance;
+	});
 
 }
 

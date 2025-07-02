@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "InputAction.h"
 #include "Components/BoxComponent.h"
-#include "Components/SphereComponent.h"
 #include "PhysicsEngine/PhysicalAnimationComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "ProjectSlice/Components/GPE/PS_FieldSystemActor.h"

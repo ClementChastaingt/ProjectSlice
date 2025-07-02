@@ -1748,7 +1748,7 @@ void UPS_HookComponent::OnGeometryCollectBreakEventReceived(const FChaosBreakEve
 {	
 	if (!IsValid(_CurrentGeometryCollection) || !IsValid(_AttachedMesh)) return;
 
-	UE_LOG(LogTemp, Error, TEXT("%S"), __FUNCTION__);
+	if (bDebugChaos) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
 	FTimerDelegate timerDelegate;
 	timerDelegate.BindUObject(this, &UPS_HookComponent::ResetImpactField, true);
