@@ -15,12 +15,12 @@ class AProjectSliceCharacter;
 
 #pragma region Utilities
 
-bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
+bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint, const bool bDebug)
 {
 	if (!IsValid(actorToTest)) return false;
 
 	bool bFoundPoint = false;
-	float bestDist = TNumericLimits<float>().Max();
+	//float bestDist = TNumericLimits<float>().Max();
     
 	TArray<UActorComponent*> outComps;
 	actorToTest->GetComponents(UMeshComponent::StaticClass(), outComps, true);
@@ -31,33 +31,15 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 		{
 			FVector currentPoint;
 			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-
-			DrawDebugPoint(actorToTest->GetWorld(), fromWorldLocation, 10.f, FColor::Emerald, true, 1.0f, 100);
 			
-			if (currentDist >= 0 && currentDist < bestDist)
+			if (currentDist >= 0/* && currentDist < bestDist*/)
 			{
-				UE_LOG(LogTemp, Error, TEXT("TEXT01"));
-				bestDist = currentDist;
+				/*bestDist = currentDist;*/
 				outClosestPoint = currentPoint;
 				bFoundPoint = true;
 			}
-			else if (currentDist == 0)
-			{
-				UE_LOG(LogTemp, Error, TEXT("TEXT02"));
-				FVector surfacePoint = FindNearestSurfacePoint(meshComp, fromWorldLocation);
-                
-				if (!surfacePoint.IsZero())
-				{
-					const float surfaceDist = FVector::Dist(surfacePoint, fromWorldLocation);
-                    
-					if (surfaceDist < bestDist)
-					{
-						bestDist = surfaceDist;
-						outClosestPoint = surfacePoint;
-						bFoundPoint = true;
-					}
-				}
-			}
+			
+			if (bDebug) DrawDebugPoint(actorToTest->GetWorld(), outClosestPoint, 10.f, FColor::Emerald, true, 1.0f, 100);
 		}
 	}
     

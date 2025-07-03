@@ -331,7 +331,7 @@ protected:
 		const bool& bReverseLoc, FHitResult& outHit) const;
 
 	UFUNCTION(BlueprintCallable)
-	FSCableWarpParams TraceCableWrap(const UCableComponent* cable, const bool bReverseLoc) const;
+	void TraceCableWrap(const UCableComponent* cable, bool bReverseLoc, FSCableWarpParams& outCableWarpParams) const;
 
 	UFUNCTION(BlueprintCallable)
 	void AddSphereCaps(const FSCableWarpParams& currentTraceParams, const bool bIsAddByFirst);

@@ -150,7 +150,7 @@ public:
  * @param outClosestPoint: the outpoint find
  * @return the Vecotr loc of the closest point on actorToTest collision 
 */
-	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
+	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint, bool bDebug);
 
 	/*
 	 * @brief Find nearest point on a component collision bound surface
