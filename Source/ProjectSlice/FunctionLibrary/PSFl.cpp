@@ -31,15 +31,19 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 		{
 			FVector currentPoint;
 			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-            
+
+			DrawDebugPoint(actorToTest->GetWorld(), fromWorldLocation, 10.f, FColor::Emerald, true, 1.0f, 100);
+			
 			if (currentDist >= 0 && currentDist < bestDist)
 			{
+				UE_LOG(LogTemp, Error, TEXT("TEXT01"));
 				bestDist = currentDist;
 				outClosestPoint = currentPoint;
 				bFoundPoint = true;
 			}
 			else if (currentDist == 0)
 			{
+				UE_LOG(LogTemp, Error, TEXT("TEXT02"));
 				FVector surfacePoint = FindNearestSurfacePoint(meshComp, fromWorldLocation);
                 
 				if (!surfacePoint.IsZero())
@@ -111,7 +115,8 @@ FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponen
             }
         }
     }
-    
+    DrawDebugPoint(targetComponent->GetWorld(), closestHit, 10.f, FColor::Turquoise, true, 1.0f, 100);
+	
     return (minDistanceSquared < FLT_MAX) ? closestHit : FVector::ZeroVector;
 }
 
