@@ -15,7 +15,7 @@ class AProjectSliceCharacter;
 
 #pragma region Utilities
 
-bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint, const bool bDebug)
+bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
 {
 	if (!IsValid(actorToTest)) return false;
 
@@ -38,8 +38,6 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 				outClosestPoint = currentPoint;
 				bFoundPoint = true;
 			}
-			
-			if (bDebug) DrawDebugPoint(actorToTest->GetWorld(), outClosestPoint, 10.f, FColor::Emerald, true, 1.0f, 100);
 		}
 	}
     
