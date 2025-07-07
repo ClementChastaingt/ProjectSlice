@@ -148,7 +148,8 @@ public:
  * @param actorToTest: actor to test collision
  * @param fromWorldLocation: world loc to test on collision
  * @param outClosestPoint: the outpoint find
- * @return the Vecotr loc of the closest point on actorToTest collision 
+ * @param neighborLoc: world loc to best neighbor loc
+ * @return the Vector loc of the closest point on actorToTest collision 
 */
 	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
 
@@ -159,7 +160,7 @@ public:
 	 * @param sweepDistance: sweep distance use for reach the collision bound outward 
 	 * @return the pint project on the input component collision bound surface 
 	*/
-	static FVector FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation, const float sweepDistance = 50.0f);
+	static void FindNearestSurfacePoint(AActor* instigator, const AActor* actorToTest, const FVector& start, const FVector& end, TArray<FVector>& outPoints);
 
 #pragma endregion Detection
 

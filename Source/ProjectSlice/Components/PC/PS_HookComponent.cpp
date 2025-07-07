@@ -456,9 +456,9 @@ void UPS_HookComponent::WrapCableAddByLast()
 	//Trace cable wrap
 	FSCableWrapParams currentTraceCableWarp = FSCableWrapParams();
 	TraceCableWrap(lastCable, false, currentTraceCableWarp);
-
 	//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+	
 	
 	//If Location Already Exist return
 	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
@@ -602,27 +602,12 @@ void UPS_HookComponent::UnwrapCableByLast()
 	}
 	
 	//Trace Unwrap
-	FHitResult outHit, reversedHit;
-	DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_START), 20.f, FColor::Orange, false, 10);
-	// DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_END), 20.f, FColor::Red, false);
+	FHitResult outHit;
 	
 	if(TraceCableUnwrap(pastCable, currentCable, false, outHit))
 	{
-		//Check angle between unwrap trace and target dir
-		// const FVector dirToPast = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END));
-		// const FVector dirUnwrapTrace = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK), pastCable->GetSocketLocation(SOCKET_CABLE_START));
-		// const float angle = UKismetMathLibrary::DegAcos(dirUnwrapTrace.Dot(dirToPast));
-		// UE_LOG(LogTemp, Error, TEXT("angle %f"), angle);
-		//
-		// DrawDebugDirectionalArrow(GetWorld(), HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END), 2.0f, FColor::Blue, false, 0.01f, 10, 1.0f);
-		 
-		//Check loc to CableUnwrapErrorMultiplier
-		DrawDebugPoint(GetWorld(), outHit.Location, 25.f, FColor::Red, false);
-		DrawDebugPoint(GetWorld(), outHit.TraceEnd, 30.f, FColor::Purple, false);
-
 		if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 		{
-			UE_LOG(LogTemp, Error, TEXT("Exit"));
 			CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 			return;
 		}
@@ -685,20 +670,20 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	const FVector end = pastCableStartSocketLoc + pastCableDirection * CableUnwrapDistance;
 
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, end, UEngineTypes::ConvertToTraceType(ECC_Rope),
-		false, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, outHit, true, bReverseLoc ? FColor::Cyan : FColor::Blue);
+		false, actorsToIgnore, false ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true, bReverseLoc ? FColor::Cyan : FColor::Blue, FLinearColor::Green, 0.01f);
 
 	if (!outHit.bBlockingHit || !IsValid(outHit.GetActor())) return false;
 	
 	//Find the closest loc on the actor hit collision
 	FVector outClosestPoint, outClosestTraceEnd;
 
-	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.Location,outClosestPoint);
+	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.Location, outClosestPoint);
 	if(!outClosestPoint.IsZero())
 	{
 		outHit.Location = outClosestPoint;
 	}
 
-	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.TraceEnd,outClosestTraceEnd);
+	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.TraceEnd, outClosestTraceEnd);
 	if(!outClosestTraceEnd.IsZero())
 	{
 		outHit.TraceEnd = outClosestTraceEnd;
@@ -718,13 +703,16 @@ void UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool 
 	outCableWarpParams.CableStart = bReverseLoc ? end : start;
 	outCableWarpParams.CableEnd = bReverseLoc ? start : end;
 
+	FHitResult  outHit;
+	
 	const TArray<AActor*> actorsToIgnore = {GetOwner()};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), outCableWarpParams.CableStart, outCableWarpParams.CableEnd,
 		UEngineTypes::ConvertToTraceType(ECC_Rope),
-		true, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
-		outCableWarpParams.OutHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple);
+		true, actorsToIgnore, bDebugCable && !bReverseLoc ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+		outHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple, FLinearColor::Green, 0.01f);
 	
-
+	outCableWarpParams.OutHit = outHit;
+		
 	//Find the closest loc on the actor hit collision
 	if (IsValid(outCableWarpParams.OutHit.GetActor()))
 	{
@@ -733,6 +721,7 @@ void UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool 
 		if (!outClosestPoint.IsZero())
 		{
 			outCableWarpParams.OutHit.Location = outClosestPoint;
+			if (!bReverseLoc) DrawDebugPoint(GetWorld(), outClosestPoint, 20.f, FColor::Orange, false, 1.0f);
 		}
 	}
 }
@@ -790,7 +779,7 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 		if(!IsValid(cableCapElement)) continue;
 		
 		if(cableCapElement->GetComponentLocation().Equals(targetLoc, errorTolerance)) bLocalPointFound = true;
-	}
+	}	
 	return !bLocalPointFound;
 }
 

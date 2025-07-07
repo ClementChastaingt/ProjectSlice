@@ -1,13 +1,16 @@
 #include "PSFl.h"
 
-#include "KismetTraceUtils.h"
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
-#include "StaticMeshAttributes.h"
 #include "GameFramework/Actor.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
+
+#include "GeometryScript/MeshGeodesicFunctions.h"
+#include "GeometryScript/MeshAssetFunctions.h"
+#include "GeometryScript/MeshQueryFunctions.h"
+#include "UDynamicMesh.h"
 
 class UProceduralMeshComponent;
 struct FProcMeshTangent;
@@ -20,8 +23,7 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 	if (!IsValid(actorToTest)) return false;
 
 	bool bFoundPoint = false;
-	//float bestDist = TNumericLimits<float>().Max();
-    
+
 	TArray<UActorComponent*> outComps;
 	actorToTest->GetComponents(UMeshComponent::StaticClass(), outComps, true);
     
@@ -31,10 +33,9 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 		{
 			FVector currentPoint;
 			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-			
-			if (currentDist >= 0/* && currentDist < bestDist*/)
+
+			if (currentDist >= 0 )
 			{
-				/*bestDist = currentDist;*/
 				outClosestPoint = currentPoint;
 				bFoundPoint = true;
 			}
@@ -44,60 +45,23 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 	return bFoundPoint;
 }
 
-FVector UPSFl::FindNearestSurfacePoint(const UPrimitiveComponent* targetComponent, const FVector& insideLocation, const float sweepDistance)
+void UPSFl::FindNearestSurfacePoint(AActor* instigator, const AActor* actorToTest, const FVector& start, const FVector& end, TArray<FVector>& outPoints)
 {
-    if (!IsValid(targetComponent)) return FVector::ZeroVector;
+	// Convert Static Mesh to Dynamic Mesh
+	UDynamicMesh* dynMesh = NewObject<UDynamicMesh>(instigator);
+	FGeometryScriptCopyMeshFromAssetOptions copyOptions;
+	UGeometryScriptLibrary_MeshAssetFunctions::CopyMeshFromStaticMesh( actorToTest, 0, dynMesh, copyOptions);
+ 
+	//UGeometryScriptLibrary_MeshGeodesicFunctions::GetShortestSurfacePath()
 	
-	static const FVector directions[] = {
-		// Cardinal Directions 
-		FVector(1.0f, 0.0f, 0.0f), FVector(-1.0f, 0.0f, 0.0f),
-		FVector(0.0f, 1.0f, 0.0f), FVector(0.0f, -1.0f, 0.0f),
-		FVector(0.0f, 0.0f, 1.0f), FVector(0.0f, 0.0f, -1.0f),
-
-		// Diagonal Directions (pre-normalized)
-		FVector(0.70710678f, 0.70710678f, 0.0f),
-		FVector(-0.70710678f, 0.70710678f, 0.0f),
-		FVector(0.70710678f, -0.70710678f, 0.0f),
-		FVector(-0.70710678f, -0.70710678f, 0.0f)
-	};
+	// Geodesic path options
+     FGeometryScriptMeshGeodesicPathOption pathOptions;
+      pathOptions.PathSolver = EGeometryScriptGeodesicSolver::Dijkstra;
+        pathOptions.bProjectToInputSurface = true;
 	
-    static const FName TraceTag = TEXT("FindNearestSurface");
-    FCollisionQueryParams Params(TraceTag, false);
-    Params.AddIgnoredComponent(targetComponent);
-    
-    FVector closestHit = FVector::ZeroVector;
-    float minDistanceSquared = FLT_MAX;
+        UGeometryScriptLibrary_MeshGeodesicFunctions::ComputeMeshGeodesicPath(
+            dynMesh, start, end, pathOptions, outPoints, nullptr);
 	
-    const UWorld* World = targetComponent->GetWorld();
-    if (!World) return FVector::ZeroVector;
-	
-    constexpr float EarlyExitThreshold = 1.0f; // Distance très courte en unités Unreal
-    constexpr float EarlyExitThresholdSquared = EarlyExitThreshold * EarlyExitThreshold;
-    
-    for (const FVector& dir : directions)
-    {
-        FHitResult Hit;
-        const FVector end = insideLocation + dir * sweepDistance;
-        
-        if (World->LineTraceSingleByChannel(Hit, insideLocation, end, ECC_Visibility, Params))
-        {
-            const float distSquared = FVector::DistSquared(Hit.ImpactPoint, insideLocation);
-            
-            if (distSquared < minDistanceSquared)
-            {
-                minDistanceSquared = distSquared;
-                closestHit = Hit.ImpactPoint;
-            	
-                if (distSquared < EarlyExitThresholdSquared)
-                {
-                    break;
-                }
-            }
-        }
-    }
-    DrawDebugPoint(targetComponent->GetWorld(), closestHit, 10.f, FColor::Turquoise, true, 1.0f, 100);
-	
-    return (minDistanceSquared < FLT_MAX) ? closestHit : FVector::ZeroVector;
 }
 
 

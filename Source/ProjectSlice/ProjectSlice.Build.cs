@@ -8,7 +8,13 @@ public class ProjectSlice : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "PhysicsCore", "ProceduralMeshComponent", "EnhancedInput", "CableComponent", "GeometryCollectionEngine", "FieldSystemEngine"});
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "PhysicsCore",
+			"InputCore","EnhancedInput",
+			"CableComponent",
+			"GeometryCollectionEngine", "FieldSystemEngine", 
+			"ProceduralMeshComponent", 
+			"GeometryScriptingCore", "GeometryFramework", "DynamicMesh"});
+		
 		PrivateDependencyModuleNames.AddRange(new string[] { "CableComponent", "AITestSuite" });
 	}
 }
