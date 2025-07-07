@@ -251,8 +251,8 @@ protected:
 	float CableUnwrapDistance = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope",
-		meta=(UIMin="0", ClampMin="0", ToolTip=
-			"Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."
+		meta=(UIMin=0, ClampMin=0,
+			ToolTip= "Cable unwrap error multiplier, when trace finds the closest point, this value should be less than 'unwrap distance' for effective work."
 		))
 	float CableUnwrapErrorMultiplier = 10.0f;
 

@@ -602,22 +602,27 @@ void UPS_HookComponent::UnwrapCableByLast()
 	}
 	
 	//Trace Unwrap
-	FHitResult outHit;
-	DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_START), 20.f, FColor::Orange, false);
-	DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_END), 20.f, FColor::Red, false);
+	FHitResult outHit, reversedHit;
+	DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_START), 20.f, FColor::Orange, false, 10);
+	// DrawDebugPoint(GetWorld(), pastCable->GetSocketLocation(SOCKET_CABLE_END), 20.f, FColor::Red, false);
 	
 	if(TraceCableUnwrap(pastCable, currentCable, false, outHit))
 	{
 		//Check angle between unwrap trace and target dir
-		const FVector dirToPast = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END));
-		const FVector dirUnwrapTrace = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK), pastCable->GetSocketLocation(SOCKET_CABLE_START));
-		const float angle = UKismetMathLibrary::DegAcos(dirUnwrapTrace.Dot(dirToPast));
-		UE_LOG(LogTemp, Error, TEXT("angle %f"), angle);
-		DrawDebugDirectionalArrow(GetWorld(), HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END), 2.0f, FColor::Blue, false, 0.01f, 10, 1.0f);
-		
+		// const FVector dirToPast = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END));
+		// const FVector dirUnwrapTrace = UKismetMathLibrary::GetDirectionUnitVector(HookThrower->GetSocketLocation(SOCKET_HOOK), pastCable->GetSocketLocation(SOCKET_CABLE_START));
+		// const float angle = UKismetMathLibrary::DegAcos(dirUnwrapTrace.Dot(dirToPast));
+		// UE_LOG(LogTemp, Error, TEXT("angle %f"), angle);
+		//
+		// DrawDebugDirectionalArrow(GetWorld(), HookThrower->GetSocketLocation(SOCKET_HOOK),pastCable->GetSocketLocation(SOCKET_CABLE_END), 2.0f, FColor::Blue, false, 0.01f, 10, 1.0f);
+		 
 		//Check loc to CableUnwrapErrorMultiplier
-		if((outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))/* || angle > 40*/)
+		DrawDebugPoint(GetWorld(), outHit.Location, 25.f, FColor::Red, false);
+		DrawDebugPoint(GetWorld(), outHit.TraceEnd, 30.f, FColor::Purple, false);
+
+		if(outHit.bBlockingHit && !outHit.Location.Equals(outHit.TraceEnd, CableUnwrapErrorMultiplier))
 		{
+			UE_LOG(LogTemp, Error, TEXT("Exit"));
 			CablePointUnwrapAlphaArray[cablePointUnwrapAlphaLastIndex] = 0.0f;
 			return;
 		}
@@ -685,14 +690,20 @@ bool UPS_HookComponent::TraceCableUnwrap(const UCableComponent* pastCable, const
 	if (!outHit.bBlockingHit || !IsValid(outHit.GetActor())) return false;
 	
 	//Find the closest loc on the actor hit collision
-	FVector outClosestPoint;
+	FVector outClosestPoint, outClosestTraceEnd;
+
 	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.Location,outClosestPoint);
 	if(!outClosestPoint.IsZero())
 	{
 		outHit.Location = outClosestPoint;
-		if (bDebug && !bReverseLoc) DrawDebugPoint(GetWorld(), outClosestPoint, 10.f, FColor::Emerald, false, 1.0f, 100);
 	}
 
+	UPSFl::FindClosestPointOnActor(outHit.GetActor(),outHit.TraceEnd,outClosestTraceEnd);
+	if(!outClosestTraceEnd.IsZero())
+	{
+		outHit.TraceEnd = outClosestTraceEnd;
+	}
+	
 	return true;
 }
 
@@ -712,6 +723,7 @@ void UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool 
 		UEngineTypes::ConvertToTraceType(ECC_Rope),
 		true, actorsToIgnore, bDebugCable ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 		outCableWarpParams.OutHit, true, bReverseLoc ? FColor::Magenta : FColor::Purple);
+	
 
 	//Find the closest loc on the actor hit collision
 	if (IsValid(outCableWarpParams.OutHit.GetActor()))
@@ -781,7 +793,6 @@ bool UPS_HookComponent::CheckPointLocation(const FVector& targetLoc, const float
 	}
 	return !bLocalPointFound;
 }
-
 
 void UPS_HookComponent::AdaptCableTense(const float alphaTense)
 {
@@ -1177,7 +1188,6 @@ void UPS_HookComponent::OnAttachedSameLocTimerEndEventReceived()
 //------------------
 #pragma endregion Unblock
 
-
 void UPS_HookComponent::DetermineForceWeight(const float alpha)
 {
 	//Common Pull logic*
@@ -1235,7 +1245,6 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	//Out
 	return alpha; 
 }
-
 
 void UPS_HookComponent::ForceDettachByFall()
 {
