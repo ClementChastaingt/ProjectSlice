@@ -1,7 +1,6 @@
 #pragma once
 
-#include "ProceduralMeshComponent.h"
-#include "DynamicMesh/DynamicMesh3.h"
+
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "PSFl.generated.h"
 
@@ -150,13 +149,6 @@ public:
  * @return the Vector loc of the closest point on actorToTest collision 
 */
 	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
-
-	//Geometry Script
-	static void ComputeGeodesicPath(UProceduralMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
-
-	static int32 FindNearestVertex(UE::Geometry::FDynamicMesh3& Mesh, const FVector& Point);
-
-	static bool ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, UE::Geometry::FDynamicMesh3& OutMesh, int32 SectionIndex = 0);
 
 #pragma endregion Detection
 

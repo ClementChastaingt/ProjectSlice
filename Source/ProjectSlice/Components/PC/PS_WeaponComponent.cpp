@@ -18,7 +18,7 @@
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
-#include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 // Sets default values for this component's properties
@@ -199,7 +199,7 @@ void UPS_WeaponComponent::Fire()
 	sliceDir.Normalize();
 
 	//Slice
-	UPSCustomProcMeshLibrary::SliceProcMesh(parentProcMeshComponent, sliceLocation,
+	UPSFL_CustomProcMesh::SliceProcMesh(parentProcMeshComponent, sliceLocation,
 		sliceDir, true, SlicedComponent, outHalfComponent, _LastSliceOutput,
 		IsValid(matInst) ? EProcMeshSliceCapOption::CreateNewSectionForCap : EProcMeshSliceCapOption::UseLastSectionForCap,
 		matInst, true);

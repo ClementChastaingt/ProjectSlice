@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
-#include "PSCustomProcMeshLibrary.generated.h"
+#include "PSFL_CustomProcMesh.generated.h"
 
 /**
  * 
@@ -36,7 +36,7 @@ public:
 
 
 UCLASS()
-class PROJECTSLICE_API UPSCustomProcMeshLibrary : public UKismetProceduralMeshLibrary
+class PROJECTSLICE_API UPSFL_CustomProcMesh : public UKismetProceduralMeshLibrary
 {
 	GENERATED_BODY()
 

@@ -13,8 +13,8 @@ public class ProjectSlice : ModuleRules
 			"CableComponent",
 			"GeometryCollectionEngine", "FieldSystemEngine", 
 			"ProceduralMeshComponent", 
-			"GeometryScriptingCore", "GeometryFramework",
-			"GeometryAlgorithms", "MeshDescription", "DynamicMesh"});
+			"GeometryCore", "GeometryScriptingCore", "GeometryFramework", "GeometryAlgorithms",
+			"DynamicMesh"});
 		
 		PrivateDependencyModuleNames.AddRange(new string[] { "CableComponent", "AITestSuite" });
 	}

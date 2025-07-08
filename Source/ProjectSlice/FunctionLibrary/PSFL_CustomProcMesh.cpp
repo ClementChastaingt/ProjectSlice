@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "PSCustomProcMeshLibrary.h"
+#include "PSFL_CustomProcMesh.h"
 
 #include "GeomTools.h"
 #include "ProceduralMeshComponent.h"
@@ -212,7 +212,7 @@ void SliceConvexElem(const FKConvexElem& InConvex, const FPlane& SlicePlane, TAr
 }
 
 
-void UPSCustomProcMeshLibrary::SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition,
+void UPSFL_CustomProcMesh::SliceProcMesh(UProceduralMeshComponent* InProcMesh, FVector PlanePosition,
 	FVector PlaneNormal, bool bCreateOtherHalf, TSubclassOf<UPS_SlicedComponent> SlicedClass, UPS_SlicedComponent*&
 	OutOtherHalfProcMesh, FSCustomSliceOutput& outSlicingData,
 	EProcMeshSliceCapOption CapOption, UMaterialInterface* CapMaterial, const bool bDiffered)

@@ -7,7 +7,7 @@
 #include "PS_HookComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
-#include "ProjectSlice/FunctionLibrary/PSCustomProcMeshLibrary.h"
+#include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 #include "PS_WeaponComponent.generated.h"
 

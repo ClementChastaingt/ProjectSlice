@@ -16,6 +16,7 @@
 #include "ProjectSlice/Components/GPE/PS_SlicedComponent.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
+#include "ProjectSlice/FunctionLibrary/PSFL_GeometryScript.h"
 
 class UCableComponent;
 
@@ -456,9 +457,9 @@ void UPS_HookComponent::WrapCableAddByLast()
 	//Trace cable wrap
 	FSCableWrapParams currentTraceCableWarp = FSCableWrapParams();
 	TraceCableWrap(lastCable, false, currentTraceCableWarp);
+	
 	//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
-	
 	
 	//If Location Already Exist return
 	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
@@ -704,7 +705,6 @@ void UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool 
 	outCableWarpParams.CableEnd = bReverseLoc ? start : end;
 
 	FHitResult  outHit;
-	
 	const TArray<AActor*> actorsToIgnore = {GetOwner()};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), outCableWarpParams.CableStart, outCableWarpParams.CableEnd,
 		UEngineTypes::ConvertToTraceType(ECC_Rope),
@@ -714,14 +714,23 @@ void UPS_HookComponent::TraceCableWrap(const UCableComponent* cable, const bool 
 	outCableWarpParams.OutHit = outHit;
 		
 	//Find the closest loc on the actor hit collision
-	if (IsValid(outCableWarpParams.OutHit.GetActor()))
+	UProceduralMeshComponent* procMeshComp = Cast<UProceduralMeshComponent>(outHit.GetComponent());
+	if (IsValid(procMeshComp))
 	{
-		FVector outClosestPoint;
-		UPSFl::FindClosestPointOnActor(outCableWarpParams.OutHit.GetActor(), outCableWarpParams.OutHit.Location, outClosestPoint);
-		if (!outClosestPoint.IsZero())
+		// FVector outClosestPoint;
+		// UPSFl::FindClosestPointOnActor(outCableWarpParams.OutHit.GetActor(), outCableWarpParams.OutHit.Location, outClosestPoint);
+		// if (!outClosestPoint.IsZero())
+		// {
+		// 	outCableWarpParams.OutHit.Location = outClosestPoint;
+		// 	if (!bReverseLoc) DrawDebugPoint(GetWorld(), outClosestPoint, 20.f, FColor::Orange, false, 1.0f);
+		// }
+		
+		UPSFL_GeometryScript::ComputeGeodesicPath(procMeshComp, outCableWarpParams.CableStart, outHit.Location, outCableWarpParams.outPoints);
+
+		UE_LOG(LogTemp, Error, TEXT("outCableWarpParams.outPoints %i"), outCableWarpParams.outPoints.Num());
+		for (const FVector points : outCableWarpParams.outPoints)
 		{
-			outCableWarpParams.OutHit.Location = outClosestPoint;
-			if (!bReverseLoc) DrawDebugPoint(GetWorld(), outClosestPoint, 20.f, FColor::Orange, false, 1.0f);
+			DrawDebugPoint(GetWorld(), points, 20.f, bReverseLoc ? FColor::Magenta : FColor::Purple, false);
 		}
 	}
 }
