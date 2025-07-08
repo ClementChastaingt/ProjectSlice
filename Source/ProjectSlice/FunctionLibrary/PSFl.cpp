@@ -3,14 +3,18 @@
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "MeshDescriptionToDynamicMesh.h"
 #include "GameFramework/Actor.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 
-#include "GeometryScript/MeshGeodesicFunctions.h"
-#include "GeometryScript/MeshAssetFunctions.h"
-#include "GeometryScript/MeshQueryFunctions.h"
-#include "UDynamicMesh.h"
+#include "DynamicMesh/MeshNormals.h"
+#include "DynamicMesh/MeshTransforms.h"
+#include "DynamicMesh/MeshIndexUtil.h"
+#include "Solvers/Dijkstra.h"
+#include "DynamicMeshAABBTree3.h"
+#include "MeshQueries.h"
+#include "DynamicMesh/DynamicMeshAABBTree3.h"
 
 class UProceduralMeshComponent;
 struct FProcMeshTangent;
@@ -45,23 +49,103 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 	return bFoundPoint;
 }
 
-void UPSFl::FindNearestSurfacePoint(AActor* instigator, const AActor* actorToTest, const FVector& start, const FVector& end, TArray<FVector>& outPoints)
+void UPSFl::ComputeGeodesicPath(UProceduralMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints)
 {
-	// Convert Static Mesh to Dynamic Mesh
-	UDynamicMesh* dynMesh = NewObject<UDynamicMesh>(instigator);
-	FGeometryScriptCopyMeshFromAssetOptions copyOptions;
-	UGeometryScriptLibrary_MeshAssetFunctions::CopyMeshFromStaticMesh( actorToTest, 0, dynMesh, copyOptions);
- 
-	//UGeometryScriptLibrary_MeshGeodesicFunctions::GetShortestSurfacePath()
+
+	FDynamicMesh3 Mesh;
+	if (!ConvertProceduralMeshToDynamicMesh(meshComp, Mesh))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to convert procedural mesh to dynamic mesh."));
+		return;
+	}
+
+	FTransform LocalToWorld = meshComp->GetComponentTransform();
+	FVector LocalStart = LocalToWorld.InverseTransformPosition(startPoint);
+	FVector LocalEnd = LocalToWorld.InverseTransformPosition(endPoint);
+
+	UE::Geometry::FDynamicMeshAABBTree3 Spatial(&Mesh);
+
+	int32 StartTri = Spatial.FindNearestTriangle(LocalStart);
+	int32 EndTri = Spatial.FindNearestTriangle(LocalEnd);
+
+	FVector3d StartProjected = UE::Geometry::TMeshQueries<FDynamicMesh3>::TriangleClosestPoint(Mesh, StartTri, LocalStart).ClosestPoint;
+	FVector3d EndProjected = UE::Geometry::TMeshQueries<FDynamicMesh3>::TriangleClosestPoint(Mesh, EndTri, LocalEnd).ClosestPoint;
+
+	int32 StartVID = Mesh.FindNearestVertex(StartProjected);
+	int32 EndVID = Mesh.FindNearestVertex(EndProjected);
+
+	FMeshDijkstra Dijkstra(&Mesh);
+	Dijkstra.SetSeedVertex(StartVID);
+	Dijkstra.Compute();
+
+	TArray<int32> PathVerts;
+	if (!Dijkstra.GetShortestPathToVertex(EndVID, PathVerts))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to find path."));
+		return;
+	}
 	
-	// Geodesic path options
-     FGeometryScriptMeshGeodesicPathOption pathOptions;
-      pathOptions.PathSolver = EGeometryScriptGeodesicSolver::Dijkstra;
-        pathOptions.bProjectToInputSurface = true;
-	
-        UGeometryScriptLibrary_MeshGeodesicFunctions::ComputeMeshGeodesicPath(
-            dynMesh, start, end, pathOptions, outPoints, nullptr);
-	
+	outPoints.Empty();
+	for (int32 VID : PathVerts)
+	{
+		FVector3d Pos = Mesh.GetVertex(VID);
+		outPoints.Add(LocalToWorld.TransformPosition((FVector)Pos));
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Geodesic path computed with %d points."), PathVerts.Num());
+
+}
+
+int32 UPSFl::FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point)
+{
+	double MinDistSqr = FLT_MAX;
+	int32 NearestVID = -1;
+
+	for (int32 VID : Mesh.VertexIndicesItr())
+	{
+		FVector3d Pos = Mesh.GetVertex(VID);
+		double DistSqr = FVector3d::DistSquared(Point, Pos);
+
+		if (DistSqr < MinDistSqr)
+		{
+			MinDistSqr = DistSqr;
+			NearestVID = VID;
+		}
+	}
+
+	return NearestVID;
+}
+
+bool UPSFl::ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, FDynamicMesh3& OutMesh, int32 SectionIndex)
+{
+	if (!ProcMesh || !ProcMesh->GetProcMeshSection(SectionIndex))
+		return false;
+
+	const FProcMeshSection* Section = ProcMesh->GetProcMeshSection(SectionIndex);
+	if (!Section)
+		return false;
+
+	OutMesh.Clear();
+
+	TMap<int32, int32> IndexMap; // Map from original index to dynamic mesh index
+
+	for (int32 i = 0; i < Section->ProcVertexBuffer.Num(); ++i)
+	{
+		const FProcMeshVertex& Vertex = Section->ProcVertexBuffer[i];
+		int32 NewVID = OutMesh.AppendVertex((FVector3d)Vertex.Position);
+		IndexMap.Add(i, NewVID);
+	}
+
+	for (int32 i = 0; i + 2 < Section->ProcIndexBuffer.Num(); i += 3)
+	{
+		int32 Idx0 = IndexMap[Section->ProcIndexBuffer[i]];
+		int32 Idx1 = IndexMap[Section->ProcIndexBuffer[i + 1]];
+		int32 Idx2 = IndexMap[Section->ProcIndexBuffer[i + 2]];
+
+		OutMesh.AppendTriangle(Idx0, Idx1, Idx2);
+	}
+
+	return true;
 }
 
 
@@ -166,76 +250,6 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 	
 	return output ;
 
-}
-
-UStaticMesh* UPSFl::CreateMeshFromProcMesh(UProceduralMeshComponent* procMesh)
-{
-	 // if (!procMesh) return nullptr;
-  //
-  //   // Create a new Static Mesh
-  //   UStaticMesh* NewStaticMesh = NewObject<UStaticMesh>(procMesh->GetOuter(), UStaticMesh::StaticClass(), NAME_None, RF_Public | RF_Standalone);
-  //   if (!NewStaticMesh) return nullptr;
-  //
-  //   // Create Mesh Description
-  //   FMeshDescription MeshDescription;
-  //   FStaticMeshAttributes Attributes(MeshDescription);
-  //   Attributes.Register();
-
-    // Get the Static Mesh Body Setup
-    // NewStaticMesh->GetMeshDescription(0) = MeshDescription;
-    // FMeshDescription* MeshDesc = NewStaticMesh->GetMeshDescription(0);
-    // if (!MeshDesc) return nullptr;
-    //
-    // // Create Mesh Section Data
-    // for (int32 SectionIndex = 0; SectionIndex < procMesh->GetNumSections(); SectionIndex++)
-    // {
-    //     FProcMeshSection* Section = procMesh->GetProcMeshSection(SectionIndex);
-    //     if (!Section) continue;
-    //
-    //     TArray<FVector>& Vertices = Section->ProcVertexBuffer;
-    //     TArray<int32>& Triangles = Section->ProcIndexBuffer;
-    //     TArray<FVector>& Normals = Section->ProcNormalBuffer;
-    //     TArray<FVector2D>& UVs = Section->ProcUVBuffer;
-    //     TArray<FProcMeshTangent>& Tangents = Section->ProcTangentBuffer;
-    //
-    //     // Create a new polygon group for this section
-    //     FPolygonGroupID PolygonGroup = MeshDesc->CreatePolygonGroup();
-    //     
-    //     // Add Vertices
-    //     TArray<FVertexID> VertexIDs;
-    //     for (const FVector& Vertex : Vertices)
-    //     {
-    //         FVertexID VertexID = MeshDesc->CreateVertex();
-    //         MeshDesc->GetVertexPositions()[VertexID] = Vertex;
-    //         VertexIDs.Add(VertexID);
-    //     }
-    //
-    //     // Add Triangles
-    //     for (int32 i = 0; i < Triangles.Num(); i += 3)
-    //     {
-    //         TArray<FVertexInstanceID> VertexInstances;
-    //         for (int32 j = 0; j < 3; j++)
-    //         {
-    //             FVertexInstanceID VertexInstance = MeshDesc->CreateVertexInstance(VertexIDs[Triangles[i + j]]);
-    //             VertexInstances.Add(VertexInstance);
-    //
-    //             // Assign normals, UVs, and tangents
-    //             MeshDesc->GetVertexInstanceNormals()[VertexInstance] = Normals[i + j];
-    //             MeshDesc->GetVertexInstanceUVs()[VertexInstance].SetNum(1);
-    //             MeshDesc->GetVertexInstanceUVs()[VertexInstance][0] = UVs[i + j];
-    //             MeshDesc->GetVertexInstanceTangents()[VertexInstance] = Tangents[i + j].TangentX;
-    //         }
-    //
-    //         MeshDesc->CreatePolygon(PolygonGroup, VertexInstances);
-    //     }
-    // }
-
-    // Commit the Mesh Description and build the Static Mesh
-    // NewStaticMesh->CommitMeshDescription(0);
-    // NewStaticMesh->PostEditChange();
-
-	// return NewStaticMesh;
-	return nullptr;
 }
 
 #pragma endregion Utilities

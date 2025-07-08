@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ProceduralMeshComponent.h"
+#include "DynamicMesh/DynamicMesh3.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "PSFl.generated.h"
 
@@ -44,9 +45,6 @@ public:
 	 * @return the Vector velocity Clamped
 	 */
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
-
-	UFUNCTION()
-	UStaticMesh* CreateMeshFromProcMesh(UProceduralMeshComponent* procMesh);
 
 #pragma endregion Utilities
 
@@ -153,14 +151,12 @@ public:
 */
 	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
 
-	/*
-	 * @brief Find nearest point on a component collision bound surface
-	 * @param targetComponent: component to use for projection
-	 * @param insideLocation: current inside loc point
-	 * @param sweepDistance: sweep distance use for reach the collision bound outward 
-	 * @return the pint project on the input component collision bound surface 
-	*/
-	static void FindNearestSurfacePoint(AActor* instigator, const AActor* actorToTest, const FVector& start, const FVector& end, TArray<FVector>& outPoints);
+	//Geometry Script
+	static void ComputeGeodesicPath(UProceduralMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
+
+	static int32 FindNearestVertex(UE::Geometry::FDynamicMesh3& Mesh, const FVector& Point);
+
+	static bool ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, UE::Geometry::FDynamicMesh3& OutMesh, int32 SectionIndex = 0);
 
 #pragma endregion Detection
 
