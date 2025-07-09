@@ -321,7 +321,13 @@ protected:
 	void WrapCableAddByFirst();
 
 	UFUNCTION()
+	void CreateWrapPointByFirst(UCableComponent* lastCable, const FSCableWrapParams& currentTraceCableWarp);
+
+	UFUNCTION()
 	void WrapCableAddByLast();
+
+	UFUNCTION()
+	void CreateNewCablePointByLast(UCableComponent* lastCable, const FSCableWrapParams& currentTraceCableWarp);
 
 	UFUNCTION()
 	void UnwrapCableByFirst();
@@ -340,8 +346,10 @@ protected:
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
 	UFUNCTION(BlueprintCallable)
-	bool CheckPointLocation(const FVector& targetLoc,
-		const float& errorTolerance);
+	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
+
+	UFUNCTION()
+	void GenerateIntermediatePoint(const FVector& lastPointLoc, const FVector& newPointLoc, UPrimitiveComponent* outComp);
 	
 	UFUNCTION()
 	void AdaptCableTense(const float alphaTense);

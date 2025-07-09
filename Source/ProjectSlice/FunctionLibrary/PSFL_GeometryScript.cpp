@@ -11,14 +11,22 @@ using namespace UE::Geometry;
 
 class UProceduralMeshComponent;
 
-void UPSFL_GeometryScript::ComputeGeodesicPath(UProceduralMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints)
+void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints)
 {
+	if (!meshComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MeshComponent is null."));
+		return;
+	}
+
 	FDynamicMesh3 dynMesh;
-	if (!ConvertProceduralMeshToDynamicMesh(meshComp, dynMesh))
+	if (!ConvertMeshComponentToDynamicMesh(meshComp, dynMesh))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Failed to convert procedural mesh to dynamic mesh."));
 		return;
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("DynamicMesh - Vertices: %d, Triangles: %d"), dynMesh.VertexCount(), dynMesh.TriangleCount());
 
 	FTransform LocalToWorld = meshComp->GetComponentTransform();
 	FVector LocalStart = LocalToWorld.InverseTransformPosition(startPoint);
@@ -45,6 +53,13 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UProceduralMeshComponent* meshCom
 
 	int32 startVID = FindNearestVertex(dynMesh, StartProjected);
 	int32 endVID = FindNearestVertex(dynMesh, EndProjected);
+
+	UE_LOG(LogTemp, Log, TEXT("StartVID: %d, EndVID: %d"), startVID, endVID);
+	if (startVID == -1 || endVID == -1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invalid vertex IDs found"));
+		return;
+	}
 
 	TMeshDijkstra Dijkstra(&dynMesh);
 
@@ -90,6 +105,7 @@ bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& D
 	// Vérifier si le vertex de destination est atteignable
 	if (!Dijkstra.HasDistance(EndVID))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: le vertex de destination est inatteignable"), __FUNCTION__);
 		return false;
 	}
     
@@ -126,6 +142,7 @@ bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& D
 		if (NextVID == -1)
 		{
 			// Pas de chemin trouvé
+			UE_LOG(LogTemp, Warning, TEXT("%S :: pas de chemin trouvé"), __FUNCTION__);
 			return false;
 		}
         
@@ -135,6 +152,7 @@ bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& D
 		// Sécurité pour éviter les boucles infinies
 		if (ReversePath.Num() > Mesh.MaxVertexID())
 		{
+			UE_LOG(LogTemp, Warning, TEXT("%S :: boucles infinies"), __FUNCTION__);
 			return false;
 		}
 	}
@@ -148,8 +166,6 @@ bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& D
     
 	return true;
 }
-
-
 
 FVector3d UPSFL_GeometryScript::GetClosestPointOnTriangle(const FDynamicMesh3& Mesh, int32 TriangleID, const FVector3d& Point)
 {
@@ -168,7 +184,6 @@ FVector3d UPSFL_GeometryScript::GetClosestPointOnTriangle(const FDynamicMesh3& M
 	
 	return DistanceQuery.ClosestTrianglePoint;
 }
-
 
 int32 UPSFL_GeometryScript::FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point)
 {
@@ -220,5 +235,75 @@ bool UPSFL_GeometryScript::ConvertProceduralMeshToDynamicMesh(UProceduralMeshCom
 	}
 
 	return true;
+}
+
+bool UPSFL_GeometryScript::ConvertStaticMeshToDynamicMesh(UStaticMeshComponent* StaticMeshComp, FDynamicMesh3& OutMesh, int32 LODIndex)
+{
+	if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh())
+	{
+		return false;
+	}
+
+	UStaticMesh* StaticMesh = StaticMeshComp->GetStaticMesh();
+	
+	// Vérifier si le LOD demandé existe
+	if (LODIndex >= StaticMesh->GetNumLODs())
+	{
+		LODIndex = 0;
+	}
+
+	const FStaticMeshLODResources& LODResource = StaticMesh->GetRenderData()->LODResources[LODIndex];
+	
+	OutMesh.Clear();
+
+	// Copier les vertices
+	const FPositionVertexBuffer& PositionBuffer = LODResource.VertexBuffers.PositionVertexBuffer;
+	TMap<int32, int32> IndexMap;
+	
+	for (uint32 VertexIndex = 0; VertexIndex < PositionBuffer.GetNumVertices(); ++VertexIndex)
+	{
+		FVector3f Position = PositionBuffer.VertexPosition(VertexIndex);
+		int32 NewVID = OutMesh.AppendVertex(FVector3d(Position));
+		IndexMap.Add(VertexIndex, NewVID);
+	}
+
+	// Copier les triangles
+	const FRawStaticIndexBuffer& IndexBuffer = LODResource.IndexBuffer;
+	const int32 NumTriangles = IndexBuffer.GetNumIndices() / 3;
+	
+	for (int32 TriangleIndex = 0; TriangleIndex < NumTriangles; ++TriangleIndex)
+	{
+		const int32 BaseIndex = TriangleIndex * 3;
+		const int32 Idx0 = IndexMap[IndexBuffer.GetIndex(BaseIndex)];
+		const int32 Idx1 = IndexMap[IndexBuffer.GetIndex(BaseIndex + 1)];
+		const int32 Idx2 = IndexMap[IndexBuffer.GetIndex(BaseIndex + 2)];
+		
+		OutMesh.AppendTriangle(Idx0, Idx1, Idx2);
+	}
+
+	return true;
+}
+
+bool UPSFL_GeometryScript::ConvertMeshComponentToDynamicMesh(UMeshComponent* MeshComp, FDynamicMesh3& OutMesh, int32 SectionOrLODIndex)
+{
+	if (!MeshComp)
+	{
+		return false;
+	}
+
+	// Essayer de convertir en tant que UProceduralMeshComponent
+	if (UProceduralMeshComponent* ProcMeshComp = Cast<UProceduralMeshComponent>(MeshComp))
+	{
+		return ConvertProceduralMeshToDynamicMesh(ProcMeshComp, OutMesh, SectionOrLODIndex);
+	}
+	
+	// Essayer de convertir en tant que UStaticMeshComponent
+	if (UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(MeshComp))
+	{
+		return ConvertStaticMeshToDynamicMesh(StaticMeshComp, OutMesh, SectionOrLODIndex);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Unsupported mesh component type: %s"), *MeshComp->GetClass()->GetName());
+	return false;
 }
 

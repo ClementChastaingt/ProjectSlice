@@ -23,7 +23,7 @@ class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 
 public:
 	//Geometry Script
-	static void ComputeGeodesicPath(UProceduralMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
+	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
 
 	static bool ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& Dijkstra, const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
 	
@@ -32,5 +32,10 @@ public:
 	static int32 FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point);
 
 	static bool ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, FDynamicMesh3& OutMesh, int32 SectionIndex = 0);
+
+	static bool ConvertStaticMeshToDynamicMesh(UStaticMeshComponent* StaticMeshComp, FDynamicMesh3& OutMesh, int32 LODIndex = 0);
+
+	static bool ConvertMeshComponentToDynamicMesh(UMeshComponent* MeshComp, FDynamicMesh3& OutMesh, int32 SectionOrLODIndex = 0);
+
 
 };
