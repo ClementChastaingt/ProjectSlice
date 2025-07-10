@@ -198,6 +198,11 @@ void UPS_ForceComponent::ReleasePush()
 			//Impulse with delay for match with VFX
 			FTimerHandle timerImpulseHandle;
 			FTimerDelegate timerImpulseDelegate;
+
+			//Determine position on cone width
+			float percentageOut;
+			const bool bWhithinCone =  FMath::GetDistanceWithinConeSegment(outHitResult.ImpactPoint,_StartForcePushLoc,_StartForcePushLoc + _DirForcePush, 0.0f, ConeLength, percentageOut);
+			UE_LOG(LogTemp, Error, TEXT("percentageOut %f, bWhithinCone %i"), percentageOut, bWhithinCone);
 				
 			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);

@@ -455,27 +455,27 @@ void UPS_HookComponent::WrapCableAddByLast()
 	if(_bArmIsRagdolled) return;
 	
 	//-----Add Wrap Logic-----
-	const int32 index = CableListArray.Num()-1;
-	if(!CableListArray.IsValidIndex(index) || CableListArray.IsEmpty()) return;
+	const int32 lastIndexCable = CableListArray.Num()-1;
+	const int32 lastIndexCableAttach = CableAttachedArray.Num()-1;
+	if(!CableListArray.IsValidIndex(lastIndexCable) || CableListArray.IsEmpty()) return;
 
-	UCableComponent* lastCable = CableListArray[index];
+	UCableComponent* lastCable = CableListArray[lastIndexCable];
 	if(!IsValid(lastCable)) return;
 
 	//Trace cable wrap
 	FSCableWrapParams currentTraceCableWarp = FSCableWrapParams();
 	TraceCableWrap(lastCable, false, currentTraceCableWarp);
-	
-	//If Trace Hit nothing or Invalid object return
+		//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
 	
 	//If Location Already Exist return
 	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
 	
 	//If Location Already Exist return
-	UE_LOG(LogTemp, Error, TEXT("a %i"), CableListArray.IsValidIndex(index));
-	if (CableListArray.IsValidIndex(index))
+	UE_LOG(LogTemp, Error, TEXT("a %i"), CableAttachedArray.IsValidIndex(lastIndexCableAttach));
+	if (CableAttachedArray.IsValidIndex(lastIndexCableAttach))
 	{
-		GenerateIntermediatePoint(CableListArray[index]->GetSocketLocation(SOCKET_CABLE_END),currentTraceCableWarp.OutHit.Location, currentTraceCableWarp.OutHit.GetComponent());
+		GenerateIntermediatePoint(CableAttachedArray[lastIndexCableAttach]->GetComponentLocation(),currentTraceCableWarp.OutHit.Location, currentTraceCableWarp.OutHit.GetComponent());
 	}
 
 	//Create new point
@@ -809,8 +809,8 @@ void UPS_HookComponent::GenerateIntermediatePoint(const FVector& lastPointLoc, c
 	UMeshComponent* meshComp = Cast<UMeshComponent>(outComp);
 	TArray<FVector> outPoints;
 
-	DrawDebugPoint(GetWorld(), lastPointLoc, 20.f, FColor::Orange, false);
-	DrawDebugPoint(GetWorld(), newPointLoc, 20.f, FColor::Red, false);
+	DrawDebugPoint(GetWorld(), lastPointLoc, 20.f, FColor::Orange, false, 2.0f);
+	DrawDebugPoint(GetWorld(), newPointLoc, 20.f, FColor::Red, false, 2.0f);
 	
 	if (IsValid(meshComp))
 	{				
@@ -818,7 +818,7 @@ void UPS_HookComponent::GenerateIntermediatePoint(const FVector& lastPointLoc, c
 		UE_LOG(LogTemp, Error, TEXT("outCableWarpParams.outPoints %i"), outPoints.Num());
 		for (const FVector points : outPoints)
 		{
-			DrawDebugPoint(GetWorld(), points, 20.f, FColor::Purple, false, 2.0f);
+			DrawDebugPoint(GetWorld(), points, 20.f, FColor::Purple, true, 2.0f, 20.0f);
 		}
 	}
 }

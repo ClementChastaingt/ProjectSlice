@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/BaseDynamicMeshSceneProxy.h"
+#include "DynamicMesh/DynamicMeshAABBTree3.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Parameterization/MeshDijkstra.h"
 #include "PSFL_GeometryScript.generated.h"
@@ -22,6 +23,7 @@ class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	static bool ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID);
 	//Geometry Script
 	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
 
@@ -30,6 +32,8 @@ public:
 	static FVector3d GetClosestPointOnTriangle(const FDynamicMesh3& Mesh, int32 TriangleID, const FVector3d& Point);
 
 	static int32 FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point);
+
+	static int32 FindNearestTriangleBruteForce(const FDynamicMesh3& Mesh, const FVector3d& Point);
 
 	static bool ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, FDynamicMesh3& OutMesh, int32 SectionIndex = 0);
 
