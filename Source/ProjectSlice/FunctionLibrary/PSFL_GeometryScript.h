@@ -31,7 +31,7 @@ public:
 	
 	static FVector3d GetClosestPointOnTriangle(const FDynamicMesh3& Mesh, int32 TriangleID, const FVector3d& Point);
 
-	static int32 FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point);
+	static int32 FindNearestVertex(FDynamicMesh3& Mesh, const FVector3d& Point);
 
 	static int32 FindNearestTriangleBruteForce(const FDynamicMesh3& Mesh, const FVector3d& Point);
 

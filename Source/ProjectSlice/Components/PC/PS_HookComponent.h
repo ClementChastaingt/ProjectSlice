@@ -327,7 +327,7 @@ protected:
 	void WrapCableAddByLast();
 
 	UFUNCTION()
-	void CreateNewCablePointByLast(UCableComponent* lastCable, const FSCableWrapParams& currentTraceCableWarp);
+	void CreateNewCablePointByLast(UCableComponent* lastCable, const FSCableWrapParams& currentTraceCableWrap);
 
 	UFUNCTION()
 	void UnwrapCableByFirst();

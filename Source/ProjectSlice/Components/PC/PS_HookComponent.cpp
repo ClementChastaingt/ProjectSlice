@@ -408,6 +408,13 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	//If Location Already Exist return
 	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
 
+	//If Location Already Exist return
+	// UE_LOG(LogTemp, Error, TEXT("b %i"), CableAttachedArray.IsValidIndex(index));
+	// if (CableAttachedArray.IsValidIndex(index))
+	// {
+	// 	GenerateIntermediatePoint(CableAttachedArray[index]->GetComponentLocation(),currentTraceCableWarp.OutHit.Location, currentTraceCableWarp.OutHit.GetComponent());
+	// }
+
 	//Create new point
 	CreateWrapPointByFirst(lastCable, currentTraceCableWarp);
 }
@@ -463,45 +470,50 @@ void UPS_HookComponent::WrapCableAddByLast()
 	if(!IsValid(lastCable)) return;
 
 	//Trace cable wrap
-	FSCableWrapParams currentTraceCableWarp = FSCableWrapParams();
-	TraceCableWrap(lastCable, false, currentTraceCableWarp);
-		//If Trace Hit nothing or Invalid object return
-	if (!currentTraceCableWarp.OutHit.bBlockingHit || !IsValid(currentTraceCableWarp.OutHit.GetComponent())) return;
+	FSCableWrapParams currentTraceCableWrap = FSCableWrapParams();
+	TraceCableWrap(lastCable, false, currentTraceCableWrap);
+
+	//If Trace Hit nothing or Invalid object return
+	if (!currentTraceCableWrap.OutHit.bBlockingHit || !IsValid(currentTraceCableWrap.OutHit.GetComponent())) return;
 	
 	//If Location Already Exist return
-	if (!CheckPointLocation(currentTraceCableWarp.OutHit.Location, CableWrapErrorTolerance)) return;
+	if (!CheckPointLocation(currentTraceCableWrap.OutHit.Location, CableWrapErrorTolerance)) return;
 	
 	//If Location Already Exist return
 	UE_LOG(LogTemp, Error, TEXT("a %i"), CableAttachedArray.IsValidIndex(lastIndexCableAttach));
 	if (CableAttachedArray.IsValidIndex(lastIndexCableAttach))
 	{
-		GenerateIntermediatePoint(CableAttachedArray[lastIndexCableAttach]->GetComponentLocation(),currentTraceCableWarp.OutHit.Location, currentTraceCableWarp.OutHit.GetComponent());
+		GenerateIntermediatePoint(CableAttachedArray[lastIndexCableAttach]->GetComponentLocation(),currentTraceCableWrap.OutHit.Location, currentTraceCableWrap.OutHit.GetComponent());
 	}
 
 	//Create new point
-	CreateNewCablePointByLast(lastCable, currentTraceCableWarp);
+	CreateNewCablePointByLast(lastCable, currentTraceCableWrap);
 }
 
-void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCable,const FSCableWrapParams& currentTraceCableWarp)
+void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCable,const FSCableWrapParams& currentTraceCableWrap)
 {
 	//----Last Cable && New Points---
 	//Add new Point Loc && Hitted Component to Array
 	CableAttachedArray.Add(lastCable);
-	CablePointComponents.Add(currentTraceCableWarp.OutHit.GetComponent());
+	CablePointComponents.Add(currentTraceCableWrap.OutHit.GetComponent());
 	CablePointUnwrapAlphaArray.Add(0.0f);
+
+	UE_LOG(LogTemp, Log, TEXT("%S :: 00"),__FUNCTION__);
 	
 	//Config lastCable And Setup newCable
 	UCableComponent* newCable = nullptr;
-	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWarp, newCable, false);
+	ConfigLastAndSetupNewCable(lastCable, currentTraceCableWrap, newCable, false);
 	if (!IsValid(newCable))
 	{
 		UE_LOG(LogActorComponent, Error, TEXT("%S :: localNewCable Invalid"),__FUNCTION__);
 		return;
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("%S :: 01"),__FUNCTION__);
 	
 	//----Caps Sphere---
 	//Add Sphere on Caps
-	AddSphereCaps(currentTraceCableWarp, false);
+	AddSphereCaps(currentTraceCableWrap, false);
 	
 	//Add newCable to list
 	CableListArray.Add(newCable);
@@ -815,10 +827,10 @@ void UPS_HookComponent::GenerateIntermediatePoint(const FVector& lastPointLoc, c
 	if (IsValid(meshComp))
 	{				
 		UPSFL_GeometryScript::ComputeGeodesicPath(meshComp, newPointLoc, lastPointLoc, outPoints);
-		UE_LOG(LogTemp, Error, TEXT("outCableWarpParams.outPoints %i"), outPoints.Num());
+		UE_LOG(LogTemp, Log, TEXT("outCableWarpParams.outPoints %i"), outPoints.Num());
 		for (const FVector points : outPoints)
 		{
-			DrawDebugPoint(GetWorld(), points, 20.f, FColor::Purple, true, 2.0f, 20.0f);
+			DrawDebugPoint(GetWorld(), points, 10.f, FColor::Magenta, true, 2.0f, 20.0f);
 		}
 	}
 }

@@ -11,18 +11,42 @@ using namespace UE::Geometry;
 
 class UProceduralMeshComponent;
 
+// bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, 
+// 	const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID)
+// {
+// 	// D'abord essayer de trouver le triangle le plus proche
+// 	double MaxDistance = Mesh.GetBounds().DiagonalLength() * 2.0;
+// 	OutTriangleID = Spatial.FindNearestTriangle(Point, MaxDistance);
+//     
+// 	if (OutTriangleID == FDynamicMesh3::InvalidID)
+// 	{
+// 		// Fallback : recherche brutale
+// 		OutTriangleID = FindNearestTriangleBruteForce(Mesh, Point);
+// 	}
+//     
+// 	if (OutTriangleID == FDynamicMesh3::InvalidID)
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("Could not find any triangle for point projection"));
+// 		return false;
+// 	}
+//     
+// 	// Projeter le point sur le triangle trouvé
+// 	OutProjectedPoint = GetClosestPointOnTriangle(Mesh, OutTriangleID, Point);
+//     
+// 	UE_LOG(LogTemp, Log, TEXT("Projected point %s to %s on triangle %d (distance: %f)"), 
+// 		   *Point.ToString(), *OutProjectedPoint.ToString(), OutTriangleID, 
+// 		   FVector3d::Distance(Point, OutProjectedPoint));
+//     
+// 	return true;
+// }
+
 bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, 
 	const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID)
 {
-	// D'abord essayer de trouver le triangle le plus proche
-	double MaxDistance = Mesh.GetBounds().DiagonalLength() * 2.0;
-	OutTriangleID = Spatial.FindNearestTriangle(Point, MaxDistance);
+	UE_LOG(LogTemp, Log, TEXT("ProjectPointToMeshSurface - Input Point: %s"), *Point.ToString());
     
-	if (OutTriangleID == FDynamicMesh3::InvalidID)
-	{
-		// Fallback : recherche brutale
-		OutTriangleID = FindNearestTriangleBruteForce(Mesh, Point);
-	}
+	// Utiliser uniquement la recherche brute force pour éviter les problèmes d'arbre spatial
+	OutTriangleID = FindNearestTriangleBruteForce(Mesh, Point);
     
 	if (OutTriangleID == FDynamicMesh3::InvalidID)
 	{
@@ -33,9 +57,10 @@ bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, 
 	// Projeter le point sur le triangle trouvé
 	OutProjectedPoint = GetClosestPointOnTriangle(Mesh, OutTriangleID, Point);
     
+	double ProjectionDistance = FVector3d::Distance(Point, OutProjectedPoint);
+    
 	UE_LOG(LogTemp, Log, TEXT("Projected point %s to %s on triangle %d (distance: %f)"), 
-		   *Point.ToString(), *OutProjectedPoint.ToString(), OutTriangleID, 
-		   FVector3d::Distance(Point, OutProjectedPoint));
+		   *Point.ToString(), *OutProjectedPoint.ToString(), OutTriangleID, ProjectionDistance);
     
 	return true;
 }
@@ -43,288 +68,523 @@ bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, 
 
 void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints)
 {
-    if (!meshComp)
+    outPoints.Reset();
+    
+    if (!IsValid(meshComp))
     {
-        UE_LOG(LogTemp, Warning, TEXT("MeshComponent is null."));
+        UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath - Invalid mesh component"));
         return;
     }
-
-    FDynamicMesh3 dynMesh;
-    if (!ConvertMeshComponentToDynamicMesh(meshComp, dynMesh))
+    
+    // Convertir le mesh en DynamicMesh3
+    FDynamicMesh3 Mesh;
+    if (!ConvertMeshComponentToDynamicMesh(meshComp, Mesh))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to convert procedural mesh to dynamic mesh."));
+        UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath - Failed to convert mesh"));
         return;
     }
-
-    if (dynMesh.VertexCount() == 0 || dynMesh.TriangleCount() == 0)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("DynamicMesh is empty"));
-        return;
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("DynamicMesh - Vertices: %d, Triangles: %d"), dynMesh.VertexCount(), dynMesh.TriangleCount());
-
-    // Obtenir les transformations
-    FTransform LocalToWorld = meshComp->GetComponentTransform();
-    FVector3d LocalStart = (FVector3d)LocalToWorld.InverseTransformPosition(startPoint);
-    FVector3d LocalEnd = (FVector3d)LocalToWorld.InverseTransformPosition(endPoint);
-
-    UE_LOG(LogTemp, Log, TEXT("Original - World Start: %s, World End: %s"), 
-           *startPoint.ToString(), *endPoint.ToString());
-    UE_LOG(LogTemp, Log, TEXT("Transformed - Local Start: %s, Local End: %s"), 
-           *LocalStart.ToString(), *LocalEnd.ToString());
-
-    // Construire l'arbre spatial
-    FDynamicMeshAABBTree3 Spatial(&dynMesh);
-
-    // Projeter les points directement sur la surface du mesh
+    
+    UE_LOG(LogTemp, Log, TEXT("DynamicMesh - Vertices: %d, Triangles: %d"), Mesh.VertexCount(), Mesh.TriangleCount());
+    
+    // Transformer les points en coordonnées locales
+    FTransform ComponentTransform = meshComp->GetComponentTransform();
+    FVector3d LocalStart = ComponentTransform.InverseTransformPosition(startPoint);
+    FVector3d LocalEnd = ComponentTransform.InverseTransformPosition(endPoint);
+    
+    UE_LOG(LogTemp, Log, TEXT("Original - World Start: %s, World End: %s"), *startPoint.ToString(), *endPoint.ToString());
+    UE_LOG(LogTemp, Log, TEXT("Transformed - Local Start: %s, Local End: %s"), *LocalStart.ToString(), *LocalEnd.ToString());
+    
+    // Créer l'arbre spatial
+    FDynamicMeshAABBTree3 Spatial(&Mesh);
+    
+    // Projeter les points sur la surface
     FVector3d ProjectedStart, ProjectedEnd;
-    int32 StartTri, EndTri;
+    int32 StartTriangleID, EndTriangleID;
     
-    if (!ProjectPointToMeshSurface(dynMesh, Spatial, LocalStart, ProjectedStart, StartTri))
+    if (!ProjectPointToMeshSurface(Mesh, Spatial, LocalStart, ProjectedStart, StartTriangleID) ||
+        !ProjectPointToMeshSurface(Mesh, Spatial, LocalEnd, ProjectedEnd, EndTriangleID))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to project start point to mesh surface"));
+        UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath - Failed to project points to mesh surface"));
         return;
     }
     
-    if (!ProjectPointToMeshSurface(dynMesh, Spatial, LocalEnd, ProjectedEnd, EndTri))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to project end point to mesh surface"));
-        return;
-    }
-
     UE_LOG(LogTemp, Log, TEXT("Projected - Start: %s (Tri: %d), End: %s (Tri: %d)"), 
-           *ProjectedStart.ToString(), StartTri, *ProjectedEnd.ToString(), EndTri);
-
-    // Trouver les vertices les plus proches des points projetés
-    int32 startVID = FindNearestVertex(dynMesh, (FVector)ProjectedStart);
-    int32 endVID = FindNearestVertex(dynMesh, (FVector)ProjectedEnd);
-
-    UE_LOG(LogTemp, Log, TEXT("Nearest vertices - Start: %d, End: %d"), startVID, endVID);
+           *ProjectedStart.ToString(), StartTriangleID, *ProjectedEnd.ToString(), EndTriangleID);
     
-    if (startVID == -1 || endVID == -1)
+    // Trouver les vertices les plus proches
+    int32 StartVID = FindNearestVertex(Mesh, ProjectedStart);
+    int32 EndVID = FindNearestVertex(Mesh, ProjectedEnd);
+    
+    UE_LOG(LogTemp, Log, TEXT("Nearest vertices - Start: %d, End: %d"), StartVID, EndVID);
+    
+    if (StartVID == FDynamicMesh3::InvalidID || EndVID == FDynamicMesh3::InvalidID)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Invalid vertex IDs found"));
+        UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath - Invalid vertex IDs"));
         return;
     }
-
-    // Si les vertices sont identiques, retourner un chemin simple
-    if (startVID == endVID)
+    
+    // Vérifier si les vertices sont identiques
+    if (StartVID == EndVID)
     {
-        UE_LOG(LogTemp, Log, TEXT("Start and end vertices are the same, returning direct path"));
-        outPoints.Empty();
-        outPoints.Add(LocalToWorld.TransformPosition((FVector)ProjectedStart));
-        outPoints.Add(LocalToWorld.TransformPosition((FVector)ProjectedEnd));
+        UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - Start and end vertices are the same"));
+        outPoints.Add(ComponentTransform.TransformPosition(Mesh.GetVertex(StartVID)));
         return;
     }
+    
+    // Vérifier la connectivité avant de lancer Dijkstra
+    bool bIsConnected = false;
+    
+    // Faire un BFS simple pour vérifier la connectivité
+    TSet<int32> Visited;
+    TQueue<int32> Queue;
+    Queue.Enqueue(StartVID);
+    Visited.Add(StartVID);
 
-    // Calculer le chemin géodésique avec Dijkstra
-    TMeshDijkstra<FDynamicMesh3> Dijkstra(&dynMesh);
+	UE_LOG(LogTemp, Log, TEXT("Starting connectivity check from vertex %d to vertex %d"), StartVID, EndVID);
+	UE_LOG(LogTemp, Log, TEXT("StartVID position: %s"), *Mesh.GetVertex(StartVID).ToString());
+	UE_LOG(LogTemp, Log, TEXT("EndVID position: %s"), *Mesh.GetVertex(EndVID).ToString());
+    
+    int32 MaxSearchDepth = 1000; // Limiter la recherche
+    int32 SearchDepth = 0;
+    
+    while (!Queue.IsEmpty() && SearchDepth < MaxSearchDepth)
+    {
+        int32 CurrentVID;
+        Queue.Dequeue(CurrentVID);
+        SearchDepth++;
+        
+        if (CurrentVID == EndVID)
+        {
+            bIsConnected = true;
+        	UE_LOG(LogTemp, Log, TEXT("Found connection at depth %d"), SearchDepth);
+            break;
+        }
+        
+        // Ajouter les voisins
+    	int32 NeighborCount = 0;
+        for (int32 NeighborVID : Mesh.VtxVerticesItr(CurrentVID))
+        {
+        	NeighborCount++;
+            if (!Visited.Contains(NeighborVID))
+            {
+                Visited.Add(NeighborVID);
+                Queue.Enqueue(NeighborVID);
+            }
+        }
 
-    // Créer un tableau de points de départ
+    	if (SearchDepth < 10) // Log seulement les premiers pour éviter le spam
+    	{
+    		UE_LOG(LogTemp, Log, TEXT("Vertex %d has %d neighbors"), CurrentVID, NeighborCount);
+    	}
+    }
+    
+    UE_LOG(LogTemp, Log, TEXT("Connectivity check - Connected: %s, Visited vertices: %d"), 
+           bIsConnected ? TEXT("Yes") : TEXT("No"), Visited.Num());
+
+	// Si pas connecté, afficher les informations sur les vertices
+    if (!bIsConnected)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Vertices %d and %d are not connected - mesh may have disconnected components"), StartVID, EndVID);
+
+    	UE_LOG(LogTemp, Warning, TEXT("Detailed analysis:"));
+    	UE_LOG(LogTemp, Warning, TEXT("Total mesh vertices: %d"), Mesh.VertexCount());
+    	UE_LOG(LogTemp, Warning, TEXT("StartVID %d neighbors:"), StartVID);
+
+    	int32 StartNeighborCount = 0;
+    	for (int32 NeighborVID : Mesh.VtxVerticesItr(StartVID))
+    	{
+    		StartNeighborCount++;
+    		UE_LOG(LogTemp, Warning, TEXT("  Neighbor %d: %s"), NeighborVID, *Mesh.GetVertex(NeighborVID).ToString());
+    	}
+        
+    	UE_LOG(LogTemp, Warning, TEXT("EndVID %d neighbors:"), EndVID);
+    	int32 EndNeighborCount = 0;
+    	for (int32 NeighborVID : Mesh.VtxVerticesItr(EndVID))
+    	{
+    		EndNeighborCount++;
+    		UE_LOG(LogTemp, Warning, TEXT("  Neighbor %d: %s"), NeighborVID, *Mesh.GetVertex(NeighborVID).ToString());
+    	}
+        
+    	UE_LOG(LogTemp, Warning, TEXT("StartVID has %d neighbors, EndVID has %d neighbors"), StartNeighborCount, EndNeighborCount);
+    	
+        // CORRECTION: Fallback avec une ligne droite interpolée
+        // Utiliser les points originaux en coordonnées monde, pas les points projetés
+        const int32 NumIntermediatePoints = 10; // Nombre de points intermédiaires
+        outPoints.Reserve(NumIntermediatePoints + 2);
+        
+        // Ajouter le point de départ
+        outPoints.Add(startPoint);
+        
+        // Ajouter des points intermédiaires
+        for (int32 i = 1; i <= NumIntermediatePoints; ++i)
+        {
+            float Alpha = (float)i / (float)(NumIntermediatePoints + 1);
+            FVector IntermediatePoint = FMath::Lerp(startPoint, endPoint, Alpha);
+            outPoints.Add(IntermediatePoint);
+        }
+        
+        // Ajouter le point d'arrivée
+        outPoints.Add(endPoint);
+        
+        UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - Generated straight line fallback with %d points"), outPoints.Num());
+        return;
+    }
+    
+    // Maintenant lancer Dijkstra avec la bonne syntaxe
+    TMeshDijkstra<FDynamicMesh3> Dijkstra(&Mesh);
+    
+    // Créer le tableau de seed points
     TArray<TMeshDijkstra<FDynamicMesh3>::FSeedPoint> SeedPoints;
-    SeedPoints.Add(TMeshDijkstra<FDynamicMesh3>::FSeedPoint(startVID, 0.0));
-
-    // Calculer les distances
-    double ComputeMaxDistance = TNumericLimits<double>::Max();
-    Dijkstra.ComputeToMaxDistance(SeedPoints, ComputeMaxDistance);
+    SeedPoints.Add(TMeshDijkstra<FDynamicMesh3>::FSeedPoint(StartVID, 0.0));
     
-    // Vérifier que le vertex de destination est atteignable
-    if (!Dijkstra.HasDistance(endVID))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("End vertex %d is not reachable from start vertex %d"), endVID, startVID);
-        return;
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("Dijkstra computed - Distance to end: %f"), Dijkstra.GetDistance(endVID));
-
-    // Reconstruire le chemin
-    TArray<int32> PathVerts;
-    if (!ReconstructPath(Dijkstra, dynMesh, startVID, endVID, PathVerts))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to reconstruct path"));
-        return;
-    }
+    // Lancer le calcul vers le vertex cible
+    Dijkstra.ComputeToTargetPoint(SeedPoints, EndVID);
     
-    UE_LOG(LogTemp, Log, TEXT("Path reconstructed with %d vertices"), PathVerts.Num());
-
-    // Convertir le chemin en positions world
-    outPoints.Empty();
-    outPoints.Reserve(PathVerts.Num() + 2); // +2 pour les points de départ et d'arrivée projetés
-    
-    // Ajouter le point de départ projeté
-    outPoints.Add(LocalToWorld.TransformPosition((FVector)ProjectedStart));
-    
-    // Ajouter les vertices du chemin (en excluant le premier et dernier s'ils sont identiques aux points projetés)
-    for (int32 i = 0; i < PathVerts.Num(); ++i)
-    {
-        int32 VID = PathVerts[i];
-        FVector3d VertexPos = dynMesh.GetVertex(VID);
-        
-        // Éviter les doublons avec les points de départ/arrivée
-        bool bSkip = false;
-        if (i == 0 && FVector3d::DistSquared(VertexPos, ProjectedStart) < 1e-6)
-        {
-            bSkip = true;
-        }
-        else if (i == PathVerts.Num() - 1 && FVector3d::DistSquared(VertexPos, ProjectedEnd) < 1e-6)
-        {
-            bSkip = true;
-        }
-        
-        if (!bSkip)
-        {
-            outPoints.Add(LocalToWorld.TransformPosition((FVector)VertexPos));
-        }
-    }
-    
-    // Ajouter le point d'arrivée projeté
-    outPoints.Add(LocalToWorld.TransformPosition((FVector)ProjectedEnd));
-
-    UE_LOG(LogTemp, Log, TEXT("Final geodesic path contains %d points"), outPoints.Num());
-}
-
-bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& Dijkstra, 
-	const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath)
-{
-	
-	OutPath.Empty();
-    
-    // Vérifier si le vertex de destination est atteignable
+    // Vérifier si le calcul a réussi
     if (!Dijkstra.HasDistance(EndVID))
     {
-        UE_LOG(LogTemp, Warning, TEXT("End vertex %d is not reachable"), EndVID);
-        return false;
+        UE_LOG(LogTemp, Warning, TEXT("Dijkstra failed to find path from %d to %d"), StartVID, EndVID);
+        
+        // Fallback: créer une ligne droite interpolée
+        const int32 NumIntermediatePoints = 10;
+        outPoints.Reserve(NumIntermediatePoints + 2);
+        
+        outPoints.Add(startPoint);
+        for (int32 i = 1; i <= NumIntermediatePoints; ++i)
+        {
+            float Alpha = (float)i / (float)(NumIntermediatePoints + 1);
+            FVector IntermediatePoint = FMath::Lerp(startPoint, endPoint, Alpha);
+            outPoints.Add(IntermediatePoint);
+        }
+        outPoints.Add(endPoint);
+        
+        UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - Generated Dijkstra fallback with %d points"), outPoints.Num());
+        return;
     }
+    
+    UE_LOG(LogTemp, Log, TEXT("Dijkstra completed - Distance to end: %f"), Dijkstra.GetDistance(EndVID));
+    
+    // Reconstruire le chemin
+    TArray<int32> Path;
+    if (!ReconstructPath(Dijkstra, Mesh, StartVID, EndVID, Path))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to reconstruct path"));
+        
+        // Fallback: créer une ligne droite interpolée
+        const int32 NumIntermediatePoints = 10;
+        outPoints.Reserve(NumIntermediatePoints + 2);
+        
+        outPoints.Add(startPoint);
+        for (int32 i = 1; i <= NumIntermediatePoints; ++i)
+        {
+            float Alpha = (float)i / (float)(NumIntermediatePoints + 1);
+            FVector IntermediatePoint = FMath::Lerp(startPoint, endPoint, Alpha);
+            outPoints.Add(IntermediatePoint);
+        }
+        outPoints.Add(endPoint);
+        
+        UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - Generated reconstruction fallback with %d points"), outPoints.Num());
+        return;
+    }
+    
+    UE_LOG(LogTemp, Log, TEXT("Path reconstructed with %d vertices"), Path.Num());
+    
+    // Convertir le chemin en coordonnées mondiales
+    outPoints.Reserve(Path.Num());
+    for (int32 VID : Path)
+    {
+        FVector3d LocalPos = Mesh.GetVertex(VID);
+        FVector WorldPos = ComponentTransform.TransformPosition(LocalPos);
+        outPoints.Add(WorldPos);
+    }
+    
+    UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath completed - Generated %d points"), outPoints.Num());
+}
+
+bool UPSFL_GeometryScript::ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& Dijkstra, const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath)
+{
+    OutPath.Reset();
     
     if (StartVID == EndVID)
     {
         OutPath.Add(StartVID);
+        UE_LOG(LogTemp, Log, TEXT("ReconstructPath - Start and End are the same vertex: %d"), StartVID);
         return true;
     }
     
-    // Reconstruire le chemin en remontant depuis la destination
+    // Vérifier que les vertices existent
+    if (!Mesh.IsVertex(StartVID) || !Mesh.IsVertex(EndVID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ReconstructPath - Invalid vertices: Start=%d, End=%d"), StartVID, EndVID);
+        return false;
+    }
+    
+    // Vérifier que Dijkstra a calculé la distance vers EndVID
+    if (!Dijkstra.HasDistance(EndVID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ReconstructPath - No path found from %d to %d"), StartVID, EndVID);
+        return false;
+    }
+    
+    // Reconstruire le chemin en remontant les prédécesseurs
     TArray<int32> ReversePath;
     int32 CurrentVID = EndVID;
-    ReversePath.Add(CurrentVID);
     
-    const double TOLERANCE = 1e-6;
-    int32 MaxIterations = Mesh.MaxVertexID() * 2; // Sécurité contre les boucles infinies
+    // Sécurité pour éviter les boucles infinies
+    int32 MaxIterations = Mesh.VertexCount();
     int32 Iterations = 0;
     
     while (CurrentVID != StartVID && Iterations < MaxIterations)
     {
-        int32 NextVID = -1;
-        double CurrentDistance = Dijkstra.GetDistance(CurrentVID);
-        double MinDistance = TNumericLimits<double>::Max();
+        ReversePath.Add(CurrentVID);
         
-        UE_LOG(LogTemp, VeryVerbose, TEXT("Current vertex %d, distance: %f"), CurrentVID, CurrentDistance);
+        // Obtenir le vertex précédent
+        int32 PreviousVID = FDynamicMesh3::InvalidID;
         
-        // Parcourir tous les voisins du vertex actuel
-        bool bFoundNext = false;
+        // Parcourir les voisins pour trouver celui qui mène au chemin le plus court
+        double MinDist = TNumericLimits<double>::Max();
+        
         for (int32 NeighborVID : Mesh.VtxVerticesItr(CurrentVID))
         {
             if (Dijkstra.HasDistance(NeighborVID))
             {
-                double NeighborDistance = Dijkstra.GetDistance(NeighborVID);
+                double NeighborDist = Dijkstra.GetDistance(NeighborVID);
                 double EdgeLength = FVector3d::Distance(Mesh.GetVertex(CurrentVID), Mesh.GetVertex(NeighborVID));
                 
-                // Vérifier si ce voisin peut être sur le chemin optimal
-                double ExpectedDistance = NeighborDistance + EdgeLength;
-                if (FMath::Abs(ExpectedDistance - CurrentDistance) < TOLERANCE && NeighborDistance < MinDistance)
+                // Vérifier si ce voisin est sur le chemin optimal
+                if (FMath::IsNearlyEqual(NeighborDist + EdgeLength, Dijkstra.GetDistance(CurrentVID), 1e-6))
                 {
-                    MinDistance = NeighborDistance;
-                    NextVID = NeighborVID;
-                    bFoundNext = true;
+                    if (NeighborDist < MinDist)
+                    {
+                        MinDist = NeighborDist;
+                        PreviousVID = NeighborVID;
+                    }
                 }
             }
         }
         
-        if (!bFoundNext || NextVID == -1)
+        if (PreviousVID == FDynamicMesh3::InvalidID)
         {
-            UE_LOG(LogTemp, Warning, TEXT("No path found from vertex %d"), CurrentVID);
+            UE_LOG(LogTemp, Warning, TEXT("ReconstructPath - Failed to find predecessor for vertex %d"), CurrentVID);
             return false;
         }
         
-        CurrentVID = NextVID;
-        ReversePath.Add(CurrentVID);
+        CurrentVID = PreviousVID;
         Iterations++;
     }
     
     if (Iterations >= MaxIterations)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Path reconstruction exceeded maximum iterations"));
+        UE_LOG(LogTemp, Warning, TEXT("ReconstructPath - Maximum iterations reached, possible infinite loop"));
         return false;
     }
     
-    // Inverser le chemin pour qu'il aille du début à la fin
+    // Ajouter le vertex de départ
+    ReversePath.Add(StartVID);
+    
+    // Inverser le chemin pour avoir l'ordre correct
     OutPath.Reserve(ReversePath.Num());
-    for (int32 i = ReversePath.Num() - 1; i >= 0; --i)
+    for (int32 i = ReversePath.Num() - 1; i >= 0; i--)
     {
         OutPath.Add(ReversePath[i]);
     }
     
-    UE_LOG(LogTemp, Log, TEXT("Path reconstructed: %d vertices"), OutPath.Num());
-    return true;
-
+    UE_LOG(LogTemp, Log, TEXT("ReconstructPath - Found path with %d vertices: Start=%d, End=%d"), 
+           OutPath.Num(), StartVID, EndVID);
+    
+    // Loguer le chemin complet pour déboguer
+    FString PathStr = TEXT("Path: ");
+    for (int32 i = 0; i < OutPath.Num(); i++)
+    {
+        PathStr += FString::Printf(TEXT("%d"), OutPath[i]);
+        if (i < OutPath.Num() - 1) PathStr += TEXT(" -> ");
+    }
+    UE_LOG(LogTemp, Log, TEXT("%s"), *PathStr);
+    
+    return OutPath.Num() > 1;
 }
 
 FVector3d UPSFL_GeometryScript::GetClosestPointOnTriangle(const FDynamicMesh3& Mesh, int32 TriangleID, const FVector3d& Point)
 {
-	if (!Mesh.IsTriangle(TriangleID))
-	{
-		return Point;
-	}
+    if (!Mesh.IsTriangle(TriangleID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetClosestPointOnTriangle - Triangle %d is not valid"), TriangleID);
+        return Point;
+    }
 
-	FIndex3i Triangle = Mesh.GetTriangle(TriangleID);
-	FVector3d A = Mesh.GetVertex(Triangle.A);
-	FVector3d B = Mesh.GetVertex(Triangle.B);
-	FVector3d C = Mesh.GetVertex(Triangle.C);
+    FIndex3i Triangle = Mesh.GetTriangle(TriangleID);
+    FVector3d A = Mesh.GetVertex(Triangle.A);
+    FVector3d B = Mesh.GetVertex(Triangle.B);
+    FVector3d C = Mesh.GetVertex(Triangle.C);
 
-	// Utiliser la classe DistPoint3Triangle3 pour calculer le point le plus proche
-	FDistPoint3Triangle3d DistanceQuery(Point, FTriangle3d(A, B, C));
-	
-	return DistanceQuery.ClosestTrianglePoint;
+    // Implémentation manuelle de l'algorithme de projection point-triangle
+    FVector3d AB = B - A;
+    FVector3d AC = C - A;
+    FVector3d AP = Point - A;
+
+    // Calculer les produits scalaires
+    double d1 = FVector3d::DotProduct(AB, AP);
+    double d2 = FVector3d::DotProduct(AC, AP);
+    
+    // Vérifier si le point est dans la région de A
+    if (d1 <= 0.0 && d2 <= 0.0)
+    {
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to vertex A"), TriangleID);
+        return A;
+    }
+
+    // Vérifier si le point est dans la région de B
+    FVector3d BP = Point - B;
+    double d3 = FVector3d::DotProduct(AB, BP);
+    double d4 = FVector3d::DotProduct(AC, BP);
+    if (d3 >= 0.0 && d4 <= d3)
+    {
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to vertex B"), TriangleID);
+        return B;
+    }
+
+    // Vérifier si le point est dans la région de l'arête AB
+    double vc = d1 * d4 - d3 * d2;
+    if (vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0)
+    {
+        double v = d1 / (d1 - d3);
+        FVector3d result = A + v * AB;
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to edge AB"), TriangleID);
+        return result;
+    }
+
+    // Vérifier si le point est dans la région de C
+    FVector3d CP = Point - C;
+    double d5 = FVector3d::DotProduct(AB, CP);
+    double d6 = FVector3d::DotProduct(AC, CP);
+    if (d6 >= 0.0 && d5 <= d6)
+    {
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to vertex C"), TriangleID);
+        return C;
+    }
+
+    // Vérifier si le point est dans la région de l'arête AC
+    double vb = d5 * d2 - d1 * d6;
+    if (vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0)
+    {
+        double w = d2 / (d2 - d6);
+        FVector3d result = A + w * AC;
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to edge AC"), TriangleID);
+        return result;
+    }
+
+    // Vérifier si le point est dans la région de l'arête BC
+    double va = d3 * d6 - d5 * d4;
+    if (va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0)
+    {
+        double w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        FVector3d result = B + w * (C - B);
+        UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point closest to edge BC"), TriangleID);
+        return result;
+    }
+
+    // Le point est à l'intérieur du triangle
+    double denom = 1.0 / (va + vb + vc);
+    double v = vb * denom;
+    double w = vc * denom;
+    FVector3d result = A + AB * v + AC * w;
+    
+    UE_LOG(LogTemp, VeryVerbose, TEXT("GetClosestPointOnTriangle - Triangle %d: Point inside triangle"), TriangleID);
+    
+    double Distance = FVector3d::Distance(Point, result);
+    UE_LOG(LogTemp, Log, TEXT("GetClosestPointOnTriangle - Triangle %d: Input=%s -> Output=%s (distance=%f)"), 
+           TriangleID, *Point.ToString(), *result.ToString(), Distance);
+    
+    return result;
 }
 
-int32 UPSFL_GeometryScript::FindNearestVertex(FDynamicMesh3& Mesh, const FVector& Point)
+int32 UPSFL_GeometryScript::FindNearestVertex(FDynamicMesh3& Mesh, const FVector3d& Point)
 {
-	double MinDistSqr = FLT_MAX;
-	int32 NearestVID = -1;
+	int32 NearestVID = FDynamicMesh3::InvalidID;
+	double MinDistance = TNumericLimits<double>::Max();
+
+	UE_LOG(LogTemp, Log, TEXT("FindNearestVertex - Looking for nearest vertex to: %s"), *Point.ToString());
 
 	for (int32 VID : Mesh.VertexIndicesItr())
 	{
-		FVector3d Pos = Mesh.GetVertex(VID);
-		double DistSqr = FVector3d::DistSquared(Point, Pos);
-
-		if (DistSqr < MinDistSqr)
+		FVector3d VertexPos = Mesh.GetVertex(VID);
+		double Distance = FVector3d::DistSquared(Point, VertexPos);
+        
+		if (Distance < MinDistance)
 		{
-			MinDistSqr = DistSqr;
+			MinDistance = Distance;
 			NearestVID = VID;
+			UE_LOG(LogTemp, Log, TEXT("New nearest vertex: %d at %s (distance: %f)"), VID, *VertexPos.ToString(), FMath::Sqrt(Distance));
 		}
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("FindNearestVertex - Final result: vertex %d at distance %f"), NearestVID, FMath::Sqrt(MinDistance));
 	return NearestVID;
 }
 
+
 int32 UPSFL_GeometryScript::FindNearestTriangleBruteForce(const FDynamicMesh3& Mesh, const FVector3d& Point)
 {
-	int32 NearestTriID = FDynamicMesh3::InvalidID;
-	double MinDistSqr = TNumericLimits<double>::Max();
+    int32 NearestTriID = FDynamicMesh3::InvalidID;
+    double MinDistSqr = TNumericLimits<double>::Max();
+    int32 ValidTriangleCount = 0;
+    
+    UE_LOG(LogTemp, Log, TEXT("FindNearestTriangleBruteForce - Point: %s, Total triangles: %d"), 
+           *Point.ToString(), Mesh.TriangleCount());
 
-	for (int32 TriID : Mesh.TriangleIndicesItr())
-	{
-		FVector3d ClosestPoint = GetClosestPointOnTriangle(Mesh, TriID, Point);
-		double DistSqr = FVector3d::DistSquared(Point, ClosestPoint);
+    // Loguer les premiers triangles pour débogage
+    int32 DebugCount = 0;
+    
+    for (int32 TriID : Mesh.TriangleIndicesItr())
+    {
+        if (!Mesh.IsTriangle(TriID))
+        {
+            continue;
+        }
+        
+        ValidTriangleCount++;
+        
+        // Utiliser notre fonction personnalisée
+        FVector3d ClosestPoint = GetClosestPointOnTriangle(Mesh, TriID, Point);
+        
+        // Vérifier que le point est valide
+        if (!FMath::IsFinite(ClosestPoint.X) || !FMath::IsFinite(ClosestPoint.Y) || !FMath::IsFinite(ClosestPoint.Z))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Triangle %d returned invalid closest point"), TriID);
+            continue;
+        }
+        
+        double DistSqr = FVector3d::DistSquared(Point, ClosestPoint);
+        
+        // Loguer les premiers triangles pour débogage
+        if (DebugCount < 10)
+        {
+            FIndex3i Triangle = Mesh.GetTriangle(TriID);
+            FVector3d A = Mesh.GetVertex(Triangle.A);
+            FVector3d B = Mesh.GetVertex(Triangle.B);
+            FVector3d C = Mesh.GetVertex(Triangle.C);
+            
+            UE_LOG(LogTemp, Log, TEXT("Triangle %d: A=%s B=%s C=%s"), 
+                   TriID, *A.ToString(), *B.ToString(), *C.ToString());
+            UE_LOG(LogTemp, Log, TEXT("Triangle %d: Closest=%s, Distance=%f"), 
+                   TriID, *ClosestPoint.ToString(), FMath::Sqrt(DistSqr));
+        }
+        DebugCount++;
 
-		if (DistSqr < MinDistSqr)
-		{
-			MinDistSqr = DistSqr;
-			NearestTriID = TriID;
-		}
-	}
+        if (DistSqr < MinDistSqr)
+        {
+            MinDistSqr = DistSqr;
+            NearestTriID = TriID;
+            
+            UE_LOG(LogTemp, Log, TEXT("New nearest triangle found: %d (distance: %f)"), 
+                   TriID, FMath::Sqrt(MinDistSqr));
+        }
+    }
 
-	return NearestTriID;
+    UE_LOG(LogTemp, Log, TEXT("FindNearestTriangleBruteForce FINAL - Checked %d triangles, nearest: %d (distance: %f)"), 
+           ValidTriangleCount, NearestTriID, FMath::Sqrt(MinDistSqr));
+
+    return NearestTriID;
 }
 
 bool UPSFL_GeometryScript::ConvertProceduralMeshToDynamicMesh(UProceduralMeshComponent* ProcMesh, FDynamicMesh3& OutMesh, int32 SectionIndex)
