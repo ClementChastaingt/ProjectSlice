@@ -17,32 +17,6 @@ using namespace UE::Geometry;
  * 
  */
 
-// Notre propre implémentation de pathfinding A* sur mesh
-struct FMeshPathNode
-{
-	int32 VertexID;
-	float GCost;     // Distance depuis le début
-	float HCost;     // Distance heuristique vers la fin
-	float FCost;     // GCost + HCost
-	int32 ParentID;  // Vertex parent dans le chemin
-    
-	FMeshPathNode()
-		: VertexID(FDynamicMesh3::InvalidID)
-		, GCost(0.0f)
-		, HCost(0.0f)
-		, FCost(0.0f)
-		, ParentID(FDynamicMesh3::InvalidID)
-	{}
-    
-	FMeshPathNode(int32 InVertexID, float InGCost, float InHCost, int32 InParentID)
-		: VertexID(InVertexID)
-		, GCost(InGCost)
-		, HCost(InHCost)
-		, FCost(InGCost + InHCost)
-		, ParentID(InParentID)
-	{}
-};
-
 // Notre propre nœud pour Dijkstra
 struct FMeshDijkstraNode
 {
@@ -72,22 +46,27 @@ class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint,TArray<FVector>& outPoints);
+	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints,const bool bDebug = false);
 
 private:
 	static bool ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID);
 	
 	static bool AreVerticesConnected(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID);
 
+	static bool AreVerticesInSameComponent(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID);
+
 	static bool ReconstructPath(const TMeshDijkstra<FDynamicMesh3>& Dijkstra, const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
 	
-	static bool AreVerticesInSameComponent(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID);
-    
 	static void AnalyzeMeshConnectivity(const FDynamicMesh3& Mesh);
 
 	static bool FindPathBetweenComponents(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
 
 	static float CalculatePathLength(const FDynamicMesh3& Mesh, const TArray<int32>& Path);
+
+	static bool CreateSurfacePath(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
+	
+	static inline bool _bDebug = false;
+	
 
 #pragma region Triangle
 	//------------------
@@ -105,8 +84,6 @@ private:
 private:
 	static int32 FindNearestVertex(FDynamicMesh3& Mesh, const FVector3d& Point);
 	
-	static int32 FindClosestVertexInTriangle(const FDynamicMesh3& Mesh, const FVector3d& Point, const FIndex3i& Triangle);
-
 	// Fonction pour trouver le nœud non visité avec la distance minimale
 	static int32 FindMinDistanceVertex(const TMap<int32, FMeshDijkstraNode>& NodeMap, const TSet<int32>& UnvisitedVertices);
 
@@ -125,19 +102,6 @@ private:
 	static bool ConvertMeshComponentToDynamicMesh(UMeshComponent* MeshComp, FDynamicMesh3& OutMesh, int32 SectionOrLODIndex = 0);
 
 #pragma endregion MeshConverter
-
-#pragma region PathStar
-	//------------------
-
-private:
-	static bool FindPathAStar(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
-	
-	static bool ReconstructPathAStar(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, const TSet<int32>& VisitedVertices, TArray<int32>& OutPath);
-	
-	static bool FindPathBFS(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
-
-	//------------------
-#pragma endregion PathStar
 
 #pragma region Dijkstra
 	//------------------

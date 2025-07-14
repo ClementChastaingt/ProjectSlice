@@ -110,6 +110,9 @@ protected:
 	bool bDebugCable = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugGeodesic = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugSwing = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
@@ -335,21 +338,24 @@ protected:
 	UFUNCTION()
 	void UnwrapCableByLast();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
 	bool TraceCableUnwrap(const UCableComponent* pastCable, const UCableComponent* currentCable, const bool& bReverseLoc, FHitResult& outHit) const;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
 	void TraceCableWrap(const UCableComponent* cable, bool bReverseLoc, FSCableWrapParams& outCableWarpParams) const;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
+	static void UpdateCableWrapExtremityLoc(const UCableComponent* cable, bool bReverseLoc, FSCableWrapParams& outCableWarpParams);
+
+	UFUNCTION()
 	void AddSphereCaps(const FSCableWrapParams& currentTraceParams, const bool bIsAddByFirst);
 
 	//Check if this location is not existing already in "cable points locations", error tolerance to determine how close another wrap point can be added
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
 	bool CheckPointLocation(const FVector& targetLoc, const float& errorTolerance);
 
 	UFUNCTION()
-	void GenerateIntermediatePoint(const FVector& lastPointLoc, const FVector& newPointLoc, UPrimitiveComponent* outComp);
+	void GenerateIntermediatePoint(const FVector& lastPointLoc, const FVector& newPointLoc, FSCableWrapParams& currentTraceCableWrap, bool bReverseLoc);
 	
 	UFUNCTION()
 	void AdaptCableTense(const float alphaTense);
