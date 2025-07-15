@@ -17,6 +17,47 @@ using namespace UE::Geometry;
  * 
  */
 
+// Structure pour identifier un path unique
+struct FPathCacheKey
+{
+	FVector StartPoint = FVector::ZeroVector;
+	FVector EndPoint = FVector::ZeroVector;
+	TWeakObjectPtr<UMeshComponent> MeshComponent = nullptr;
+
+	// Constructeur par défaut - maintenant défini inline
+	FPathCacheKey()
+		: StartPoint(FVector::ZeroVector)
+		, EndPoint(FVector::ZeroVector)
+		, MeshComponent(nullptr)
+	{}
+    
+	FPathCacheKey(const FVector& InStartPoint, const FVector& InEndPoint, UMeshComponent* InMeshComp)
+		: StartPoint(InStartPoint), EndPoint(InEndPoint), MeshComponent(InMeshComp){}
+    
+	bool operator==(const FPathCacheKey& Other) const
+	{
+		const float Tolerance = 1e-3f; // Tolérance pour la comparaison des positions
+		return FVector::DistSquared(StartPoint, Other.StartPoint) < Tolerance * Tolerance &&
+			   FVector::DistSquared(EndPoint, Other.EndPoint) < Tolerance * Tolerance &&
+			   MeshComponent == Other.MeshComponent;
+	}
+};
+
+// Structure pour stocker les résultats du cache
+struct FPathCacheEntry
+{
+	TArray<FVector> Points;
+	double LastAccessTime;
+    
+	FPathCacheEntry()
+		: LastAccessTime(0.0)
+	{}
+    
+	FPathCacheEntry(const TArray<FVector>& InPoints)
+		: Points(InPoints), LastAccessTime(FPlatformTime::Seconds())
+	{}
+};
+
 // Notre propre nœud pour Dijkstra
 struct FMeshDijkstraNode
 {
@@ -40,15 +81,27 @@ struct FMeshDijkstraNode
 	{}
 };
 
+// Hash function pour FPathCacheKey
+inline uint32 GetTypeHash(const FPathCacheKey& Key)
+{
+	uint32 Hash = 0;
+	Hash = HashCombine(Hash, GetTypeHash(Key.StartPoint));
+	Hash = HashCombine(Hash, GetTypeHash(Key.EndPoint));
+	Hash = HashCombine(Hash, GetTypeHash(Key.MeshComponent.Get()));
+	return Hash;
+}
+
+
 UCLASS()
 class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
 public:
-	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints,const bool bDebug = false);
+	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints,const bool bDebug = false, const bool bDebugPoint = false);
 
 private:
+	
 	static bool ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID);
 	
 	static bool AreVerticesConnected(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID);
@@ -66,7 +119,34 @@ private:
 	static bool CreateSurfacePath(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
 	
 	static inline bool _bDebug = false;
+
+	static inline bool _bDebugPoint = false;
+
+#pragma region Cache
+	//------------------
+
+public:
+	// Fonction pour nettoyer le cache
+	UFUNCTION(BlueprintCallable, Category = "Geometry Script")
+	static void ClearPathCache();
 	
+	// Fonction pour définir la taille maximale du cache
+	UFUNCTION(BlueprintCallable, Category = "Geometry Script")
+	static void SetMaxCacheSize(int32 MaxSize);
+
+private:
+	// Cache statique pour stocker les chemins calculés
+	static TMap<FPathCacheKey, FPathCacheEntry> PathCache;
+	static int32 MaxCacheSize;
+	static constexpr double CacheExpirationTime = 300.0; // 5 minutes
+	
+	// Fonctions de gestion du cache
+	static bool TryGetCachedPath(const FPathCacheKey& Key, TArray<FVector>& OutPoints);
+	static void StoreCachedPath(const FPathCacheKey& Key, const TArray<FVector>& Points);
+	static void CleanupExpiredCache();
+
+	//------------------
+#pragma endregion Cache
 
 #pragma region Triangle
 	//------------------

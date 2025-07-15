@@ -37,18 +37,37 @@ bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, 
 }
 
 // Version simplifiée et corrigée de ComputeGeodesicPath
-void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints, const bool bDebug)
+void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints, const bool bDebug, const bool bDebugPoint)
 {
+	// Vérifier les paramètres d'entrée
+	if (!meshComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath: MeshComponent is null"));
+		return;
+	}
+
+	// Créer la clé de cache
+	FPathCacheKey CacheKey(startPoint, endPoint, meshComp);
+
+	// Vérifier si le résultat existe déjà dans le cache
+	if (TryGetCachedPath(CacheKey, outPoints))
+	{
+		if (bDebug)
+		{
+			UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath: Using cached path with %d points"), outPoints.Num());
+		}
+		return;
+	}
+
+	// Si pas dans le cache, calculer le path normalement
+	TArray<FVector> CalculatedPoints;
+
+	// Init var
     outPoints.Reset();
 
 	_bDebug = bDebug;
-    
-    if (!IsValid(meshComp))
-    {
-        if(_bDebug) UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPath - Invalid mesh component"));
-        return;
-    }
-    
+	_bDebugPoint = bDebugPoint;
+	
     // Convertir le mesh en DynamicMesh3
     FDynamicMesh3 Mesh;
     if (!ConvertMeshComponentToDynamicMesh(meshComp, Mesh))
@@ -109,6 +128,10 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
         }
         
         if(_bDebug) UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - Created direct path with %d points"), outPoints.Num());
+
+    	//Stockage en cache du résultat
+    	StoreCachedPath(CacheKey, outPoints);
+    	
         return;
     }
     
@@ -201,8 +224,11 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
         	i++;
         }
         
-        if(_bDebug) UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - SUCCESS! Found path with %d points, length %f"), 
-               outPoints.Num(), BestPathLength);
+    	if(_bDebug) UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPath - SUCCESS! Found path with %d points, length %f"), outPoints.Num(), BestPathLength);
+
+    	//Stockage en cache du résultat
+    	StoreCachedPath(CacheKey, outPoints);
+    	
         return;
     }
     
@@ -221,6 +247,11 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
     	if (_bDebug && meshComp->GetWorld()) DrawDebugPoint(meshComp->GetWorld(), IntermediatePoint, 10.f, FColor::Magenta, true, 2.0f, 20.0f);
     }
     outPoints.Add(endPoint);
+    
+     //Stockage en cache du résultat
+     StoreCachedPath(CacheKey, outPoints);
+	
+	
 }
 
 // Fonction helper pour vérifier la connectivité rapidement
@@ -616,6 +647,117 @@ bool UPSFL_GeometryScript::CreateSurfacePath(const FDynamicMesh3& Mesh, int32 St
 	if(_bDebug) UE_LOG(LogTemp, Log, TEXT("Created surface path with %d vertices"), OutPath.Num());
 	return OutPath.Num() > 1;
 }
+
+#pragma region Cache
+//------------------
+
+// Initialisation des variables statiques du cache
+TMap<FPathCacheKey, FPathCacheEntry> UPSFL_GeometryScript::PathCache;
+int32 UPSFL_GeometryScript::MaxCacheSize = 100;
+
+bool UPSFL_GeometryScript::TryGetCachedPath(const FPathCacheKey& Key, TArray<FVector>& OutPoints)
+{
+    // Nettoyer le cache expiré périodiquement
+    CleanupExpiredCache();
+    
+    if (FPathCacheEntry* Entry = PathCache.Find(Key))
+    {
+        // Vérifier si l'entrée n'est pas expirée
+        double CurrentTime = FPlatformTime::Seconds();
+        if (CurrentTime - Entry->LastAccessTime < CacheExpirationTime)
+        {
+            Entry->LastAccessTime = CurrentTime; // Mettre à jour le temps d'accès
+            OutPoints = Entry->Points;
+            return true;
+        }
+        else
+        {
+            // L'entrée est expirée, la supprimer
+            PathCache.Remove(Key);
+        }
+    }
+    
+    return false;
+}
+
+void UPSFL_GeometryScript::StoreCachedPath(const FPathCacheKey& Key, const TArray<FVector>& Points)
+{
+    // Vérifier si le cache est plein
+    if (PathCache.Num() >= MaxCacheSize)
+    {
+        // Supprimer l'entrée la plus ancienne
+        FPathCacheKey OldestKey = FPathCacheKey();
+        double OldestTime = FPlatformTime::Seconds();
+        
+        for (const auto& Pair : PathCache)
+        {
+            if (Pair.Value.LastAccessTime < OldestTime)
+            {
+                OldestTime = Pair.Value.LastAccessTime;
+                OldestKey = Pair.Key;
+            }
+        }
+        
+        PathCache.Remove(OldestKey);
+    }
+    
+    // Ajouter la nouvelle entrée
+    PathCache.Add(Key, FPathCacheEntry(Points));
+}
+
+void UPSFL_GeometryScript::CleanupExpiredCache()
+{
+    double CurrentTime = FPlatformTime::Seconds();
+    
+    // Collecter les clés expirées
+    TArray<FPathCacheKey> ExpiredKeys;
+    for (const auto& Pair : PathCache)
+    {
+        if (CurrentTime - Pair.Value.LastAccessTime >= CacheExpirationTime)
+        {
+            ExpiredKeys.Add(Pair.Key);
+        }
+    }
+    
+    // Supprimer les entrées expirées
+    for (const FPathCacheKey& ExpiredKey : ExpiredKeys)
+    {
+        PathCache.Remove(ExpiredKey);
+    }
+}
+
+void UPSFL_GeometryScript::ClearPathCache()
+{
+	PathCache.Empty();
+	UE_LOG(LogTemp, Log, TEXT("Path cache cleared"));
+}
+
+void UPSFL_GeometryScript::SetMaxCacheSize(int32 MaxSize)
+{
+	MaxCacheSize = FMath::Max(1, MaxSize);
+    
+	// Si le cache actuel est plus grand que la nouvelle limite, le réduire
+	while (PathCache.Num() > MaxCacheSize)
+	{
+		// Supprimer l'entrée la plus ancienne
+		FPathCacheKey OldestKey = FPathCacheKey();
+		double OldestTime = FPlatformTime::Seconds();
+        
+		for (const auto& Pair : PathCache)
+		{
+			if (Pair.Value.LastAccessTime < OldestTime)
+			{
+				OldestTime = Pair.Value.LastAccessTime;
+				OldestKey = Pair.Key;
+			}
+		}
+        
+		PathCache.Remove(OldestKey);
+	}
+}
+
+//------------------
+#pragma endregion Cache
 
 #pragma region Triangle
 //------------------
