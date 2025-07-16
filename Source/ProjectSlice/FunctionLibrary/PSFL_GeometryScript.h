@@ -58,6 +58,31 @@ struct FPathCacheEntry
 	{}
 };
 
+// Nouvelle structure pour inclure la vélocité dans le cache
+struct FPathCacheKeyWithVelocity
+{
+	FVector StartPoint = FVector::ZeroVector;
+	FVector EndPoint = FVector::ZeroVector;
+	FVector Velocity = FVector::ZeroVector;
+	float VelocityInfluence = 0.5f;
+	TWeakObjectPtr<UMeshComponent> MeshComponent = nullptr;
+
+	FPathCacheKeyWithVelocity() = default;
+    
+	FPathCacheKeyWithVelocity(const FVector& InStartPoint, const FVector& InEndPoint, const FVector& InVelocity, float InVelocityInfluence, UMeshComponent* InMeshComp)
+		: StartPoint(InStartPoint), EndPoint(InEndPoint), Velocity(InVelocity), VelocityInfluence(InVelocityInfluence), MeshComponent(InMeshComp) {}
+    
+	bool operator==(const FPathCacheKeyWithVelocity& Other) const
+	{
+		const float Tolerance = 1e-3f;
+		return FVector::DistSquared(StartPoint, Other.StartPoint) < Tolerance * Tolerance &&
+			   FVector::DistSquared(EndPoint, Other.EndPoint) < Tolerance * Tolerance &&
+			   FVector::DistSquared(Velocity, Other.Velocity) < Tolerance * Tolerance &&
+			   FMath::Abs(VelocityInfluence - Other.VelocityInfluence) < Tolerance &&
+			   MeshComponent == Other.MeshComponent;
+	}
+};
+
 // Notre propre nœud pour Dijkstra
 struct FMeshDijkstraNode
 {
@@ -99,6 +124,9 @@ class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 
 public:
 	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints,const bool bDebug = false, const bool bDebugPoint = false);
+
+	// Version avec vélocité
+	static void ComputeGeodesicPathWithVelocity(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, const FVector& velocity, TArray<FVector>& outPoints, float velocityInfluence = 0.5f, const bool bDebug = false, const bool bDebugPoint = false);
 
 private:
 	
@@ -194,9 +222,23 @@ private:
     	
 	// Fonction helper pour reconstruire le chemin depuis notre Dijkstra
 	static bool ReconstructPathDijkstra(const TMap<int32, FMeshDijkstraNode>& NodeMap, int32 StartVID, int32 EndVID, TArray<int32>& OutPath);
+
+	// Version modifiée de l'algorithme de Dijkstra avec vélocité
+	static bool FindPathDijkstraWithVelocity(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, const FVector3d& velocity, float velocityInfluence, TArray<int32>& OutPath);
         
 
 #pragma endregion Dijkstra
-	
 
+#pragma region Velocity
+	//------------------
+
+private:
+	// Calculer le coût d'un edge en tenant compte de la vélocité
+	static float CalculateVelocityBiasedCost(const FDynamicMesh3& Mesh, int32 EdgeID, const FVector3d& velocity, float velocityInfluence = 0.5f);
+    
+	// Calculer le coût entre deux vertices en tenant compte de la vélocité
+	static float CalculateVelocityBiasedVertexCost(const FDynamicMesh3& Mesh, int32 FromVertexID, int32 ToVertexID, const FVector3d& velocity, float velocityInfluence = 0.5f);
+
+
+#pragma endregion Velocity
 };

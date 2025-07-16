@@ -82,10 +82,10 @@ void UPS_HookComponent::BeginPlay()
 		// 1/90 for extra low latency 
 		GetWorld()->GetTimerManager().SetTimer(_LowSubstepTickHandler, LowTimerDelegate, 1/90.0f, true);
 
-		// 1/360 for 120 FPS
+		// 1/360 for 120 FPS 
 		FTimerDelegate HighTimerDelegate;
 		HighTimerDelegate.BindUObject(this, &UPS_HookComponent::SubstepTickHighLatency);
-		GetWorld()->GetTimerManager().SetTimer(_HighSubstepTickHandler, HighTimerDelegate, 1/360.0f, true);
+		GetWorld()->GetTimerManager().SetTimer(_HighSubstepTickHandler, HighTimerDelegate, 1/540.0f, true);
 	}
 	
 	//Constraint display
@@ -390,6 +390,7 @@ void UPS_HookComponent::SetupCableMaterial(UCableComponent* newCable) const
 
 void UPS_HookComponent::WrapCableAddByFirst()
 {
+	if (_bWrappingByFirst) return;
 	
 	//-----Add Wrap Logic-----
 	//Add By First
@@ -402,7 +403,7 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	//Trace cable wrap
 	FSCableWrapParams currentTraceCableWrap = FSCableWrapParams();
 	constexpr bool bReverseLoc = true;
-	TraceCableWrap(lastCable, true, currentTraceCableWrap);
+	TraceCableWrap(lastCable, bReverseLoc, currentTraceCableWrap);
 	
 	//If Trace Hit nothing or Invalid object return
 	if (!currentTraceCableWrap.OutHit.bBlockingHit || !IsValid(currentTraceCableWrap.OutHit.GetComponent())) return;
@@ -411,13 +412,15 @@ void UPS_HookComponent::WrapCableAddByFirst()
 	if (!CheckPointLocation(currentTraceCableWrap.OutHit.Location, CableWrapErrorTolerance)) return;
 
 	//Create intermediate points
-	// if (CableCapArray.IsValidIndex(firstIndex))
-	// {
-	// 	GenerateIntermediatePoint(CableCapArray[firstIndex]->GetComponentLocation(), currentTraceCableWrap.OutHit.Location, currentTraceCableWrap, bReverseLoc);
-	//
-	// 	//Update index and LastCable
-	// 	lastCable = CableListArray[firstIndex];
-	// }
+	 // if (CableCapArray.IsValidIndex(firstIndex))
+	 // {
+	 // 	GenerateIntermediatePoint(CableCapArray[firstIndex]->GetComponentLocation(), currentTraceCableWrap.OutHit.Location, currentTraceCableWrap, bReverseLoc);
+	 // 	
+	 // }else
+	 // {
+	 // 	//Create end new point
+	 // 	CreateWrapPointByFirst(lastCable, currentTraceCableWrap);
+	 // }
 	
 	//Create new point
 	CreateWrapPointByFirst(lastCable, currentTraceCableWrap);
@@ -438,9 +441,12 @@ void UPS_HookComponent::CreateWrapPointByFirst(UCableComponent* const lastCable,
 		UE_LOG(LogActorComponent, Error, TEXT("%S :: localNewCable Invalid"), __FUNCTION__);
 		return;
 	}
+
+	_bWrappingByFirst = true;
 	
 	//----Caps Sphere---
 	//Add Sphere on Caps
+	if (bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: AddSphereCaps"), __FUNCTION__);
 	AddSphereCaps(currentTraceCableWrap, true);
 	
 	//Add latest cable to attached cables array && Add this new cable to "cable list array"
@@ -453,20 +459,22 @@ void UPS_HookComponent::CreateWrapPointByFirst(UCableComponent* const lastCable,
 	//Attach New Cable to Hitted Object && Set his position to it
 	if(!CableCapArray.IsValidIndex(1) || !CablePointComponents.IsValidIndex(1))
 	{
+		_bWrappingByFirst = false;
 		return;
 	}
-
 	const FAttachmentTransformRules AttachmentRule = FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false);
 	newCable->SetWorldLocation(CableCapArray[1]->GetComponentLocation());
 	newCable->AttachToComponent(CablePointComponents[1], AttachmentRule);
 	
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
+
+	_bWrappingByFirst = false;
 }
 
 void UPS_HookComponent::WrapCableAddByLast()
 {
-	if(_bArmIsRagdolled) return;
+	if(_bArmIsRagdolled || _bWrappingByLast) return;
 	
 	int32 lastIndexCable = CableListArray.Num()-1;
 	
@@ -489,7 +497,7 @@ void UPS_HookComponent::WrapCableAddByLast()
 	{		
 		GenerateIntermediatePoint(CableCapArray[lastIndexCablePoint]->GetComponentLocation(), currentTraceCableWrap.OutHit.Location, currentTraceCableWrap, bReverseLoc);
 	}
-	else
+	else if (lastIndexCablePoint < 0)
 	{
 		//Create end point
 		CreateNewCablePointByLast(lastCable, currentTraceCableWrap);
@@ -502,7 +510,6 @@ void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCab
 	//If Location Already Exist return
 	if (!CheckPointLocation(currentTraceCableWrap.OutHit.Location, CableWrapErrorTolerance))
 	{
-		UE_LOG(LogTemp, Error, TEXT("TEXT01"));
 		return;
 	}
 	
@@ -520,9 +527,12 @@ void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCab
 		UE_LOG(LogActorComponent, Error, TEXT("%S :: localNewCable Invalid"),__FUNCTION__);
 		return;
 	}
+
+	_bWrappingByLast = true;
 	
 	//----Caps Sphere---
 	//Add Sphere on Caps
+	if (bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S :: AddSphereCaps"), __FUNCTION__);
 	AddSphereCaps(currentTraceCableWrap, false);
 	
 	//Add newCable to list
@@ -533,6 +543,8 @@ void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCab
 
 	//----Set New Cable Params identical to First Cable---
 	if (bCableUseSharedSettings) ConfigCableToFirstCableSettings(newCable);
+
+	_bWrappingByLast = false;
 	
 }
 
@@ -789,8 +801,6 @@ void UPS_HookComponent::AddSphereCaps(const FSCableWrapParams& currentTraceParam
 		return;
 	}
 
-	if (bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-
 	//Set Mesh && Attach Cap to Hitted Object
 	if(IsValid(CapsMesh)) newCapMesh->SetStaticMesh(CapsMesh);
 	newCapMesh->SetCollisionProfileName(Profile_NoCollision);
@@ -840,16 +850,20 @@ void UPS_HookComponent::GenerateIntermediatePoint(const FVector& lastPointLoc, c
 	UMeshComponent* meshComp = Cast<UMeshComponent>(currentTraceCableWrap.OutHit.GetComponent());
 	if (!IsValid(meshComp)) return;
 
+	//Compute Path
+	TArray<FVector> outPoints;
+	//UPSFL_GeometryScript::ComputeGeodesicPath(meshComp, newPointLoc, lastPointLoc, outPoints, false, bDebugGeodesic);
+	UPSFL_GeometryScript::ComputeGeodesicPathWithVelocity(meshComp, newPointLoc, lastPointLoc, _PlayerCharacter->GetCapsuleVelocity(), outPoints, 0.5, false, bDebugGeodesic);
+	
+	if (outPoints.Num() == 	currentTraceCableWrap.outPoints.Num()) return;
+
 	if (bDebugCable)
 	{
-		DrawDebugPoint(GetWorld(), lastPointLoc, 20.f, FColor::Orange, false, 1.0f);
-		DrawDebugPoint(GetWorld(), newPointLoc, 20.f, FColor::Red, false, 1.0f);
+		DrawDebugPoint(GetWorld(), lastPointLoc, 20.f,bReverseLoc ? FColor::Yellow : FColor::Orange, false, 1.0f);
+		DrawDebugPoint(GetWorld(), newPointLoc, 20.f,bReverseLoc ? FColor::FromHex(FString("#990000")) : FColor::Red, false, 1.0f);
 	}
-	
-	TArray<FVector> outPoints;
-	UPSFL_GeometryScript::ComputeGeodesicPath(meshComp, newPointLoc, lastPointLoc, outPoints, false, bDebugGeodesic);
 
-	if (outPoints.Num() == 	currentTraceCableWrap.outPoints.Num()) return;
+	if (bDebugCable) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	//Geodesic intermediate points
 	FSCableWrapParams intermediateCableWrapParams = currentTraceCableWrap;
@@ -861,9 +875,9 @@ void UPS_HookComponent::GenerateIntermediatePoint(const FVector& lastPointLoc, c
 		const int32 indexCable = bReverseLoc ? 0 : CableListArray.Num()-1;
 		
 		if(!CableListArray.IsValidIndex(indexCable)) return;
-
+	
 		UCableComponent* cable = CableListArray[indexCable];
-
+	
 		if(!IsValid(cable)) return;
 		
 		//Update wrap params

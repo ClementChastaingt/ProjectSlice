@@ -383,6 +383,12 @@ private:
 	UPROPERTY(Transient)
 	FVector _UnwrapLastLocation;
 
+	UPROPERTY(Transient)
+	bool _bWrappingByFirst;
+	
+	UPROPERTY(Transient)
+	bool _bWrappingByLast;
+	
 #pragma endregion Cable
 
 #pragma region Grapple

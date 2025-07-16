@@ -219,7 +219,7 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
         	
             outPoints.Add(WorldPos);
 
-        	if (_bDebug && meshComp->GetWorld()) DrawDebugPoint(meshComp->GetWorld(), WorldPos, 10.f + (i * 5), FColor::Magenta, true, 2.0f, 20.0f);
+        	if (_bDebugPoint && meshComp->GetWorld()) DrawDebugPoint(meshComp->GetWorld(), WorldPos, 10.f + (i * 5), FColor::Magenta, true, 0.5f, 20.0f);
 
         	i++;
         }
@@ -244,7 +244,7 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
         FVector IntermediatePoint = FMath::Lerp(startPoint, endPoint, alpha);
         outPoints.Add(IntermediatePoint);
 
-    	if (_bDebug && meshComp->GetWorld()) DrawDebugPoint(meshComp->GetWorld(), IntermediatePoint, 10.f, FColor::Magenta, true, 2.0f, 20.0f);
+    	if (_bDebugPoint && meshComp->GetWorld()) DrawDebugPoint(meshComp->GetWorld(), IntermediatePoint, 10.f, FColor::Magenta, true, 0.5f, 20.0f);
     }
     outPoints.Add(endPoint);
     
@@ -252,6 +252,115 @@ void UPSFL_GeometryScript::ComputeGeodesicPath(UMeshComponent* meshComp, const F
      StoreCachedPath(CacheKey, outPoints);
 	
 	
+}
+
+void UPSFL_GeometryScript::ComputeGeodesicPathWithVelocity(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, const FVector& velocity, TArray<FVector>& outPoints, float velocityInfluence, const bool bDebug, const bool bDebugPoint)
+{
+    // Vérifier les paramètres d'entrée
+    if (!meshComp)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPathWithVelocity: MeshComponent is null"));
+        return;
+    }
+
+	if (velocity.IsNearlyZero())
+	{
+		ComputeGeodesicPath(meshComp, startPoint, endPoint, outPoints, bDebug, bDebugPoint);
+		return;
+	}
+
+    // Normaliser la vélocité si elle n'est pas nulle
+    FVector3d normalizedVelocity = velocity;
+    if (normalizedVelocity.Length() > SMALL_NUMBER)
+    {
+        normalizedVelocity.Normalize();
+    }
+
+    // Créer une clé de cache modifiée pour inclure la vélocité
+    FPathCacheKey CacheKey(startPoint, endPoint, meshComp);
+    // Note: vous pourriez vouloir modifier FPathCacheKey pour inclure la vélocité
+
+    // Initialiser les variables
+    outPoints.Reset();
+    _bDebug = bDebug;
+    _bDebugPoint = bDebugPoint;
+
+    // Convertir le mesh en DynamicMesh3
+    FDynamicMesh3 Mesh;
+    if (!ConvertMeshComponentToDynamicMesh(meshComp, Mesh))
+    {
+        if (_bDebug) UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPathWithVelocity - Failed to convert mesh"));
+        return;
+    }
+
+    // Obtenir le transform du composant
+    FTransform ComponentTransform = meshComp->GetComponentTransform();
+
+    // Transformer les points et la vélocité en coordonnées locales
+    FVector3d LocalStart = ComponentTransform.InverseTransformPosition(startPoint);
+    FVector3d LocalEnd = ComponentTransform.InverseTransformPosition(endPoint);
+    FVector3d LocalVelocity = ComponentTransform.InverseTransformVector(normalizedVelocity);
+
+    // Créer l'arbre spatial
+    FDynamicMeshAABBTree3 Spatial(&Mesh);
+
+    // Projeter les points sur la surface
+    FVector3d ProjectedStart, ProjectedEnd;
+    int32 StartTriangleID, EndTriangleID;
+
+    if (!ProjectPointToMeshSurface(Mesh, Spatial, LocalStart, ProjectedStart, StartTriangleID) ||
+        !ProjectPointToMeshSurface(Mesh, Spatial, LocalEnd, ProjectedEnd, EndTriangleID))
+    {
+        if (_bDebug) UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPathWithVelocity - Failed to project points to mesh surface"));
+        return;
+    }
+
+    // Trouver les vertices les plus proches
+    int32 StartVertexID = FindNearestVertex(Mesh, ProjectedStart);
+    int32 EndVertexID = FindNearestVertex(Mesh, ProjectedEnd);
+
+    if (StartVertexID == FDynamicMesh3::InvalidID || EndVertexID == FDynamicMesh3::InvalidID)
+    {
+        if (_bDebug) UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPathWithVelocity - Failed to find nearest vertices"));
+        return;
+    }
+
+    // Utiliser l'algorithme de Dijkstra modifié avec vélocité
+    TArray<int32> Path;
+    if (FindPathDijkstraWithVelocity(Mesh, StartVertexID, EndVertexID, LocalVelocity, velocityInfluence, Path))
+    {
+        // Convertir le chemin en points world
+        outPoints.Reserve(Path.Num() + 2);
+        outPoints.Add(startPoint);
+    	
+    	int i = 0;
+        for (int32 VertexID : Path)
+        {
+            FVector3d LocalPos = Mesh.GetVertex(VertexID);
+            FVector WorldPos = ComponentTransform.TransformPosition(LocalPos);
+
+        	float alpha = static_cast<float>(i) / static_cast<float>(Path.Num());
+        	FVector intermediatePoint = FMath::Lerp(startPoint, endPoint, alpha);
+        	WorldPos.Z = intermediatePoint.Z;
+        	
+            outPoints.Add(WorldPos);
+
+        	i++;
+        }
+
+        outPoints.Add(endPoint);
+
+        if (_bDebug)
+        {
+            UE_LOG(LogTemp, Log, TEXT("ComputeGeodesicPathWithVelocity - Path found with %d points"), outPoints.Num());
+        }
+    }
+    else
+    {
+        // Fallback vers la méthode standard
+        if (_bDebug) UE_LOG(LogTemp, Warning, TEXT("ComputeGeodesicPathWithVelocity - Falling back to standard geodesic path"));
+        ComputeGeodesicPath(meshComp, startPoint, endPoint, outPoints, bDebug, bDebugPoint);
+    }
 }
 
 // Fonction helper pour vérifier la connectivité rapidement
@@ -596,7 +705,6 @@ bool UPSFL_GeometryScript::FindPathBetweenComponents(const FDynamicMesh3& Mesh, 
     if(_bDebug) UE_LOG(LogTemp, Log, TEXT("Created bridged path with %d vertices"), OutPath.Num());
     return OutPath.Num() > 0;
 }
-
 
 // Fonction helper pour calculer la longueur d'un chemin
 float UPSFL_GeometryScript::CalculatePathLength(const FDynamicMesh3& Mesh, const TArray<int32>& Path)
@@ -1357,8 +1465,177 @@ bool UPSFL_GeometryScript::ReconstructPathDijkstra(const TMap<int32, FMeshDijkst
     return OutPath.Num() > 0;
 }
 
+bool UPSFL_GeometryScript::FindPathDijkstraWithVelocity(const FDynamicMesh3& Mesh, int32 StartVID, int32 EndVID, const FVector3d& velocity, float velocityInfluence, TArray<int32>& OutPath)
+{
+   if (!Mesh.IsVertex(StartVID) || !Mesh.IsVertex(EndVID))
+    {
+        return false;
+    }
+
+    if (StartVID == EndVID)
+    {
+        OutPath = {StartVID};
+        return true;
+    }
+
+    // Initialiser les structures de données pour Dijkstra
+    TMap<int32, FMeshDijkstraNode> NodeMap;
+    TSet<int32> UnvisitedVertices;
+
+    // Initialiser tous les vertices
+    for (int32 VertexID : Mesh.VertexIndicesItr())
+    {
+        NodeMap.Add(VertexID, FMeshDijkstraNode(VertexID));
+        UnvisitedVertices.Add(VertexID);
+    }
+
+    // Définir la distance du point de départ à 0
+    NodeMap[StartVID].Distance = 0.0f;
+
+    // Algorithme de Dijkstra principal
+    while (UnvisitedVertices.Num() > 0)
+    {
+        // Trouver le vertex non visité avec la distance minimale
+        int32 CurrentVertex = FindMinDistanceVertex(NodeMap, UnvisitedVertices);
+        
+        if (CurrentVertex == FDynamicMesh3::InvalidID || NodeMap[CurrentVertex].Distance == TNumericLimits<float>::Max())
+        {
+            break; // Pas de chemin possible
+        }
+
+        // Marquer comme visité
+        UnvisitedVertices.Remove(CurrentVertex);
+        NodeMap[CurrentVertex].bVisited = true;
+
+        // Si nous avons atteint la destination, nous pouvons arrêter
+        if (CurrentVertex == EndVID)
+        {
+            break;
+        }
+
+        // Examiner tous les voisins
+        for (int32 EdgeID : Mesh.VtxEdgesItr(CurrentVertex))
+        {
+            // Utiliser GetEdge pour obtenir les vertices de l'edge
+            FDynamicMesh3::FEdge Edge = Mesh.GetEdge(EdgeID);
+            
+            // Déterminer quel vertex est le voisin (l'autre vertex de l'edge)
+            int32 NeighborVertex;
+            if (Edge.Vert.A == CurrentVertex)
+            {
+                NeighborVertex = Edge.Vert.B;
+            }
+            else if (Edge.Vert.B == CurrentVertex)
+            {
+                NeighborVertex = Edge.Vert.A;
+            }
+            else
+            {
+                // Cet edge ne devrait pas être dans la liste du CurrentVertex
+                continue;
+            }
+            
+            if (NodeMap[NeighborVertex].bVisited)
+            {
+                continue;
+            }
+
+            // Calculer le coût avec biais de vélocité
+            float EdgeCost = CalculateVelocityBiasedVertexCost(Mesh, CurrentVertex, NeighborVertex, velocity, velocityInfluence);
+            float NewDistance = NodeMap[CurrentVertex].Distance + EdgeCost;
+
+            // Mettre à jour si nous avons trouvé un meilleur chemin
+            if (NewDistance < NodeMap[NeighborVertex].Distance)
+            {
+                NodeMap[NeighborVertex].Distance = NewDistance;
+                NodeMap[NeighborVertex].ParentID = CurrentVertex;
+            }
+        }
+    }
+
+    // Reconstruire le chemin
+    return ReconstructPathDijkstra(NodeMap, StartVID, EndVID, OutPath);
+}
+
 //------------------
 #pragma endregion Djikstra
+
+#pragma region Velocity
+//------------------
+
+float UPSFL_GeometryScript::CalculateVelocityBiasedCost(const FDynamicMesh3& Mesh, int32 EdgeID, const FVector3d& velocity, float velocityInfluence)
+{
+	if (!Mesh.IsEdge(EdgeID))
+	{
+		return TNumericLimits<float>::Max();
+	}
+
+	// Obtenir l'edge
+	FDynamicMesh3::FEdge Edge = Mesh.GetEdge(EdgeID);
+    
+	// Calculer la direction de l'edge
+	FVector3d Vertex1Pos = Mesh.GetVertex(Edge.Vert.A);
+	FVector3d Vertex2Pos = Mesh.GetVertex(Edge.Vert.B);
+	FVector3d EdgeDirection = (Vertex2Pos - Vertex1Pos).GetSafeNormal();
+    
+	// Calculer la distance de base de l'edge
+	float BaseDistance = FVector3d::Dist(Vertex1Pos, Vertex2Pos);
+
+	// Si la vélocité est nulle, retourner la distance de base
+	if (velocity.Length() < SMALL_NUMBER)
+	{
+		return BaseDistance;
+	}
+
+	// Calculer l'alignement entre la direction de l'edge et la vélocité
+	float DotProduct = FVector3d::DotProduct(EdgeDirection, velocity);
+    
+	// Convertir le dot product en facteur de coût
+	// DotProduct = 1 (même direction) -> facteur de réduction
+	// DotProduct = -1 (direction opposée) -> facteur d'augmentation
+	// DotProduct = 0 (perpendiculaire) -> facteur neutre
+    
+	float AlignmentFactor = 1.0f - (DotProduct * velocityInfluence);
+    
+	// S'assurer que le facteur reste dans des limites raisonnables
+	AlignmentFactor = FMath::Clamp(AlignmentFactor, 0.1f, 2.0f);
+    
+	return BaseDistance * AlignmentFactor;
+}
+
+float UPSFL_GeometryScript::CalculateVelocityBiasedVertexCost(const FDynamicMesh3& Mesh, int32 FromVertexID, int32 ToVertexID, const FVector3d& velocity, float velocityInfluence)
+{
+	// Calculer la distance euclidienne de base
+	FVector3d FromPos = Mesh.GetVertex(FromVertexID);
+	FVector3d ToPos = Mesh.GetVertex(ToVertexID);
+	FVector3d EdgeDirection = (ToPos - FromPos).GetSafeNormal();
+	float BaseDistance = FVector3d::Dist(FromPos, ToPos);
+
+	// Si la vélocité est nulle, retourner la distance de base
+	if (velocity.Length() < SMALL_NUMBER)
+	{
+		return BaseDistance;
+	}
+
+	// Calculer l'alignement entre la direction de l'edge et la vélocité
+	float DotProduct = FVector3d::DotProduct(EdgeDirection, velocity);
+    
+	// Convertir le dot product en facteur de coût
+	// DotProduct = 1 (même direction) -> facteur de réduction
+	// DotProduct = -1 (direction opposée) -> facteur d'augmentation
+	// DotProduct = 0 (perpendiculaire) -> facteur neutre
+    
+	float AlignmentFactor = 1.0f - (DotProduct * velocityInfluence);
+    
+	// S'assurer que le facteur reste dans des limites raisonnables
+	AlignmentFactor = FMath::Clamp(AlignmentFactor, 0.1f, 2.0f);
+    
+	return BaseDistance * AlignmentFactor;
+}
+
+//------------------
+#pragma endregion Velocity
+	
 
 
 
