@@ -337,8 +337,8 @@ void UPS_ParkourComponent::JumpOffWallRun()
 	OnWallRunStop();
 
 	FHitResult outHitFwd = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
-	const float angleSigthToWallBack = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector().Dot(WallRunDirection);
-	bool bIsARightDirJumpOff = ((outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall) || FMath::Abs(UKismetMathLibrary::DegAcos(angleSigthToWallBack)) < 6.5f);
+	//const float angleSigthToWallBack = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector().Dot(WallRunDirection);
+	bool bIsARightDirJumpOff = ((outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall) /*|| FMath::Abs(UKismetMathLibrary::DegAcos(angleSigthToWallBack)) < 6.5f*/);
 
 	DrawDebugLine(GetWorld(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation() + WallRunDirection * 600.0f, FColor::Yellow, false, 2, 10, 3);
 	
@@ -350,7 +350,6 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	//Weight Force when sight is up
 	const float angleCamToWallUp = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection.UpVector);
-	UE_LOG(LogTemp, Error, TEXT("angleSigthToWallBack %f"), UKismetMathLibrary::DegAcos(angleSigthToWallBack));
 	float jumpOffSpeed = JumpOffForceSpeed;
 	if(angleCamToWallUp >= 0)
 		jumpOffSpeed = UKismetMathLibrary::MapRangeClamped(angleCamToWallUp,0.0f,1.0f,JumpOffForceSpeed,0.0f);
@@ -1054,6 +1053,11 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+
+	for (auto Element : OverlappingComponents)
+	{
+		UE_LOG(LogTemp, Error, TEXT(" %s"), *Element.OverlapInfo.GetComponent()->GetName());
+	}
 	
 	if(bIsWallRunning && OverlappingComponents.IsEmpty())
 	{
