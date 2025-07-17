@@ -49,8 +49,8 @@ void UPS_ParkourComponent::BeginPlay()
 	{
 		FTimerDelegate wallRunTick_TimerDelegate;
 		wallRunTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::WallRunTick);
-		GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
-		GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
+		GetWorld()->GetTimerManager().SetTimer(_WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
+		GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
 
 		FTimerDelegate slideTick_TimerDelegate;
 		slideTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::SlideTick);
@@ -139,12 +139,12 @@ void UPS_ParkourComponent::ToggleObstacleLockConstraint(const AActor* const othe
 void UPS_ParkourComponent::WallRunTick()
 {
 	//-----WallRunTick-----
-	if(!bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
+	if(!_bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
 	
 	//WallRun timer setup
-	WallRunSeconds = WallRunSeconds + CustomTickRate;
-	const float endTimestamp = StartWallRunTimestamp + WallRunTimeToFall;
-	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(WallRunSeconds, StartWallRunTimestamp, endTimestamp, 0,1);
+	_WallRunSeconds = _WallRunSeconds + CustomTickRate;
+	const float endTimestamp = _StartWallRunTimestamp + WallRunTimeToFall;
+	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(_WallRunSeconds, _StartWallRunTimestamp, endTimestamp, 0,1);
 
 	//-----Velocity Weight-----
 	//Setup alpha use for Force interp
@@ -156,7 +156,7 @@ void UPS_ParkourComponent::WallRunTick()
 	FVector wallRunVel = _WallRunEnterVelocity + WallRunSpeedBoost;
 	wallRunVel = UPSFl::ClampVelocity(_WallRunEnterVelocity, _PlayerCharacter->GetVelocity(),wallRunVel,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxWallRunSpeedMultiplicator);
 
-	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection);
+	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_WallRunDirection);
 	const float cameraOrientationWeight = FMath::Clamp(FMath::Abs(angleCamToWall), 0.0f, 1.0f);
 	
 	float targetWallRunVel = FMath::Lerp(_WallRunEnterVelocity.Length() / 2.0, wallRunVel.Length(),cameraOrientationWeight);
@@ -167,21 +167,21 @@ void UPS_ParkourComponent::WallRunTick()
 		targetWallRunVel -= FMath::Lerp(0.0f, wallRunVel.Length(),cameraOrientationWeight);
 	};
 	
-	VelocityWeight = FMath::Lerp(_WallRunEnterVelocity.Length(), targetWallRunVel,curveForceAlpha);
+	_VelocityWeight = FMath::Lerp(_WallRunEnterVelocity.Length(), targetWallRunVel,curveForceAlpha);
 	
 	//-----Fake Gravity Velocity-----
 	float curveGravityAlpha = alphaWallRun;
 	if(IsValid(WallRunGravityCurve))
 		curveGravityAlpha = WallRunGravityCurve->GetFloatValue(alphaWallRun);
 	
-	FVector customWallDirection = WallRunDirection;
-	customWallDirection.Z = FMath::Lerp(WallRunDirection.Z, WallRunDirection.Z + 0.5,curveGravityAlpha);
+	FVector customWallDirection = _WallRunDirection;
+	customWallDirection.Z = FMath::Lerp(_WallRunDirection.Z, _WallRunDirection.Z + 0.5,curveGravityAlpha);
 	customWallDirection.Normalize();
 
 	//-----Velocity Stick to Wall-----
 	const float inputWeight = _PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity;
 		
-	const FVector newPlayerVelocity = customWallDirection * VelocityWeight * inputWeight;
+	const FVector newPlayerVelocity = customWallDirection * _VelocityWeight * inputWeight;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 	
 	//Stop WallRun if he was too long
@@ -192,12 +192,12 @@ void UPS_ParkourComponent::WallRunTick()
 	}
 		
 	//Debug
-	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity.Length(), VelocityWeight);
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun alpha %f,  _WallRunEnterVelocity %f, VelocityWeight %f"),alphaWallRun, _WallRunEnterVelocity.Length(), _VelocityWeight);
 	
 }
 
 void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
-{	
+{
 	if(bIsCrouched
 		|| bIsLedging
 		|| bIsMantling
@@ -206,7 +206,10 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !_PlayerCharacter->bWasJumping) return;
 
-	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	//Prevent from trigger in loop by encounter new wall
+	if (_PlayerCharacter->JumpCurrentCount == _JumpCountOnWallRunning && !_bIsWallRunning) return;
+	
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	//WallRun Logic activation
 	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
@@ -248,27 +251,28 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 		OnWallRunStop();
 		return;
 	}
-	UE_LOG(LogTemp, Log, TEXT("playerToWallOrientation %i"), playerToWallOrientation);
+
+	if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: playerToWallOrientation %i"),__FUNCTION__, playerToWallOrientation);
+	
 	//Update only if don't come from WallRun && Check if player is facing the wall
-	if(!bIsWallRunning)
+	if(!_bIsWallRunning)
 	{
-		WallToPlayerOrientation = FMath::Sign(playerToWallOrientation);
+		_WallToPlayerOrientation = FMath::Sign(playerToWallOrientation);
 	}
-	else if(WallToPlayerOrientation != playerToWallOrientation)
+	else if(_WallToPlayerOrientation != playerToWallOrientation)
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the last wall, stop"), __FUNCTION__);
 		OnWallRunStop();
 		return;
 	}
 	
-
 	//Determine Orientation
-	WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
-	CameraTiltOrientation = WallToPlayerOrientation;
-
+	_WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
+	_CameraTiltOrientation = _WallToPlayerOrientation;
+	
 	if(bDebugWallRun)
 	{
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + WallRunDirection * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + _WallRunDirection * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
 	}
@@ -278,55 +282,60 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
 
 	//Timer init
-	if(!bIsWallRunning)
+	if(!_bIsWallRunning)
 	{
-		StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
-		WallRunSeconds = StartWallRunTimestamp;
-		GetWorld()->GetTimerManager().UnPauseTimer(WallRunTimerHandle);
+		_StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
+		_WallRunSeconds = _StartWallRunTimestamp;
+		GetWorld()->GetTimerManager().UnPauseTimer(_WallRunTimerHandle);
 	}
 
 	//--------Camera_Tilt Setup--------
-	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, CameraTiltOrientation * -1);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, _CameraTiltOrientation * -1);
+
+	//--------Start Wallrunning --------
 
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
-	Wall = otherActor;
-	bIsWallRunning = true;
+	_Wall = otherActor;
+	_bIsWallRunning = true;
+	_JumpCountOnWallRunning = _PlayerCharacter->JumpCurrentCount;
 
 	//Feedback 
 	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
 		_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnim();
-	
+
 }
 
 void UPS_ParkourComponent::OnWallRunStop()
 {
-	if(!bIsWallRunning) return;
+	if(!_bIsWallRunning) return;
 	
 	//-----OnWallRunStop-----
 	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
 	
-	GetWorld()->GetTimerManager().PauseTimer(WallRunTimerHandle);
-	WallRunSeconds = 0.0f;
+	GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
+	_WallRunSeconds = 0.0f;
 
 	//-----Reset Variables-----
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
-	VelocityWeight = 1.0f;
+	_VelocityWeight = 1.0f;
 
 	//--------Camera_Tilt--------
 	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(true);
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-	bIsWallRunning = false;
 
 	//--------Reset Collision--------
 	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
+
+	//--------Reset Variables--------
+	_bIsWallRunning = false;
 }
 
 void UPS_ParkourComponent::JumpOffWallRun()
 {
-	if(!bIsWallRunning) return;
+	if(!_bIsWallRunning) return;
 
-	if(!IsValid(Wall) || !IsValid(_PlayerCharacter)) return;
+	if(!IsValid(_Wall) || !IsValid(_PlayerCharacter)) return;
 
 	if(bDebugWallRunJump)
 	{
@@ -338,18 +347,18 @@ void UPS_ParkourComponent::JumpOffWallRun()
 
 	FHitResult outHitFwd = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	//const float angleSigthToWallBack = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector().Dot(WallRunDirection);
-	bool bIsARightDirJumpOff = ((outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == Wall) /*|| FMath::Abs(UKismetMathLibrary::DegAcos(angleSigthToWallBack)) < 6.5f*/);
+	bool bIsARightDirJumpOff = ((outHitFwd.bBlockingHit && IsValid(outHitFwd.GetActor()) && outHitFwd.GetActor() == _Wall) /*|| FMath::Abs(UKismetMathLibrary::DegAcos(angleSigthToWallBack)) < 6.5f*/);
 
-	DrawDebugLine(GetWorld(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation() + WallRunDirection * 600.0f, FColor::Yellow, false, 2, 10, 3);
+	DrawDebugLine(GetWorld(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation(), _PlayerCharacter->GetFirstPersonCameraComponent()->GetComponentLocation() + _WallRunDirection * 600.0f, FColor::Yellow, false, 2, 10, 3);
 	
 	//Determine Target Roll
-	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection);
+	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_WallRunDirection);
 	
-	FVector jumpDir = bIsARightDirJumpOff ? _PlayerCharacter->GetActorRightVector() * -WallToPlayerOrientation * FMath::Sign(angleCamToWall) : _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
+	FVector jumpDir = bIsARightDirJumpOff ? _PlayerCharacter->GetActorRightVector() * -_WallToPlayerOrientation * FMath::Sign(angleCamToWall) : _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 	jumpDir.Normalize();
 
 	//Weight Force when sight is up
-	const float angleCamToWallUp = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(WallRunDirection.UpVector);
+	const float angleCamToWallUp = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_WallRunDirection.UpVector);
 	float jumpOffSpeed = JumpOffForceSpeed;
 	if(angleCamToWallUp >= 0)
 		jumpOffSpeed = UKismetMathLibrary::MapRangeClamped(angleCamToWallUp,0.0f,1.0f,JumpOffForceSpeed,0.0f);
@@ -632,7 +641,7 @@ void UPS_ParkourComponent::OnDash()
 
 	if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle)) return;
 
-	if(bIsWallRunning)
+	if(_bIsWallRunning)
 		OnWallRunStop();
 
 	if(_bIsSliding)
@@ -1028,7 +1037,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		}
 	
 		//Choose right parkour logic to execute
-		if(angle <= MaxMantleAngle && !bIsWallRunning /*&& !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle())*/)
+		if(angle <= MaxMantleAngle && !_bIsWallRunning /*&& !GetWorld()->GetTimerManager().IsTimerActive(_PlayerCharacter->GetCoyoteTimerHandle())*/)
 		{
 			if(CanMantle(outHit))
 				OnStartMantle();
@@ -1041,7 +1050,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		
 
 	//If can't parkour reactivate physic
-	if(!bIsWallRunning && !bIsLedging && !bIsMantling)
+	if(!_bIsWallRunning && !bIsLedging && !bIsMantling)
 	{
 		ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 	}
@@ -1053,13 +1062,8 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
                                                                     AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex)
 {
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
-
-	for (auto Element : OverlappingComponents)
-	{
-		UE_LOG(LogTemp, Error, TEXT(" %s"), *Element.OverlapInfo.GetComponent()->GetName());
-	}
 	
-	if(bIsWallRunning && OverlappingComponents.IsEmpty())
+	if(_bIsWallRunning && OverlappingComponents.IsEmpty())
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
 		OnWallRunStop();

@@ -1430,7 +1430,7 @@ void UPS_HookComponent::PowerCablePull()
 	float currentPushAccel = _ForceWeight;
 	
 	//Pull direction calculation 
-	FVector start = _AttachedMesh->GetComponentLocation();
+	FVector start = CableListArray[0]->GetSocketLocation(SOCKET_CABLE_END);
 	FVector end =  CableListArray[0]->GetSocketLocation(SOCKET_CABLE_START);
 
 	//Blocked Pull Force

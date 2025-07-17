@@ -269,41 +269,14 @@ public:
 	void JumpOffWallRun();
 
 	//Getters && Setters
-	FORCEINLINE bool IsWallRunning() const  {return bIsWallRunning;}
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsWallRunning() const  {return _bIsWallRunning;}
 
-	FORCEINLINE FVector GetWallRunDirection() const{return WallRunDirection;}
+	FORCEINLINE FVector GetWallRunDirection() const{return _WallRunDirection;}
 
 protected:
 	UFUNCTION()
 	void WallRunTick();
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Is currently WallRunning"))
-	bool bIsWallRunning = false;
-
-	//-1:Left, 0:Forward, 1:Right
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Player orientation from Wall, basiclly use for determine if Player is on the left or the right from Wall"))
-	int32 WallToPlayerOrientation = 0;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
-	int32 CameraTiltOrientation = 0;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun timer handler"))
-	FTimerHandle WallRunTimerHandle;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall direction"))
-	AActor* Wall = nullptr;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun start time in second"))
-	float StartWallRunTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun tick current time in second"))
-	float WallRunSeconds = TNumericLimits<float>().Lowest();
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="WallRun move direction"))
-	FVector WallRunDirection = FVector::ZeroVector;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|WallRun", meta=(ToolTip="Player to Wall Run velocity "))
-	float VelocityWeight = 1.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
@@ -334,8 +307,40 @@ protected:
 	
 	
 private:
-	//------------------
+	
+	UPROPERTY(Transient)
+	bool _bIsWallRunning;
 
+	UPROPERTY(Transient)
+	int32 _JumpCountOnWallRunning;
+
+	//Player orientation from Wall, basiclly use for determine if Player is on the left or the right from Wall
+	//-1:Left, 0:Forward, 1:Right
+	UPROPERTY(DuplicateTransient)
+	int32 _WallToPlayerOrientation = 0;
+
+	//Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall
+	UPROPERTY(DuplicateTransient)
+	int32 _CameraTiltOrientation = 0;
+	
+	UPROPERTY(Transient)
+	FTimerHandle _WallRunTimerHandle;
+
+	UPROPERTY(Transient)
+	float _StartWallRunTimestamp;
+
+	UPROPERTY(Transient)
+	float _WallRunSeconds;
+
+	UPROPERTY(Transient)
+	AActor* _Wall;
+		
+	UPROPERTY(DuplicateTransient)
+	FVector _WallRunDirection = FVector::ZeroVector;
+
+	UPROPERTY(DuplicateTransient)
+	float _VelocityWeight = 1.0f;
+	
 	UPROPERTY(Transient, meta=(ToolTip="Start WallRun player velocity scale"))
 	FVector _WallRunEnterVelocity;	
 

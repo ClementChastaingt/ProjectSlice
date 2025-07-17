@@ -324,6 +324,20 @@ void UPS_ForceComponent::AttachScrew()
 			// Create a new StaticMeshComponent
 			UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
 			NewMeshComponent->SetStaticMesh(Cast<UStaticMesh>(LoadedScrewMesh));
+
+			//Collision
+			NewMeshComponent->SetCollisionProfileName(Profile_NoCollision);
+			NewMeshComponent->SetGenerateOverlapEvents(false);
+
+			//Opti
+			NewMeshComponent->PrimaryComponentTick.bCanEverTick = false;
+			NewMeshComponent->PrimaryComponentTick.bStartWithTickEnabled = false;
+			NewMeshComponent->bApplyImpulseOnDamage = false;
+			NewMeshComponent->bReplicatePhysicsToAutonomousProxy = false;
+			//NewMeshComponent->SetCastShadow(false);
+			NewMeshComponent->SetCanEverAffectNavigation(false);
+
+			//Finish spawn
 			NewMeshComponent->RegisterComponent();
 			
 			//Setup mesh transform
