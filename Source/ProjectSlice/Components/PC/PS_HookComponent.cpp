@@ -1389,12 +1389,13 @@ void UPS_HookComponent::PowerCablePull()
 	if (!IsValid(_PlayerCharacter)
 		|| !IsValid(_AttachedMesh)
 		|| !CableListArray.IsValidIndex(0)
+		|| !CableListArray.IsValidIndex(CableListArray.Num() - 1)
 		|| !IsValid(GetWorld()))
 		return;
 
 	//Determine Alphas
 	//Current dist to attach loc
-	float baseToMeshDist =	FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(),_AttachedMesh->GetComponentLocation()));
+	float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetSocketLocation(SOCKET_HOOK), CableListArray[CableListArray.Num() - 1]->GetSocketLocation(SOCKET_CABLE_END)));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
@@ -1409,7 +1410,7 @@ void UPS_HookComponent::PowerCablePull()
 		UpdateImpactField();
 		return;
 	}
-
+	
 	//Check if we can start default Pull logic
 	//Check if object using physic
 	if (!_AttachedMesh->IsSimulatingPhysics()) return;
@@ -1427,6 +1428,8 @@ void UPS_HookComponent::PowerCablePull()
 	CheckingIfObjectIsBlocked();
 	
 	//Pull Object
+	// const float radiusSquared = _AttachedMesh->GetLocalBounds().ComputeSquaredDistanceFromBoxToPoint(_AttachedMesh->GetComponentLocation());
+	// UE_LOG(LogTemp, Error, TEXT("radius %f"), FMath::Sqrt(radiusSquared));
 	float currentPushAccel = _ForceWeight;
 	
 	//Pull direction calculation 
@@ -1443,7 +1446,7 @@ void UPS_HookComponent::PowerCablePull()
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
 	//if(_bAttachObjectIsBlocked) currentPushAccel = (currentPushAccel / UnblockDefaultPullforceDivider);
 	
-	FVector defaultNewVel = _AttachedMesh->GetMass() * rotMeshCable.Vector() * currentPushAccel;
+	FVector defaultNewVel = _AttachedMesh->GetMass() *  rotMeshCable.Vector() * currentPushAccel;
 	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation, NAME_None, false);
 
 	//Debug base Pull dir

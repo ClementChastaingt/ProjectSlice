@@ -277,7 +277,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1",  ToolTip="Min length cable determine by divide Distance Between Cable by it"))
 	float CableMinLengthDivider = 2;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1",  ToolTip="Max length cable determine by multiplie Distance Between Cable by it"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="0", ClampMin="0",  ToolTip="Max length cable determine by multiplie Distance Between Cable by it"))
 	float CableMaxLengthMultiplicator = 1.5;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
