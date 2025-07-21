@@ -4,6 +4,7 @@
 #include "PS_ParkourComponent.h"
 
 #include "PS_PlayerCameraComponent.h"
+#include "Field/FieldSystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -328,6 +329,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 
 	//--------Reset Variables--------
+	_JumpCountOnWallRunning = 0;
 	_bIsWallRunning = false;
 }
 
@@ -1004,7 +1006,8 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	
 	if(bIsMantling || bIsLedging)  return;
 
-	if (otherComp->IsA(UGeometryCollectionComponent::StaticClass())) return;
+	UE_LOG(LogTemp, Log, TEXT("otherActor %s,  otherComp %s"),*otherActor->GetName(),  *otherComp->GetReadableName());
+	if (otherComp->IsA(UGeometryCollectionComponent::StaticClass()) || otherActor->IsA(AFieldSystemActor::StaticClass())) return;
 	
 	_ActorOverlap = otherActor;
 	_ComponentOverlap = otherComp;

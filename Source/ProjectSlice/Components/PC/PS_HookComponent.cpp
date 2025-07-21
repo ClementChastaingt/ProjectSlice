@@ -59,6 +59,9 @@ void UPS_HookComponent::BeginPlay()
 	if(IsValid(FirstCable))
 		_FirstCableDefaultLenght = FirstCable->CableLength;
 
+	_CablePullSlackDistance = CablePullSlackMaxDistanceRange;
+	_WindeInputAxis1DValue = WindeMaxInputWeight;
+
 	//Callback
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
@@ -1005,7 +1008,7 @@ void UPS_HookComponent::HookObject()
 	_AttachedMesh->SetGenerateOverlapEvents(true);
 	
 	//Determine max distance for Pull
-	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), _AttachedMesh->GetComponentLocation()));
+	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), _CurrentHookHitResult.Location));
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -1309,9 +1312,12 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 {
 	//Winde Alpha
 	if(_CableWindeInputValue != 0.0f && FMath::Abs(_CableWindeInputValue) != _AlphaWinde)
-	{
-		//Applicate curve to winde alpha input
+	{	
+		//Decrement Slack on Pulling Object
+		if (_CableWindeInputValue < 0 ) _CableWindeInputValue += _AlphaPull;
+
 		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
+		//Applicate curve to winde alpha input
 		if(IsValid(WindePullingCurve))
 		{
 			_AlphaWinde = WindePullingCurve->GetFloatValue(_AlphaWinde);
@@ -1395,13 +1401,14 @@ void UPS_HookComponent::PowerCablePull()
 
 	//Determine Alphas
 	//Current dist to attach loc
-	float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetSocketLocation(SOCKET_HOOK), CableListArray[CableListArray.Num() - 1]->GetSocketLocation(SOCKET_CABLE_END)));
+	float armToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(HookThrower->GetSocketLocation(SOCKET_HOOK), CableListArray[CableListArray.Num() - 1]->GetSocketLocation(SOCKET_CABLE_END)));
+	float baseToMeshDist = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), CableListArray[CableListArray.Num() - 1]->GetSocketLocation(SOCKET_CABLE_END)));
 	
 	//Calculate current pull alpha (Winde && Distance Pull)
 	_AlphaPull = CalculatePullAlpha(baseToMeshDist);
 
 	//Try Auto Break Rope if tense is too high else Adapt Cable tense render
-	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - baseToMeshDist, -CablePullSlackMaxDistanceRange, CablePullSlackMaxDistanceRange,1.0f,0.0f);
+	_AlphaTense = UKismetMathLibrary::MapRangeClamped((_DistanceOnAttach + _CablePullSlackDistance) - armToMeshDist, -CablePullSlackMaxDistanceRange, CablePullSlackMaxDistanceRange,1.0f,0.0f);
 	AdaptCableTense(_AlphaTense);
 
 	//Check if it's destructible and use Chaos logic if it is
@@ -1792,7 +1799,8 @@ void UPS_HookComponent::UpdateMasterConstraint(const FVector& targetLoc, const f
 void UPS_HookComponent::ImpulseConstraintAttach() const
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || _PlayerCharacter->GetCharacterMovement()->MovementMode == MOVE_Walking) return;
-	GetConstraintAttachSlave()->AddImpulse(_PlayerCharacter->GetCapsuleVelocity() * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
+	const FVector velocity = _PlayerCharacter->GetCapsuleVelocity().IsNearlyZero(10.0f) ? _PlayerCharacter->GetActorForwardVector() * 1000.0f: _PlayerCharacter->GetCapsuleVelocity(); 
+	GetConstraintAttachSlave()->AddImpulse(velocity * _PlayerCharacter->CustomTimeDilation,NAME_None, true);
 	
 	if(bDebugSwing) UE_LOG(LogActorComponent, Warning, TEXT("%S"), __FUNCTION__);
 }

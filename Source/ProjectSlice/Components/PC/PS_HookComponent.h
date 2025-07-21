@@ -278,7 +278,7 @@ protected:
 	float CableMinLengthDivider = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="0", ClampMin="0",  ToolTip="Max length cable determine by multiplie Distance Between Cable by it"))
-	float CableMaxLengthMultiplicator = 1.5;
+	float CableMaxLengthMultiplicator = 1.0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Cable|Rope|Tense", meta=(UIMin="1", ClampMin="1", UIMax="16", ClampMax="16", ToolTip="Max layer depth of Adapt cable tense"))
 	FFloatInterval CableSolverRange = FFloatInterval(4,8);
@@ -371,8 +371,8 @@ private:
 	UPROPERTY(Transient)
 	float _FirstCableDefaultLenght;
 
-	UPROPERTY(DuplicateTransient)
-	float _CablePullSlackDistance = CablePullSlackMaxDistanceRange;
+	UPROPERTY(Transient)
+	float _CablePullSlackDistance;
 	
 	UPROPERTY(Transient)
 	float _AlphaTense;
@@ -468,8 +468,8 @@ private:
 	UPROPERTY(Transient)
 	float _AlphaWinde;
 	
-	UPROPERTY(DuplicateTransient)
-	float _WindeInputAxis1DValue = WindeMaxInputWeight;
+	UPROPERTY(Transient)
+	float _WindeInputAxis1DValue;
 		
 	//------------------
 #pragma endregion Winde
