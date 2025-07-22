@@ -217,8 +217,6 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetComponentLocation(), GetComponentLocation() + GetUpVector() * -GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebugWallRun ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, findedFloor, true);
-	
-	UE_LOG(LogTemp, Error, TEXT("block %i, dist %f"),findedFloor.bBlockingHit, findedFloor.Distance);
 	if (findedFloor.bBlockingHit) return;
 	
 	//Prevent from trigger in loop by encounter new wall
