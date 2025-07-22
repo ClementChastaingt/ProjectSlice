@@ -450,6 +450,9 @@ public:
 protected:
 
 	UFUNCTION()
+	void UpdateCableWinde(float offset);
+
+	UFUNCTION()
 	void ResetWindeHook();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",

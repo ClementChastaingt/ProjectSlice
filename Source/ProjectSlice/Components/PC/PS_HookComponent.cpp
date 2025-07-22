@@ -1101,7 +1101,7 @@ void UPS_HookComponent::AttachCableToHookThrower(UCableComponent* cableToAttach)
 void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstance)
 {
 	//Break Hook constraint if already exist Or begin Winding
-	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld())) return;
+	if (!IsValid(GetAttachedMesh()) || !IsValid(GetWorld()) || _bCablePowerPull) return;
 	
 	//Update Winde vars
 	_bCableWinderIsActive = true;
@@ -1122,6 +1122,25 @@ void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstan
 	{
 		ResetWindeHook();
 	}
+}
+
+void UPS_HookComponent::UpdateCableWinde(const float offset)
+{
+	if (_bPlayerIsSwinging || !_bCableWinderIsActive || !_bCablePowerPull) return;
+
+	// if (_AlphaPull < 0.75f) return;
+
+	if (offset > 0)
+	{
+		_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(offset,
+			 -CablePullSlackMaxDistanceRange, CablePullSlackMaxDistanceRange,
+			-1.0f, 1.0f);
+		_WindeInputAxis1DValue = UKismetMathLibrary::MapRangeClamped(_CableWindeInputValue,
+			-CablePullSlackMaxDistanceRange,  +CablePullSlackMaxDistanceRange,
+			-WindeMaxInputWeight, WindeMaxInputWeight);
+	}
+	
+	UE_LOG(LogTemp, Error, TEXT("offset %f, _CableWindeInputValue %f, _WindeInputAxis1DValue %f"), offset, _CableWindeInputValue, _WindeInputAxis1DValue);
 }
 
 void UPS_HookComponent::ResetWindeHook()
@@ -1312,10 +1331,7 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 {
 	//Winde Alpha
 	if(_CableWindeInputValue != 0.0f && FMath::Abs(_CableWindeInputValue) != _AlphaWinde)
-	{	
-		//Decrement Slack on Pulling Object
-		//_CableWindeInputValue = UKismetMathLibrary::Lerp(_CableWindeInputValue,0.0f, _AlphaPull);
-		
+	{			
 		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
 		//Applicate curve to winde alpha input
 		if(IsValid(WindePullingCurve))
@@ -1345,6 +1361,10 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	//Calculate Pull alpha && activate pull
 	const float alpha = UKismetMathLibrary::MapRangeClamped(baseToMeshDist + distanceOnAttachByTensorWeight, 0, max, 0 ,1);
 	_bCablePowerPull = baseToMeshDist + distanceOnAttachByTensorWeight > _DistanceOnAttach + _CablePullSlackDistance;
+
+	//Updade WindeValue on Pulling Object
+	const float offset = (baseToMeshDist + distanceOnAttachByTensorWeight) - (_DistanceOnAttach + _CablePullSlackDistance);
+	UpdateCableWinde(offset);
 
 	//Debug
 	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: baseToMeshDist %f, _DistanceOnAttach %f, _DistOnAttachWithRange %f, distanceOnAttachByTensorWeight %f, alpha %f"),__FUNCTION__, baseToMeshDist, _DistanceOnAttach, _DistanceOnAttach + _CablePullSlackDistance, distanceOnAttachByTensorWeight, alpha);
