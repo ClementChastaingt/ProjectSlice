@@ -1314,8 +1314,8 @@ float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 	if(_CableWindeInputValue != 0.0f && FMath::Abs(_CableWindeInputValue) != _AlphaWinde)
 	{	
 		//Decrement Slack on Pulling Object
-		if (_CableWindeInputValue < 0 ) _CableWindeInputValue += _AlphaPull;
-
+		//_CableWindeInputValue = UKismetMathLibrary::Lerp(_CableWindeInputValue,0.0f, _AlphaPull);
+		
 		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
 		//Applicate curve to winde alpha input
 		if(IsValid(WindePullingCurve))

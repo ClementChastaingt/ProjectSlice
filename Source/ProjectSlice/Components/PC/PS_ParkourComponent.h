@@ -291,7 +291,7 @@ protected:
 	float WallRunMaxCamOrientationAngle = 25.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(ToolTip="Min velocity threshold to maintain WallRunning"))
-	float MinWallRunVelocityThreshold = 0.01f;
+	float MinWallRunVelocityThreshold = 200.0f;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Fake input push force when input was not pressed"))
 	float WallRunNoInputVelocity = 0.8f;
@@ -342,7 +342,7 @@ private:
 	float _VelocityWeight = 1.0f;
 	
 	UPROPERTY(Transient, meta=(ToolTip="Start WallRun player velocity scale"))
-	FVector _WallRunEnterVelocity;	
+	FVector _WallRunEnterVelocity;
 
 #pragma endregion WallRun
 

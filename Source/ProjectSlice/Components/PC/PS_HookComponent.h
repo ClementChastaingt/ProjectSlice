@@ -444,6 +444,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsCableWinderInUse() const{return _bCableWinderIsActive;}
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetCableWindeInputValue() const{return _CableWindeInputValue;}
+
 protected:
 
 	UFUNCTION()

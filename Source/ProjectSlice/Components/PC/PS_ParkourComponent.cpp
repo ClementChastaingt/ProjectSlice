@@ -6,6 +6,7 @@
 #include "PS_PlayerCameraComponent.h"
 #include "Field/FieldSystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GeometryCollection/GeometryCollectionActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
@@ -182,13 +183,17 @@ void UPS_ParkourComponent::WallRunTick()
 	//-----Velocity Stick to Wall-----
 	const float inputWeight = _PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity;
 		
-	const FVector newPlayerVelocity = customWallDirection * _VelocityWeight * inputWeight;
+	const FVector newPlayerVelocity = customWallDirection * _VelocityWeight * inputWeight;	
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
+
+	//Determine vertical only vel
+	FVector verticalVel = newPlayerVelocity;
+	verticalVel.Z = 0.0f;
 	
-	//Stop WallRun if he was too long
-	if(alphaWallRun >= 1 || newPlayerVelocity.IsNearlyZero(MinWallRunVelocityThreshold))
+	//Stop WallRun if he was too long OR vel is under MinWallRunVelocityThreshold
+	if(alphaWallRun >= 1 || verticalVel.IsNearlyZero(MinWallRunVelocityThreshold))
 	{
-		if(bDebugWallRun)UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
+		if(bDebugWallRun)UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
 		OnWallRunStop();
 	}
 		
@@ -207,6 +212,15 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	//Activate Only if in Air
 	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !_PlayerCharacter->bWasJumping) return;
 
+	//Check distance to floor
+	FHitResult findedFloor;
+	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetComponentLocation(), GetComponentLocation() + GetUpVector() * -GetUnscaledCapsuleHalfHeight(), UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false, actorsToIgnore, bDebugWallRun ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, findedFloor, true);
+	
+	UE_LOG(LogTemp, Error, TEXT("block %i, dist %f"),findedFloor.bBlockingHit, findedFloor.Distance);
+	if (findedFloor.bBlockingHit) return;
+	
 	//Prevent from trigger in loop by encounter new wall
 	if (_PlayerCharacter->JumpCurrentCount == _JumpCountOnWallRunning && !_bIsWallRunning) return;
 	
@@ -219,7 +233,6 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	//DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(),  otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 1100, 12.0f, FColor::Cyan, true, 2, 10, 6);
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
-	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _PlayerCharacter->GetActorLocation(), _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorRightVector() * 200, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 										  false, actorsToIgnore, bDebugWallRun ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHitRight, true, FColor::Blue);
 
@@ -228,8 +241,8 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 
 	//Determine player to/from WallOrientation
 	int32 playerToWallOrientation = 0;
-	bool hitRight = outHitRight.bBlockingHit /*&& outHitRight.GetActor() == otherActor*/;
-	bool hitLeft = outHitLeft.bBlockingHit /*&& outHitLeft.GetActor() == otherActor*/;
+	bool hitRight = outHitRight.bBlockingHit;
+	bool hitLeft = outHitLeft.bBlockingHit;
 
 	//If hit left && right choose the nearest
 	if(hitRight && hitLeft)
@@ -1005,9 +1018,9 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		|| otherActor->ActorHasTag(TAG_UNPARKOURABLE)) return;
 	
 	if(bIsMantling || bIsLedging)  return;
-
-	UE_LOG(LogTemp, Log, TEXT("otherActor %s,  otherComp %s"),*otherActor->GetName(),  *otherComp->GetReadableName());
-	if (otherComp->IsA(UGeometryCollectionComponent::StaticClass()) || otherActor->IsA(AFieldSystemActor::StaticClass())) return;
+	
+	if (otherActor->IsA(AGeometryCollectionActor::StaticClass()) || otherActor->IsA(AFieldSystemActor::StaticClass())) return;
+	UE_LOG(LogTemp, Log, TEXT("otherActor %s,  otherComp %s"),*otherActor->GetActorNameOrLabel(),  *otherComp->GetReadableName());
 	
 	_ActorOverlap = otherActor;
 	_ComponentOverlap = otherComp;
