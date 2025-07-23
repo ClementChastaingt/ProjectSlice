@@ -373,6 +373,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _CablePullSlackDistance;
+
+	UPROPERTY(Transient)
+	float _CableSlackCounterMagnitude;
 	
 	UPROPERTY(Transient)
 	float _AlphaTense;
@@ -450,7 +453,7 @@ public:
 protected:
 
 	UFUNCTION()
-	void UpdateCableWinde(float offset);
+	void UpdateCableWinde(float baseToMesh);
 
 	UFUNCTION()
 	void ResetWindeHook();
@@ -458,6 +461,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
 		meta=(UIMin="0", ClampMin="0", ToolTip="Max input Winde iteration to do for reach max tense or slack"))
 	float WindeMaxInputWeight = 10;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
+		meta=(UIMin="0", ClampMin="0", ForceUnits="s", ToolTip="Counter effect latency on slack when object was pulled"))
+	float CounterEffectLatency = 1.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Hook|Pull|Winde",
 		meta=(UIMin="0", ClampMin="0", ForceUnits="s", ToolTip="Max Force Winde Weight curve"))
@@ -476,6 +483,9 @@ private:
 	
 	UPROPERTY(Transient)
 	float _WindeInputAxis1DValue;
+
+	UPROPERTY(Transient)
+	FTimerHandle _SlackCounterDeferredTimerHandle;
 		
 	//------------------
 #pragma endregion Winde
