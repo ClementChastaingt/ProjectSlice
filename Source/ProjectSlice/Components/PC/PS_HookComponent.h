@@ -119,6 +119,9 @@ protected:
 	bool bDebugPull = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugWinde = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugChaos = false;
 	
 private:

@@ -128,10 +128,9 @@ void UPS_HookComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if(!bCanUseSubstepTick)
 	{
 		CableWraping();
-	}
 
-	//Pull (need to use frame rate for prevent pull on object blocking)
-	PowerCablePull();
+		PowerCablePull();
+	}
 
 	//Swing
 	SwingTick(DeltaTime);
@@ -1111,13 +1110,13 @@ void UPS_HookComponent::WindeHook(const FInputActionInstance& inputActionInstanc
 	_WindeInputAxis1DValue = FMath::Clamp(_WindeInputAxis1DValue,-WindeMaxInputWeight, WindeMaxInputWeight);
 	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_WindeInputAxis1DValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
 	
-	if (bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
+	if (bDebugWinde) UE_LOG(LogActorComponent, Log, TEXT("%S :: _CableWindeInputValue %f"), __FUNCTION__, _CableWindeInputValue);
 	
 }
 
 void UPS_HookComponent::ResetWinde(const FInputActionInstance& inputActionInstance)
 {
-	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
+	if(bDebugWinde) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
 	
 	//On wheel axis change reset
 	if (FMath::Sign(inputActionInstance.GetValue().Get<float>()) != FMath::Sign(_WindeInputAxis1DValue) && _bCableWinderIsActive)
@@ -1130,20 +1129,22 @@ void UPS_HookComponent::UpdateCableWinde(const float baseToMesh)
 {
 	if (_bPlayerIsSwinging || !_bCableWinderIsActive) return;
 
-	if (_AttachedMesh->GetPhysicsLinearVelocity().IsNearlyZero()) return;
-
+	if (_AttachedMesh->GetComponentVelocity().IsNearlyZero(10.0f)) return;
+	
 	if (baseToMesh >= _DistanceOnAttach || FMath::Sign(_CableWindeInputValue) != -1) return;
-
-	//_CablePullSlackDistance = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);
-	_WindeInputAxis1DValue += UKismetMathLibrary::MapRangeClamped(baseToMesh,_DistanceOnAttach - CablePullSlackMaxDistanceRange, _DistanceOnAttach, WindeMaxInputWeight, 0.0f);
+	
+	_WindeInputAxis1DValue += UKismetMathLibrary::MapRangeClamped(baseToMesh, _DistanceOnAttach, 0.0f, 0.0f, WindeMaxInputWeight);
+	//_WindeInputAxis1DValue += UKismetMathLibrary::MapRangeClamped(baseToMesh,_DistanceOnAttach - CablePullSlackMaxDistanceRange, _DistanceOnAttach, WindeMaxInputWeight, 0.0f);
 	_CableWindeInputValue = UKismetMathLibrary::MapRangeClamped(_WindeInputAxis1DValue,-WindeMaxInputWeight,WindeMaxInputWeight, -1.0f,1.0f);
 	
-	UE_LOG(LogTemp, Error, TEXT("_WindeInputAxis1DValue %f"), _WindeInputAxis1DValue);
+	if (bDebugWinde) UE_LOG(LogTemp, Log, TEXT("%S :: _WindeInputAxis1DValue %f"),__FUNCTION__,  _WindeInputAxis1DValue);
 	
 }
 
 void UPS_HookComponent::ResetWindeHook()
 {
+	if(bDebugWinde) UE_LOG(LogActorComponent, Log, TEXT("%S"),__FUNCTION__);
+	
 	//Reset Input var
 	_WindeInputAxis1DValue = WindeMaxInputWeight / 2;
 	_CableWindeInputValue = 0.0f;
@@ -1329,25 +1330,24 @@ void UPS_HookComponent::DetermineForceWeight(const float alpha)
 float UPS_HookComponent::CalculatePullAlpha(const float baseToMeshDist)
 {
 	//Winde Alpha
-	if(FMath::Abs(_CableWindeInputValue) != _AlphaWinde)
-	{			
-		_AlphaWinde = FMath::Abs(_CableWindeInputValue);
-		//Applicate curve to winde alpha input
-		if(IsValid(WindePullingCurve))
-		{
-			_AlphaWinde = WindePullingCurve->GetFloatValue(_AlphaWinde);
-		}
-
-		//Winde anim only in pull not slack
-		if(_CableWindeInputValue < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
-
-		//Determine current slack distance
-		_CablePullSlackDistance = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);			
+	_AlphaWinde = FMath::Abs(_CableWindeInputValue);
+	
+	//Applicate curve to winde alpha input
+	if(IsValid(WindePullingCurve))
+	{
+		_AlphaWinde = WindePullingCurve->GetFloatValue(_AlphaWinde);
 	}
+
+	//Winde anim only in pull not slack
+	if(_CableWindeInputValue < 0) _PlayerCharacter->GetProceduralAnimComponent()->ApplyWindingVibration(_AlphaWinde);
+
+	//Determine current slack distance
+	_CablePullSlackDistance = FMath::Lerp(0.0f, CablePullSlackMaxDistanceRange, _AlphaWinde) * FMath::Sign(_CableWindeInputValue);			
 	
 	//Override _DistanceOnAttach
-	if(_DistanceOnAttach + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackMaxDistanceRange
-		&& FMath::Sign(_DistanceOnAttach - CablePullSlackMaxDistanceRange) == FMath::Sign(_DistanceOnAttach + _CablePullSlackDistance)
+	if(((_DistanceOnAttach + _CablePullSlackDistance < _DistanceOnAttach - CablePullSlackMaxDistanceRange
+		&& FMath::Sign(_DistanceOnAttach - CablePullSlackMaxDistanceRange) == FMath::Sign(_DistanceOnAttach + _CablePullSlackDistance))
+		|| _AttachedMesh->GetComponentVelocity().IsNearlyZero(10.0f))
 		&& !_bPlayerIsSwinging)
 	{
 		_DistanceOnAttach = baseToMeshDist;
