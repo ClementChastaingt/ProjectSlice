@@ -19,7 +19,7 @@ UPS_SlicedComponent::UPS_SlicedComponent(const FObjectInitializer& objectInitial
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 
 	//Init ProcMeshCompo Collision
 	bUseComplexAsSimpleCollision = false;
@@ -35,8 +35,8 @@ void UPS_SlicedComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitComponent();
-	
+	OnComponentHit.AddUniqueDynamic(this, &UPS_SlicedComponent::OnSlicedObjectHitEventReceived);
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: hitComp %s"), __FUNCTION__, *this->GetName());
 }
 
 
@@ -85,6 +85,7 @@ void UPS_SlicedComponent::InitSliceObject()
 	SetGenerateOverlapEvents(true);
 	SetCollisionProfileName(Profile_GPE, true);
 	SetNotifyRigidBodyCollision(true);
+	GetBodyInstance()->WakeInstance();
 
 	//Init Physic
 	const bool bIsNotFixed = GetOwner()->ActorHasTag(TAG_UNFIXED);
@@ -94,8 +95,15 @@ void UPS_SlicedComponent::InitSliceObject()
 
 void UPS_SlicedComponent::InitComponent()
 {
-	OnComponentHit.AddUniqueDynamic(this, &UPS_SlicedComponent::OnSlicedObjectHitEventReceived);
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: hitComp %s"), __FUNCTION__, *this->GetName());	
+	//Update
+	UpdateBounds();
+
+	//Init Collision 
+	bUseComplexAsSimpleCollision = false;
+	SetGenerateOverlapEvents(true);
+	SetCollisionProfileName(Profile_GPE, true);
+	SetNotifyRigidBodyCollision(true);
+	GetBodyInstance()->WakeInstance();
 }
 
 

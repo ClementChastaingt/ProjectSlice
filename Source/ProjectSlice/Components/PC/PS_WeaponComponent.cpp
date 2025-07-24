@@ -205,9 +205,7 @@ void UPS_WeaponComponent::Fire()
 		matInst, true);
 	if(!IsValid(outHalfComponent)) return;
 	
-	// Ensure collision is generated for both meshes
-	outHalfComponent->bUseComplexAsSimpleCollision = false;
-	
+	// Ensure collision is generated for both meshes	
 	// for (int32 newProcMeshSection = 0; newProcMeshSection < outHalfComponent->GetNumSections(); newProcMeshSection++)
 	// {
 	// 	UpdateMeshTangents(outHalfComponent, newProcMeshSection);
@@ -217,8 +215,6 @@ void UPS_WeaponComponent::Fire()
 	// {
 	// 	UpdateMeshTangents(parentProcMeshComponent, currentProcMeshSection);
 	// }
-	
-	outHalfComponent->UpdateBounds();
 
 	//Debug trace
 	if(bDebugSlice)
@@ -237,12 +233,12 @@ void UPS_WeaponComponent::Fire()
 		//Cast<UMeshComponent>(CurrentFireHitResult.GetActor()->GetRootComponent())->SetCollisionResponseToChannel(ECC_Rope, ECR_Ignore);
 		parentProcMeshComponent->GetOwner()->AddInstanceComponent(outHalfComponent);
 	}
-		
-	//Init Physic Config;
-	outHalfComponent->SetGenerateOverlapEvents(true);
-	outHalfComponent->SetCollisionProfileName(Profile_GPE, true);
-	outHalfComponent->SetNotifyRigidBodyCollision(true);
 
+	//Bound Update
+	// parentProcMeshComponent->UpdateBounds();
+	// outHalfComponent->UpdateBounds();
+
+	//Physics
 	UPhysicalMaterial* physMat = currentSlicedComponent->BodyInstance.GetSimplePhysicalMaterial();
 	outHalfComponent->SetPhysMaterialOverride(physMat);	
 	outHalfComponent->SetSimulatePhysics(true);
