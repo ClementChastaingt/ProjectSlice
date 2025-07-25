@@ -261,7 +261,7 @@ private:
 
 public:
 	UFUNCTION()
-	void TryStartWallRun(AActor* const otherActor);
+	void TryStartWallRun(AActor* otherActor, const FHitResult& fwdHit);
 
 	UFUNCTION()
 	void OnWallRunStop();
@@ -276,10 +276,13 @@ public:
 	FORCEINLINE FVector GetWallRunDirection() const{return _WallRunDirection;}
 
 protected:
+	
+	UFUNCTION()
+	bool FindWallOrientationFromPlayer(int32& playerToWallOrientation);
+
 	UFUNCTION()
 	void WallRunTick();
-	FVector DetermineWallRunDirection(const AActor* otherActor);
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
 
@@ -319,11 +322,14 @@ private:
 	//Player orientation from Wall, basiclly use for determine if Player is on the left or the right from Wall
 	//-1:Left, 0:Forward, 1:Right
 	UPROPERTY(DuplicateTransient)
-	int32 _WallToPlayerOrientation = 0;
+	int32 _PlayerToWallOrientation = 0;
 
 	//Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall
 	UPROPERTY(DuplicateTransient)
 	int32 _CameraTiltOrientation = 0;
+
+	UPROPERTY(Transient)
+	FHitResult _WallRunSideHitResult;
 	
 	UPROPERTY(Transient)
 	FTimerHandle _WallRunTimerHandle;
@@ -336,9 +342,6 @@ private:
 
 	UPROPERTY(Transient)
 	AActor* _Wall;
-	
-	UPROPERTY(Transient)
-	EDirectionOrientation _WallRunDirOrientation;
 		
 	UPROPERTY(DuplicateTransient)
 	FVector _WallRunDirection = FVector::ZeroVector;
@@ -346,7 +349,7 @@ private:
 	UPROPERTY(DuplicateTransient)
 	float _VelocityWeight = 1.0f;
 	
-	UPROPERTY(Transient, meta=(ToolTip="Start WallRun player velocity scale"))
+	UPROPERTY(Transient)
 	FVector _WallRunEnterVelocity;
 
 #pragma endregion WallRun
