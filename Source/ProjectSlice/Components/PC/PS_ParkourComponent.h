@@ -7,6 +7,7 @@
 #include "Components/SceneComponent.h"
 #include "ProjectSlice/Character/PC/PS_PlayerController.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "PS_ParkourComponent.generated.h"
 
 class AProjectSliceCharacter;
@@ -277,7 +278,8 @@ public:
 protected:
 	UFUNCTION()
 	void WallRunTick();
-	
+	FVector DetermineWallRunDirection(const AActor* otherActor);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
 
@@ -334,6 +336,9 @@ private:
 
 	UPROPERTY(Transient)
 	AActor* _Wall;
+	
+	UPROPERTY(Transient)
+	EDirectionOrientation _WallRunDirOrientation;
 		
 	UPROPERTY(DuplicateTransient)
 	FVector _WallRunDirection = FVector::ZeroVector;

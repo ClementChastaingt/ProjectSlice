@@ -22,6 +22,18 @@ enum class ETransitPhase : uint8
 };
 
 UENUM(BlueprintType)
+enum class EDirectionOrientation : uint8
+{
+	FORWARD     UMETA(DisplayName = "Forward"),
+	UP          UMETA(DisplayName = "Up"),
+	BACKWARD    UMETA(DisplayName = "Backward"),
+	DOWN        UMETA(DisplayName = "Down"),
+	LEFT        UMETA(DisplayName = "Left"),
+	RIGHT       UMETA(DisplayName = "Right"),
+};
+
+
+UENUM(BlueprintType)
 enum class ETriangularOrientation : uint8
 {
 	CENTER = 0 UMETA(DisplayName = "Center"),
@@ -29,9 +41,6 @@ enum class ETriangularOrientation : uint8
 	LEFT = 2 UMETA(DisplayName = "Left"),
 	RIGHT = 3 UMETA(DisplayName = "Right"),
 };
-
-const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
-
 
 //__________________________________________________
 #pragma endregion GlobalEnum
@@ -46,6 +55,8 @@ enum class EPointedObjectType : uint8
 	CHAOS = 2 UMETA(DisplayName = "Chaos"),
 	ENEMY = 3 UMETA(DisplayName = "Enemy")
 };
+
+const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
 
 //__________________________________________________
 #pragma endregion Gameplay

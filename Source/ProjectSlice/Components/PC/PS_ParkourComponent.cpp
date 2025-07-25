@@ -11,6 +11,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 
@@ -202,6 +203,54 @@ void UPS_ParkourComponent::WallRunTick()
 	
 }
 
+FVector UPS_ParkourComponent::DetermineWallRunDirection(const AActor* const otherActor)
+{
+	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
+	
+	const float dotForward = playerCam->GetForwardVector().Dot(otherActor->GetActorForwardVector());
+	const float dotBack = playerCam->GetForwardVector().Dot(otherActor->GetActorForwardVector() * -1);
+	const float dotLeft = playerCam->GetForwardVector().Dot(otherActor->GetActorRightVector() - 1);
+	const float dotRight = playerCam->GetForwardVector().Dot(otherActor->GetActorRightVector());
+	const TArray<float> dotArray = {dotForward, dotBack, dotLeft, dotRight};
+
+	FVector dirVect = FVector::ZeroVector;
+	int32 outIndex;
+	float outMax;
+	UKismetMathLibrary::MaxOfFloatArray(dotArray, outIndex, outMax);
+	
+	if((outMax == dotForward) && (dotLeft == 0.0f || dotForward > 0.0f))
+	{
+		_WallRunDirOrientation = EDirectionOrientation::FORWARD;
+		dirVect = otherActor->GetActorForwardVector();
+	}
+	if ((outMax == dotRight) && (dotForward == 0.0f || dotRight > 0.0f))
+	{
+		_WallRunDirOrientation = EDirectionOrientation::RIGHT;
+		dirVect = otherActor->GetActorRightVector();
+	}
+	if ((outMax == dotBack) && (dotRight == 0.0f || dotBack > 0.0f))
+	{
+		_WallRunDirOrientation = EDirectionOrientation::BACKWARD;
+		dirVect = otherActor->GetActorForwardVector() - 1;
+	}
+	if ((outMax == dotLeft) && (dotBack == 0.0f || dotLeft > 0.0f))
+	{
+		_WallRunDirOrientation = EDirectionOrientation::LEFT;
+		dirVect = otherActor->GetActorRightVector() * -1;
+	}
+	
+	if(bDebugWallRun)
+	{
+		UE_LOG(LogTemp, Log, TEXT("%S :: _WallRunDirOrientation %s"),__FUNCTION__, *UEnum::GetValueAsString(_WallRunDirOrientation));
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 200, 5.0f, FColor::White, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + dirVect * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
+		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
+		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
+	}
+
+	return dirVect;
+}
+
 void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 {
 	if(bIsCrouched
@@ -224,10 +273,6 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 	
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
-	//WallRun Logic activation
-	const UPS_PlayerCameraComponent* playerCam = _PlayerCharacter->GetFirstPersonCameraComponent();
-	const float angleObjectFwdToCamFwd = otherActor->GetActorForwardVector().Dot(playerCam->GetForwardVector());
-
 	//DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(),  otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 1100, 12.0f, FColor::Cyan, true, 2, 10, 6);
 	//Find WallOrientation from player
 	FHitResult outHitRight, outHitLeft;
@@ -264,7 +309,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 		return;
 	}
 
-	if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: playerToWallOrientation %i"),__FUNCTION__, playerToWallOrientation);
+	if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: playerToWallOrientation %s"),__FUNCTION__, playerToWallOrientation > 0 ? TEXT("Right") : TEXT("Left") );
 	
 	//Update only if don't come from WallRun && Check if player is facing the wall
 	if(!_bIsWallRunning)
@@ -277,17 +322,10 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 		OnWallRunStop();
 		return;
 	}
-	
-	//Determine Orientation
-	_WallRunDirection = otherActor->GetActorForwardVector() * FMath::Sign(angleObjectFwdToCamFwd);
 	_CameraTiltOrientation = _WallToPlayerOrientation;
 	
-	if(bDebugWallRun)
-	{
-		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation() , _PlayerCharacter->GetActorLocation() + _WallRunDirection * 200, 5.0f, FColor::Yellow, false, 2, 10, 2);
-		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorRightVector() * 200, 10.0f, FColor::Green, false, 2, 10, 3);
-		DrawDebugDirectionalArrow(GetWorld(), otherActor->GetActorLocation(), otherActor->GetActorLocation() + otherActor->GetActorForwardVector() * 200, 10.0f, FColor::Red, false, 2, 10, 3);
-	}
+	//Determine Direction
+	_WallRunDirection = DetermineWallRunDirection(otherActor);;
 
 	//Constraint init
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
@@ -301,11 +339,11 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor)
 		GetWorld()->GetTimerManager().UnPauseTimer(_WallRunTimerHandle);
 	}
 
-	//--------Camera_Tilt Setup--------
+	//Camera_Tilt Setup
 	_PlayerCharacter->GetFirstPersonCameraComponent()->SetupCameraTilt(false, _CameraTiltOrientation * -1);
 
-	//--------Start Wallrunning --------
-
+	//Start Wallrunning
+	
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
 	_Wall = otherActor;
