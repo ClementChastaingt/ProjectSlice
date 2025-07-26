@@ -298,8 +298,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(ToolTip="Min velocity threshold to maintain WallRunning"))
 	float MinWallRunVelocityThreshold = 200.0f;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Fake input push force when input was not pressed"))
-	float WallRunNoInputVelocity = 0.8f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="cm/s", ToolTip="Fake input weight use when input was not pressed"))
+	float WallRunDefaultInputWeight = 0.8f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
@@ -308,7 +308,7 @@ protected:
 	UCurveFloat* WallRunGravityCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
-	float JumpOffForceSpeed = 1500.0f;
+	float JumpOffForceSpeed = 750.0f;
 	
 	
 private:

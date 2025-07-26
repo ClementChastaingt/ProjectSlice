@@ -192,6 +192,13 @@ void UPS_ForceComponent::ReleasePush()
 		//Impulse
 		if(IsValid(outMeshComp))
 		{
+			//If not mobile break
+			if (outMeshComp->Mobility != EComponentMobility::Movable)
+			{
+				iteration++;
+				continue;
+			}
+			
 			//Calculate mass for weight force 
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 

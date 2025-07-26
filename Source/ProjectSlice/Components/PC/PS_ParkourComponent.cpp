@@ -340,7 +340,7 @@ void UPS_ParkourComponent::WallRunTick()
 	customWallDirection.Normalize();
 
 	//Velocity impact by input weight
-	const float inputWeight = _PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunNoInputVelocity;
+	const float inputWeight = _PlayerController->GetMoveInput().Y > 0.0 ? _PlayerController->GetMoveInput().Y : WallRunDefaultInputWeight;
 	const FVector newPlayerVelocity = customWallDirection * _VelocityWeight * inputWeight;
 	_PlayerCharacter->GetCharacterMovement()->Velocity = newPlayerVelocity;
 
