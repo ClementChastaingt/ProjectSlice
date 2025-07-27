@@ -72,9 +72,9 @@ public:
 
 	FORCEINLINE bool IsPushReleased() const{return _bIsPushReleased;}
 	
-	FORCEINLINE float GetMaxPushForceTime() const{return MaxPushForceTime;}
+	FORCEINLINE float GetMaxPushForceTime() const{return InputMaxPushForceDuration;}
 	
-	FORCEINLINE float GetInputTimeWeigtAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.0f, 1.0f);};
+	FORCEINLINE float GetInputTimeWeigtAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.0f, 1.0f);};
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FRotator GetPushForceRotation() const{return _PushForceRotation;}
@@ -106,11 +106,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0"))
 	float PushForce = 25.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float QuickPushTimeThreshold = 0.35f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
-	float MaxPushForceTime = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
+	float InputMaxPushForceDuration = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
+	float MaxPushForceTime = 3.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
 	float SphereRadius = 50.0f;

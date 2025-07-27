@@ -128,10 +128,10 @@ void UPS_ForceComponent::ReleasePush()
 	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 	
 	//Setup force var
-	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + MaxPushForceTime,0.5f, 1.0f);
-	const float force = PushForce * alphaInput;
+	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.5f, 1.0f);
+	const float initialForce = PushForce * alphaInput;
 	float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
-	
+		
 	//Determine dir
 	if(bIsQuickPush)
 	{
@@ -164,22 +164,27 @@ void UPS_ForceComponent::ReleasePush()
 		//Check comp type
 		UMeshComponent* outMeshComp = Cast<UMeshComponent>(outHitResult.GetComponent());
 		UGeometryCollectionComponent* outGeometryComp = Cast<UGeometryCollectionComponent>(outHitResult.GetComponent());
-		
-		if(!IsValid(outMeshComp) && !IsValid(outGeometryComp))
+	
+
+		if((!IsValid(outMeshComp) && !IsValid(outGeometryComp)))
 		{
 			iteration++;
 			continue;
 		}
 
-		//Determine response latency 
-		const float dist = UKismetMathLibrary::Vector_DistanceSquared(outHitResult.TraceStart, outMeshComp->GetComponentLocation());
-		//const float dist = UKismetMathLibrary::Vector_Distance(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength);
-		const float duration = UKismetMathLibrary::SafeDivide(dist, ConeLength * ConeLength);
+		//Determine response latency
+		const float currentDistSquared = UKismetMathLibrary::Vector_DistanceSquared(_StartForcePushLoc, outHitResult.Location);
+		const float maxDistSquared = FMath::Square(ConeLength * 1.5);
 		
-		//Chaos :: Field is moving so why don't need to create multiple of them
+		const float alpha = FMath::Clamp(currentDistSquared / maxDistSquared, 0.f, 1.f);		
+		const float duration = MaxPushForceTime * alpha;
+		const float force = initialForce * (1 - duration/MaxPushForceTime);
+		
+		//Chaos
+		//Field is moving so we don't need to create multiple of them
 		if(iteration == 0 && IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
 		{
-			const float radius = FMath::Sqrt(dist) * FMath::DegreesToRadians(ConeAngleDegrees);
+			const float radius = FMath::Sqrt(currentDistSquared) * FMath::DegreesToRadians(ConeAngleDegrees);
 
 			//Destruct with delay for match with VFX
 			FTimerHandle timerChaosHandle;
@@ -193,11 +198,14 @@ void UPS_ForceComponent::ReleasePush()
 		if(IsValid(outMeshComp))
 		{
 			//If not mobile break
-			if (outMeshComp->Mobility != EComponentMobility::Movable)
+			if (outMeshComp->Mobility != EComponentMobility::Movable || !outMeshComp->GetComponentVelocity().IsNearlyZero())
+			if (outMeshComp->Mobility != EComponentMobility::Movable || !outMeshComp->GetComponentVelocity().IsNearlyZero())
 			{
 				iteration++;
 				continue;
 			}
+
+			UE_LOG(LogTemp, Error, TEXT("%s :: force %f, duration %f, alpha %f"), *outMeshComp->GetReadableName(), force, duration, alpha);
 			
 			//Calculate mass for weight force 
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
@@ -205,11 +213,6 @@ void UPS_ForceComponent::ReleasePush()
 			//Impulse with delay for match with VFX
 			FTimerHandle timerImpulseHandle;
 			FTimerDelegate timerImpulseDelegate;
-
-			//Determine position on cone width
-			float percentageOut;
-			const bool bWhithinCone =  FMath::GetDistanceWithinConeSegment(outHitResult.ImpactPoint,_StartForcePushLoc,_StartForcePushLoc + _DirForcePush, 0.0f, ConeLength, percentageOut);
-			UE_LOG(LogTemp, Error, TEXT("percentageOut %f, bWhithinCone %i"), percentageOut, bWhithinCone);
 				
 			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);

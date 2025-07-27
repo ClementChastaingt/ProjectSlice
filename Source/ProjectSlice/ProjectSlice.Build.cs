@@ -11,11 +11,15 @@ public class ProjectSlice : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "PhysicsCore",
 			"InputCore","EnhancedInput",
 			"CableComponent",
+			"Niagara",
 			"GeometryCollectionEngine", "FieldSystemEngine", 
 			"ProceduralMeshComponent", 
 			"GeometryCore", "GeometryScriptingCore", "GeometryFramework", "GeometryAlgorithms",
 			"DynamicMesh"});
 		
-		PrivateDependencyModuleNames.AddRange(new string[] { "CableComponent", "AITestSuite" });
+		PrivateDependencyModuleNames.AddRange(new string[] 
+		{
+			"AITestSuite"
+		});
 	}
 }
