@@ -345,7 +345,14 @@ private:
 
 public:
 	UFUNCTION()
+	void AdaptSightMeshBound_DEPRECATED();
+
+	UFUNCTION()
 	void AdaptSightMeshBound();
+
+protected:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
+	bool bDebugRackBoundAdaptation = false;
 
 #pragma endregion Ray_Rack
 
