@@ -150,7 +150,7 @@ void UPS_ForceComponent::ReleasePush()
 	TArray<FHitResult> outHits;
 	TArray<AActor*> actorsToIgnore;
 	actorsToIgnore.AddUnique(_PlayerCharacter);
-	
+
 	UPSFl::SweepConeMultiByChannel(GetWorld(),_StartForcePushLoc, _DirForcePush,ConeAngleDegrees, ConeLength, StepInterval,outHits, ECC_GPE, actorsToIgnore, bDebugPush);
 
 	//Sort Hits result
@@ -173,10 +173,15 @@ void UPS_ForceComponent::ReleasePush()
 		
 		//Testing id object is blocking view line
 		FHitResult lineViewHit;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), _CurrentPushHitResult.TraceStart, _CurrentPushHitResult.ImpactPoint, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), _StartForcePushLoc, outHitResult.ImpactPoint, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 			false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, lineViewHit, true);
 
-		if (_CurrentPushHitResult.bBlockingHit && lineViewHit.GetActor() != outHitResult.GetActor()) return;
+		if (lineViewHit.bBlockingHit && lineViewHit.GetActor() != outHitResult.GetActor())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%S :: %s is not in Push line view "),__FUNCTION__, *outHitResult.GetActor()->GetActorNameOrLabel());
+			iteration++;
+			continue;
+		}
 
 		//Determine response latency
 		const float currentDistSquared = UKismetMathLibrary::Vector_DistanceSquared(_StartForcePushLoc, outHitResult.Location);
@@ -185,7 +190,6 @@ void UPS_ForceComponent::ReleasePush()
 		const float alpha = FMath::Clamp(currentDistSquared / maxDistSquared, 0.f, 1.f);		
 		const float duration = MaxPushForceTime * alpha;
 		const float force = initialForce * (1 - duration/MaxPushForceTime);
-		
 		
 		//Chaos
 		//Field is moving so we don't need to create multiple of them
