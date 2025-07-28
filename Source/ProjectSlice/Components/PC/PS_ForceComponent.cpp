@@ -164,13 +164,19 @@ void UPS_ForceComponent::ReleasePush()
 		//Check comp type
 		UMeshComponent* outMeshComp = Cast<UMeshComponent>(outHitResult.GetComponent());
 		UGeometryCollectionComponent* outGeometryComp = Cast<UGeometryCollectionComponent>(outHitResult.GetComponent());
-	
 
-		if((!IsValid(outMeshComp) && !IsValid(outGeometryComp)))
+		if((!IsValid(outMeshComp) && !IsValid(outGeometryComp)) || outMeshComp->Mobility != EComponentMobility::Movable )
 		{
 			iteration++;
 			continue;
 		}
+		
+		//Testing id object is blocking view line
+		FHitResult lineViewHit;
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), _CurrentPushHitResult.TraceStart, _CurrentPushHitResult.ImpactPoint, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, lineViewHit, true);
+
+		if (_CurrentPushHitResult.bBlockingHit && lineViewHit.GetActor() != outHitResult.GetActor()) return;
 
 		//Determine response latency
 		const float currentDistSquared = UKismetMathLibrary::Vector_DistanceSquared(_StartForcePushLoc, outHitResult.Location);
@@ -179,6 +185,7 @@ void UPS_ForceComponent::ReleasePush()
 		const float alpha = FMath::Clamp(currentDistSquared / maxDistSquared, 0.f, 1.f);		
 		const float duration = MaxPushForceTime * alpha;
 		const float force = initialForce * (1 - duration/MaxPushForceTime);
+		
 		
 		//Chaos
 		//Field is moving so we don't need to create multiple of them
@@ -198,15 +205,12 @@ void UPS_ForceComponent::ReleasePush()
 		if(IsValid(outMeshComp))
 		{
 			//If not mobile break
-			if (outMeshComp->Mobility != EComponentMobility::Movable || !outMeshComp->GetComponentVelocity().IsNearlyZero())
-			if (outMeshComp->Mobility != EComponentMobility::Movable || !outMeshComp->GetComponentVelocity().IsNearlyZero())
+			if (!outMeshComp->GetComponentVelocity().IsNearlyZero())
 			{
 				iteration++;
 				continue;
 			}
-
-			UE_LOG(LogTemp, Error, TEXT("%s :: force %f, duration %f, alpha %f"), *outMeshComp->GetReadableName(), force, duration, alpha);
-			
+						
 			//Calculate mass for weight force 
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 
