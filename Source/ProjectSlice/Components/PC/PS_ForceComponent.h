@@ -125,7 +125,7 @@ protected:
 	float ConeLength = 500.0f ;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Push|Sweep", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
-	float StepInterval = 100.0f; 
+	float StepInterval = 20.0f; 
 			
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
