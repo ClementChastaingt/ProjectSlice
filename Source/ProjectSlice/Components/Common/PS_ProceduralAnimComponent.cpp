@@ -53,6 +53,12 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	{
 		_ForceComponent->OnPushEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::OnPushEventReceived);
 	}
+
+	//Hand custom tick 
+	FTimerDelegate HandTimerDelegate;
+	HandTimerDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::HandShake);
+	// 120 fps
+	GetWorld()->GetTimerManager().SetTimer(_HandTimeHandler, HandTimerDelegate, 1/120.0f, true);
 	
 }
 
@@ -76,7 +82,7 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Dip();
 	
 	ApplyScrewMovement();
-	HandShake(DeltaTime);
+	//HandShake(DeltaTime);
 }
 
 #pragma region Dip
@@ -335,7 +341,7 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 	//Alpha
 	const float alpha = _bIsReseting ?
 		UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _ForceComponent->GetReleasePushTimestamp(),
-			_ForceComponent->GetReleasePushTimestamp() + ScrewResetMoveDuration, 0.0f, 1.0f) :  _ForceComponent->GetInputTimeWeigtAlpha();
+			_ForceComponent->GetReleasePushTimestamp() + ScrewResetMoveDuration, 0.0f, 1.0f) :  _ForceComponent->GetInputTimeWeightAlpha();
 	_ScrewLocAlpha = alpha;
 	float curveRotAlpha = alpha;
 	
@@ -385,10 +391,10 @@ void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 	}
 
 	//Curved alpha input
-	float curveAlpha = _ForceComponent->GetInputTimeWeigtAlpha();
+	float curveAlpha = _ForceComponent->GetInputTimeWeightAlpha();
 	if(IsValid(ShakeChargeCurve))
 	{
-		curveAlpha = ShakeChargeCurve->GetFloatValue(_ForceComponent->GetInputTimeWeigtAlpha());
+		curveAlpha = ShakeChargeCurve->GetFloatValue(_ForceComponent->GetInputTimeWeightAlpha());
 	}
 	
 	// Time-based oscillation

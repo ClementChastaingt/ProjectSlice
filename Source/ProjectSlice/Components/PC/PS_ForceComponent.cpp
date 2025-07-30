@@ -41,10 +41,12 @@ void UPS_ForceComponent::BeginPlay()
 	AttachScrew();
 
 	//Callback
-	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	OnPushReleaseNotifyEvent.AddUniqueDynamic(this, &UPS_ForceComponent::OnPushReleasedEventReceived);
+	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
 	{
 		_PlayerCharacter->GetProceduralAnimComponent()->OnScrewResetEnd.AddUniqueDynamic(this, &UPS_ForceComponent::OnScrewResetEndEventReceived);
 	}
+
 	
 }
 
@@ -137,7 +139,7 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		_DirForcePush = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		_DirForcePush.Normalize();
-		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush;
+		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush * 100.0f;
 	}
 	else
 	{
@@ -246,6 +248,12 @@ void UPS_ForceComponent::ReleasePush()
 
 }
 
+void UPS_ForceComponent::OnPushReleasedEventReceived()
+{
+	//Release force when screw reseting finished
+	ReleasePush();
+}
+
 void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, UPARAM(Ref) TArray<FHitResult>& outFilteredHitResult)
 {
 	// Remove duplicate components
@@ -313,8 +321,7 @@ void UPS_ForceComponent::StopPush()
 
 void UPS_ForceComponent::OnScrewResetEndEventReceived()
 {
-	//Release force when screw reseting finished
-	ReleasePush();
+	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 }
 
 void UPS_ForceComponent::AttachScrew()

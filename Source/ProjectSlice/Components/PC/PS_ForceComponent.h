@@ -56,6 +56,9 @@ public:
 	
 	UFUNCTION()
 	void ReleasePush();
+
+	UFUNCTION()
+	void OnPushReleasedEventReceived();
 		
 	UFUNCTION()
 	static void SortPushTargets(const TArray<FHitResult>& hitsToSort, TArray<FHitResult>& outFilteredHitResult);
@@ -74,7 +77,7 @@ public:
 	
 	FORCEINLINE float GetMaxPushForceTime() const{return InputMaxPushForceDuration;}
 	
-	FORCEINLINE float GetInputTimeWeigtAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.0f, 1.0f);};
+	FORCEINLINE float GetInputTimeWeightAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.0f, 1.0f);};
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FRotator GetPushForceRotation() const{return _PushForceRotation;}

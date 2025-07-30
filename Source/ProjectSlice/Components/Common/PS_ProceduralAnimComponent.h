@@ -349,5 +349,8 @@ private:
 	UPROPERTY(Transient)
 	float _HandShakeTime;
 
+	UPROPERTY(Transient)
+	FTimerHandle _HandTimeHandler;
+
 #pragma endregion Hand
 };
