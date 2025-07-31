@@ -53,13 +53,7 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	{
 		_ForceComponent->OnPushEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::OnPushEventReceived);
 	}
-
-	//Hand custom tick 
-	FTimerDelegate HandTimerDelegate;
-	HandTimerDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::HandShake);
-	// 120 fps
-	GetWorld()->GetTimerManager().SetTimer(_HandTimeHandler, HandTimerDelegate, 1/120.0f, true);
-	
+		
 }
 
 void UPS_ProceduralAnimComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -82,7 +76,8 @@ void UPS_ProceduralAnimComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Dip();
 	
 	ApplyScrewMovement();
-	//HandShake(DeltaTime);
+	
+	HandShake(DeltaTime);
 }
 
 #pragma region Dip
@@ -391,35 +386,30 @@ void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 	}
 
 	//Curved alpha input
-	float curveAlpha = _ForceComponent->GetInputTimeWeightAlpha();
-	if(IsValid(ShakeChargeCurve))
-	{
-		curveAlpha = ShakeChargeCurve->GetFloatValue(_ForceComponent->GetInputTimeWeightAlpha());
-	}
+	float alphaFrequency = _ForceComponent->GetInputTimeWeightAlpha();
 	
 	// Time-based oscillation
-	_HandShakeTime =_HandShakeTime + deltaTime;
-	//TODO :: Frenquency seam more stabel when stop to interpolate
-	float frequency = FMath::Lerp(ShakeFrequency.Min,ShakeFrequency.Max,curveAlpha);
+	/*f (GetScrewLocAlpha() < 1.0f) */_HandShakeTime =_HandShakeTime + deltaTime;
+	float frequency = FMath::TruncToInt(FMath::Lerp(ShakeFrequency.Min,ShakeFrequency.Max,alphaFrequency));
 
 	// Remap sin from [-1,1] to [0,1]
-	float alpha = (FMath::Sin(_HandShakeTime * frequency) + 1.0f) * 0.5f;
-
+	float alphaSin = (FMath::Sin(_HandShakeTime * frequency) + 1.0f) * 0.5f;
+	
 	//Random
 	//const float rangePitch = UKismetMathLibrary::RandomFloatInRange(0.1,2.0);
-	const float rangePitch = FMath::Lerp(RangePitch.Min,RangePitch.Max,curveAlpha);
-	const float rangeX = FMath::Lerp(RangeForward.Min,RangeForward.Max,curveAlpha);
+	const float rangePitch = FMath::Lerp(RangePitch.X,RangePitch.Y,alphaFrequency);
+	const float rangeX = FMath::Lerp(RangeForward.X,RangeForward.Y,alphaFrequency);
 	
 	// Interpolate between two positions
 	FRotator StartRot = FRotator(-rangePitch, 0, 0);
 	FRotator EndRot = FRotator(rangePitch, 0, 0);
-	HandRotOffset = UKismetMathLibrary::RLerp(StartRot, EndRot, alpha, true);
+	HandRotOffset = UKismetMathLibrary::RLerp(StartRot, EndRot, alphaSin, true);
 
 	FVector StartLoc = FVector(-rangeX,0, 0);
 	FVector EndLot = FVector(rangeX, 0, 0);
-	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, alpha);
+	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, alphaSin);
 	
-	if(bDebugForcePush)UE_LOG(LogTemp, Log, TEXT("%S :: frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),__FUNCTION__, frequency, _HandShakeTime,HandRotOffset.Pitch, alpha);
+	if(bDebugForcePush)UE_LOG(LogTemp, Log, TEXT("%S :: frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),__FUNCTION__, frequency, _HandShakeTime,HandRotOffset.Pitch, alphaSin);
 }
 
 //------------------

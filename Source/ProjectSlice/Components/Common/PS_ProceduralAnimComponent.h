@@ -334,23 +334,19 @@ protected:
 	FRotator HandRotOffset = FRotator::ZeroRotator;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	FFloatInterval ShakeFrequency = FFloatInterval(0.0f, 30.0f);
+	FFloatInterval ShakeFrequency = FFloatInterval(5.0f, 30.0f);
 
+	//Interp Pitch from X to Y by input time 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	FFloatInterval RangePitch = FFloatInterval(1.0f, 2.0f);
+	FVector2D RangePitch = FVector2D(10.0f, 2.0f);
 
+	//Interp Forward mouvement from X to Y by input time 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	FFloatInterval RangeForward = FFloatInterval(0.0f, 0.25f);
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	UCurveFloat* ShakeChargeCurve;
+	FVector2D RangeForward = FVector2D(0.0f, 0.25f);
 
 private:
 	UPROPERTY(Transient)
 	float _HandShakeTime;
-
-	UPROPERTY(Transient)
-	FTimerHandle _HandTimeHandler;
 
 #pragma endregion Hand
 };
