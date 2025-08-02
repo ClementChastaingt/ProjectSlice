@@ -1,11 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PSFL_GeometryScript.h"
-
 #include "PSFL_CustomProcMesh.h"
+
+//Path
 #include "Components/BaseDynamicMeshSceneProxy.h"
 #include "DynamicMesh/DynamicMeshAABBTree3.h"
 #include "Parameterization/MeshDijkstra.h"
+
+//Hull
+#include "CompGeom/ConvexHull2.h"
+
+
 
 using namespace UE::Geometry;
 
@@ -1635,6 +1641,62 @@ float UPSFL_GeometryScript::CalculateVelocityBiasedVertexCost(const FDynamicMesh
 
 //------------------
 #pragma endregion Velocity
+
+#pragma region HullBounds
+//------------------
+
+void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
+	UMeshComponent* MeshComponent,
+	const FVector& ViewDirection,
+	TArray<FVector>& OutProjectedCorners,
+	const bool bDebug)
+{
+	OutProjectedCorners.Reset();
+	if (!IsValid(MeshComponent)) return;
+
+	FDynamicMesh3 DynamicMesh;
+	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return;
+
+	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
+	FFrame3d ProjectionFrame(FVector3d::Zero(), (FVector3d)ViewDirection);
+
+	// Projeter tous les sommets dans le plan orthogonal à ViewDirection
+	TArray<FVector2d> ProjectedPoints2D;
+	for (int32 VID : DynamicMesh.VertexIndicesItr())
+	{
+		FVector3d Vertex = DynamicMesh.GetVertex(VID);
+		FVector3d WorldPos = WorldTransform.TransformPosition(Vertex);
+		FVector3d Projected = ProjectionFrame.ToPlane(WorldPos);
+		ProjectedPoints2D.Add(FVector2d(Projected.X, Projected.Y));
+	}
+
+	// Calculer le Convex Hull 2D à partir des points projetés
+	TArray<int32> HullIndices;
+	// FConvexHull2d::ComputeConvexHull(ProjectedPoints2D, HullIndices); TODO :: Replace by Graham Scan / Andrew's Algorithm
+
+	// Convertir les points du hull en 3D (plan projeté)
+	for (int32 Idx : HullIndices)
+	{
+		const FVector2d& Pt2D = ProjectedPoints2D[Idx];
+		FVector3d Pt3D = ProjectionFrame.FromPlaneUV(Pt2D);
+		OutProjectedCorners.Add((FVector)Pt3D);
+	}
+
+	// Affichage debug facultatif
+	if (bDebug && MeshComponent->GetWorld())
+	{
+		for (int32 i = 0; i < OutProjectedCorners.Num(); ++i)
+		{
+			const FVector& A = OutProjectedCorners[i];
+			const FVector& B = OutProjectedCorners[(i + 1) % OutProjectedCorners.Num()];
+			DrawDebugLine(MeshComponent->GetWorld(), A, B, FColor::Green, false, 5.f, 0, 1.f);
+		}
+	}
+}
+
+
+#pragma endregion HullBounds
+	
 	
 
 

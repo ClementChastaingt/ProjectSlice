@@ -3,10 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/BaseDynamicMeshSceneProxy.h"
-#include "DynamicMesh/DynamicMeshAABBTree3.h"
+
 #include "Kismet/BlueprintFunctionLibrary.h"
+
+//Path
+#include "DynamicMesh/DynamicMeshAABBTree3.h"
 #include "Parameterization/MeshDijkstra.h"
+
 #include "PSFL_GeometryScript.generated.h"
 
 class UProceduralMeshComponent;
@@ -115,7 +118,6 @@ inline uint32 GetTypeHash(const FPathCacheKey& Key)
 	Hash = HashCombine(Hash, GetTypeHash(Key.MeshComponent.Get()));
 	return Hash;
 }
-
 
 UCLASS()
 class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
@@ -229,6 +231,7 @@ private:
 
 #pragma endregion Dijkstra
 
+//TODO :: Actually Velocity Biased func are WIP 
 #pragma region Velocity
 	//------------------
 
@@ -239,6 +242,16 @@ private:
 	// Calculer le coût entre deux vertices en tenant compte de la vélocité
 	static float CalculateVelocityBiasedVertexCost(const FDynamicMesh3& Mesh, int32 FromVertexID, int32 ToVertexID, const FVector3d& velocity, float velocityInfluence = 0.5f);
 
-
 #pragma endregion Velocity
+
+#pragma region HullBounds
+	//------------------
+
+public:
+	// Computes the 2D bounds of a Static or Procedural Mesh projected along a direction.
+    // Returns 4 corners of the convex projection hull that surrounds the mesh
+    // Used to scale a visual triangle from muzzle to projected edges
+    static void ComputeProjectedSweptHullBounds(UMeshComponent* MeshComponent, const FVector& ViewDirection, TArray<FVector>& OutProjectedCorners, bool bDebug);
+
+#pragma endregion HullBounds
 };
