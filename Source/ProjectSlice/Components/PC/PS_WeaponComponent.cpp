@@ -20,6 +20,7 @@
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
+#include "ProjectSlice/FunctionLibrary/PSFL_GeometryScript.h"
 
 // Sets default values for this component's properties
 UPS_WeaponComponent::UPS_WeaponComponent()
@@ -38,7 +39,12 @@ UPS_WeaponComponent::UPS_WeaponComponent()
 
 FVector UPS_WeaponComponent::GetMuzzlePosition()
 {
-	return GetSocketLocation(FName("Muzzle"));
+	return GetSocketLocation(SOCKET_MUZZLE);
+}
+
+FVector UPS_WeaponComponent::GetLaserPosition()
+{
+	return GetSocketLocation(SOCKET_LASER);
 }
 
 void UPS_WeaponComponent::BeginPlay()
@@ -65,7 +71,7 @@ void UPS_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
 	//TODO :: Made custom tick for that	
-	SightShaderTick();
+	SightTick();
 
 	SightMeshRotation();
 		
@@ -575,93 +581,95 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
 
+	//Init work var
 	FVector MuzzleLoc = GetMuzzlePosition();
 	FVector ViewDir = _PlayerCamera->GetForwardVector();
-
-	// Line trace pour le centre
-	FHitResult Hit;
-	FVector TraceEnd = MuzzleLoc + ViewDir * 5000.f;
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(_PlayerCharacter);
-
-	if (!GetWorld()->LineTraceSingleByChannel(Hit, MuzzleLoc, TraceEnd, ECC_Visibility, Params)) return;
-
-	// Récupération de l'extent de l'objet visé
-	FVector TargetExtent(50.f, 50.f, 50.f); // fallback par défaut
-	FVector TargetLocation = Hit.ImpactPoint;
-
-	FVector ActorForward = FVector::ForwardVector;
-	FVector ActorRight = FVector::RightVector;
-	FVector ActorUp = FVector::UpVector;
-
-	if (UPrimitiveComponent* HitComp = Hit.GetComponent())
+	
+	//--Default adaptation--
+	//TODO :: Use extent scale adaption Widht && Length just like Geometry adaptation usage for have default scale correctly placed on _LaserTarget
+	const bool bUseDefaultScale = !_SightHitResult.bBlockingHit || !_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass());
+	if (bUseDefaultScale)
 	{
-		TargetExtent = HitComp->Bounds.BoxExtent * HitComp->GetComponentScale();
-		TargetLocation = HitComp->GetComponentLocation();
-		ActorForward = HitComp->GetForwardVector();
-		ActorRight = HitComp->GetRightVector();
-		ActorUp = HitComp->GetUpVector();
+		//Determine scale
+		FVector defaultScale = DefaultAdaptationScale;
+
+		//If it's an Chaos GPE use scale One
+		if(IsValid(_SightHitResult.GetComponent()) && _SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass()))
+			defaultScale = FVector(1.0f, 1.0f, 1.0f);
+
+		//Determine Rotation
+		FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+		
+		//Override scale && rot
+		SightMesh->SetWorldScale3D(defaultScale);
+		SightMesh->SetWorldRotation(LookRot);
+		
+		return;
+	}
+	
+	//--Geometry adaptation--
+	//Compute convex hull de la surface visée
+	TArray<FVector> ProjectedCorners;
+
+	UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
+		SightMesh,
+		ViewDir, // direction canon
+		ProjectedCorners,
+		bDebugRackBoundAdaptation
+	);
+
+	// Trouver les deux points les plus éloignés dans le plan projeté
+	float MaxDistSq = 0.f;
+	FVector PtA, PtB;
+
+	for (int32 i = 0; i < ProjectedCorners.Num(); ++i)
+	{
+		for (int32 j = i + 1; j < ProjectedCorners.Num(); ++j)
+		{
+			float DistSq = FVector::DistSquared(ProjectedCorners[i], ProjectedCorners[j]);
+			if (DistSq > MaxDistSq)
+			{
+				MaxDistSq = DistSq;
+				PtA = ProjectedCorners[i];
+				PtB = ProjectedCorners[j];
+			}
+		}
 	}
 
-	// Calcul du vecteur forward à partir du canon
-	FVector ForwardVec = (TargetLocation - MuzzleLoc).GetSafeNormal();
-	FVector TriangleRight = FVector::CrossProduct(ForwardVec, FVector::UpVector).GetSafeNormal();
-	FVector TriangleUp = FVector::CrossProduct(TriangleRight, ForwardVec).GetSafeNormal();
-
-	// Projeter les extents sur les axes locaux du triangle
-	float ProjectedHalfWidth =
-		FMath::Abs(FVector::DotProduct(ActorRight, TriangleRight)) * TargetExtent.Y +
-		FMath::Abs(FVector::DotProduct(ActorForward, TriangleRight)) * TargetExtent.X +
-		FMath::Abs(FVector::DotProduct(ActorUp, TriangleRight)) * TargetExtent.Z;
-
-	float ProjectedHalfHeight =
-		FMath::Abs(FVector::DotProduct(ActorRight, TriangleUp)) * TargetExtent.Y +
-		FMath::Abs(FVector::DotProduct(ActorForward, TriangleUp)) * TargetExtent.X +
-		FMath::Abs(FVector::DotProduct(ActorUp, TriangleUp)) * TargetExtent.Z;
-
-	// Offsets dynamiques basés sur projection
-	FVector OffsetRight = TriangleRight * ProjectedHalfWidth;
-	FVector OffsetUp = TriangleUp * ProjectedHalfHeight;
-
-	// Points de trace en 3D
-	FVector TraceEndTopLeft = MuzzleLoc - OffsetRight + OffsetUp + ForwardVec * 5000.f;
-	FVector TraceEndTopRight = MuzzleLoc + OffsetRight + OffsetUp + ForwardVec * 5000.f;
-	FVector TraceEndBottomLeft = MuzzleLoc - OffsetRight - OffsetUp + ForwardVec * 5000.f;
-	FVector TraceEndBottomRight = MuzzleLoc + OffsetRight - OffsetUp + ForwardVec * 5000.f;
-
-	FHitResult HitTL, HitTR, HitBL, HitBR;
-	bool bHitTL = GetWorld()->LineTraceSingleByChannel(HitTL, MuzzleLoc, TraceEndTopLeft, ECC_Visibility, Params);
-	bool bHitTR = GetWorld()->LineTraceSingleByChannel(HitTR, MuzzleLoc, TraceEndTopRight, ECC_Visibility, Params);
-	bool bHitBL = GetWorld()->LineTraceSingleByChannel(HitBL, MuzzleLoc, TraceEndBottomLeft, ECC_Visibility, Params);
-	bool bHitBR = GetWorld()->LineTraceSingleByChannel(HitBR, MuzzleLoc, TraceEndBottomRight, ECC_Visibility, Params);
-
-	if (!(bHitTL && bHitTR && bHitBL && bHitBR)) return;
-
-	FVector CenterTop = (HitTL.ImpactPoint + HitTR.ImpactPoint) * 0.5f;
-	FVector CenterBottom = (HitBL.ImpactPoint + HitBR.ImpactPoint) * 0.5f;
-	FVector MidBase = (CenterTop + CenterBottom) * 0.5f;
-
-	ForwardVec = (MidBase - MuzzleLoc).GetSafeNormal();
-	FVector WidthVec = HitTR.ImpactPoint - HitTL.ImpactPoint;
-	FVector HeightVec = HitTL.ImpactPoint - HitBL.ImpactPoint;
-
-	FVector UpVecFinal = FVector::CrossProduct(ForwardVec, WidthVec).GetSafeNormal();
-	FRotator TriangleRot = UKismetMathLibrary::MakeRotFromXZ(ForwardVec, UpVecFinal);
-
-	float Width = FVector::Distance(HitTL.ImpactPoint, HitTR.ImpactPoint);
-	float Length = FVector::Distance(MuzzleLoc, MidBase);
-
-	// Application du scale uniquement (le mesh reste au bout du canon)
-	SightMesh->SetWorldRotation(TriangleRot);
-	SightMesh->SetWorldScale3D(FVector(Length / 100.f, Width / 100.f, 1.0f));
-
-	// Debug
-	if (bDebugRackBoundAdaptation)
+	// Adapter le triangle visuel
+	if (MaxDistSq > 0.f && SightMesh->GetStaticMesh())
 	{
-		DrawDebugLine(GetWorld(), MuzzleLoc, HitTL.ImpactPoint, FColor::Red, false, 0.1f);
-		DrawDebugLine(GetWorld(), MuzzleLoc, HitTR.ImpactPoint, FColor::Red, false, 0.1f);
-		DrawDebugLine(GetWorld(), MuzzleLoc, HitBL.ImpactPoint, FColor::Red, false, 0.1f);
-		DrawDebugLine(GetWorld(), MuzzleLoc, HitBR.ImpactPoint, FColor::Red, false, 0.1f);
+		FVector MidPoint = (PtA + PtB) * 0.5f;
+		float Width = FMath::Sqrt(MaxDistSq);
+		float Length = FVector::Dist(MuzzleLoc, MidPoint);
+
+		if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
+			return;
+		}
+
+		FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
+
+		if (!MeshExtent.IsNearlyZero())
+		{
+			float WidthScale = Width / (MeshExtent.Y * 2.f);  // full width
+			float LengthScale = Length / MeshExtent.X;
+
+			FVector NewScale = FVector(LengthScale, WidthScale, 1.f);
+			const bool newScaleIsFinite = FMath::IsFinite(NewScale.X) && FMath::IsFinite(NewScale.Y) && FMath::IsFinite(NewScale.Z);
+
+			if (!newScaleIsFinite || NewScale.ContainsNaN())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Non-finite scale detected. Skipping."));
+				return;
+			}
+
+			SightMesh->SetWorldScale3D(NewScale);
+
+			// FRotator LookRot = (MidPoint - MuzzleLoc).Rotation();
+			// SightMesh->SetWorldRotation(LookRot);
+		}
 	}
 }
 
@@ -671,7 +679,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 #pragma region Shader
 //------------------
 
-void UPS_WeaponComponent::SightShaderTick()
+void UPS_WeaponComponent::SightTick()
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || !IsValid(_PlayerCharacter->GetForceComponent()) || !IsValid(_PlayerCharacter->GetHookComponent()))
 	{
@@ -686,11 +694,18 @@ void UPS_WeaponComponent::SightShaderTick()
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, EDrawDebugTrace::None, _SightHitResult, true);
+		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _SightHitResult, true, FLinearColor::Red, FLinearColor::Green,0.1f);
 	
-	//Laser
-	_LaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	const FVector tempLaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+
+	//Determine Laser Hit
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), tempLaserTarget, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
+
+	//Laser && Sight Target
+	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : tempLaserTarget;
 	_SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
+	
 	
 	//Stop if in can't slice situation
 	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
@@ -705,6 +720,10 @@ void UPS_WeaponComponent::SightShaderTick()
 	//Update laser color if necessary
 	UpdateLaserColor();
 
+	//Adapt SightMesh scale
+	AdaptSightMeshBound();
+
+	//Sight Shader
 	UMeshComponent* sliceTarget = Cast<UMeshComponent>(_SightHitResult.GetComponent());
 	if(_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetActor()))
 	{
@@ -715,8 +734,6 @@ void UPS_WeaponComponent::SightShaderTick()
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 		
-		//Adapt sightMesh scale to sighted object bound
-		//AdaptSightMeshBound();
 		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent())
 			return;
 		

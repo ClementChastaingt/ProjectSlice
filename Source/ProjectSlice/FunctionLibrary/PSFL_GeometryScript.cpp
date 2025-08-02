@@ -10,8 +10,7 @@
 
 //Hull
 #include "CompGeom/ConvexHull2.h"
-
-
+#include "Algo/Reverse.h"
 
 using namespace UE::Geometry;
 
@@ -1645,6 +1644,47 @@ float UPSFL_GeometryScript::CalculateVelocityBiasedVertexCost(const FDynamicMesh
 #pragma region HullBounds
 //------------------
 
+// Simple 2D convex hull (Andrew’s monotone chain algorithm)
+static void ComputeConvexHull2D(const TArray<FVector2d>& Points, TArray<int32>& OutHullIndices)
+{
+	OutHullIndices.Reset();
+	if (Points.Num() < 3) return;
+
+	TArray<int32> SortedIndices;
+	for (int32 i = 0; i < Points.Num(); ++i) SortedIndices.Add(i);
+	SortedIndices.Sort([&](int32 A, int32 B)
+	{
+		const FVector2d& P1 = Points[A];
+		const FVector2d& P2 = Points[B];
+		return (P1.X < P2.X) || (P1.X == P2.X && P1.Y < P2.Y);
+	});
+
+	auto Cross = [](const FVector2d& O, const FVector2d& A, const FVector2d& B)
+	{
+		return (A.X - O.X)*(B.Y - O.Y) - (A.Y - O.Y)*(B.X - O.X);
+	};
+
+	TArray<int32> Hull;
+	for (int32 phase = 0; phase < 2; ++phase)
+	{
+		int32 start = Hull.Num();
+		for (int32 i : SortedIndices)
+		{
+			while (Hull.Num() >= start + 2 &&
+				   Cross(Points[Hull[Hull.Num()-2]], Points[Hull[Hull.Num()-1]], Points[i]) <= 0)
+			{
+				Hull.Pop();
+			}
+			Hull.Add(i);
+		}
+		Algo::Reverse(SortedIndices);
+		Hull.Pop(); // remove duplicate
+	}
+
+	OutHullIndices = Hull;
+}
+
+
 void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 	UMeshComponent* MeshComponent,
 	const FVector& ViewDirection,
@@ -1660,7 +1700,6 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
 	FFrame3d ProjectionFrame(FVector3d::Zero(), (FVector3d)ViewDirection);
 
-	// Projeter tous les sommets dans le plan orthogonal à ViewDirection
 	TArray<FVector2d> ProjectedPoints2D;
 	for (int32 VID : DynamicMesh.VertexIndicesItr())
 	{
@@ -1670,11 +1709,9 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		ProjectedPoints2D.Add(FVector2d(Projected.X, Projected.Y));
 	}
 
-	// Calculer le Convex Hull 2D à partir des points projetés
 	TArray<int32> HullIndices;
-	// FConvexHull2d::ComputeConvexHull(ProjectedPoints2D, HullIndices); TODO :: Replace by Graham Scan / Andrew's Algorithm
+	ComputeConvexHull2D(ProjectedPoints2D, HullIndices);
 
-	// Convertir les points du hull en 3D (plan projeté)
 	for (int32 Idx : HullIndices)
 	{
 		const FVector2d& Pt2D = ProjectedPoints2D[Idx];
@@ -1682,7 +1719,6 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		OutProjectedCorners.Add((FVector)Pt3D);
 	}
 
-	// Affichage debug facultatif
 	if (bDebug && MeshComponent->GetWorld())
 	{
 		for (int32 i = 0; i < OutProjectedCorners.Num(); ++i)
@@ -1693,6 +1729,7 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		}
 	}
 }
+
 
 
 #pragma endregion HullBounds

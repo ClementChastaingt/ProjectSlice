@@ -253,5 +253,6 @@ public:
     // Used to scale a visual triangle from muzzle to projected edges
     static void ComputeProjectedSweptHullBounds(UMeshComponent* MeshComponent, const FVector& ViewDirection, TArray<FVector>& OutProjectedCorners, bool bDebug);
 
+	//------------------
 #pragma endregion HullBounds
 };

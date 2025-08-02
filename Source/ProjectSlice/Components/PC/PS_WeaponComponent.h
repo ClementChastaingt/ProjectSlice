@@ -30,6 +30,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	FVector GetMuzzlePosition();
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	FVector GetLaserPosition();
 	
 	/** Attaches the actor to a FirstPersonCharacter */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
@@ -195,6 +198,9 @@ public:
 	FORCEINLINE FHitResult GetSightHitResult() const{return _SightHitResult;}
 
 	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FHitResult GetLaserHitResult() const{return _LaserHitResult;}
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UPrimitiveComponent* GetCurrentSightedComponent() const{return _CurrentSightedComponent;}
 
 	UFUNCTION(BlueprintCallable)
@@ -229,6 +235,9 @@ private:
 
 	UPROPERTY(Transient)
 	FHitResult _SightHitResult;
+
+	UPROPERTY(Transient)
+    FHitResult _LaserHitResult;
 	
 	UPROPERTY(Transient)
 	TArray<UMaterialInterface*> _CurrentSightedBaseMats;
@@ -354,6 +363,10 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugRackBoundAdaptation = false;
 
+	// Échelle du mesh
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
+	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);
+
 #pragma endregion Ray_Rack
 
 #pragma region Shader
@@ -362,7 +375,7 @@ protected:
 protected:
 	/**Sight slice shader */
 	UFUNCTION()
-	void SightShaderTick();
+	void SightTick();
 	
 	UFUNCTION()
 	void ResetSightRackProperties();

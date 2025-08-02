@@ -83,6 +83,9 @@
 
 #pragma region SocketName
 //__________________________________________________
+
+#define SOCKET_MUZZLE "Muzzle"
+#define SOCKET_LASER "LaserPointer"
 #define SOCKET_HOOK "HookAttach"
 #define SOCKET_CABLE_START "CableStart"
 #define SOCKET_CABLE_END "CableEnd"
