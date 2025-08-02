@@ -100,8 +100,6 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	
 }
 
-
-
 #pragma region Push
 //------------------
 
@@ -126,6 +124,7 @@ void UPS_ForceComponent::ReleasePush()
 
 	//Quick pushing check && if player target is valid, if don't do quickPush logic
 	bIsQuickPush = GetWorld()->GetAudioTimeSeconds() - _StartForcePushTimestamp <= QuickPushTimeThreshold;
+	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush %i "), bIsQuickPush);
 	if(!bIsQuickPush)
 	{
 		bIsQuickPush =
@@ -133,8 +132,10 @@ void UPS_ForceComponent::ReleasePush()
 			|| !IsValid(_CurrentPushHitResult.GetActor())
 			|| !IsValid(_CurrentPushHitResult.GetComponent())
 			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
+
+		UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
+		DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
 	}
-	if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 	
 	//Setup force var
 	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.5f, 1.0f);
@@ -183,7 +184,7 @@ void UPS_ForceComponent::ReleasePush()
 		//Testing id object is blocking view line
 		FHitResult lineViewHit;
 		UKismetSystemLibrary::LineTraceSingle(GetWorld(), _StartForcePushLoc, outHitResult.ImpactPoint, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-			false, actorsToIgnore, true ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, lineViewHit, true);
+			false, actorsToIgnore, bDebugPush ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, lineViewHit, true);
 
 		if (lineViewHit.bBlockingHit && lineViewHit.GetActor() != outHitResult.GetActor())
 		{
@@ -199,10 +200,12 @@ void UPS_ForceComponent::ReleasePush()
 		const float alpha = FMath::Clamp(currentDistSquared / maxDistSquared, 0.f, 1.f);		
 		const float duration = MaxPushForceTime * alpha;
 		const float force = initialForce * (1 - duration/MaxPushForceTime);
+
+		if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: bIsQuickPush %i"), __FUNCTION__, bIsQuickPush);
 		
 		//Chaos
 		//Field is moving so we don't need to create multiple of them
-		if(iteration == 0 && IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
+		if(IsValid(outGeometryComp) && !IsValid(_ImpactField) && !_bCanMoveField)
 		{
 			const float radius = FMath::Sqrt(currentDistSquared) * FMath::DegreesToRadians(ConeAngleDegrees);
 
@@ -212,6 +215,12 @@ void UPS_ForceComponent::ReleasePush()
 			
 			timerChaosDelegate.BindUFunction(this, FName("GenerateImpactField"), outHitResult, FVector::One() * radius); 
 			GetWorld()->GetTimerManager().SetTimer(timerChaosHandle, timerChaosDelegate, duration, false);
+
+			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos "), __FUNCTION__);
+
+			//Increment iteration var 
+			iteration++;
+			continue;
 		}
 
 		//Impulse
@@ -234,11 +243,11 @@ void UPS_ForceComponent::ReleasePush()
 			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
 			
-			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
-		}
+			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Impulse actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
 
-		//Increment iteration var 
-		iteration++;
+			//Increment iteration var 
+			iteration++;
+		}
 	}
 
 	//---Feedbacks----
