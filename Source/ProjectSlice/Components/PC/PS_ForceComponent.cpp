@@ -50,16 +50,36 @@ void UPS_ForceComponent::BeginPlay()
 	
 }
 
+// Called every frame
+void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
+	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
+	
+	UpdatePushTargetLoc();
+
+	UpdateImpactField();
+}
+
 
 void UPS_ForceComponent::UpdatePushTargetLoc()
 {
 	if(!_bIsPushLoading) return;
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
-
-	OnSpawnPushDistorsion.Broadcast(_CurrentPushHitResult.bBlockingHit && !bIsQuickPush);
 	
-	if(!_CurrentPushHitResult.bBlockingHit || bIsQuickPush) return;
+	if(!_CurrentPushHitResult.bBlockingHit
+		|| !IsValid(_CurrentPushHitResult.GetActor())
+		|| bIsQuickPush
+		|| (!_CurrentPushHitResult.GetActor()->ActorHasTag(TAG_GPE_SLICEABLE) && !_CurrentPushHitResult.GetActor()->ActorHasTag(TAG_GPE_CHAOS)))
+	{
+		OnSpawnPushDistorsion.Broadcast(false);
+		return;
+	}
+	else
+		OnSpawnPushDistorsion.Broadcast(true);
 	
 	//Target Loc
 	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
@@ -80,23 +100,10 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	
 }
 
-// Called every frame
-void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
-	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
-	
-	UpdatePushTargetLoc();
-
-	UpdateImpactField();
-}
 
 
 #pragma region Push
 //------------------
-
 
 void UPS_ForceComponent::UnloadPush()
 {
@@ -139,7 +146,7 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		_DirForcePush = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		_DirForcePush.Normalize();
-		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush * 100.0f;
+		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush * QuickPushStartLocOffset;
 	}
 	else
 	{

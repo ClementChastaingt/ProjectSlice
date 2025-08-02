@@ -72,7 +72,8 @@
 
 #pragma region Gpe
 // === //
-#define TAG_SLICEABLE "Sliceable"
+#define TAG_GPE_SLICEABLE "Sliceable"
+#define TAG_GPE_CHAOS "Chaos"
 #define TAG_UNFIXED "Unfixed"
 // === //
 #pragma endregion Gpe

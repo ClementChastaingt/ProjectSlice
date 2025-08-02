@@ -92,7 +92,7 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UPS_ParkourComponent::ToggleObstacleLockConstraint(const AActor* const otherActor, UPrimitiveComponent* const otherComp,
 	const bool bActivate) const
 {
-	if(otherActor->ActorHasTag(TAG_SLICEABLE))
+	if(otherActor->ActorHasTag(TAG_GPE_SLICEABLE))
 	{
 		UMeshComponent* objectOverlap = Cast<UMeshComponent>(otherComp);
 		if(!IsValid(objectOverlap))
