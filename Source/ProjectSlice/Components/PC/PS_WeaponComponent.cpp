@@ -391,7 +391,7 @@ void UPS_WeaponComponent::SightMeshRotation()
 		if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRotation %s, TargetRackRotation %s, alpha %f"),__FUNCTION__,*StartRackRotation.ToString(),*TargetRackRotation.ToString(), alpha);
 
 		//Stop Rot
-		if(alpha > 1 && !_bTurnRackTargetSetuped)
+		if(alpha >= 1 && !_bTurnRackTargetSetuped)
 			bInterpRackRotation = false;
 		
 	}
@@ -487,6 +487,8 @@ void UPS_WeaponComponent::TurnRackTarget()
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + muzzleDir * 100, 10.0f,FColor::Orange, false, 0.1, 10, 3);
 		DrawDebugDirectionalArrow(GetWorld(), SightMesh->GetComponentLocation(), SightMesh->GetComponentLocation() + sightDir * 100, 10.0f,FColor::Green, false, 0.1, 10, 3);
 	}
+
+	//TargetRackRotation = UKismetMathLibrary::FindLookAtRotation(GetMuzzlePosition(), _LaserTarget);
 	TargetRackRotation.Roll = angleToInputTargetLoc;
 	
 	//Active rot interp
@@ -575,7 +577,35 @@ void UPS_WeaponComponent::AdaptSightMeshBound_DEPRECATED()
 	
 	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
 }
-	
+
+
+void UPS_WeaponComponent::AdaptSightMeshDependingExtent(const float& width,const float& length, const FVector& midPoint, const FVector& muzzleLoc, const bool bUseRot) const
+{
+	FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
+	if (!MeshExtent.IsNearlyZero())
+	{
+		float WidthScale = width / (MeshExtent.Y * 2.f);  // full width
+		float LengthScale = length / MeshExtent.X;
+
+		FVector NewScale = FVector(LengthScale, WidthScale, 1.f);
+		const bool newScaleIsFinite = FMath::IsFinite(NewScale.X) && FMath::IsFinite(NewScale.Y) && FMath::IsFinite(NewScale.Z);
+
+		if (!newScaleIsFinite || NewScale.ContainsNaN())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Non-finite scale detected. Skipping."));
+			return;
+		}
+
+		SightMesh->SetWorldScale3D(NewScale);
+
+		if (bUseRot)
+		{
+			FRotator LookRot = (midPoint - muzzleLoc).Rotation();
+			SightMesh->SetWorldRotation(LookRot);
+		}
+	}
+
+}
 
 void UPS_WeaponComponent::AdaptSightMeshBound()
 {
@@ -584,33 +614,40 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	//Init work var
 	FVector MuzzleLoc = GetMuzzlePosition();
 	FVector ViewDir = _PlayerCamera->GetForwardVector();
-	
+		
 	//--Default adaptation--
-	//TODO :: Use extent scale adaption Widht && Length just like Geometry adaptation usage for have default scale correctly placed on _LaserTarget
-	const bool bUseDefaultScale = !_SightHitResult.bBlockingHit || !_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass());
-	if (bUseDefaultScale)
+	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetComponent()) ||
+		(IsValid(_SightHitResult.GetComponent())
+		&& !_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass())
+		&& !_SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass())) )
 	{
-		//Determine scale
-		FVector defaultScale = DefaultAdaptationScale;
-
-		//If it's an Chaos GPE use scale One
-		if(IsValid(_SightHitResult.GetComponent()) && _SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass()))
-			defaultScale = FVector(1.0f, 1.0f, 1.0f);
+		//Override scale 
+		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
 
 		//Determine Rotation
-		FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
+		//SightMesh->SetWorldRotation(LookRot);
+
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
 		
-		//Override scale && rot
-		SightMesh->SetWorldScale3D(defaultScale);
-		SightMesh->SetWorldRotation(LookRot);
+		return;
+	}
+
+	//--Chaos adaptation--
+	if(IsValid(_SightHitResult.GetComponent())
+		&& _SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass()))
+	{
+		SightMesh->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
+		
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos"), __FUNCTION__);
 		
 		return;
 	}
 	
-	//--Geometry adaptation--
+	//--Geometry adaptation (Sliceable)--
 	//Compute convex hull de la surface visée
 	TArray<FVector> ProjectedCorners;
-
 	UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		SightMesh,
 		ViewDir, // direction canon
@@ -618,7 +655,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 		bDebugRackBoundAdaptation
 	);
 
-	// Trouver les deux points les plus éloignés dans le plan projeté
+	// Find the two points more far than projected plane
 	float MaxDistSq = 0.f;
 	FVector PtA, PtB;
 
@@ -636,7 +673,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 		}
 	}
 
-	// Adapter le triangle visuel
+	// Find adapted Width && Length
 	if (MaxDistSq > 0.f && SightMesh->GetStaticMesh())
 	{
 		FVector MidPoint = (PtA + PtB) * 0.5f;
@@ -649,27 +686,10 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 			return;
 		}
 
-		FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
-
-		if (!MeshExtent.IsNearlyZero())
-		{
-			float WidthScale = Width / (MeshExtent.Y * 2.f);  // full width
-			float LengthScale = Length / MeshExtent.X;
-
-			FVector NewScale = FVector(LengthScale, WidthScale, 1.f);
-			const bool newScaleIsFinite = FMath::IsFinite(NewScale.X) && FMath::IsFinite(NewScale.Y) && FMath::IsFinite(NewScale.Z);
-
-			if (!newScaleIsFinite || NewScale.ContainsNaN())
-			{
-				UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Non-finite scale detected. Skipping."));
-				return;
-			}
-
-			SightMesh->SetWorldScale3D(NewScale);
-
-			// FRotator LookRot = (MidPoint - MuzzleLoc).Rotation();
-			// SightMesh->SetWorldRotation(LookRot);
-		}
+		//Adapte scale to SightMesh extent
+		AdaptSightMeshDependingExtent(Width, Length, MidPoint, MuzzleLoc, false);
+		
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Geometry"), __FUNCTION__);
 	}
 }
 
@@ -690,24 +710,23 @@ void UPS_WeaponComponent::SightTick()
 	//Determine Sight Hit
 	_bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
 	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
-	const FVector target = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
+	const FVector targetSight = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, targetSight, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _SightHitResult, true, FLinearColor::Red, FLinearColor::Green,0.1f);
 	
-	const FVector tempLaserTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
-
 	//Determine Laser Hit
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), tempLaserTarget, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	const FVector targetLaser = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), targetLaser, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
 
 	//Laser && Sight Target
-	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : tempLaserTarget;
-	_SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
+	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : targetLaser;
+	_SightTarget =  _SightHitResult.bBlockingHit ? _SightHitResult.ImpactPoint : targetSight; 
+	//_SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
 	
-	
-	//Stop if in can't slice situation
+	//Stop if in unauthorized slicing situation
 	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
 	{
 		ResetSightRackProperties();

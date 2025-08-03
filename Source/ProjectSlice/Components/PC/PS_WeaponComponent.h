@@ -357,6 +357,9 @@ public:
 	void AdaptSightMeshBound_DEPRECATED();
 
 	UFUNCTION()
+	void AdaptSightMeshDependingExtent(const float& width, const float& length, const FVector& midPoint, const FVector& muzzleLoc, bool bUseRot) const;
+
+	UFUNCTION()
 	void AdaptSightMeshBound();
 
 protected:
