@@ -1698,7 +1698,8 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return;
 
 	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
-	FFrame3d ProjectionFrame(FVector3d::Zero(), (FVector3d)ViewDirection);
+	FVector TargetCenter = MeshComponent->Bounds.Origin;
+	FFrame3d ProjectionFrame(TargetCenter, (FVector3d)ViewDirection);
 
 	TArray<FVector2d> ProjectedPoints2D;
 	for (int32 VID : DynamicMesh.VertexIndicesItr())
@@ -1725,11 +1726,89 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		{
 			const FVector& A = OutProjectedCorners[i];
 			const FVector& B = OutProjectedCorners[(i + 1) % OutProjectedCorners.Num()];
-			DrawDebugLine(MeshComponent->GetWorld(), A, B, FColor::Green, false, 5.f, 0, 1.f);
+			DrawDebugLine(MeshComponent->GetWorld(), A, B, FColor::Green, false, 5.f, 50, 1.f);
 		}
 	}
 }
 
+
+float UPSFL_GeometryScript::ComputeProjectedHullWidth(
+	UMeshComponent* MeshComponent,
+	const FVector& ViewDirection,
+	FVector& OutCenter3D,
+	FFrame3d& OutProjectionFrame,
+	bool bDebug
+)
+{
+	OutCenter3D = FVector::ZeroVector;
+	OutProjectionFrame = FFrame3d(); // reset
+
+	if (!IsValid(MeshComponent)) return 0.f;
+
+	FDynamicMesh3 DynamicMesh;
+	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return 0.f;
+
+	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
+	FVector TargetCenter = MeshComponent->Bounds.Origin;
+
+	// Important : inverser ViewDirection car FFrame3d attend l’axe Z+
+	OutProjectionFrame = FFrame3d((FVector3d)TargetCenter, (FVector3d)(-ViewDirection));
+
+	TArray<FVector2d> ProjectedPoints2D;
+	for (int32 VID : DynamicMesh.VertexIndicesItr())
+	{
+		FVector3d Vertex = DynamicMesh.GetVertex(VID);
+		FVector3d WorldPos = WorldTransform.TransformPositionNoScale(Vertex);
+		const bool bIsFinite = FMath::IsFinite(WorldPos.X) && FMath::IsFinite(WorldPos.Y) && FMath::IsFinite(WorldPos.Z);
+		if (!bIsFinite) continue;
+
+		FVector3d Proj = OutProjectionFrame.ToPlane(WorldPos);
+		ProjectedPoints2D.Add(FVector2d(Proj.X, Proj.Y));
+	}
+
+	if (ProjectedPoints2D.Num() < 2) return 0.f;
+
+	TArray<int32> HullIndices;
+	ComputeConvexHull2D(ProjectedPoints2D, HullIndices);
+
+	// Trouver les deux points les plus éloignés dans le plan 2D
+	float MaxDistSq = 0.f;
+	FVector2d PtA, PtB;
+
+	for (int32 i = 0; i < HullIndices.Num(); ++i)
+	{
+		for (int32 j = i + 1; j < HullIndices.Num(); ++j)
+		{
+			const FVector2d& A = ProjectedPoints2D[HullIndices[i]];
+			const FVector2d& B = ProjectedPoints2D[HullIndices[j]];
+			float DistSq = FVector2d::DistSquared(A, B);
+			if (DistSq > MaxDistSq)
+			{
+				MaxDistSq = DistSq;
+				PtA = A;
+				PtB = B;
+			}
+		}
+	}
+
+	// Reconstruit le centre 3D
+	FVector2d Mid2D = (PtA + PtB) * 0.5;
+	OutCenter3D = (FVector)OutProjectionFrame.FromPlaneUV(Mid2D);
+
+	if (bDebug && MeshComponent->GetWorld())
+	{
+		for (int32 i = 0; i < HullIndices.Num(); ++i)
+		{
+			const FVector2d& A2 = ProjectedPoints2D[HullIndices[i]];
+			const FVector2d& B2 = ProjectedPoints2D[HullIndices[(i + 1) % HullIndices.Num()]];
+			FVector WorldA = (FVector)OutProjectionFrame.FromPlaneUV(A2);
+			FVector WorldB = (FVector)OutProjectionFrame.FromPlaneUV(B2);
+			DrawDebugLine(MeshComponent->GetWorld(), WorldA, WorldB, FColor::Green, false, 5.f, 50, 1.f);
+		}
+	}
+
+	return FMath::Sqrt(MaxDistSq);
+}
 
 
 #pragma endregion HullBounds

@@ -252,6 +252,9 @@ public:
     // Returns 4 corners of the convex projection hull that surrounds the mesh
     // Used to scale a visual triangle from muzzle to projected edges
     static void ComputeProjectedSweptHullBounds(UMeshComponent* MeshComponent, const FVector& ViewDirection, TArray<FVector>& OutProjectedCorners, bool bDebug);
+	
+	static float ComputeProjectedHullWidth(UMeshComponent* MeshComponent, const FVector& ViewDirection, FVector& OutCenter3D, FFrame3d& OutProjectionFrame, bool
+		bDebug);
 
 	//------------------
 #pragma endregion HullBounds

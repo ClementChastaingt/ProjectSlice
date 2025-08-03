@@ -607,49 +607,12 @@ void UPS_WeaponComponent::AdaptSightMeshDependingExtent(const float& width,const
 
 }
 
-void UPS_WeaponComponent::AdaptSightMeshBound()
+void UPS_WeaponComponent::AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const
 {
-	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
-
-	//Init work var
-	FVector MuzzleLoc = GetMuzzlePosition();
-	FVector ViewDir = _PlayerCamera->GetForwardVector();
-		
-	//--Default adaptation--
-	if (!_SightHitResult.bBlockingHit || !IsValid(_SightHitResult.GetComponent()) ||
-		(IsValid(_SightHitResult.GetComponent())
-		&& !_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass())
-		&& !_SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass())) )
-	{
-		//Override scale 
-		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
-
-		//Determine Rotation
-		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
-		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
-		//SightMesh->SetWorldRotation(LookRot);
-
-		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
-		
-		return;
-	}
-
-	//--Chaos adaptation--
-	if(IsValid(_SightHitResult.GetComponent())
-		&& _SightHitResult.GetComponent()->IsA(UGeometryCollection::StaticClass()))
-	{
-		SightMesh->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
-		
-		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos"), __FUNCTION__);
-		
-		return;
-	}
-	
-	//--Geometry adaptation (Sliceable)--
-	//Compute convex hull de la surface visée
+	//Compute convex hull de la surface visée	
 	TArray<FVector> ProjectedCorners;
 	UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
-		SightMesh,
+		meshComp,
 		ViewDir, // direction canon
 		ProjectedCorners,
 		bDebugRackBoundAdaptation
@@ -689,8 +652,94 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 		//Adapte scale to SightMesh extent
 		AdaptSightMeshDependingExtent(Width, Length, MidPoint, MuzzleLoc, false);
 		
-		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Geometry"), __FUNCTION__);
+		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (3D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
 	}
+	return;
+}
+
+void UPS_WeaponComponent::AdaptWith2DHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp)
+{
+	FVector HullCenter3D;
+	FFrame3d ProjectionFrame;
+	float Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
+		meshComp,
+		ViewDir,
+		HullCenter3D,
+		ProjectionFrame,
+		bDebugRackBoundAdaptation
+	);
+	
+	// Project also the muzzle into 2D to compute length
+	FVector3d projMuzzle3D = ProjectionFrame.ToPlane(MuzzleLoc);
+	FVector3d projCenter3D = ProjectionFrame.ToPlane(HullCenter3D);
+	
+	FVector2d ProjMuzzle(projMuzzle3D.X, projMuzzle3D.Y);
+	FVector2d ProjCenter(projCenter3D.X, projCenter3D.Y);
+	
+	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
+	
+	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
+	}
+	
+	AdaptSightMeshDependingExtent(Width, Length, HullCenter3D, MuzzleLoc, false);
+	
+	if (bDebugRackBoundAdaptation)
+	{
+		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
+	}
+}
+
+void UPS_WeaponComponent::AdaptSightMeshBound()
+{
+	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
+
+	//Init work var
+	FVector MuzzleLoc = GetMuzzlePosition();
+	FVector ViewDir = _PlayerCamera->GetForwardVector();
+	
+	UProceduralMeshComponent* procComp = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
+	UGeometryCollection* chaosComp = Cast<UGeometryCollection>(_SightHitResult.GetComponent());
+		
+	//--Default adaptation--
+	if (!_SightHitResult.bBlockingHit
+		|| !IsValid(_SightHitResult.GetComponent())
+		|| (IsValid(_SightHitResult.GetComponent()) && !IsValid(procComp) && !IsValid(chaosComp)))
+	{
+		//Override scale 
+		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
+
+		//Determine Rotation
+		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
+		//SightMesh->SetWorldRotation(LookRot);
+
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
+		
+		return;
+	}
+
+	//--Chaos adaptation--
+	if(IsValid(chaosComp))
+	{
+		SightMesh->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
+		
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos"), __FUNCTION__);
+		
+		return;
+	}
+	
+	//--Geometry adaptation (Sliceable)--
+	if (!IsValid(procComp)) return;
+	if (bUse3DHull)
+	{
+		AdaptWithConvexHull(MuzzleLoc, ViewDir, procComp);
+	}else
+	{
+		AdaptWith2DHull(MuzzleLoc, ViewDir, procComp);
+	}
+	
 }
 
 //------------------

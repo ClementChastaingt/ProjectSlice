@@ -353,11 +353,18 @@ private:
 	//------------------
 
 public:
-	UFUNCTION()
-	void AdaptSightMeshBound_DEPRECATED();
 
 	UFUNCTION()
 	void AdaptSightMeshDependingExtent(const float& width, const float& length, const FVector& midPoint, const FVector& muzzleLoc, bool bUseRot) const;
+
+	UFUNCTION()
+	void AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const;
+
+	UFUNCTION()
+	void AdaptWith2DHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp);
+
+	UFUNCTION()
+	void AdaptSightMeshBound_DEPRECATED();
 
 	UFUNCTION()
 	void AdaptSightMeshBound();
@@ -365,10 +372,12 @@ public:
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugRackBoundAdaptation = false;
-
-	// Échelle du mesh
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
+	bool bUse3DHull = false;
 
 #pragma endregion Ray_Rack
 
