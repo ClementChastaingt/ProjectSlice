@@ -53,7 +53,7 @@ void UPS_WeaponComponent::BeginPlay()
 
 	//Setup default value
 	RackDefaultRelativeTransform = SightMesh->GetRelativeTransform();
-	TargetRackRotation = RackDefaultRelativeTransform.Rotator();
+	_TargetRackRoll = RackDefaultRelativeTransform.Rotator().Roll;
 
 	//Custom Tick
 	if (IsValid(GetWorld()))
@@ -311,7 +311,7 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 	//Determine base loc && rot
 	FVector loc =  targetHit.Location + UKismetMathLibrary::GetDirectionUnitVector(targetHit.TraceStart, targetHit.Location) * 100;
 	FRotator rot = UKismetMathLibrary::FindLookAtRotation(targetHit.TraceStart, targetHit.Location);
-	rot.Roll = -TargetRackRotation.Roll;
+	rot.Roll = -_TargetRackRoll;
 
 	DrawDebugLine(GetWorld(), loc, loc + rot.Vector() * 500, FColor::Yellow, false, 2, 10, 3);
 	
@@ -361,14 +361,14 @@ void UPS_WeaponComponent::TurnRack()
 {
 	if (!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(SightMesh)) return;
 	
-	StartRackRotation = SightMesh->GetRelativeRotation().Clamp();
+	_StartRackRoll = SightMesh->GetRelativeRotation().Clamp().Roll;
 	
-	const float divider = UKismetMathLibrary::SafeDivide(StartRackRotation.Roll, 90.0f) + 1.0f;
+	const float divider = UKismetMathLibrary::SafeDivide(_StartRackRoll, 90.0f) + 1.0f;
 	const float rollTarget = 90.0f * UKismetMathLibrary::FTrunc(divider);
 	
-	if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: DividerRounded %i, Divider %f, RollTarget %f, Currentroll %f"), __FUNCTION__, UKismetMathLibrary::Round(divider), divider, rollTarget, StartRackRotation.Clamp().Roll);
+	if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: DividerRounded %i, Divider %f, RollTarget %f, Currentroll %f"), __FUNCTION__, UKismetMathLibrary::Round(divider), divider, rollTarget, _StartRackRoll);
 	
-	TargetRackRotation.Roll = rollTarget;
+	_TargetRackRoll = rollTarget;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
 	
@@ -385,10 +385,13 @@ void UPS_WeaponComponent::SightMeshRotation()
 		if(IsValid(RackRotCurve))
 			curveAlpha = RackRotCurve->GetFloatValue(alpha);
 				
-		const FRotator newRotation = FMath::Lerp(StartRackRotation,TargetRackRotation, curveAlpha);
+		FRotator newRotation = SightMesh->GetRelativeRotation().Clamp();
+		const float newRoll= FMath::Lerp(_StartRackRoll,_TargetRackRoll, curveAlpha);
+		newRotation.Roll = newRoll;
+		
 		SightMesh->SetRelativeRotation(newRotation);
 
-		if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRotation %s, TargetRackRotation %s, alpha %f"),__FUNCTION__,*StartRackRotation.ToString(),*TargetRackRotation.ToString(), alpha);
+		if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRoll %f, TargetRackRoll %f, alpha %f"),__FUNCTION__,_StartRackRoll,_TargetRackRoll, alpha);
 
 		//Stop Rot
 		if(alpha >= 1 && !_bTurnRackTargetSetuped)
@@ -423,7 +426,7 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
 	//Setup work var
-	StartRackRotation = SightMesh->GetRelativeRotation();
+	_StartRackRoll = SightMesh->GetRelativeRotation().Clamp().Roll;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bTurnRackTargetSetuped = true;
 
@@ -489,7 +492,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 	}
 
 	//TargetRackRotation = UKismetMathLibrary::FindLookAtRotation(GetMuzzlePosition(), _LaserTarget);
-	TargetRackRotation.Roll = angleToInputTargetLoc;
+	_TargetRackRoll = angleToInputTargetLoc;
 	
 	//Active rot interp
 	bInterpRackRotation = true;
@@ -501,7 +504,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 //------------------
 #pragma endregion Rack
 
-#pragma region Ray_Rack
+#pragma region Adaptation
 //------------------
 void UPS_WeaponComponent::AdaptSightMeshBound_DEPRECATED()
 {
@@ -579,7 +582,58 @@ void UPS_WeaponComponent::AdaptSightMeshBound_DEPRECATED()
 }
 
 
-void UPS_WeaponComponent::AdaptSightMeshDependingExtent(const float& width,const float& length, const FVector& midPoint, const FVector& muzzleLoc, const bool bUseRot) const
+void UPS_WeaponComponent::AdaptSightMeshBound()
+{
+	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
+
+	//Init work var
+	FVector MuzzleLoc = GetMuzzlePosition();
+	FVector ViewDir = _PlayerCamera->GetForwardVector();
+	
+	UProceduralMeshComponent* procComp = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
+	UGeometryCollection* chaosComp = Cast<UGeometryCollection>(_SightHitResult.GetComponent());
+		
+	//--Default adaptation--
+	if (!_SightHitResult.bBlockingHit
+		|| !IsValid(_SightHitResult.GetComponent())
+		|| (IsValid(_SightHitResult.GetComponent()) && !IsValid(procComp) && !IsValid(chaosComp)))
+	{
+		//Override scale 
+		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
+
+		//Determine Rotation
+		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
+		FRotator rot = FRotator::ZeroRotator;
+		rot.Roll = SightMesh->GetRelativeRotation().Roll;
+		SightMesh->SetRelativeRotation(rot);
+
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
+		
+		return;
+	}
+
+	//--Chaos adaptation--
+	if(IsValid(chaosComp))
+	{
+		FRotator rot = FRotator::ZeroRotator;
+		rot.Roll = SightMesh->GetRelativeRotation().Roll;
+		SightMesh->SetRelativeRotation(rot);
+		
+		SightMesh->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
+		
+		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos"), __FUNCTION__);
+		
+		return;
+	}
+	
+	//--Geometry adaptation (Sliceable)--
+	if (!IsValid(procComp)) return;
+	AdaptWith2DHull(MuzzleLoc, ViewDir, procComp);
+	
+}
+
+void UPS_WeaponComponent::AdaptSightMeshScale(const float& width,const float& length, const FVector& midPoint) const
 {
 	FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
 	if (!MeshExtent.IsNearlyZero())
@@ -597,15 +651,35 @@ void UPS_WeaponComponent::AdaptSightMeshDependingExtent(const float& width,const
 		}
 
 		SightMesh->SetWorldScale3D(NewScale);
-
-		if (bUseRot)
-		{
-			FRotator LookRot = (midPoint - muzzleLoc).Rotation();
-			SightMesh->SetWorldRotation(LookRot);
-		}
+		DrawDebugPoint(GetWorld(), midPoint, 20.f, FColor::Magenta, false);
 	}
 
 }
+
+// FVector UPS_WeaponComponent::ComputeAdjustedAimTarget(
+// 	const FVector& ImpactPoint,
+// 	const FVector2d& PtA2D,
+// 	const FVector2d& PtB2D,
+// 	const FFrame3d& ProjectionFrame,
+// 	double Width)
+// {
+// 	// Projeter le point visé dans le plan de projection
+// 	FVector3d ImpactProj3D = ProjectionFrame.ToPlane((FVector3d)ImpactPoint);
+// 	FVector2d ImpactProj2D(ImpactProj3D.X, ImpactProj3D.Y);
+//
+// 	// Calcul direction et position relative sur la largeur du hull
+// 	FVector2d EdgeDir = (PtB2D - PtA2D).GetSafeNormal();
+// 	double PosOnLine = FVector2d::DotProduct(ImpactProj2D - PtA2D, EdgeDir);
+// 	double RelativePos = FMath::Clamp(PosOnLine / Width, 0.0, 1.0);
+//
+// 	// Calcul de l’offset inversé par rapport au centre (0.5)
+// 	double CenterOffset = (0.5 - RelativePos); // <- inversion logique ici
+// 	FVector2d Offset2D = EdgeDir * CenterOffset * Width;
+//
+// 	// Retourner la cible ajustée (ImpactPoint + décalage opposé)
+// 	FVector3d Offset3D = ProjectionFrame.FromPlaneUV(Offset2D);
+// 	return ImpactPoint + (FVector)Offset3D;
+// }
 
 void UPS_WeaponComponent::AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const
 {
@@ -614,8 +688,8 @@ void UPS_WeaponComponent::AdaptWithConvexHull(const FVector& MuzzleLoc, const FV
 	UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 		meshComp,
 		ViewDir, // direction canon
-		ProjectedCorners,
-		bDebugRackBoundAdaptation
+		_SightHitResult.ImpactPoint,
+		ProjectedCorners, bDebugRackBoundAdaptation
 	);
 
 	// Find the two points more far than projected plane
@@ -650,7 +724,7 @@ void UPS_WeaponComponent::AdaptWithConvexHull(const FVector& MuzzleLoc, const FV
 		}
 
 		//Adapte scale to SightMesh extent
-		AdaptSightMeshDependingExtent(Width, Length, MidPoint, MuzzleLoc, false);
+		AdaptSightMeshScale(Width, Length, MidPoint);
 		
 		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (3D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
 	}
@@ -661,15 +735,15 @@ void UPS_WeaponComponent::AdaptWith2DHull(const FVector& MuzzleLoc, const FVecto
 {
 	FVector HullCenter3D;
 	FFrame3d ProjectionFrame;
-	float Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
+	double Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		meshComp,
 		ViewDir,
+		_SightHitResult.ImpactPoint,
 		HullCenter3D,
-		ProjectionFrame,
-		bDebugRackBoundAdaptation
+		ProjectionFrame, bDebugRackBoundAdaptation
 	);
 	
-	// Project also the muzzle into 2D to compute length
+	//Project also the muzzle into 2D to compute length
 	FVector3d projMuzzle3D = ProjectionFrame.ToPlane(MuzzleLoc);
 	FVector3d projCenter3D = ProjectionFrame.ToPlane(HullCenter3D);
 	
@@ -677,73 +751,52 @@ void UPS_WeaponComponent::AdaptWith2DHull(const FVector& MuzzleLoc, const FVecto
 	FVector2d ProjCenter(projCenter3D.X, projCenter3D.Y);
 	
 	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
-	
 	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
 	}
 	
-	AdaptSightMeshDependingExtent(Width, Length, HullCenter3D, MuzzleLoc, false);
+	AdaptSightMeshScale(Width, Length, HullCenter3D);
 	
 	if (bDebugRackBoundAdaptation)
 	{
 		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
 	}
+
+	// FVector PtA, PtB, HullCenter3D;
+	// FFrame3d ProjectionFrame;
+	// double Width = UPSFL_GeometryScript::ComputeProjectedHullWidthDyn(
+	// 	meshComp,
+	// 	ViewDir,
+	// 	PtA,
+	// 	PtB,
+	// 	HullCenter3D,
+	// 	ProjectionFrame,
+	// 	bDebugRackBoundAdaptation
+	// );
+	
+	// if (Width > 0.0)
+	// {
+	// 	float Length = FVector::Dist(MuzzleLoc, HullCenter3D);
+	// 	if (FMath::IsFinite(Width) && FMath::IsFinite(Length) && Length > 1.f)
+	// 	{
+	// 		FVector2d PtA2D = FVector2d(ProjectionFrame.ToPlane((FVector3d)PtA).X, ProjectionFrame.ToPlane((FVector3d)PtA).Y);
+	// 		FVector2d PtB2D = FVector2d(ProjectionFrame.ToPlane((FVector3d)PtB).X, ProjectionFrame.ToPlane((FVector3d)PtB).Y);
+	//
+	// 		FVector AdjustedTarget = ComputeAdjustedAimTarget(_SightHitResult.ImpactPoint, PtA2D, PtB2D, ProjectionFrame, Width);
+	// 		FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc, AdjustedTarget);
+	// 		LookRot.Roll = SightMesh->GetComponentRotation().Roll;
+	// 		SightMesh->SetWorldRotation(LookRot);
+	//
+	// 		AdaptSightMeshScale(Width, Length, HullCenter3D);
+	// 	}
+	// }
+
 }
 
-void UPS_WeaponComponent::AdaptSightMeshBound()
-{
-	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
-
-	//Init work var
-	FVector MuzzleLoc = GetMuzzlePosition();
-	FVector ViewDir = _PlayerCamera->GetForwardVector();
-	
-	UProceduralMeshComponent* procComp = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
-	UGeometryCollection* chaosComp = Cast<UGeometryCollection>(_SightHitResult.GetComponent());
-		
-	//--Default adaptation--
-	if (!_SightHitResult.bBlockingHit
-		|| !IsValid(_SightHitResult.GetComponent())
-		|| (IsValid(_SightHitResult.GetComponent()) && !IsValid(procComp) && !IsValid(chaosComp)))
-	{
-		//Override scale 
-		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
-
-		//Determine Rotation
-		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
-		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
-		//SightMesh->SetWorldRotation(LookRot);
-
-		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
-		
-		return;
-	}
-
-	//--Chaos adaptation--
-	if(IsValid(chaosComp))
-	{
-		SightMesh->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
-		
-		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Chaos"), __FUNCTION__);
-		
-		return;
-	}
-	
-	//--Geometry adaptation (Sliceable)--
-	if (!IsValid(procComp)) return;
-	if (bUse3DHull)
-	{
-		AdaptWithConvexHull(MuzzleLoc, ViewDir, procComp);
-	}else
-	{
-		AdaptWith2DHull(MuzzleLoc, ViewDir, procComp);
-	}
-	
-}
 
 //------------------
-#pragma endregion Ray_Rack
+#pragma endregion Adaptation
 
 #pragma region Shader
 //------------------

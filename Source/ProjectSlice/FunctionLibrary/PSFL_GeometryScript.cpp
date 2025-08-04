@@ -1688,6 +1688,7 @@ static void ComputeConvexHull2D(const TArray<FVector2d>& Points, TArray<int32>& 
 void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 	UMeshComponent* MeshComponent,
 	const FVector& ViewDirection,
+	const FVector& SightHitPoint,
 	TArray<FVector>& OutProjectedCorners,
 	const bool bDebug)
 {
@@ -1698,7 +1699,7 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return;
 
 	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
-	FVector TargetCenter = MeshComponent->Bounds.Origin;
+	FVector TargetCenter = SightHitPoint;
 	FFrame3d ProjectionFrame(TargetCenter, (FVector3d)ViewDirection);
 
 	TArray<FVector2d> ProjectedPoints2D;
@@ -1732,9 +1733,79 @@ void UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
 }
 
 
+double UPSFL_GeometryScript::ComputeProjectedHullWidthDyn(
+	UMeshComponent* MeshComponent,
+	const FVector& ViewDirection,
+	FVector& OutPtA,
+	FVector& OutPtB,
+	FVector& OutCenter3D,
+	FFrame3d& OutProjectionFrame,
+	bool bDebug)
+{
+	OutPtA = OutPtB = OutCenter3D = FVector::ZeroVector;
+	if (!IsValid(MeshComponent)) return 0.0;
+
+	FDynamicMesh3 DynamicMesh;
+	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return 0.0;
+
+	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
+	FVector TargetCenter = MeshComponent->Bounds.Origin;
+	OutProjectionFrame = FFrame3d((FVector3d)TargetCenter, (FVector3d)ViewDirection);
+
+	TArray<FVector2d> ProjectedPoints2D;
+	TArray<FVector3d> ProjectedWorld3D;
+
+	for (int32 VID : DynamicMesh.VertexIndicesItr())
+	{
+		FVector3d Vertex = DynamicMesh.GetVertex(VID);
+		FVector3d WorldPos = WorldTransform.TransformPosition(Vertex);
+		FVector3d Projected = OutProjectionFrame.ToPlane(WorldPos);
+		ProjectedPoints2D.Add(FVector2d(Projected.X, Projected.Y));
+		ProjectedWorld3D.Add(Projected); // Not used, just kept for debug
+	}
+
+	if (ProjectedPoints2D.Num() < 3) return 0.0;
+
+	TArray<int32> HullIndices;
+	ComputeConvexHull2D(ProjectedPoints2D, HullIndices);
+
+	double MaxDistSq = 0.0;
+	int32 MaxIdxA = 0, MaxIdxB = 0;
+	for (int32 i = 0; i < HullIndices.Num(); ++i)
+	{
+		for (int32 j = i + 1; j < HullIndices.Num(); ++j)
+		{
+			double DistSq = (ProjectedPoints2D[HullIndices[i]] - ProjectedPoints2D[HullIndices[j]]).SquaredLength();
+			if (DistSq > MaxDistSq)
+			{
+				MaxDistSq = DistSq;
+				MaxIdxA = HullIndices[i];
+				MaxIdxB = HullIndices[j];
+			}
+		}
+	}
+
+	FVector2d PtA2D = ProjectedPoints2D[MaxIdxA];
+	FVector2d PtB2D = ProjectedPoints2D[MaxIdxB];
+
+	OutPtA = (FVector)OutProjectionFrame.FromPlaneUV(PtA2D);
+	OutPtB = (FVector)OutProjectionFrame.FromPlaneUV(PtB2D);
+	OutCenter3D = (OutPtA + OutPtB) * 0.5;
+
+	if (bDebug && MeshComponent->GetWorld())
+	{
+		DrawDebugLine(MeshComponent->GetWorld(), OutPtA, OutPtB, FColor::Magenta, false, 5.f, 0, 1.f);
+		DrawDebugPoint(MeshComponent->GetWorld(), OutCenter3D, 8.f, FColor::Yellow, false, 5.f);
+	}
+
+	return FMath::Sqrt(MaxDistSq);
+}
+
+
 float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 	UMeshComponent* MeshComponent,
 	const FVector& ViewDirection,
+	const FVector& SightHitPoint,
 	FVector& OutCenter3D,
 	FFrame3d& OutProjectionFrame,
 	bool bDebug
@@ -1749,7 +1820,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 	if (!ConvertMeshComponentToDynamicMesh(MeshComponent, DynamicMesh)) return 0.f;
 
 	const FTransform& WorldTransform = MeshComponent->GetComponentTransform();
-	FVector TargetCenter = MeshComponent->Bounds.Origin;
+	FVector TargetCenter = SightHitPoint;
 
 	// Important : inverser ViewDirection car FFrame3d attend l’axe Z+
 	OutProjectionFrame = FFrame3d((FVector3d)TargetCenter, (FVector3d)(-ViewDirection));

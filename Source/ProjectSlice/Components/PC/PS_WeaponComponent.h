@@ -3,18 +3,29 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "PS_ForceComponent.h"
 #include "PS_HookComponent.h"
+
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+
 #include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
+
+#include "Math/Vector2D.h"
+#include "Math/UnrealMathUtility.h"
+#include "Math/MathFwd.h"
+
 #include "PS_WeaponComponent.generated.h"
+
+using namespace UE::Geometry;
 
 class UPS_PlayerCameraComponent;
 class AProjectSlicePlayerController;
 class UProceduralMeshComponent;
 class AProjectSliceCharacter;
+
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_WeaponComponent : public USkeletalMeshComponent, public IPS_CanGenerateImpactField
@@ -297,7 +308,7 @@ public:
 	FORCEINLINE FVector2D GetSightLookInput() const{return _SightLookInput;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE float GetTargetRackRoll() const{return TargetRackRotation.Roll;}
+	FORCEINLINE float GetTargetRackRoll() const{return _TargetRackRoll;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnToggleTurnRackTargetEvent;
@@ -317,12 +328,6 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FTransform RackDefaultRelativeTransform =  FTransform();
-	
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
-	FRotator StartRackRotation = FRotator::ZeroRotator;
-
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
-	FRotator TargetRackRotation = FRotator::ZeroRotator;
 
 	/** Rack Rotation interpolation params */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
@@ -346,6 +351,12 @@ private:
 
 	UPROPERTY(Transient)
 	FVector2D _SightLookInput;
+	
+	UPROPERTY(Transient)
+	float _StartRackRoll;
+
+	UPROPERTY(Transient)
+	float _TargetRackRoll;
 
 #pragma endregion Rack
 
@@ -355,7 +366,10 @@ private:
 public:
 
 	UFUNCTION()
-	void AdaptSightMeshDependingExtent(const float& width, const float& length, const FVector& midPoint, const FVector& muzzleLoc, bool bUseRot) const;
+	void AdaptSightMeshScale(const float& width, const float& length, const FVector& midPoint) const;
+
+	// UFUNCTION()
+	// FVector ComputeAdjustedAimTarget(const FVector& ImpactPoint, const FVector2d& PtA2D, const FVector2d& PtB2D, const FFrame3d& ProjectionFrame, double Width);
 
 	UFUNCTION()
 	void AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const;
@@ -376,8 +390,6 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
-	bool bUse3DHull = false;
 
 #pragma endregion Ray_Rack
 
