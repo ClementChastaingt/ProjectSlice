@@ -20,6 +20,10 @@ using namespace UE::Geometry;
  * 
  */
 
+
+#pragma region Path
+//------------------
+
 // Structure pour identifier un path unique
 struct FPathCacheKey
 {
@@ -118,6 +122,43 @@ inline uint32 GetTypeHash(const FPathCacheKey& Key)
 	Hash = HashCombine(Hash, GetTypeHash(Key.MeshComponent.Get()));
 	return Hash;
 }
+
+//------------------
+#pragma endregion Path
+
+
+#pragma region Hull
+//------------------
+
+struct FHullWidthOutData
+{
+	FVector OutCenter3D;
+	FVector2d OutHullLeft;
+	FVector2d OutHullRight;
+	FFrame3d OutProjectionFrame;
+	
+	FHullWidthOutData() 
+		: OutCenter3D(FVector::ZeroVector)
+		, OutHullLeft(FVector2d::ZeroVector)
+		, OutHullRight(FVector2d::ZeroVector)
+		, OutProjectionFrame(FFrame3d())
+	{
+	}
+	
+	FHullWidthOutData(FVector InCenter3D, FVector2d InHullLeft, FVector2d InHullRight, FFrame3d InProjectionFrame)
+		: OutCenter3D(InCenter3D)
+		, OutHullLeft(InHullLeft)
+		, OutHullRight(InHullRight)
+		, OutProjectionFrame(InProjectionFrame)
+	{
+	}
+
+};
+
+//------------------
+
+#pragma endregion Hull
+
 
 UCLASS()
 class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
@@ -246,19 +287,15 @@ private:
 
 #pragma region HullBounds
 	//------------------
-
+	
 public:
 	// Computes the 2D bounds of a Static or Procedural Mesh projected along a direction.
     // Returns 4 corners of the convex projection hull that surrounds the mesh
     // Used to scale a visual triangle from muzzle to projected edges
-    static void ComputeProjectedSweptHullBounds(UMeshComponent* MeshComponent, const FVector& ViewDirection, const FVector& SightHitPoint, TArray<FVector>&
-	    OutProjectedCorners, bool bDebug);
-	double ComputeProjectedHullWidthDyn(UMeshComponent* MeshComponent, const FVector& ViewDirection, FVector& OutPtA,
-		FVector& OutPtB, FVector& OutCenter3D, FFrame3d& OutProjectionFrame, bool bDebug);
+	static float ComputeProjectedHullWidth(UMeshComponent* MeshComponent, const FVector& ViewDirection, const FVector& SightHitPoint, FHullWidthOutData& OutDatas, bool bDebug);
+	
+	static float ComputeAdjustedAimRotation(const FVector& ImpactPoint, const FVector& MuzzleLoc, const FVector2d& HullLeft, const FVector2d& HullRight, const FFrame3d& ProjectionFrame);
 
-	static float ComputeProjectedHullWidth(UMeshComponent* MeshComponent, const FVector& ViewDirection, const FVector& SightHitPoint, FVector& OutCenter3D, FFrame3d
-		& OutProjectionFrame, bool
-		bDebug);
 
 	//------------------
 #pragma endregion HullBounds

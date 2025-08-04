@@ -13,10 +13,6 @@
 #include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
 
-#include "Math/Vector2D.h"
-#include "Math/UnrealMathUtility.h"
-#include "Math/MathFwd.h"
-
 #include "PS_WeaponComponent.generated.h"
 
 using namespace UE::Geometry;
@@ -198,10 +194,10 @@ private:
 
 #pragma endregion Slice
 
-#pragma region SightRack
+#pragma region Sight
 	//------------------
 	
-public:	
+public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UStaticMeshComponent* GetSightMeshComponent() const{return SightMesh;}
 
@@ -222,6 +218,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetSightTarget() const{return _SightTarget;}
+
+	UFUNCTION()
+	void SightTick();
+
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_ObjectType_Bool OnSwitchLaserMatEvent;
@@ -264,6 +264,9 @@ private:
 
 	UPROPERTY(Transient)
 	FVector _SightTarget;
+		
+	UPROPERTY(Transient)
+	FVector _LastSightTarget;
 
 	UPROPERTY(Transient)
 	EPointedObjectType _SightedObjectType;
@@ -360,38 +363,29 @@ private:
 
 #pragma endregion Rack
 
-#pragma region Ray_Rack
+#pragma region Adaptation
 	//------------------
 
 public:
-
 	UFUNCTION()
-	void AdaptSightMeshScale(const float& width, const float& length, const FVector& midPoint) const;
-
-	// UFUNCTION()
-	// FVector ComputeAdjustedAimTarget(const FVector& ImpactPoint, const FVector2d& PtA2D, const FVector2d& PtB2D, const FFrame3d& ProjectionFrame, double Width);
-
-	UFUNCTION()
-	void AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const;
-
-	UFUNCTION()
-	void AdaptWith2DHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp);
-
-	UFUNCTION()
-	void AdaptSightMeshBound_DEPRECATED();
+	void AdaptToProjectedHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp);
 
 	UFUNCTION()
 	void AdaptSightMeshBound();
 
 protected:
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugRackBoundAdaptation = false;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);
 
-
-#pragma endregion Ray_Rack
+	//Projected Adaptation Width && Length weight
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
+	FVector2D ProjectedAdaptationWeigth = FVector2D(0.5f, 1.0f);
+	
+#pragma endregion Adaptation
 
 #pragma region Shader
 	//------------------
@@ -399,10 +393,10 @@ protected:
 protected:
 	/**Sight slice shader */
 	UFUNCTION()
-	void SightTick();
+	void UpdateSightRackShader();
 	
 	UFUNCTION()
-	void ResetSightRackProperties();
+	void ResetSightRackShaderProperties();
 
 	UFUNCTION()
 	void ForceInitSliceBump();
@@ -430,7 +424,7 @@ protected:
 
 #pragma endregion Shader
 
-#pragma endregion SightRack
+#pragma endregion Sight
 
 #pragma region ForcePush
 	//------------------

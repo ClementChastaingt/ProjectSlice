@@ -192,7 +192,7 @@ void UPS_WeaponComponent::Fire()
 	if (!IsValid(parentProcMeshComponent) || !IsValid(currentSlicedComponent)) return;
 	
 	//Setup material
-	ResetSightRackProperties();
+	ResetSightRackShaderProperties();
 	UMaterialInstanceDynamic* matInst = SetupMeltingMat(parentProcMeshComponent);
 
 	//Slice mesh setup
@@ -337,6 +337,55 @@ void UPS_WeaponComponent::GenerateImpactField(const FHitResult& targetHit, const
 
 #pragma region Sight
 //------------------
+
+void UPS_WeaponComponent::SightTick()
+{
+	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || !IsValid(_PlayerCharacter->GetForceComponent()) || !IsValid(_PlayerCharacter->GetHookComponent()))
+	{
+		ResetSightRackShaderProperties();
+		return;
+	}
+
+	//Determine Sight Hit
+	_bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
+	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
+	const FVector targetSight = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
+	
+	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, targetSight, UEngineTypes::ConvertToTraceType(ECC_Slice),
+		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _SightHitResult, true, FLinearColor::Red, FLinearColor::Green,0.1f);
+	
+	//Determine Laser Hit
+	const FVector targetLaser = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), targetLaser, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
+
+	//Laser && Sight Target
+	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : targetLaser;
+	_SightTarget = _SightHitResult.bBlockingHit ? _SightHitResult.ImpactPoint : targetSight; 
+	
+	//Stop if in unauthorized slicing situation
+	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
+	{
+		ResetSightRackShaderProperties();
+		return;
+	}
+
+	//On shoot Bump tick logic 
+	SliceBump();
+
+	//Update laser color if necessary
+	UpdateLaserColor();
+
+	//Adapt SightMesh scale
+	AdaptSightMeshBound();
+
+	//Sight Shader
+	UpdateSightRackShader();
+	
+	//Setup last var
+	_LastSightTarget = _SightTarget;
+}
 
 #pragma region Rack
 //------------------
@@ -506,92 +555,20 @@ void UPS_WeaponComponent::TurnRackTarget()
 
 #pragma region Adaptation
 //------------------
-void UPS_WeaponComponent::AdaptSightMeshBound_DEPRECATED()
-{
-	if(!IsValid(SightMesh)) return;
-	
-	//Setup
-	_bSightMeshIsInUse = IsValid(_CurrentSightedComponent) && !_PlayerCharacter->IsWeaponStow() && !_PlayerCharacter->GetForceComponent()->IsPushLoading();
-	
-	//Sleep Targeting
-	if(!IsValid(_CurrentSightedComponent))
-	{
-		SightMesh->SetRelativeScale3D(RackDefaultRelativeTransform.GetScale3D());
-		SightMesh->SetRelativeLocation(RackDefaultRelativeTransform.GetLocation());
-		return;
-	};
-	
-	//Active Targetting
-	if(!_bSightMeshIsInUse) return;
-	
-	//Setup variables
-	UProceduralMeshComponent* procMeshComp = Cast<UProceduralMeshComponent>(_CurrentSightedComponent);
-	double roll = 180.0f;
-	double reminder;
-	UKismetMathLibrary::FMod(SightMesh->GetComponentRotation().Roll, roll, reminder);
-	const bool bRackIsHorizontal = (FMath::IsNearlyEqual(FMath::Abs(reminder), 0.0f, 5.0f) || FMath::IsNearlyEqual(FMath::Abs(reminder), 180.0f, 5.0f));
-	
-	//Get origin and extent
-	FVector origin, extent;
-	procMeshComp->GetLocalBounds().GetBox().GetCenterAndExtents(origin, extent);
-	extent = procMeshComp->GetComponentRotation().RotateVector(extent * procMeshComp->GetComponentScale()); 
-	origin = procMeshComp->GetComponentTransform().TransformPosition(origin);
-	
-	//Ratio to max dist
-	float sightAjustementDist = (_SightHitResult.Distance / MaxFireDistance);/** 10.0f*/
-	
-	//Debug
-	if(bDebugSightShader)
-	{
-		DrawDebugPoint(GetWorld(), origin + extent, 20.f, FColor::Yellow, false);
-		DrawDebugLine(GetWorld(), origin, origin + extent, FColor::Yellow, false, 2, 10, 3);
-		DrawDebugPoint(GetWorld(), origin - extent, 20.f, FColor::Orange, false);
-		DrawDebugLine(GetWorld(), origin, origin - extent, FColor::Orange, false, 2, 10, 3);
-	}
-	
-	//Determine placement on distance
-	FVector2D origin2D, extent2D;
-	origin2D = UKismetMathLibrary::Conv_VectorToVector2D(origin);
-	extent2D = UKismetMathLibrary::Conv_VectorToVector2D(extent);
-	
-	const float maxScale = FMath::Abs(bRackIsHorizontal ? UKismetMathLibrary::SafeDivide(extent.Y, procMeshComp->GetComponentScale().Y) : UKismetMathLibrary::SafeDivide(extent.Z, procMeshComp->GetComponentScale().Z));
-	const float distOriginToBorder =  UKismetMathLibrary::SafeDivide(UKismetMathLibrary::Distance2D(origin2D, extent2D), maxScale);
-	const float distSigthBorder = UKismetMathLibrary::SafeDivide(UKismetMathLibrary::Distance2D(UKismetMathLibrary::Conv_VectorToVector2D(_SightHitResult.Location), origin2D + extent2D), maxScale);
-	const float maxDistToBorder = UKismetMathLibrary::SafeDivide((bRackIsHorizontal ?  distOriginToBorder : origin.Z + extent.Z), maxScale);
-	
-	const float distToBorder =  FMath::Abs(bRackIsHorizontal ? (maxDistToBorder - FMath::Abs(distSigthBorder)) : (maxDistToBorder -  FMath::Abs(_SightHitResult.Location.Z)));
-	
-	//FVector scaleWeight = procMeshComp->GetComponentRotation().RotateVector(procMeshComp->GetLocalBounds().GetBox().GetExtent() * procMeshComp->GetComponentScale());
-	//float maxScale = UKismetMathLibrary::NormalizeToRange(bRackIsHorizontal ? scaleWeight.Y : scaleWeight.Z, 0.0f,1.0f);
-	const float sightAjustementBound = UKismetMathLibrary::MapRangeClamped(distToBorder, 0.0f, maxDistToBorder, MinSightRayMultiplicator, 1.0f);
-	
-	//UE_LOG(LogTemp, Error, TEXT("sightAjustementDist %f, bRackIsHorizontal %i, sightAjustementBound %f, maxScale %f,distToBorder %f, maxDistToBorder %f"),sightAjustementDist, bRackIsHorizontal, sightAjustementBound,maxScale,distToBorder, maxDistToBorder);
-	
-	FVector newScale = RackDefaultRelativeTransform.GetScale3D();
-	newScale.X = newScale.X * sightAjustementDist;
-	newScale.Y = sightAjustementBound;
-	newScale.Z = 0.01f;
-	
-	FVector newLoc = RackDefaultRelativeTransform.GetLocation();
-	newLoc.X = newLoc.X * sightAjustementDist;
-	
-	SightMesh->SetRelativeScale3D(newScale);
-	SightMesh->SetRelativeLocation(newLoc);
-	
-	if(bDebugSightShader) UE_LOG(LogTemp, Error, TEXT("%S :: sightAjustementBound %f, sightAjustementDist %f, newScale %s, newLoc %s"),__FUNCTION__, sightAjustementBound, sightAjustementDist, *newScale.ToString(), *newLoc.ToString());
-}
-
 
 void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
+
+	UE_LOG(LogTemp, Log, TEXT("_LastSightTarget %s, _SightTarget %s"), *_LastSightTarget.ToString(), *_SightTarget.ToString());
+	if (_LastSightTarget.Equals(_SightTarget, 1.0f)) return;
 
 	//Init work var
 	FVector MuzzleLoc = GetMuzzlePosition();
 	FVector ViewDir = _PlayerCamera->GetForwardVector();
 	
 	UProceduralMeshComponent* procComp = Cast<UProceduralMeshComponent>(_SightHitResult.GetComponent());
-	UGeometryCollection* chaosComp = Cast<UGeometryCollection>(_SightHitResult.GetComponent());
+	UGeometryCollectionComponent* chaosComp = Cast<UGeometryCollectionComponent>(_SightHitResult.GetComponent());
 		
 	//--Default adaptation--
 	if (!_SightHitResult.bBlockingHit
@@ -629,17 +606,43 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 	
 	//--Geometry adaptation (Sliceable)--
 	if (!IsValid(procComp)) return;
-	AdaptWith2DHull(MuzzleLoc, ViewDir, procComp);
+	AdaptToProjectedHull(MuzzleLoc, ViewDir, procComp);
+	
 	
 }
 
-void UPS_WeaponComponent::AdaptSightMeshScale(const float& width,const float& length, const FVector& midPoint) const
+void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp)
 {
+	FHullWidthOutData OutDatas = FHullWidthOutData();
+	double Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
+		meshComp,
+		ViewDir,
+		_SightHitResult.ImpactPoint,
+		OutDatas,
+		bDebugRackBoundAdaptation
+	);
+	//TODO :: Temp Fix 
+	Width = Width * ProjectedAdaptationWeigth.X;
+
+	// Project muzzle and center into same 2D frame
+	FVector2d ProjMuzzle = FVector2d(OutDatas.OutProjectionFrame.ToPlane(MuzzleLoc));
+	FVector2d ProjCenter = FVector2d(OutDatas.OutProjectionFrame.ToPlane(OutDatas.OutCenter3D));
+
+	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
+	Length = Length * ProjectedAdaptationWeigth.Y;
+
+	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
+		return;
+	}
+
+	//Adpat Mesh Scale
 	FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
 	if (!MeshExtent.IsNearlyZero())
 	{
-		float WidthScale = width / (MeshExtent.Y * 2.f);  // full width
-		float LengthScale = length / MeshExtent.X;
+		float WidthScale = Width / (MeshExtent.Y * 2.f);  // full width
+		float LengthScale = Length / MeshExtent.X;
 
 		FVector NewScale = FVector(LengthScale, WidthScale, 1.f);
 		const bool newScaleIsFinite = FMath::IsFinite(NewScale.X) && FMath::IsFinite(NewScale.Y) && FMath::IsFinite(NewScale.Z);
@@ -651,149 +654,26 @@ void UPS_WeaponComponent::AdaptSightMeshScale(const float& width,const float& le
 		}
 
 		SightMesh->SetWorldScale3D(NewScale);
-		DrawDebugPoint(GetWorld(), midPoint, 20.f, FColor::Magenta, false);
 	}
 
-}
+	/* TODO :: WIP not working well for the moment */
+	// Compensation de visée (triangle reste centré même si visée excentrée)
+	// float RotationOffsetDeg = UPSFL_GeometryScript::ComputeAdjustedAimRotation(
+	// 	_SightHitResult.ImpactPoint,
+	// 	MuzzleLoc,
+	// 	OutDatas.OutHullLeft,
+	// 	OutDatas.OutHullRight,
+	// 	OutDatas.OutProjectionFrame
+	// );
+	// FRotator AdjustedRot = SightMesh->GetComponentRotation();
+	// AdjustedRot.Yaw += RotationOffsetDeg;
+	// SightMesh->SetWorldRotation(AdjustedRot);
 
-// FVector UPS_WeaponComponent::ComputeAdjustedAimTarget(
-// 	const FVector& ImpactPoint,
-// 	const FVector2d& PtA2D,
-// 	const FVector2d& PtB2D,
-// 	const FFrame3d& ProjectionFrame,
-// 	double Width)
-// {
-// 	// Projeter le point visé dans le plan de projection
-// 	FVector3d ImpactProj3D = ProjectionFrame.ToPlane((FVector3d)ImpactPoint);
-// 	FVector2d ImpactProj2D(ImpactProj3D.X, ImpactProj3D.Y);
-//
-// 	// Calcul direction et position relative sur la largeur du hull
-// 	FVector2d EdgeDir = (PtB2D - PtA2D).GetSafeNormal();
-// 	double PosOnLine = FVector2d::DotProduct(ImpactProj2D - PtA2D, EdgeDir);
-// 	double RelativePos = FMath::Clamp(PosOnLine / Width, 0.0, 1.0);
-//
-// 	// Calcul de l’offset inversé par rapport au centre (0.5)
-// 	double CenterOffset = (0.5 - RelativePos); // <- inversion logique ici
-// 	FVector2d Offset2D = EdgeDir * CenterOffset * Width;
-//
-// 	// Retourner la cible ajustée (ImpactPoint + décalage opposé)
-// 	FVector3d Offset3D = ProjectionFrame.FromPlaneUV(Offset2D);
-// 	return ImpactPoint + (FVector)Offset3D;
-// }
-
-void UPS_WeaponComponent::AdaptWithConvexHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp) const
-{
-	//Compute convex hull de la surface visée	
-	TArray<FVector> ProjectedCorners;
-	UPSFL_GeometryScript::ComputeProjectedSweptHullBounds(
-		meshComp,
-		ViewDir, // direction canon
-		_SightHitResult.ImpactPoint,
-		ProjectedCorners, bDebugRackBoundAdaptation
-	);
-
-	// Find the two points more far than projected plane
-	float MaxDistSq = 0.f;
-	FVector PtA, PtB;
-
-	for (int32 i = 0; i < ProjectedCorners.Num(); ++i)
-	{
-		for (int32 j = i + 1; j < ProjectedCorners.Num(); ++j)
-		{
-			float DistSq = FVector::DistSquared(ProjectedCorners[i], ProjectedCorners[j]);
-			if (DistSq > MaxDistSq)
-			{
-				MaxDistSq = DistSq;
-				PtA = ProjectedCorners[i];
-				PtB = ProjectedCorners[j];
-			}
-		}
-	}
-
-	// Find adapted Width && Length
-	if (MaxDistSq > 0.f && SightMesh->GetStaticMesh())
-	{
-		FVector MidPoint = (PtA + PtB) * 0.5f;
-		float Width = FMath::Sqrt(MaxDistSq);
-		float Length = FVector::Dist(MuzzleLoc, MidPoint);
-
-		if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
-			return;
-		}
-
-		//Adapte scale to SightMesh extent
-		AdaptSightMeshScale(Width, Length, MidPoint);
-		
-		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (3D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
-	}
-	return;
-}
-
-void UPS_WeaponComponent::AdaptWith2DHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp)
-{
-	FVector HullCenter3D;
-	FFrame3d ProjectionFrame;
-	double Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
-		meshComp,
-		ViewDir,
-		_SightHitResult.ImpactPoint,
-		HullCenter3D,
-		ProjectionFrame, bDebugRackBoundAdaptation
-	);
-	
-	//Project also the muzzle into 2D to compute length
-	FVector3d projMuzzle3D = ProjectionFrame.ToPlane(MuzzleLoc);
-	FVector3d projCenter3D = ProjectionFrame.ToPlane(HullCenter3D);
-	
-	FVector2d ProjMuzzle(projMuzzle3D.X, projMuzzle3D.Y);
-	FVector2d ProjCenter(projCenter3D.X, projCenter3D.Y);
-	
-	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
-	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
-	}
-	
-	AdaptSightMeshScale(Width, Length, HullCenter3D);
-	
 	if (bDebugRackBoundAdaptation)
 	{
 		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
 	}
-
-	// FVector PtA, PtB, HullCenter3D;
-	// FFrame3d ProjectionFrame;
-	// double Width = UPSFL_GeometryScript::ComputeProjectedHullWidthDyn(
-	// 	meshComp,
-	// 	ViewDir,
-	// 	PtA,
-	// 	PtB,
-	// 	HullCenter3D,
-	// 	ProjectionFrame,
-	// 	bDebugRackBoundAdaptation
-	// );
-	
-	// if (Width > 0.0)
-	// {
-	// 	float Length = FVector::Dist(MuzzleLoc, HullCenter3D);
-	// 	if (FMath::IsFinite(Width) && FMath::IsFinite(Length) && Length > 1.f)
-	// 	{
-	// 		FVector2d PtA2D = FVector2d(ProjectionFrame.ToPlane((FVector3d)PtA).X, ProjectionFrame.ToPlane((FVector3d)PtA).Y);
-	// 		FVector2d PtB2D = FVector2d(ProjectionFrame.ToPlane((FVector3d)PtB).X, ProjectionFrame.ToPlane((FVector3d)PtB).Y);
-	//
-	// 		FVector AdjustedTarget = ComputeAdjustedAimTarget(_SightHitResult.ImpactPoint, PtA2D, PtB2D, ProjectionFrame, Width);
-	// 		FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc, AdjustedTarget);
-	// 		LookRot.Roll = SightMesh->GetComponentRotation().Roll;
-	// 		SightMesh->SetWorldRotation(LookRot);
-	//
-	// 		AdaptSightMeshScale(Width, Length, HullCenter3D);
-	// 	}
-	// }
-
 }
-
 
 //------------------
 #pragma endregion Adaptation
@@ -801,50 +681,8 @@ void UPS_WeaponComponent::AdaptWith2DHull(const FVector& MuzzleLoc, const FVecto
 #pragma region Shader
 //------------------
 
-void UPS_WeaponComponent::SightTick()
+void UPS_WeaponComponent::UpdateSightRackShader()
 {
-	if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld()) || !IsValid(_PlayerCharacter->GetForceComponent()) || !IsValid(_PlayerCharacter->GetHookComponent()))
-	{
-		ResetSightRackProperties();
-		return;
-	}
-
-	//Determine Sight Hit
-	_bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
-	const FVector targetSight = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
-	
-	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, targetSight, UEngineTypes::ConvertToTraceType(ECC_Slice),
-		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _SightHitResult, true, FLinearColor::Red, FLinearColor::Green,0.1f);
-	
-	//Determine Laser Hit
-	const FVector targetLaser = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), targetLaser, UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
-
-	//Laser && Sight Target
-	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : targetLaser;
-	_SightTarget =  _SightHitResult.bBlockingHit ? _SightHitResult.ImpactPoint : targetSight; 
-	//_SightTarget = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * _SightHitResult.Distance;
-	
-	//Stop if in unauthorized slicing situation
-	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
-	{
-		ResetSightRackProperties();
-		return;
-	}
-
-	//On shoot Bump tick logic 
-	SliceBump();
-
-	//Update laser color if necessary
-	UpdateLaserColor();
-
-	//Adapt SightMesh scale
-	AdaptSightMeshBound();
-
-	//Sight Shader
 	UMeshComponent* sliceTarget = Cast<UMeshComponent>(_SightHitResult.GetComponent());
 	if(_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetActor()))
 	{
@@ -855,11 +693,10 @@ void UPS_WeaponComponent::SightTick()
 			DrawDebugBox(GetWorld(),(sliceTarget->GetComponentLocation() + sliceTarget->GetLocalBounds().Origin),sliceTarget->GetComponentRotation().RotateVector(sliceTarget->GetLocalBounds().BoxExtent * sliceTarget->GetComponentScale()), FColor::Yellow, false,-1 , 1 ,2);
 		}
 		
-		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent())
-			return;
+		if(IsValid(_CurrentSightedComponent) && _CurrentSightedComponent == _SightHitResult.GetComponent()) return;
 		
 		//Reset last material properties
-		ResetSightRackProperties();
+		ResetSightRackShaderProperties();
 		if(!_SightHitResult.GetComponent()->IsA(UProceduralMeshComponent::StaticClass())) return;
 		_CurrentSightedComponent = _SightHitResult.GetComponent();
 		_CurrentSightedFace = _SightHitResult.FaceIndex;
@@ -906,17 +743,16 @@ void UPS_WeaponComponent::SightTick()
 		
 		if(bDebugSightShader) UE_LOG(LogTemp, Log, TEXT("%S :: activate sight shader on %s"), __FUNCTION__, *_CurrentSightedComponent->GetName());
 	}
-	//If don't Lbock reset old mat properties
+	//If don't block reset old mat properties
 	else if(!_SightHitResult.bBlockingHit && IsValid(_CurrentSightedComponent))
 	{
 		//Reset sight shader
-		ResetSightRackProperties();
+		ResetSightRackShaderProperties();
 	}
-
-		
+	return;
 }
 
-void UPS_WeaponComponent::ResetSightRackProperties()
+void UPS_WeaponComponent::ResetSightRackShaderProperties()
 {
 	if(IsValid(_CurrentSightedComponent))
 	{
