@@ -35,12 +35,9 @@ public:
 
 	UFUNCTION()
 	void InitComponent();
-	
+
 	//Getters && Setters
 	FORCEINLINE UStaticMeshComponent* GetParentMesh() const{return _RootMesh;}
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnSlicedObjectHitEvent;
@@ -48,21 +45,6 @@ public:
 protected:
 	UFUNCTION()
 	void OnSlicedObjectHitEventReceived(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback")
-	USoundBase* CrashSound = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max ultiplier"))
-	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Volume multiplier Range"))
-	FFloatInterval VolumeRange = FFloatInterval(0.9, 1.25f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Pitch multiplier Range"))
-	FFloatInterval PitchRange = FFloatInterval(0.5, 1.25f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(ForceUnits="cm/s", UIMin="1", ClampMin="1"))
-	float MinVelocityZForFeedback = 100.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bDebug = false;
@@ -70,22 +52,56 @@ protected:
 private:
 	UPROPERTY(Transient)
 	UStaticMeshComponent* _RootMesh = nullptr;
+	
+//------------------	
+#pragma endregion General
+
+
+#pragma region Feedback
+	//------------------
+
+public:
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
+
+protected:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Feedback|CameraShake")
+	TArray<TSubclassOf<UCameraShakeBase>> ImpactCameraShake;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio")
+	USoundBase* CrashSound = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Velocity Range to max ultiplier"))
+	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Volume multiplier Range"))
+	FFloatInterval VolumeRange = FFloatInterval(0.9, 1.25f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Pitch multiplier Range"))
+	FFloatInterval PitchRange = FFloatInterval(0.5, 1.25f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(ForceUnits="cm/s", UIMin="1", ClampMin="1"))
+	float MinVelocityZForFeedback = 100.0f;
+	
+	UFUNCTION()
+	void ImpactSoundFeedback(const FHitResult& Hit,const float& alpha);
+	
+	UFUNCTION()
+	void ImpactCameraFeedback(const float& alpha);
+
+private:
 	UPROPERTY(DuplicateTransient)
-	float _LastImpactSoundTime = -1.0f;
+	float _LastImpactTime = -1.0f;
 
 	// 100ms between sounds
 	UPROPERTY(DuplicateTransient)
-	float _ImpactSoundCooldown = 0.1f;
+	float _ImpactCooldown = 0.1f;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	int32 _LastImpactFeedbackForce;
 
 	UPROPERTY(VisibleInstanceOnly, Transient)
 	UAudioComponent* _CollideAudio;
-	
-//------------------	
-#pragma endregion General
 
-	
-	
+#pragma endregion Feedback
 };

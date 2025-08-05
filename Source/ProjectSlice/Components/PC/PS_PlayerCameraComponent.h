@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 #include "PS_PlayerCameraComponent.generated.h"
 
 class AProjectSlicePlayerController;
@@ -65,6 +66,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Debug")
 	bool bDebugPostProcess = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraShake|Debug")
+	bool bDebugCameraShake = false;
+
 private:
 	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
@@ -110,6 +114,7 @@ protected:
 	
 	UFUNCTION()
 	void FieldOfViewTick();
+
 private:
 	//------------------
 
@@ -118,18 +123,18 @@ private:
 #pragma region CameraShake
 	//------------------
 
-protected:
+public:
+	UFUNCTION(BlueprintCallable)
+	void ShakeCamera(const EPlayerScreenShakeType& shakeType);
 	
-	UFUNCTION()
-	void GlassesCameraShake();
+protected:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
+	TMap<EPlayerScreenShakeType, TSubclassOf<UCameraShakeBase>> CameraShakes;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Glasses")
-	TArray<TSubclassOf<UCameraShakeBase>> CameraShakeGlasses;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
+	TArray<TSubclassOf<UCameraShakeBase>> GlassesCameraShakes;
 
-private:
-	UPROPERTY(Transient)
-	FTimerHandle _ShakeTimerHandle;
-
+	//------------------
 #pragma endregion CameraShake
 
 #pragma region Post-Process

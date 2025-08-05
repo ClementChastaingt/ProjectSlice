@@ -259,6 +259,9 @@ void UPS_ForceComponent::ReleasePush()
 	if(IsValid(PushSound))
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
+	//CameraShake
+	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EPlayerScreenShakeType::FORCE);
+
 	//Stop push
 	StopPush();
 

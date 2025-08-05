@@ -11,6 +11,8 @@
 #include "DynamicMesh/MeshIndexUtil.h"
 #include "MeshQueries.h"
 #include "DynamicMesh/DynamicMeshAABBTree3.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Parameterization/MeshDijkstra.h"
 
 class UProceduralMeshComponent;
@@ -18,33 +20,7 @@ struct FProcMeshTangent;
 class AProjectSliceCharacter;
 
 #pragma region Utilities
-
-bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
-{
-	if (!IsValid(actorToTest)) return false;
-
-	bool bFoundPoint = false;
-
-	TArray<UActorComponent*> outComps;
-	actorToTest->GetComponents(UMeshComponent::StaticClass(), outComps, true);
-    
-	for (UActorComponent* currentComp : outComps)
-	{
-		if (UMeshComponent* meshComp = Cast<UMeshComponent>(currentComp))
-		{
-			FVector currentPoint;
-			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
-
-			if (currentDist >= 0 )
-			{
-				outClosestPoint = currentPoint;
-				bFoundPoint = true;
-			}
-		}
-	}
-    
-	return bFoundPoint;
-}
+//------------------
 
 FVector UPSFl::ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug )
 {
@@ -77,6 +53,25 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 	}
 	return clampedVel;
 }
+
+float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
+{
+	if(!IsValid(comp)) return 1.0f;
+	
+	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
+
+	const float output = ((comp->GetMass() * comp->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / comp->GetComponentScale().Length());
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s output %f"),__FUNCTION__, *comp->GetName(),output);
+	
+	return output ;
+
+}
+
+//------------------
+#pragma endregion Utilities
+
+#pragma region Camera
+//------------------
 
 FVector UPSFl::GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, const FVector2D moveInput)
 {
@@ -136,20 +131,22 @@ FVector UPSFl::GetWorldPointInFrontOfCamera(const APlayerController* const Playe
 	return FVector::ZeroVector; // Return zero vector if conversion fails
 }
 
-float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
+void UPSFl::ShakeCamera(const UWorld* const world, const TSubclassOf<class UCameraShakeBase>& shake, const float& scale)
 {
-	if(!IsValid(comp)) return 1.0f;
+	if(!IsValid(world) || !IsValid(shake)) return;
 	
-	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
-
-	const float output = ((comp->GetMass() * comp->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / comp->GetComponentScale().Length());
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s output %f"),__FUNCTION__, *comp->GetName(),output);
+	APlayerController* playerController =  UGameplayStatics::GetPlayerController(world, 0);
+	if(!IsValid(playerController)) return;
 	
-	return output ;
-
+	playerController->ClientStartCameraShake(shake, scale);
 }
 
-#pragma endregion Utilities
+//------------------
+#pragma endregion Camera
+
+#pragma region Detection
+//------------------
+
 
 FCollisionQueryParams UPSFl::CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject)
 {
@@ -359,6 +356,37 @@ void UPSFl::SweepConeMultiByChannel(
             ConeAngleRadians, ConeAngleRadians, 8, FColor::Green, false, 5.0f);
     }
 }
+
+
+bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint)
+{
+	if (!IsValid(actorToTest)) return false;
+
+	bool bFoundPoint = false;
+
+	TArray<UActorComponent*> outComps;
+	actorToTest->GetComponents(UMeshComponent::StaticClass(), outComps, true);
+    
+	for (UActorComponent* currentComp : outComps)
+	{
+		if (UMeshComponent* meshComp = Cast<UMeshComponent>(currentComp))
+		{
+			FVector currentPoint;
+			const float currentDist = meshComp->GetClosestPointOnCollision(fromWorldLocation, currentPoint);
+
+			if (currentDist >= 0 )
+			{
+				outClosestPoint = currentPoint;
+				bFoundPoint = true;
+			}
+		}
+	}
+    
+	return bFoundPoint;
+}
+
+	//------------------
+#pragma endregion Detection
 
 #pragma region Cooldown
 //------------------

@@ -56,6 +56,17 @@ enum class EPointedObjectType : uint8
 	ENEMY = 3 UMETA(DisplayName = "Enemy")
 };
 
+UENUM(BlueprintType)
+enum class EPlayerScreenShakeType : uint8
+{
+	GLASSES = 0 UMETA(DisplayName = "Glasses"),
+	SHOOT = 1 UMETA(DisplayName = "Shoot"),
+	DASH = 2 UMETA(DisplayName = "Dash"),
+	SLIDE = 4 UMETA(DisplayName = "Slide"),
+	FORCE = 5 UMETA(DisplayName = "Force"),
+	LANDING = 6 UMETA(DisplayName = "Landing")
+};
+
 const TArray<FName> ScrewSocketNames = { SOCKET_SCREW_INDEX, SOCKET_SCREW_MIDDLE, SOCKET_SCREW_PINKY, SOCKET_SCREW_RING };
 
 //__________________________________________________

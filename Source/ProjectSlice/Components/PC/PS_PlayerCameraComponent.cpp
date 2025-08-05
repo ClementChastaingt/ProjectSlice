@@ -105,33 +105,46 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 #pragma region CameraShake
 //------------------
 
-void UPS_PlayerCameraComponent::GlassesCameraShake()
+void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeType)
 {
 	if(!IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
+
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
 	
-	//Idle or Walk
-	const float playerVel =  _PlayerCharacter->GetVelocity().Length();
-	const int32 shakeIndex = playerVel >_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed / 2;
-	
-	if(CameraShakeGlasses.IsValidIndex(shakeIndex) && !GetWorld()->GetTimerManager().IsTimerActive(_ShakeTimerHandle))
+	if (shakeType == EPlayerScreenShakeType::GLASSES)
 	{
-		if(!IsValid(CameraShakeGlasses[shakeIndex])) return;
-		_PlayerController->ClientStartCameraShake(CameraShakeGlasses[shakeIndex]);
+		if (_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
+		
+		//Idle or Walk
+		const float playerVel = _PlayerCharacter->GetVelocity().Length();
+		const float index = playerVel < 50.0f ? 0 : 1;
+		const float alphaScale = index ? 1.0f : UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 1.0f);
+
+		if (!GlassesCameraShakes.IsValidIndex(index) || !IsValid(GlassesCameraShakes[index])) return;
+		
+		_PlayerController->ClientStartCameraShake(GlassesCameraShakes[index], alphaScale);
 	}
 	else
 	{
-		return;
+		TSubclassOf<class UCameraShakeBase>* cameraShake = CameraShakes.Find(shakeType);
+		if (cameraShake == nullptr || !IsValid(cameraShake->Get())) return;
+	
+		//Idle or Walk
+		const float playerVel =  _PlayerCharacter->GetVelocity().Length();
+		const float alphaScale = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 1.0f);
+	
+		_PlayerController->ClientStartCameraShake(*cameraShake, alphaScale);
 	}
-	
-	//Reset timer
-	const UCameraShakeBase* shakeParams =Cast<UCameraShakeBase>(CameraShakeGlasses[shakeIndex].GetDefaultObject());
-	
-	float shakeDuration = 0.5f;
-	if(IsValid(shakeParams) && shakeParams->GetCameraShakeDuration().IsFixed())
-		shakeDuration = shakeParams->GetCameraShakeDuration().Get();
 		
-	FTimerDelegate walkTimerDelegate;
-	GetWorld()->GetTimerManager().SetTimer(_ShakeTimerHandle, walkTimerDelegate, shakeDuration, false);
+	//Reset timer
+	// const UCameraShakeBase* shakeParams =Cast<UCameraShakeBase>(GlassesCameraShake[shakeIndex].GetDefaultObject());
+	//
+	// float shakeDuration = 0.5f;
+	// if(IsValid(shakeParams) && shakeParams->GetCameraShakeDuration().IsFixed())
+	// 	shakeDuration = shakeParams->GetCameraShakeDuration().Get();
+	// 	
+	// FTimerDelegate walkTimerDelegate;
+	// GetWorld()->GetTimerManager().SetTimer(_ShakeTimerHandle, walkTimerDelegate, shakeDuration, false);
 	
 	
 }
@@ -396,7 +409,7 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 			
 			//Start WBP_Glasses 
 			OnTriggerGlasses.Broadcast(true);
-			GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+			//GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
 		}
 
 		//Launch post process blend if needed
@@ -443,7 +456,7 @@ void UPS_PlayerCameraComponent::OnStopGlasses()
 
 	//Stop WBP_Glasses after Transition delay 
 	OnTriggerGlasses.Broadcast(false);
-	GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
+	//GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
 		
 }
 
@@ -527,7 +540,7 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	}
 
 	//CameraShake
-	GlassesCameraShake();
+	ShakeCamera(EPlayerScreenShakeType::GLASSES);
 	
 }
 

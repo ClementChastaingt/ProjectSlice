@@ -45,6 +45,7 @@ public:
 	 */
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
 
+	//------------------
 #pragma endregion Utilities
 
 #pragma region Camera
@@ -73,6 +74,9 @@ public:
 	 * @return the screen center point world location 
 	*/
 	static FVector GetWorldPointInFrontOfCamera(const APlayerController* PlayerController, float Distance);
+
+	static void ShakeCamera(const UWorld* world, const TSubclassOf<class UCameraShakeBase>& shake, const float& scale = 0.0f);
+
 
 	//------------------
 #pragma endregion Camera
@@ -150,6 +154,7 @@ public:
 */
 	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
 
+	//------------------
 #pragma endregion Detection
 
 #pragma region Cooldown

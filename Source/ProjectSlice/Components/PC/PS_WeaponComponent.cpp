@@ -559,8 +559,7 @@ void UPS_WeaponComponent::TurnRackTarget()
 void UPS_WeaponComponent::AdaptSightMeshBound()
 {
 	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
-
-	UE_LOG(LogTemp, Log, TEXT("_LastSightTarget %s, _SightTarget %s"), *_LastSightTarget.ToString(), *_SightTarget.ToString());
+	
 	if (_LastSightTarget.Equals(_SightTarget, 1.0f)) return;
 
 	//Init work var
@@ -655,20 +654,20 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 
 		SightMesh->SetWorldScale3D(NewScale);
 	}
-
-	/* TODO :: WIP not working well for the moment */
+	
 	// Compensation de visée (triangle reste centré même si visée excentrée)
-	// float RotationOffsetDeg = UPSFL_GeometryScript::ComputeAdjustedAimRotation(
-	// 	_SightHitResult.ImpactPoint,
-	// 	MuzzleLoc,
-	// 	OutDatas.OutHullLeft,
-	// 	OutDatas.OutHullRight,
-	// 	OutDatas.OutProjectionFrame
-	// );
-	// FRotator AdjustedRot = SightMesh->GetComponentRotation();
-	// AdjustedRot.Yaw += RotationOffsetDeg;
-	// SightMesh->SetWorldRotation(AdjustedRot);
+	FRotator LookRot = UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
+		MuzzleLoc,
+		OutDatas.OutCenter3D,
+		_SightHitResult.ImpactPoint,
+		OutDatas.OutProjectionFrame,
+		1.0f // ← si tu veux corriger à 100%
+	);
 
+	LookRot.Roll = SightMesh->GetComponentRotation().Roll; // garde Roll intact pr TurnRack()
+	SightMesh->SetWorldRotation(LookRot);
+
+	//Debug
 	if (bDebugRackBoundAdaptation)
 	{
 		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);

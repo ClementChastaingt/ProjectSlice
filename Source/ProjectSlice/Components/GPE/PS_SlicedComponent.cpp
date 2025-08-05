@@ -106,7 +106,6 @@ void UPS_SlicedComponent::InitComponent()
 	GetBodyInstance()->WakeInstance();
 }
 
-
 void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
@@ -127,12 +126,25 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	
 	//Cooldown
 	float currentTime = GetWorld()->GetTimeSeconds();
-	if (currentTime - _LastImpactSoundTime < _ImpactSoundCooldown) return;
-	_LastImpactSoundTime = currentTime;
+	if (currentTime - _LastImpactTime < _ImpactCooldown) return;
+	_LastImpactTime = currentTime;
 	
-	// Try and play the sound if specified
+	// Try play sound if specified
 	const float alpha = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeSound.Min, VelocityRangeSound.Max, 0.0f, 1.0f);
 	_LastImpactFeedbackForce = FMath::InterpStep(0,4,alpha,5);
+	ImpactSoundFeedback(Hit, alpha);
+	
+	//Try and play camera shake if specified
+	ImpactCameraFeedback(alpha);
+	
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f,alpha %f, _LastImpactFeedbackForce %i, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength,alpha, _LastImpactFeedbackForce, extent, objectMassScaled);
+
+	//Callback
+	OnSlicedObjectHitEvent.Broadcast();
+}
+
+void UPS_SlicedComponent::ImpactSoundFeedback(const FHitResult& Hit, const float& alpha)
+{
 	if (IsValid(CrashSound))
 	{
 		FVector loc = GetComponentLocation();
@@ -151,14 +163,14 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 			_CollideAudio->SetIntParameter(FName("Intensity"), _LastImpactFeedbackForce);
 			_CollideAudio->Play();
 		}
-
 	}
-	
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f,alpha %f, _LastImpactFeedbackForce %i, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength,alpha, _LastImpactFeedbackForce, extent, objectMassScaled);
-
-	//Callback
-	OnSlicedObjectHitEvent.Broadcast();
 }
+
+void UPS_SlicedComponent::ImpactCameraFeedback(const float& alpha)
+{
+}
+
+
 
 
 
