@@ -336,13 +336,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
 	FFloatInterval ShakeFrequency = FFloatInterval(5.0f, 30.0f);
 
-	//Interp Pitch from X to Y by input time 
+	//Interp Rot  by input time 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	FVector2D RangePitch = FVector2D(10.0f, 2.0f);
+	FRotator MinRotRange = FRotator(0.0f, 0.0f, 10.0f);
 
-	//Interp Forward mouvement from X to Y by input time 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
-	FVector2D RangeForward = FVector2D(0.0f, 0.25f);
+	FRotator MaxRotRange = FRotator(0.0f, 0.0f, 2.0f);
+
+	//Interp mouvement by input time 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	FVector MinLocRange = FVector(0.0f, 0.f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Hand")
+	FVector MaxLocRange = FVector(0.4f, 0.0f, 0.0f);
 
 private:
 	UPROPERTY(Transient)

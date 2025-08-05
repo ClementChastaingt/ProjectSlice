@@ -396,17 +396,16 @@ void UPS_ProceduralAnimComponent::HandShake(const float deltaTime)
 	float alphaSin = (FMath::Sin(_HandShakeTime * frequency) + 1.0f) * 0.5f;
 	
 	//Random
-	//const float rangePitch = UKismetMathLibrary::RandomFloatInRange(0.1,2.0);
-	const float rangePitch = FMath::Lerp(RangePitch.X,RangePitch.Y,alphaFrequency);
-	const float rangeX = FMath::Lerp(RangeForward.X,RangeForward.Y,alphaFrequency);
+	const FRotator rangeRot = FMath::Lerp(MinRotRange,MaxRotRange,alphaFrequency);
+	const FVector rangeLoc = FMath::Lerp(MinLocRange,MaxLocRange,alphaFrequency);
 	
 	// Interpolate between two positions
-	FRotator StartRot = FRotator(-rangePitch, 0, 0);
-	FRotator EndRot = FRotator(rangePitch, 0, 0);
+	FRotator StartRot = rangeRot.GetInverse();
+	FRotator EndRot = rangeRot;
 	HandRotOffset = UKismetMathLibrary::RLerp(StartRot, EndRot, alphaSin, true);
 
-	FVector StartLoc = FVector(-rangeX,0, 0);
-	FVector EndLot = FVector(rangeX, 0, 0);
+	FVector StartLoc = -rangeLoc;
+	FVector EndLot = rangeLoc;
 	HandLocOffset = UKismetMathLibrary::VLerp(StartLoc, EndLot, alphaSin);
 	
 	if(bDebugForcePush)UE_LOG(LogTemp, Log, TEXT("%S :: frequency %f, _HandShakeTime %f, HandRotOffset %f, alpha %f"),__FUNCTION__, frequency, _HandShakeTime,HandRotOffset.Pitch, alphaSin);

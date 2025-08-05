@@ -1645,7 +1645,6 @@ float UPSFL_GeometryScript::CalculateVelocityBiasedVertexCost(const FDynamicMesh
 //------------------
 
 
-
 // Simple 2D convex hull (Andrew’s monotone chain algorithm)
 static void ComputeConvexHull2D(const TArray<FVector2d>& Points, TArray<int32>& OutHullIndices)
 {
@@ -1723,7 +1722,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		ProjectedPoints2D.Add(FVector2d(Proj.X, Proj.Y));
 		ProjectedPoints3D.Add(WorldPos);
 
-		DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 2.0f, 5.0f);
+		DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 0.5f);
 	}
 
 	if (ProjectedPoints2D.Num() < 2) return 0.f;
@@ -1791,28 +1790,6 @@ float UPSFL_GeometryScript::ComputeAdjustedAimRotation(
 	const FFrame3d& ProjectionFrame
 )
 {
-	// // Projection 2D des points
-	// FVector2d Impact2D = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
-	// FVector2d Muzzle2D = FVector2d(ProjectionFrame.ToPlane(MuzzleLoc));
-	//
-	// // Ratio du point visé entre gauche/droite (0.0 = gauche, 1.0 = droite)
-	// double TotalWidth = FVector2d::Distance(HullLeft, HullRight);
-	// if (TotalWidth < KINDA_SMALL_NUMBER)
-	// 	return 0.f;
-	//
-	// double HitToLeft = FVector2d::Distance(HullLeft, Impact2D);
-	// double HitRatio = FMath::Clamp(HitToLeft / TotalWidth, 0.0, 1.0);
-	//
-	// // Converti en offset de rotation (centré = 0)
-	// double CenterRatio = 0.5;
-	// double Deviation = HitRatio - CenterRatio;
-	//
-	// // Angle max de compensation (ajustable selon perception)
-	// const double MaxAngleDeg = 15.0;
-	// double AngleOffsetDeg = -Deviation * 2.0 * MaxAngleDeg;
-	//
-	// return AngleOffsetDeg;
-
 	// Convert impact point in the projected 2D space
 	FVector2d ProjImpact = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
 	float MinX = HullLeft.X;
@@ -1823,14 +1800,13 @@ float UPSFL_GeometryScript::ComputeAdjustedAimRotation(
 	double Deviation = (ProjImpact.X - CenterX) / (MaxX - MinX);
 	Deviation = FMath::Clamp(Deviation, -1.0, 1.0);
 
-	const double MaxAngleDeg = 5.0;
+	const double MaxAngleDeg = 15.0;
 	double AngleOffsetDeg = -Deviation * 2.0 * MaxAngleDeg;
 
 	return FMath::Clamp(AngleOffsetDeg, -MaxAngleDeg, MaxAngleDeg);
 }
 
-
-
+//------------------
 #pragma endregion HullBounds
 	
 	

@@ -87,7 +87,7 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	dir.Normalize();
 	
 	//FVector start = _CurrentPushHitResult.Location;
-	FVector start = _PlayerCharacter->GetWeaponComponent()->GetSightTarget();
+	FVector start = _PlayerCharacter->GetWeaponComponent()->GetLaserTarget();
 	
 	const FVector pushTargetLoc = start + dir * -10.0f;
 
@@ -133,8 +133,8 @@ void UPS_ForceComponent::ReleasePush()
 			|| !IsValid(_CurrentPushHitResult.GetComponent())
 			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
 
-		UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
-		DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
+		//UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
+		//DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
 	}
 	
 	//Setup force var
