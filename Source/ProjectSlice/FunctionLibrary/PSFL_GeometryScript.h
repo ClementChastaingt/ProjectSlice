@@ -126,7 +126,6 @@ inline uint32 GetTypeHash(const FPathCacheKey& Key)
 //------------------
 #pragma endregion Path
 
-
 #pragma region Hull
 //------------------
 
@@ -159,12 +158,15 @@ struct FHullWidthOutData
 
 #pragma endregion Hull
 
-
 UCLASS()
 class PROJECTSLICE_API UPSFL_GeometryScript : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
+#pragma region Projection
+	//------------------
+
+	
 public:
 	static void ComputeGeodesicPath(UMeshComponent* meshComp, const FVector& startPoint, const FVector& endPoint, TArray<FVector>& outPoints,const bool bDebug = false, const bool bDebugPoint = false);
 
@@ -284,6 +286,9 @@ private:
 	static float CalculateVelocityBiasedVertexCost(const FDynamicMesh3& Mesh, int32 FromVertexID, int32 ToVertexID, const FVector3d& velocity, float velocityInfluence = 0.5f);
 
 #pragma endregion Velocity
+	
+	//------------------
+#pragma endregion Projection
 
 #pragma region HullBounds
 	//------------------
@@ -294,8 +299,12 @@ public:
     // Used to scale a visual triangle from muzzle to projected edges
 	static float ComputeProjectedHullWidth(UMeshComponent* MeshComponent, const FVector& ViewDirection, const FVector& SightHitPoint, FHullWidthOutData& OutDatas, bool bDebug);
 	
-	static float ComputeAdjustedAimRotation(const FVector& ImpactPoint, const FVector& MuzzleLoc, const FVector2d& HullLeft, const FVector2d& HullRight, const FFrame3d& ProjectionFrame);
+	static FRotator ComputeAdjustedAimDeltaRotator(const FVector& MuzzleLoc, const FVector& HullCenter3D, const FVector& ImpactPoint, const FFrame3d& ProjectionFrame);
+	
+	static FRotator ComputeAdjustedAimLookAt(const FVector& MuzzleLoc, const FVector& HullCenter3D, const FVector& ImpactPoint, const FFrame3d& ProjectionFrame, float BlendAlpha);
 
+	static FRotator ComputeAdjustedAimLookAt_Relative(const FVector& MuzzleWorldLoc, const FVector& HullCenterWorld,
+		const FVector& ImpactWorld, const FTransform& MuzzleTransform);
 
 	//------------------
 #pragma endregion HullBounds

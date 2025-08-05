@@ -612,6 +612,7 @@ void UPS_WeaponComponent::AdaptSightMeshBound()
 
 void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp)
 {
+	//Calcul du hull
 	FHullWidthOutData OutDatas = FHullWidthOutData();
 	double Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		meshComp,
@@ -620,15 +621,11 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 		OutDatas,
 		bDebugRackBoundAdaptation
 	);
-	//TODO :: Temp Fix 
-	Width = Width * ProjectedAdaptationWeigth.X;
 
 	// Project muzzle and center into same 2D frame
 	FVector2d ProjMuzzle = FVector2d(OutDatas.OutProjectionFrame.ToPlane(MuzzleLoc));
 	FVector2d ProjCenter = FVector2d(OutDatas.OutProjectionFrame.ToPlane(OutDatas.OutCenter3D));
-
 	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
-	Length = Length * ProjectedAdaptationWeigth.Y;
 
 	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
 	{
@@ -656,16 +653,18 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 	}
 	
 	// Compensation de visée (triangle reste centré même si visée excentrée)
-	FRotator LookRot = UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
+	FRotator DeltaAim = UPSFL_GeometryScript::ComputeAdjustedAimLookAt_Relative(
 		MuzzleLoc,
 		OutDatas.OutCenter3D,
 		_SightHitResult.ImpactPoint,
-		OutDatas.OutProjectionFrame,
-		1.0f // ← si tu veux corriger à 100%
+		this->GetComponentTransform()  // Transform du Muzzle
 	);
 
-	LookRot.Roll = SightMesh->GetComponentRotation().Roll; // garde Roll intact pr TurnRack()
-	SightMesh->SetWorldRotation(LookRot);
+	// Application en relatif
+	FRotator FinalRot = FRotator::ZeroRotator;
+	FinalRot += DeltaAim;
+	FinalRot.Roll = SightMesh->GetRelativeRotation().Roll; // conserve ton rack turn
+	SightMesh->SetRelativeRotation(FinalRot);
 
 	//Debug
 	if (bDebugRackBoundAdaptation)

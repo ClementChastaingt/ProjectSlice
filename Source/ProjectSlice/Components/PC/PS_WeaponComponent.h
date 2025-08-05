@@ -380,10 +380,6 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);
-
-	//Projected Adaptation Width && Length weight
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
-	FVector2D ProjectedAdaptationWeigth = FVector2D(0.5f, 1.0f);
 	
 #pragma endregion Adaptation
 

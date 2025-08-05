@@ -11,10 +11,15 @@
 //Hull
 #include "CompGeom/ConvexHull2.h"
 #include "Algo/Reverse.h"
+#include "Kismet/KismetMathLibrary.h"
 
 using namespace UE::Geometry;
 
 class UProceduralMeshComponent;
+
+#pragma region Projection
+//------------------
+
 
 bool UPSFL_GeometryScript::ProjectPointToMeshSurface(const FDynamicMesh3& Mesh, const FDynamicMeshAABBTree3& Spatial, 
 	const FVector3d& Point, FVector3d& OutProjectedPoint, int32& OutTriangleID)
@@ -1641,6 +1646,10 @@ float UPSFL_GeometryScript::CalculateVelocityBiasedVertexCost(const FDynamicMesh
 //------------------
 #pragma endregion Velocity
 
+//------------------
+
+#pragma endregion Projection
+
 #pragma region HullBounds
 //------------------
 
@@ -1781,31 +1790,99 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 	return FMath::Sqrt(MaxDistSq);
 }
 
-// Calcule un angle de rotation latéral à appliquer à la sight mesh
-float UPSFL_GeometryScript::ComputeAdjustedAimRotation(
-	const FVector& ImpactPoint,
+// Calcule un angle de rotation latéral && vertical à appliquer au sight mesh
+FRotator UPSFL_GeometryScript::ComputeAdjustedAimDeltaRotator(
 	const FVector& MuzzleLoc,
-	const FVector2d& HullLeft,
-	const FVector2d& HullRight,
-	const FFrame3d& ProjectionFrame
-)
+	const FVector& HullCenter3D,
+	const FVector& ImpactPoint,
+	const FFrame3d& ProjectionFrame)
 {
-	// Convert impact point in the projected 2D space
-	FVector2d ProjImpact = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
-	float MinX = HullLeft.X;
-	float MaxX = HullRight.X;
-	float CenterX = (MinX + MaxX) * 0.5;
+	// Étape 1 : Projection dans le plan 2D local (XY du FFrame3d)
+	FVector2d Muzzle2D  = FVector2d(ProjectionFrame.ToPlane(MuzzleLoc));
+	FVector2d Center2D  = FVector2d(ProjectionFrame.ToPlane(HullCenter3D));
+	FVector2d Impact2D  = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
 
-	// Normalized deviation [-1, +1]
-	double Deviation = (ProjImpact.X - CenterX) / (MaxX - MinX);
-	Deviation = FMath::Clamp(Deviation, -1.0, 1.0);
+	// Étape 2 : Vecteurs directionnels projetés
+	FVector2d DirIdeal = (Center2D - Muzzle2D).GetSafeNormal();  // vers le centre
+	FVector2d DirReal  = (Impact2D - Muzzle2D).GetSafeNormal();  // vers l’impact
 
-	const double MaxAngleDeg = 15.0;
-	double AngleOffsetDeg = -Deviation * 2.0 * MaxAngleDeg;
+	// Étape 3 : Reprojection en espace 3D
+	FVector Ideal3D = (FVector)(ProjectionFrame.FromPlaneUV(DirIdeal));
+	FVector Real3D  = (FVector)(ProjectionFrame.FromPlaneUV(DirReal));
 
-	return FMath::Clamp(AngleOffsetDeg, -MaxAngleDeg, MaxAngleDeg);
+	// Étape 4 : Rotation des deux vecteurs
+	FRotator RotIdeal = Ideal3D.Rotation();
+	FRotator RotReal  = Real3D.Rotation();
+
+	// Étape 5 : Calcul du delta
+	FRotator DeltaRot = RotReal - RotIdeal;
+
+	// Étape 6 : Clamp (sécurité pour éviter le flapping)
+	DeltaRot.Pitch = FMath::Clamp(DeltaRot.Pitch, -15.f, 15.f);
+	DeltaRot.Yaw   = FMath::Clamp(DeltaRot.Yaw, -15.f, 15.f);
+	DeltaRot.Roll  = 0.f;
+
+	return DeltaRot;
 }
 
+
+// Calcule un angle de rotation latéral && vertical à appliquer au sight mesh
+FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
+	const FVector& MuzzleLoc,
+	const FVector& HullCenter3D,
+	const FVector& ImpactPoint,
+	const FFrame3d& ProjectionFrame,
+	float BlendAlpha // 0 = center, 1 = impact
+)
+{
+	// Projette les points dans le plan
+	FVector2d ProjMuzzle = FVector2d(ProjectionFrame.ToPlane(MuzzleLoc));
+	FVector2d ProjImpact = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
+	FVector2d ProjCenter = FVector2d(ProjectionFrame.ToPlane(HullCenter3D));
+
+	// Direction blendée entre impact réel et le centre de l’objet
+	FVector2d Dir = FMath::Lerp(ProjCenter - ProjMuzzle, ProjImpact - ProjMuzzle, BlendAlpha).GetSafeNormal();
+
+	// Retourne la rotation 3D associée dans le repère monde
+	FVector AimTarget3D = ProjectionFrame.FromPlaneUV(ProjMuzzle + Dir * 100); // peu importe la distance ici
+	return UKismetMathLibrary::FindLookAtRotation(MuzzleLoc, AimTarget3D);
+}
+
+FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt_Relative(
+	const FVector& MuzzleWorldLoc,
+	const FVector& HullCenterWorld,
+	const FVector& ImpactWorld,
+	const FTransform& MuzzleTransform)
+{
+	// Étape 1 : Calcule la direction idéale (vers le centre de l'objet)
+	FVector DirToCenter = (HullCenterWorld - MuzzleWorldLoc).GetSafeNormal();
+
+	// Étape 2 : Calcule la direction réelle (vers le point d'impact visé)
+	FVector DirToImpact = (ImpactWorld - MuzzleWorldLoc).GetSafeNormal();
+
+	// Étape 3 : Transforme ces vecteurs dans le repère local du canon
+	FVector LocalDirToCenter  = MuzzleTransform.InverseTransformVectorNoScale(DirToCenter);
+	FVector LocalDirToImpact  = MuzzleTransform.InverseTransformVectorNoScale(DirToImpact);
+
+	// Étape 4 : Calcul des rotateurs relatifs
+	FRotator RotToCenter = LocalDirToCenter.Rotation();
+	FRotator RotToImpact = LocalDirToImpact.Rotation();
+
+	// Étape 5 : Calcul du delta (le "décalage" à appliquer)
+	FRotator DeltaRot = RotToImpact - RotToCenter;
+
+	// Inversion pour recentrage visuel (effet miroir)
+	DeltaRot.Pitch *= -1.f;
+	DeltaRot.Yaw   *= -1.f;
+	DeltaRot.Roll   = 0.f;
+
+	// Clamp de sécurité (évite le flipping)
+	DeltaRot.Pitch = FMath::Clamp(DeltaRot.Pitch, -15.f, 15.f);
+	DeltaRot.Yaw   = FMath::Clamp(DeltaRot.Yaw,   -15.f, 15.f);
+	DeltaRot.Roll  = 0.f;
+
+	return DeltaRot;
+}
 //------------------
 #pragma endregion HullBounds
 	

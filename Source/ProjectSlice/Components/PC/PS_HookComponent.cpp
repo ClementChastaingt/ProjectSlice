@@ -496,17 +496,18 @@ void UPS_HookComponent::WrapCableAddByLast()
 	if (!currentTraceCableWrap.OutHit.bBlockingHit || !IsValid(currentTraceCableWrap.OutHit.GetComponent())) return;
 	
 	// Create intermediate points
-	const int32 lastIndexCablePoint = CableCapArray.Num() - 1;
-	if (CableCapArray.IsValidIndex(lastIndexCablePoint))
-	{		
-		GenerateIntermediatePoint(CableCapArray[lastIndexCablePoint]->GetComponentLocation(), currentTraceCableWrap.OutHit.Location, currentTraceCableWrap, bReverseLoc);
-	}
-	else if (lastIndexCablePoint < 0)
-	{
-		//Create end point
-		CreateNewCablePointByLast(lastCable, currentTraceCableWrap);
-	}
+	// const int32 lastIndexCablePoint = CableCapArray.Num() - 1;
+	// if (CableCapArray.IsValidIndex(lastIndexCablePoint))
+	// {		
+	// 	GenerateIntermediatePoint(CableCapArray[lastIndexCablePoint]->GetComponentLocation(), currentTraceCableWrap.OutHit.Location, currentTraceCableWrap, bReverseLoc);
+	// }
+	// else if (lastIndexCablePoint < 0)
+	// {
+	// 	//Create end point
+	// 	CreateNewCablePointByLast(lastCable, currentTraceCableWrap);
+	// }
 	
+	CreateNewCablePointByLast(lastCable, currentTraceCableWrap);
 }
 
 void UPS_HookComponent::CreateNewCablePointByLast(UCableComponent* const lastCable,const FSCableWrapParams& currentTraceCableWrap)
