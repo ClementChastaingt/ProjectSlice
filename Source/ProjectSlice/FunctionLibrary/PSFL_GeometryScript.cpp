@@ -1731,7 +1731,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		ProjectedPoints2D.Add(FVector2d(Proj.X, Proj.Y));
 		ProjectedPoints3D.Add(WorldPos);
 
-		DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 0.5f);
+		DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 0.01f);
 	}
 
 	if (ProjectedPoints2D.Num() < 2) return 0.f;
@@ -1783,7 +1783,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 	// Debug visualisation
 	if (bDebug && MeshComponent->GetWorld())
 	{
-		DrawDebugPoint(MeshComponent->GetWorld(), OutDatas.OutCenter3D, 20.f, FColor::Blue, false, 2.0f, 5.0f);
+		DrawDebugPoint(MeshComponent->GetWorld(), OutDatas.OutCenter3D, 20.f, FColor::Magenta, false, 0.2f, 5.0f);
 	}
 
 	// Retourne la largeur (distance entre les deux points extrêmes du hull)
@@ -1791,61 +1791,37 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 }
 
 // Calcule un angle de rotation latéral && vertical à appliquer au sight mesh
-FRotator UPSFL_GeometryScript::ComputeAdjustedAimDeltaRotator(
-	const FVector& MuzzleLoc,
-	const FVector& HullCenter3D,
-	const FVector& ImpactPoint,
-	const FFrame3d& ProjectionFrame)
-{
-	// Étape 1 : Projection dans le plan 2D local (XY du FFrame3d)
-	FVector2d Muzzle2D  = FVector2d(ProjectionFrame.ToPlane(MuzzleLoc));
-	FVector2d Center2D  = FVector2d(ProjectionFrame.ToPlane(HullCenter3D));
-	FVector2d Impact2D  = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
-
-	// Étape 2 : Vecteurs directionnels projetés
-	FVector2d DirIdeal = (Center2D - Muzzle2D).GetSafeNormal();  // vers le centre
-	FVector2d DirReal  = (Impact2D - Muzzle2D).GetSafeNormal();  // vers l’impact
-
-	// Étape 3 : Reprojection en espace 3D
-	FVector Ideal3D = (FVector)(ProjectionFrame.FromPlaneUV(DirIdeal));
-	FVector Real3D  = (FVector)(ProjectionFrame.FromPlaneUV(DirReal));
-
-	// Étape 4 : Rotation des deux vecteurs
-	FRotator RotIdeal = Ideal3D.Rotation();
-	FRotator RotReal  = Real3D.Rotation();
-
-	// Étape 5 : Calcul du delta
-	FRotator DeltaRot = RotReal - RotIdeal;
-
-	// Étape 6 : Clamp (sécurité pour éviter le flapping)
-	DeltaRot.Pitch = FMath::Clamp(DeltaRot.Pitch, -15.f, 15.f);
-	DeltaRot.Yaw   = FMath::Clamp(DeltaRot.Yaw, -15.f, 15.f);
-	DeltaRot.Roll  = 0.f;
-
-	return DeltaRot;
-}
-
-
-// Calcule un angle de rotation latéral && vertical à appliquer au sight mesh
 FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
 	const FVector& MuzzleLoc,
-	const FVector& HullCenter3D,
+	const FVector& HullCenter,
 	const FVector& ImpactPoint,
-	const FFrame3d& ProjectionFrame,
-	float BlendAlpha // 0 = center, 1 = impact
-)
+	const FTransform& ReferenceFrame)
 {
-	// Projette les points dans le plan
-	FVector2d ProjMuzzle = FVector2d(ProjectionFrame.ToPlane(MuzzleLoc));
-	FVector2d ProjImpact = FVector2d(ProjectionFrame.ToPlane(ImpactPoint));
-	FVector2d ProjCenter = FVector2d(ProjectionFrame.ToPlane(HullCenter3D));
+	// Tous les vecteurs dans l’espace de référence (caméra)
+	const FVector LocalMuzzle   = ReferenceFrame.InverseTransformPosition(MuzzleLoc);
+	const FVector LocalCenter   = ReferenceFrame.InverseTransformPosition(HullCenter);
+	const FVector LocalImpact   = ReferenceFrame.InverseTransformPosition(ImpactPoint);
 
-	// Direction blendée entre impact réel et le centre de l’objet
-	FVector2d Dir = FMath::Lerp(ProjCenter - ProjMuzzle, ProjImpact - ProjMuzzle, BlendAlpha).GetSafeNormal();
+	// Vecteurs directionnels
+	const FVector DirIdeal = (LocalCenter - LocalMuzzle).GetSafeNormal();
+	const FVector DirReal  = (LocalImpact - LocalMuzzle).GetSafeNormal();
 
-	// Retourne la rotation 3D associée dans le repère monde
-	FVector AimTarget3D = ProjectionFrame.FromPlaneUV(ProjMuzzle + Dir * 100); // peu importe la distance ici
-	return UKismetMathLibrary::FindLookAtRotation(MuzzleLoc, AimTarget3D);
+	FRotator RotToCenter = DirIdeal.Rotation();
+	FRotator RotToImpact = DirReal.Rotation();
+
+	// Rotation delta
+	FRotator DeltaRot = RotToImpact - RotToCenter;
+
+	// Inverse pour recentrage visuel
+	DeltaRot.Pitch *= -1.f;
+	DeltaRot.Yaw   *= -1.f;
+	DeltaRot.Roll   = 0.f;
+
+	// Clamp pour éviter les effets excessifs
+	DeltaRot.Pitch = FMath::Clamp(DeltaRot.Pitch, -15.f, 15.f);
+	DeltaRot.Yaw   = FMath::Clamp(DeltaRot.Yaw,   -15.f, 15.f);
+
+	return DeltaRot;
 }
 
 FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt_Relative(

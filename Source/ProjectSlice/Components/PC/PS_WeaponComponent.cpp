@@ -617,21 +617,20 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 	double Width = UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		meshComp,
 		ViewDir,
-		_SightHitResult.ImpactPoint,
+		_SightTarget,
 		OutDatas,
 		bDebugRackBoundAdaptation
 	);
+	Width *= ProjectedAdaptationWeigth.X;
 
 	// Project muzzle and center into same 2D frame
-	FVector2d ProjMuzzle = FVector2d(OutDatas.OutProjectionFrame.ToPlane(MuzzleLoc));
-	FVector2d ProjCenter = FVector2d(OutDatas.OutProjectionFrame.ToPlane(OutDatas.OutCenter3D));
-	float Length = FVector2d::Distance(ProjMuzzle, ProjCenter);
-
+	float Length = FVector::Distance(MuzzleLoc, _SightTarget);
 	if (!FMath::IsFinite(Width) || !FMath::IsFinite(Length) || Length < 1.f || !SightMesh->GetStaticMesh())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[SightMesh] Invalid width or length — skipping scale."));
 		return;
 	}
+	Length *= ProjectedAdaptationWeigth.Y;
 
 	//Adpat Mesh Scale
 	FVector MeshExtent = SightMesh->GetStaticMesh()->GetBounds().BoxExtent;
@@ -653,19 +652,25 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 	}
 	
 	// Compensation de visée (triangle reste centré même si visée excentrée)
-	FRotator DeltaAim = UPSFL_GeometryScript::ComputeAdjustedAimLookAt_Relative(
+	const FTransform CameraTransform = _PlayerCamera->GetComponentTransform();
+
+	//Influent hullcenter for correspond to laser pointing
+	FVector CorrectedHulCenter = FMath::Lerp(OutDatas.OutCenter3D, _LaserTarget, SightCompensationWeight);
+	//TODO :: Y quand trignale orienté en vertical // Z quand orienté en horizontal
+	//CorrectedHulCenter.Z = _SightTarget.Z;
+
+	FRotator DeltaRot = UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
 		MuzzleLoc,
-		OutDatas.OutCenter3D,
-		_SightHitResult.ImpactPoint,
-		this->GetComponentTransform()  // Transform du Muzzle
+		CorrectedHulCenter,
+		_SightTarget, //OutDatas.OutCenter3D 
+		CameraTransform // <<< ici on donne le repère camera
 	);
+	if (bDebugRackBoundAdaptation) DrawDebugPoint(GetWorld(), CorrectedHulCenter, 20.f, FColor::Cyan, false, 0.2f, 10.0f);
 
-	// Application en relatif
-	FRotator FinalRot = FRotator::ZeroRotator;
-	FinalRot += DeltaAim;
-	FinalRot.Roll = SightMesh->GetRelativeRotation().Roll; // conserve ton rack turn
-	SightMesh->SetRelativeRotation(FinalRot);
-
+	// Applique une rotation relative au muzzle (car SightMesh est attaché au Muzzle)
+	DeltaRot.Roll = SightMesh->GetRelativeRotation().Roll;
+	SightMesh->SetRelativeRotation(DeltaRot);
+	
 	//Debug
 	if (bDebugRackBoundAdaptation)
 	{
