@@ -1731,7 +1731,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 		ProjectedPoints2D.Add(FVector2d(Proj.X, Proj.Y));
 		ProjectedPoints3D.Add(WorldPos);
 
-		DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 0.01f);
+		if (bDebug) DrawDebugPoint(MeshComponent->GetWorld(), WorldPos, 20.f, FColor::Orange, false, 0.01f);
 	}
 
 	if (ProjectedPoints2D.Num() < 2) return 0.f;
