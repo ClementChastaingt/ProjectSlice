@@ -371,7 +371,7 @@ public:
 	void AdaptToProjectedHull(const FVector& MuzzleLoc, const FVector& ViewDir, UMeshComponent* meshComp);
 
 	UFUNCTION()
-	void AdaptSightMeshBound();
+	void AdaptSightMeshBound(const bool& bForce = false);
 
 protected:
 	
@@ -383,10 +383,6 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector2D ProjectedAdaptationWeigth = FVector2D(1.0f, 1.0f);
-
-	//SightCompensationWeight is the alpha use for ComputeAdjustedAimLookAt: 0.0f it use HulCenter, 1.0f LaserTarget
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation", meta=(ClampMin="0.0", UIMin="0.0", ClampMax="1.0", UIMax="1.0"))
-	float SightCompensationWeight = 0.5f;
 	
 #pragma endregion Adaptation
 

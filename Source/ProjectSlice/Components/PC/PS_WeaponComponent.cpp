@@ -439,12 +439,16 @@ void UPS_WeaponComponent::SightMeshRotation()
 		newRotation.Roll = newRoll;
 		
 		SightMesh->SetRelativeRotation(newRotation);
+		AdaptSightMeshBound(true);
 
 		if(bDebugSightRack) UE_LOG(LogTemp, Log, TEXT("%S :: StartRackRoll %f, TargetRackRoll %f, alpha %f"),__FUNCTION__,_StartRackRoll,_TargetRackRoll, alpha);
 
 		//Stop Rot
 		if(alpha >= 1 && !_bTurnRackTargetSetuped)
+		{
 			bInterpRackRotation = false;
+		}
+	
 		
 	}
 }
@@ -556,11 +560,11 @@ void UPS_WeaponComponent::TurnRackTarget()
 #pragma region Adaptation
 //------------------
 
-void UPS_WeaponComponent::AdaptSightMeshBound()
+void UPS_WeaponComponent::AdaptSightMeshBound(const bool& bForce)
 {
 	if (!IsValid(_PlayerCamera) || !IsValid(_PlayerCharacter) || !IsValid(SightMesh)) return;
 	
-	if (_LastSightTarget.Equals(_SightTarget, 1.0f)) return;
+	if (_LastSightTarget.Equals(_SightTarget, 1.0f) && !bForce) return;
 
 	//Init work var
 	FVector MuzzleLoc = GetMuzzlePosition();
@@ -653,29 +657,46 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 	
 	// Compensation de visée (triangle reste centré même si visée excentrée)
 	const FTransform CameraTransform = _PlayerCamera->GetComponentTransform();
+	
+	//Récupération du Roll local du SightMesh
+	float RollDeg = SightMesh->GetRelativeRotation().Roll;
+	RollDeg = FMath::Abs(FRotator::NormalizeAxis(RollDeg)); // On veut [0,180]
 
-	//Influent hullcenter for correspond to laser pointing
-	FVector CorrectedHulCenter = FMath::Lerp(OutDatas.OutCenter3D, _LaserTarget, SightCompensationWeight);
-	//TODO :: Y quand trignale orienté en vertical // Z quand orienté en horizontal
-	//CorrectedHulCenter.Z = _SightTarget.Z;
+	
+	// On compare avec l’axe vertical global (0,0,1)
+	FVector TriangleUp = SightMesh->GetUpVector(); // Z local en world
+	float DotUp = FVector::DotProduct(TriangleUp.GetSafeNormal(), FVector::UpVector);
 
+	// Converti dot [-1,+1] → verticalité entre 0 (horizontal) et 1 (vertical)
+	float HorizontalAlpha = FMath::Abs(DotUp); // 0 = horizontal, 1 = vertical
+	float VerticalAlpha = 1.f - HorizontalAlpha;
+
+	// Blend dynamique par axe
+	FVector BlendedHullCenter;
+	BlendedHullCenter.X = FMath::Lerp(OutDatas.OutCenter3D.X, _LaserTarget.X, VerticalAlpha);
+	BlendedHullCenter.Y = FMath::Lerp(OutDatas.OutCenter3D.Y, _LaserTarget.Y, VerticalAlpha);
+	BlendedHullCenter.Z = FMath::Lerp(OutDatas.OutCenter3D.Z, _LaserTarget.Z, HorizontalAlpha);
+
+	// Enfin, blend global si voulu (en plus du blend par axe)
 	FRotator DeltaRot = UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
 		MuzzleLoc,
-		CorrectedHulCenter,
-		_SightTarget, //OutDatas.OutCenter3D 
-		CameraTransform // <<< ici on donne le repère camera
+		BlendedHullCenter,
+		_SightTarget,
+		CameraTransform
 	);
-	if (bDebugRackBoundAdaptation) DrawDebugPoint(GetWorld(), CorrectedHulCenter, 20.f, FColor::Cyan, false, 0.2f, 10.0f);
-
-	// Applique une rotation relative au muzzle (car SightMesh est attaché au Muzzle)
-	DeltaRot.Roll = SightMesh->GetRelativeRotation().Roll;
-	SightMesh->SetRelativeRotation(DeltaRot);
 	
 	//Debug
 	if (bDebugRackBoundAdaptation)
 	{
-		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f"), __FUNCTION__, Width, Length);
+		DrawDebugPoint(GetWorld(), BlendedHullCenter, 20.f, FColor::Cyan, false, 0.2f, 10.0f);
+		DrawDebugPoint(GetWorld(), _LaserTarget, 20.f, FColor::Red, false, 0.2f, 10.0f);
+		DrawDebugPoint(GetWorld(), OutDatas.OutCenter3D, 20.f, FColor::Magenta, false, 0.2f, 10.0f);
+		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f, VerticalAlpha %f, HorizontalAlpha %f "), __FUNCTION__, Width, Length, VerticalAlpha, HorizontalAlpha); 
 	}
+
+	// Applique une rotation relative au muzzle (car SightMesh est attaché au Muzzle)
+	DeltaRot.Roll = SightMesh->GetRelativeRotation().Roll;
+	SightMesh->SetRelativeRotation(DeltaRot);
 }
 
 //------------------

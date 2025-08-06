@@ -1779,13 +1779,7 @@ float UPSFL_GeometryScript::ComputeProjectedHullWidth(
 			OutDatas.OutHullRight = A2D;
 		}
 	}
-
-	// Debug visualisation
-	if (bDebug && MeshComponent->GetWorld())
-	{
-		DrawDebugPoint(MeshComponent->GetWorld(), OutDatas.OutCenter3D, 20.f, FColor::Magenta, false, 0.2f, 5.0f);
-	}
-
+	
 	// Retourne la largeur (distance entre les deux points extrêmes du hull)
 	return FMath::Sqrt(MaxDistSq);
 }
@@ -1824,41 +1818,6 @@ FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
 	return DeltaRot;
 }
 
-FRotator UPSFL_GeometryScript::ComputeAdjustedAimLookAt_Relative(
-	const FVector& MuzzleWorldLoc,
-	const FVector& HullCenterWorld,
-	const FVector& ImpactWorld,
-	const FTransform& MuzzleTransform)
-{
-	// Étape 1 : Calcule la direction idéale (vers le centre de l'objet)
-	FVector DirToCenter = (HullCenterWorld - MuzzleWorldLoc).GetSafeNormal();
-
-	// Étape 2 : Calcule la direction réelle (vers le point d'impact visé)
-	FVector DirToImpact = (ImpactWorld - MuzzleWorldLoc).GetSafeNormal();
-
-	// Étape 3 : Transforme ces vecteurs dans le repère local du canon
-	FVector LocalDirToCenter  = MuzzleTransform.InverseTransformVectorNoScale(DirToCenter);
-	FVector LocalDirToImpact  = MuzzleTransform.InverseTransformVectorNoScale(DirToImpact);
-
-	// Étape 4 : Calcul des rotateurs relatifs
-	FRotator RotToCenter = LocalDirToCenter.Rotation();
-	FRotator RotToImpact = LocalDirToImpact.Rotation();
-
-	// Étape 5 : Calcul du delta (le "décalage" à appliquer)
-	FRotator DeltaRot = RotToImpact - RotToCenter;
-
-	// Inversion pour recentrage visuel (effet miroir)
-	DeltaRot.Pitch *= -1.f;
-	DeltaRot.Yaw   *= -1.f;
-	DeltaRot.Roll   = 0.f;
-
-	// Clamp de sécurité (évite le flipping)
-	DeltaRot.Pitch = FMath::Clamp(DeltaRot.Pitch, -15.f, 15.f);
-	DeltaRot.Yaw   = FMath::Clamp(DeltaRot.Yaw,   -15.f, 15.f);
-	DeltaRot.Roll  = 0.f;
-
-	return DeltaRot;
-}
 //------------------
 #pragma endregion HullBounds
 	

@@ -298,13 +298,8 @@ public:
     // Returns 4 corners of the convex projection hull that surrounds the mesh
     // Used to scale a visual triangle from muzzle to projected edges
 	static float ComputeProjectedHullWidth(UMeshComponent* MeshComponent, const FVector& ViewDirection, const FVector& SightHitPoint, FHullWidthOutData& OutDatas, bool bDebug);
-	
-	static FRotator ComputeAdjustedAimDeltaRotator(const FVector& MuzzleLoc, const FVector& HullCenter3D, const FVector& ImpactPoint, const FFrame3d& ProjectionFrame);
-	
-	static FRotator ComputeAdjustedAimLookAt(const FVector& MuzzleLoc, const FVector& HullCenter, const FVector& ImpactPoint, const FTransform& ReferenceFrame);
 
-	static FRotator ComputeAdjustedAimLookAt_Relative(const FVector& MuzzleWorldLoc, const FVector& HullCenterWorld,
-		const FVector& ImpactWorld, const FTransform& MuzzleTransform);
+	static FRotator ComputeAdjustedAimLookAt(const FVector& MuzzleLoc, const FVector& HullCenter, const FVector& ImpactPoint, const FTransform& ReferenceFrame);
 
 	//------------------
 #pragma endregion HullBounds
