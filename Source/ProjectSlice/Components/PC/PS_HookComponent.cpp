@@ -1445,7 +1445,7 @@ void UPS_HookComponent::PowerCablePull()
 	
 	//Check if we can start default Pull logic
 	//Check if object using physic
-	if (!_AttachedMesh->IsSimulatingPhysics()) return;
+	if (!_AttachedMesh->IsSimulatingPhysics() || _AttachedMesh->GetMobility() != EComponentMobility::Movable) return;
 	
 	//If can't Pull or Swing return
 	if(!_bCablePowerPull || _bPlayerIsSwinging) return;

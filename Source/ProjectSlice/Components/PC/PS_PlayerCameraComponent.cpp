@@ -105,7 +105,7 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 #pragma region CameraShake
 //------------------
 
-void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeType)
+void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeType, const float scale)
 {
 	if(!IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 
@@ -117,23 +117,18 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeT
 		
 		//Idle or Walk
 		const float playerVel = _PlayerCharacter->GetVelocity().Length();
-		const float index = playerVel < 50.0f ? 0 : 1;
+		const int32 index = playerVel < 50.0f ? 0 : 1;
 		const float alphaScale = index ? 1.0f : UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 1.0f);
 
-		if (!GlassesCameraShakes.IsValidIndex(index) || !IsValid(GlassesCameraShakes[index])) return;
-		
-		_PlayerController->ClientStartCameraShake(GlassesCameraShakes[index], alphaScale);
+		if (!GlassesCameraShakes.IsValidIndex(index) || GlassesCameraShakes[index] == nullptr) return;
+		UE_LOG(LogTemp, Error, TEXT("CameraShake Glasses, index %i"),index);
+		_PlayerController->ClientStartCameraShake(*GlassesCameraShakes[index], alphaScale);
 	}
 	else
 	{
 		TSubclassOf<class UCameraShakeBase>* cameraShake = CameraShakes.Find(shakeType);
-		if (cameraShake == nullptr || !IsValid(cameraShake->Get())) return;
-	
-		//Idle or Walk
-		const float playerVel =  _PlayerCharacter->GetVelocity().Length();
-		const float alphaScale = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 1.0f);
-	
-		_PlayerController->ClientStartCameraShake(*cameraShake, alphaScale);
+		if (cameraShake == nullptr) return;
+		_PlayerController->ClientStartCameraShake(*cameraShake, scale);
 	}
 		
 	//Reset timer

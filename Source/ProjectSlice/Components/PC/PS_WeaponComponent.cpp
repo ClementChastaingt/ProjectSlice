@@ -160,6 +160,9 @@ void UPS_WeaponComponent::FireTriggered()
 	}
 	else
 		SetupSliceBump();
+
+	//Callback
+	OnFireTriggeredEvent.Broadcast();
 	
 }
 
@@ -252,7 +255,7 @@ void UPS_WeaponComponent::Fire()
 	parentProcMeshComponent->SetSimulatePhysics(true);
 	
 	//Impulse
-	if(ActivateImpulseOnSlice)
+	if(ActivateImpulseOnSlice && outHalfComponent->GetMobility() == EComponentMobility::Movable) 
 	{
 		FDamageEvent damageEvent = FDamageEvent();
 		outHalfComponent->ReceiveComponentDamage(10000,damageEvent,_PlayerController,_PlayerCharacter);
@@ -361,8 +364,8 @@ void UPS_WeaponComponent::SightTick()
 		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
 
 	//Laser && Sight Target
-	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : targetLaser;
-	_SightTarget = _SightHitResult.bBlockingHit ? _SightHitResult.ImpactPoint : targetSight; 
+	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.Location : targetLaser;
+	_SightTarget = _SightHitResult.bBlockingHit ? _SightHitResult.Location : targetSight; 
 	
 	//Stop if in unauthorized slicing situation
 	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
@@ -420,6 +423,9 @@ void UPS_WeaponComponent::TurnRack()
 	_TargetRackRoll = rollTarget;
 	InterpRackRotStartTimestamp = GetWorld()->GetAudioTimeSeconds();
 	bInterpRackRotation = true;
+
+	//Callback
+	OnTurnRackEvent.Broadcast();
 	
 }
 
@@ -476,7 +482,7 @@ void UPS_WeaponComponent::SetupTurnRackTargetting()
 	_PlayerController->SetCanLook(false);
 	
 	//Trigger slowmo
-	//_PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
+	if (bRackTargetingRotToggleSlowmo) _PlayerCharacter->GetSlowmoComponent()->OnTriggerSlowmo();
 
 	//Setup work var
 	_StartRackRoll = SightMesh->GetRelativeRotation().Clamp().Roll;
@@ -582,12 +588,15 @@ void UPS_WeaponComponent::AdaptSightMeshBound(const bool& bForce)
 		SightMesh->SetWorldScale3D(DefaultAdaptationScale);
 
 		//Determine Rotation
-		// FRotator LookRot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
-		// LookRot.Roll = SightMesh->GetComponentRotation().Roll;
-		FRotator rot = FRotator::ZeroRotator;
-		rot.Roll = SightMesh->GetRelativeRotation().Roll;
-		SightMesh->SetRelativeRotation(rot);
-
+		if (!DefaultAdaptationScale.IsNearlyZero())
+		{
+			FRotator rot = FRotator::ZeroRotator;
+			if (bDefaultAdaptationAimLaserTarget)
+				rot = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc,_LaserTarget);
+			rot.Roll = SightMesh->GetRelativeRotation().Roll;
+			SightMesh->SetRelativeRotation(rot);
+		}
+		
 		if (bDebugRackBoundAdaptation) UE_LOG(LogTemp, Log, TEXT("%S :: Default"), __FUNCTION__);
 		
 		return;
@@ -673,9 +682,9 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 
 	// Blend dynamique par axe
 	FVector BlendedHullCenter;
-	BlendedHullCenter.X = FMath::Lerp(OutDatas.OutCenter3D.X, _LaserTarget.X, VerticalAlpha);
-	BlendedHullCenter.Y = FMath::Lerp(OutDatas.OutCenter3D.Y, _LaserTarget.Y, VerticalAlpha);
-	BlendedHullCenter.Z = FMath::Lerp(OutDatas.OutCenter3D.Z, _LaserTarget.Z, HorizontalAlpha);
+	BlendedHullCenter.X = FMath::Lerp(OutDatas.OutCenter3D.X, _SightTarget.X, VerticalAlpha);
+	BlendedHullCenter.Y = FMath::Lerp(OutDatas.OutCenter3D.Y, _SightTarget.Y, VerticalAlpha);
+	BlendedHullCenter.Z = FMath::Lerp(OutDatas.OutCenter3D.Z, _SightTarget.Z, HorizontalAlpha);
 
 	// Enfin, blend global si voulu (en plus du blend par axe)
 	FRotator DeltaRot = UPSFL_GeometryScript::ComputeAdjustedAimLookAt(
@@ -689,7 +698,7 @@ void UPS_WeaponComponent::AdaptToProjectedHull(const FVector& MuzzleLoc, const F
 	if (bDebugRackBoundAdaptation)
 	{
 		DrawDebugPoint(GetWorld(), BlendedHullCenter, 20.f, FColor::Cyan, false, 0.2f, 10.0f);
-		DrawDebugPoint(GetWorld(), _LaserTarget, 20.f, FColor::Red, false, 0.2f, 10.0f);
+		DrawDebugPoint(GetWorld(), _SightTarget, 20.f, FColor::Red, false, 0.2f, 10.0f);
 		DrawDebugPoint(GetWorld(), OutDatas.OutCenter3D, 20.f, FColor::Magenta, false, 0.2f, 10.0f);
 		UE_LOG(LogTemp, Log, TEXT("%S :: Geometry (2D projected), Width %f, Length %f, VerticalAlpha %f, HorizontalAlpha %f "), __FUNCTION__, Width, Length, VerticalAlpha, HorizontalAlpha); 
 	}

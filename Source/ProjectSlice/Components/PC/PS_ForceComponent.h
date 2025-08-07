@@ -26,8 +26,6 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-	
-	void UpdatePushTargetLoc();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bDebugPush = false;
@@ -40,12 +38,38 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
+protected:
+
+
 private:
 	UPROPERTY(Transient)
 	AProjectSliceCharacter* _PlayerCharacter;
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+#pragma region General
+	//------------------
+
+protected:
+	UFUNCTION()	
+	void UpdatePushTargetLoc() const;
+	
+	UFUNCTION()
+	void OnFireEventReceived();
+
+	UFUNCTION()
+	void OnFireTriggeredEventReceived();
+
+	UFUNCTION()
+	void OnToggleTurnRackTargetEventReceived(const bool bActive);
+	
+	UFUNCTION()
+	void OnTurnRackEventReceived();
+
+	//------------------
+#pragma endregion General
+
 
 #pragma region Push
 	//------------------
@@ -59,6 +83,9 @@ public:
 
 	UFUNCTION()
 	void OnPushReleasedEventReceived();
+
+	UFUNCTION()
+	void DeterminePushType();
 		
 	UFUNCTION()
 	static void SortPushTargets(const TArray<FHitResult>& hitsToSort, TArray<FHitResult>& outFilteredHitResult);
@@ -78,6 +105,9 @@ public:
 	FORCEINLINE float GetMaxPushForceTime() const{return InputMaxPushForceDuration;}
 	
 	FORCEINLINE float GetInputTimeWeightAlpha() const { return UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.0f, 1.0f);};
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetStartForceHandOffset() const{return _StartForceHandOffset;}
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FRotator GetPushForceRotation() const{return _PushForceRotation;}
@@ -153,6 +183,9 @@ private:
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	FHitResult _CurrentPushHitResult;
 
+	UPROPERTY(Transient)
+	float _AlphaInput;
+
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
 	float _PushForceWeight;
 	
@@ -167,6 +200,9 @@ private:
 
 	UPROPERTY(Transient)
 	FVector _StartForcePushLoc;
+	
+	UPROPERTY(Transient)
+	float _StartForceHandOffset;
 	
 	UPROPERTY(Transient)
 	FVector _DirForcePush;

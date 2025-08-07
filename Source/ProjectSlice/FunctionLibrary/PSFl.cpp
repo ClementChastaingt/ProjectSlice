@@ -56,7 +56,7 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 
 float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
 {
-	if(!IsValid(comp)) return 1.0f;
+	if(!IsValid(comp) || comp->GetMobility() != EComponentMobility::Movable) return 1.0f;
 	
 	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
 

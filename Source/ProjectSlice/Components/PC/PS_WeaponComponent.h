@@ -100,13 +100,15 @@ public:
 	UFUNCTION()
 	void Fire();
 
-
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnFireEvent;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnFireTriggeredEvent;
+
 protected:
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Status")
+	UPROPERTY(BlueprintReadOnly, Category="Status")
 	bool bIsHoldingFire = false;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Weapon", meta=(UIMin="0", ClampMin="0", ForceUnits="cm"))
@@ -315,6 +317,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnToggleTurnRackTargetEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnTurnRackEvent;
 	
 protected:
 	UFUNCTION()
@@ -323,7 +328,7 @@ protected:
 	UFUNCTION()
 	void RackTick();
 	
-	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
+	UPROPERTY(BlueprintReadOnly, Category="Status|Sight|Mesh")
 	bool bInterpRackRotation = false;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
@@ -331,6 +336,9 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Category="Status|Sight|Mesh")
 	FTransform RackDefaultRelativeTransform =  FTransform();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
+	bool bRackTargetingRotToggleSlowmo = false;
 
 	/** Rack Rotation interpolation params */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Sight|Move")
@@ -377,6 +385,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebugRackBoundAdaptation = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
+	bool bDefaultAdaptationAimLaserTarget = false;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Sight|Adaptation")
 	FVector DefaultAdaptationScale = FVector(10.0f, 0.5f, 0.5f);

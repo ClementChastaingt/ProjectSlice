@@ -47,6 +47,13 @@ void UPS_ForceComponent::BeginPlay()
 		_PlayerCharacter->GetProceduralAnimComponent()->OnScrewResetEnd.AddUniqueDynamic(this, &UPS_ForceComponent::OnScrewResetEndEventReceived);
 	}
 
+	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
+	{
+		_PlayerCharacter->GetWeaponComponent()->OnFireTriggeredEvent.AddUniqueDynamic(this, &UPS_ForceComponent::OnFireTriggeredEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnFireEvent.AddUniqueDynamic(this, &UPS_ForceComponent::OnFireEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnToggleTurnRackTargetEvent.AddUniqueDynamic(this, &UPS_ForceComponent::OnToggleTurnRackTargetEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnTurnRackEvent.AddUniqueDynamic(this, &UPS_ForceComponent::OnTurnRackEventReceived);
+	}
 	
 }
 
@@ -63,8 +70,10 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	UpdateImpactField();
 }
 
+#pragma region General
+//------------------
 
-void UPS_ForceComponent::UpdatePushTargetLoc()
+void UPS_ForceComponent::UpdatePushTargetLoc() const
 {
 	if(!_bIsPushLoading) return;
 	
@@ -100,6 +109,29 @@ void UPS_ForceComponent::UpdatePushTargetLoc()
 	
 }
 
+void UPS_ForceComponent::OnFireEventReceived()
+{
+	if (_bIsPushing || _bIsPushLoading) StopPush();
+}
+
+void UPS_ForceComponent::OnFireTriggeredEventReceived()
+{
+	if (_bIsPushing || _bIsPushLoading) StopPush();
+}
+
+void UPS_ForceComponent::OnToggleTurnRackTargetEventReceived(const bool bActive)
+{
+	if (_bIsPushing || _bIsPushLoading) StopPush();
+}
+
+void UPS_ForceComponent::OnTurnRackEventReceived()
+{
+	if (_bIsPushing || _bIsPushLoading) StopPush();
+}
+
+//------------------
+#pragma endregion General
+
 #pragma region Push
 //------------------
 
@@ -109,6 +141,7 @@ void UPS_ForceComponent::UnloadPush()
 	
 	_ReleasePushTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bIsPushLoading = false;
+	DeterminePushType();
 	OnPushEvent.Broadcast(_bIsPushLoading);
 }
 
@@ -121,25 +154,10 @@ void UPS_ForceComponent::ReleasePush()
 		StopPush();
 		return;
 	}
-
-	//Quick pushing check && if player target is valid, if don't do quickPush logic
-	bIsQuickPush = GetWorld()->GetAudioTimeSeconds() - _StartForcePushTimestamp <= QuickPushTimeThreshold;
-	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush %i "), bIsQuickPush);
-	if(!bIsQuickPush)
-	{
-		bIsQuickPush =
-			!_CurrentPushHitResult.bBlockingHit
-			|| !IsValid(_CurrentPushHitResult.GetActor())
-			|| !IsValid(_CurrentPushHitResult.GetComponent())
-			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
-
-		//UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
-		//DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
-	}
 	
 	//Setup force var
-	const float alphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.5f, 1.0f);
-	const float initialForce = PushForce * alphaInput;
+	_AlphaInput = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartForcePushTimestamp,_StartForcePushTimestamp + InputMaxPushForceDuration,0.5f, 1.0f);
+	const float initialForce = PushForce * _AlphaInput;
 	float mass = UPSFl::GetObjectUnifiedMass(_CurrentPushHitResult.GetComponent());
 		
 	//Determine dir
@@ -147,6 +165,7 @@ void UPS_ForceComponent::ReleasePush()
 	{
 		_DirForcePush = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector();
 		_DirForcePush.Normalize();
+		_StartForceHandOffset =  UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT), _PlayerCharacter->GetActorLocation());
 		_StartForcePushLoc = _PlayerCharacter->GetMesh()->GetSocketLocation(SOCKET_HAND_LEFT) + _DirForcePush * QuickPushStartLocOffset;
 	}
 	else
@@ -243,7 +262,7 @@ void UPS_ForceComponent::ReleasePush()
 			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
 			
-			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Impulse actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, alphaInput, duration);
+			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Impulse actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, _AlphaInput, duration);
 
 			//Increment iteration var 
 			iteration++;
@@ -260,7 +279,7 @@ void UPS_ForceComponent::ReleasePush()
 		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
 
 	//CameraShake
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EPlayerScreenShakeType::FORCE);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EPlayerScreenShakeType::FORCE, 1.0f);
 
 	//Stop push
 	StopPush();
@@ -272,6 +291,26 @@ void UPS_ForceComponent::OnPushReleasedEventReceived()
 	//Release force when screw reseting finished
 	ReleasePush();
 }
+
+void UPS_ForceComponent::DeterminePushType()
+{
+	//Quick pushing check && if player target is valid, if don't do quickPush logic
+	bIsQuickPush = GetWorld()->GetAudioTimeSeconds() - _StartForcePushTimestamp <= QuickPushTimeThreshold;
+	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush %i "), bIsQuickPush);
+	if(!bIsQuickPush)
+	{
+		bIsQuickPush =
+			!_CurrentPushHitResult.bBlockingHit
+			|| !IsValid(_CurrentPushHitResult.GetActor())
+			|| !IsValid(_CurrentPushHitResult.GetComponent())
+			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
+
+		//UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
+		//DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
+	}
+	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush02 %i "), bIsQuickPush);
+}
+
 
 void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, UPARAM(Ref) TArray<FHitResult>& outFilteredHitResult)
 {
@@ -325,10 +364,11 @@ void UPS_ForceComponent::StopPush()
 	_bIsPushing = false;
 	_bIsPushLoading = false;
 	_bIsPushReleased = true;
-	bIsQuickPush = false;
+	
+	const float duration = _AlphaInput < CoolDownDuration ? CoolDownDuration : _AlphaInput;
+	UPSFl::StartCooldown(GetWorld(),duration,_CoolDownTimerHandle);
 
-	//TODO:: Made cooldown proportional to force weight
-	UPSFl::StartCooldown(GetWorld(),CoolDownDuration,_CoolDownTimerHandle);
+	OnPushEvent.Broadcast(false);
 }
 
 //------------------

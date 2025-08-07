@@ -125,7 +125,7 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void ShakeCamera(const EPlayerScreenShakeType& shakeType);
+	void ShakeCamera(const EPlayerScreenShakeType& shakeType,const float scale = 0);
 	
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
