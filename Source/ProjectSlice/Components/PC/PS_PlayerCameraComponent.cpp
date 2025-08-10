@@ -109,7 +109,7 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeT
 {
 	if(!IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 
-	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), scale);
 	
 	if (shakeType == EPlayerScreenShakeType::GLASSES)
 	{

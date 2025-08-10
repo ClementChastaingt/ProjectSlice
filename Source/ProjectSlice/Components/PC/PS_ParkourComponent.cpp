@@ -195,15 +195,27 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 		|| _PlayerCharacter->GetHookComponent()->IsPlayerSwinging()) return;
 	
 	//Activate Only if in Air
-	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !_PlayerCharacter->bWasJumping) return;
+	if(!_PlayerCharacter->GetCharacterMovement()->IsFalling() && !_PlayerCharacter->GetCharacterMovement()->IsFlying() && !_PlayerCharacter->bWasJumping)
+	{
+		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: movement state check"), __FUNCTION__);
+		return;
+	}
 
 	//Check distance to floor
 	FFindFloorResult floorResult;
 	_PlayerCharacter->GetCharacterMovement()->FindFloor(_PlayerCharacter->GetActorLocation(), floorResult , true);
-	if (floorResult.bBlockingHit && floorResult.GetDistanceToFloor() < _PlayerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 1.5f) return;
+	if (floorResult.bBlockingHit && floorResult.GetDistanceToFloor() < _PlayerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * CapsuleHalfHeightWeightForFloorCheck)
+	{
+		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: exit by distance to floor check"), __FUNCTION__);
+		return;
+	}
 	
 	//Prevent from trigger in loop by encounter new wall
-	if (_PlayerCharacter->JumpCurrentCount == _JumpCountOnWallRunning && !_bIsWallRunning) return;
+	if (_PlayerCharacter->JumpCurrentCount == _JumpCountOnWallRunning && !_bIsWallRunning)
+	{
+		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: exit by jump count"), __FUNCTION__);
+		return;
+	}
 	
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
@@ -218,7 +230,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	}
 	else if(_PlayerToWallOrientation != playerToWallOrientation)
 	{
-		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the last wall, stop"), __FUNCTION__);
+		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: player facing the last wall, stop"), __FUNCTION__);
 		OnWallRunStop();
 		return;
 	}
@@ -266,7 +278,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 {
 	if(!_bIsWallRunning) return;
 
-	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("UTZParkourComp :: WallRun stop"));
+	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 
 	//Reset timer
 	GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
