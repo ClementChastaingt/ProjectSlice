@@ -312,7 +312,6 @@ void UPS_ForceComponent::DeterminePushType()
 	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush02 %i "), bIsQuickPush);
 }
 
-
 void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, UPARAM(Ref) TArray<FHitResult>& outFilteredHitResult)
 {
 	// Remove duplicate components

@@ -105,32 +105,32 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 #pragma region CameraShake
 //------------------
 
-void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeType, const float scale)
+void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeType, const float& scale)
 {
-	if(!IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
-
-	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), scale);
+	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
 	
-	if (shakeType == EPlayerScreenShakeType::GLASSES)
-	{
-		if (_PlayerCharacter->GetCharacterMovement()->IsFalling()) return;
-		
-		//Idle or Walk
-		const float playerVel = _PlayerCharacter->GetVelocity().Length();
-		const int32 index = playerVel < 50.0f ? 0 : 1;
-		const float alphaScale = index == 0 ? 10.0f : UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 10.0f);
+	//Find scale
+	FSShakeParams currentShakesParams = *ShakesParams.Find(shakeType);
+	
+	const float finalScale = FMath::Clamp(scale, 0.0f, 1.0f) * currentShakesParams.ShakeMaxScale;
 
-		if (!GlassesCameraShakes.IsValidIndex(index) || GlassesCameraShakes[index] == nullptr) return;
-		UE_LOG(LogTemp, Error, TEXT("CameraShake Glasses, index %i, alphaScale %f"),index, alphaScale);
-		_PlayerController->ClientStartCameraShake(*GlassesCameraShakes[index], alphaScale);
-	}
-	else
+	//Validity checks
+	if (!IsValid(currentShakesParams.CameraShake))
 	{
-		TSubclassOf<class UCameraShakeBase>* cameraShake = CameraShakes.Find(shakeType);
-		if (cameraShake == nullptr) return;
-		_PlayerController->ClientStartCameraShake(*cameraShake, scale);
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: cameraShakeInst already exist OR currentShakesParams are Invalid, return"),__FUNCTION__);
+		return;
 	}
-		
+
+	//Start shake
+	UE_LOG(LogTemp, Log, TEXT("TEXT"),  currentShakesParams.CameraShake.Get());
+	
+	UCameraShakeBase* newShake = _PlayerController->PlayerCameraManager->StartCameraShake(currentShakesParams.CameraShake, finalScale);
+	_CameraShakesInst.Add(shakeType, newShake);
+
+	//Debug
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, class %s, inst %s, scale: %f"), __FUNCTION__,
+		*UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake), *GetNameSafe(*_CameraShakesInst.Find(shakeType)), finalScale);
+
 	//Reset timer
 	// const UCameraShakeBase* shakeParams =Cast<UCameraShakeBase>(GlassesCameraShake[shakeIndex].GetDefaultObject());
 	//
@@ -141,8 +141,63 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeT
 	// FTimerDelegate walkTimerDelegate;
 	// GetWorld()->GetTimerManager().SetTimer(_ShakeTimerHandle, walkTimerDelegate, shakeDuration, false);
 	
+}
+
+void UPS_PlayerCameraComponent::StopCameraShake(const EPlayerScreenShakeType& shakeType,const bool& bImmediately)
+{
+	if(!IsValid(_PlayerController) || _CameraShakesInst.IsEmpty()) return;
+
+	// Vérification sécurisée pour _CameraShakesInst
+	UCameraShakeBase** cameraShakeInstPtr = _CameraShakesInst.Find(shakeType);
+	if (!cameraShakeInstPtr || !*cameraShakeInstPtr)
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: CameraShake instance not found for type: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	UCameraShakeBase* cameraShakeInst = *cameraShakeInstPtr;
+	if (!IsValid(cameraShakeInst)) return;
+	
+	_PlayerController->PlayerCameraManager->StopCameraShake(cameraShakeInst, bImmediately);
+
+	//Debug
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S ::  %s :: CameraShaketype: %s, inst %s"), __FUNCTION__, bImmediately ? TEXT("Immediately") :  TEXT(""),
+		*UEnum::GetValueAsString(shakeType), *GetNameSafe(cameraShakeInst));
+
+	_CameraShakesInst.Remove(shakeType);
 	
 }
+
+void UPS_PlayerCameraComponent::UpdateCameraShake(const EPlayerScreenShakeType& shakeType, const float& scale)
+{
+	if(_CameraShakesInst.IsEmpty() || ShakesParams.IsEmpty()) return;
+
+	// Vérification sécurisée pour _CameraShakesInst
+	UCameraShakeBase** cameraShakeInstPtr = _CameraShakesInst.Find(shakeType);
+	if (!cameraShakeInstPtr || !*cameraShakeInstPtr)
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: CameraShake instance not found for type: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	UCameraShakeBase* cameraShakeInst = *cameraShakeInstPtr;
+
+	// Vérification sécurisée pour ShakesParams
+	FSShakeParams* currentShakeParamsPtr = ShakesParams.Find(shakeType);
+	if (!currentShakeParamsPtr)
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: ShakeParams not found for type: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	FSShakeParams currentShakeParams = *currentShakeParamsPtr;
+	
+	if (!IsValid(cameraShakeInst)) return;
+	
+	cameraShakeInst->ShakeScale = FMath::Clamp(scale, 0.0f, 1.0f) * currentShakeParams.ShakeMaxScale;
+
+	if (bDebugCameraShake)
+		UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, inst %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *GetNameSafe(cameraShakeInst), cameraShakeInst->ShakeScale );
+
+}
+
 //------------------
 #pragma endregion CameraShake
 
@@ -402,10 +457,14 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 			if(_WeightedBlendableArray.IsValidIndex(2)) _WeightedBlendableArray[2].Weight = 1.0f;		
 			UpdateWeightedBlendPostProcess();
 			
-			//Start WBP_Glasses 
+			//Start WBP_Glasses
 			OnTriggerGlasses.Broadcast(true);
 			//GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
 		}
+		
+		//Launch CameraShake
+		if (bActivate) ShakeCamera(EPlayerScreenShakeType::GLASSES);
+		else StopCameraShake(EPlayerScreenShakeType::GLASSES);
 
 		//Launch post process blend if needed
 		if(bBlendPostProcess)
@@ -527,15 +586,18 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	//X = (Up//Down) // Y = (Left//Right)
 	_VignetteMatInst->SetVectorParameterValue(FName("VignetteOffset"), FVector(VignetteAnimParams.VignetteOffset.Y ,VignetteAnimParams.VignetteOffset.X,0.0));
 
+	//Switch camera shake (Idle or Walk)
+	const float playerVel = _PlayerCharacter->GetVelocity().Length();
+	FSShakeParams currentShakesParams = *ShakesParams.Find(EPlayerScreenShakeType::GLASSES);
+	const float alphaAmplitude = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.5f, currentShakesParams.ShakeMaxScale);
+	UpdateCameraShake(EPlayerScreenShakeType::GLASSES, alphaAmplitude);
+	
 	//Update FilmGrain animation
 	if(FilmGrainMatCollec->IsValidLowLevel())
 	{
 		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FilmGrainMatCollec, FILMGRAIN_R, FMath::RandRange(0.0f, 1.0f));
 		UKismetMaterialLibrary::SetScalarParameterValue(GetWorld(), FilmGrainMatCollec, FILMGRAIN_G, FMath::RandRange(0.0f ,1.0f));
 	}
-
-	//CameraShake
-	ShakeCamera(EPlayerScreenShakeType::GLASSES);
 	
 }
 

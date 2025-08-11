@@ -36,6 +36,27 @@ public:
 	FVector2D VignetteOffset = FVector2D::ZeroVector;
 };
 
+USTRUCT(BlueprintType, Category = "Struct")
+struct FSShakeParams
+{
+	GENERATED_BODY()
+
+	FSShakeParams(){};
+	
+public:
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
+	TSubclassOf<UCameraShakeBase> CameraShake;
+
+	//Use if Shake is Updated
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
+	float ShakeMaxScale = 10.0f;
+};
+
+
+
+
+
 UCLASS(Blueprintable, ClassGroup=(Player), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_PlayerCameraComponent : public UCameraComponent
 {
@@ -125,15 +146,25 @@ private:
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void ShakeCamera(const EPlayerScreenShakeType& shakeType,const float scale = 0);
+	void ShakeCamera(const EPlayerScreenShakeType& shakeType,const float& scale = 0);
+
+	UFUNCTION(BlueprintCallable)
+	void StopCameraShake(const EPlayerScreenShakeType& shakeType, const bool& bImmediately = true);
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateCameraShake(const EPlayerScreenShakeType& shakeType, const float& scale = 0);
+
+	UFUNCTION(BlueprintCallable)
+	bool IsCameraShakeExist(const EPlayerScreenShakeType& shakeType){ return IsValid(*_CameraShakesInst.Find(shakeType));};
 	
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
-	TMap<EPlayerScreenShakeType, TSubclassOf<UCameraShakeBase>> CameraShakes;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
-	TArray<TSubclassOf<UCameraShakeBase>> GlassesCameraShakes;
-
+	TMap<EPlayerScreenShakeType, FSShakeParams> ShakesParams;
+	
+private:
+	UPROPERTY(Transient)
+	TMap<EPlayerScreenShakeType, UCameraShakeBase*> _CameraShakesInst;
+	
 	//------------------
 #pragma endregion CameraShake
 

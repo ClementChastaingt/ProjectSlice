@@ -202,13 +202,13 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	}
 
 	//Check distance to floor
-	FFindFloorResult floorResult;
-	_PlayerCharacter->GetCharacterMovement()->FindFloor(_PlayerCharacter->GetActorLocation(), floorResult , true);
-	if (floorResult.bBlockingHit && floorResult.GetDistanceToFloor() < _PlayerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * CapsuleHalfHeightWeightForFloorCheck)
-	{
-		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: exit by distance to floor check"), __FUNCTION__);
-		return;
-	}
+	// FFindFloorResult floorResult;
+	// _PlayerCharacter->GetCharacterMovement()->FindFloor(_PlayerCharacter->GetActorLocation(), floorResult , true);
+	// if (floorResult.bBlockingHit && floorResult.GetDistanceToFloor() < _PlayerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * CapsuleHalfHeightWeightForFloorCheck)
+	// {
+	// 	if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: exit by distance to floor check"), __FUNCTION__);
+	// 	return;
+	// }
 	
 	//Prevent from trigger in loop by encounter new wall
 	if (_PlayerCharacter->JumpCurrentCount == _JumpCountOnWallRunning && !_bIsWallRunning)

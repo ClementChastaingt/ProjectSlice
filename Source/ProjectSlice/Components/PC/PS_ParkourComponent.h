@@ -282,9 +282,6 @@ protected:
 
 	UFUNCTION()
 	void WallRunTick();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(UIMin = 0.0f, ClampMin = 0.0f))
-	float CapsuleHalfHeightWeightForFloorCheck = 1.15f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
