@@ -1492,6 +1492,9 @@ void UPS_HookComponent::PowerCablePull()
 void UPS_HookComponent::OnPushTimerEndEventReceived(const FTimerHandle selfHandler, const FVector& currentPushDir, const float pushAccel)
 {
 	if(!IsValid(_AttachedMesh) || !IsValid(GetWorld())) return;
+
+	//Check if object using physic
+	if (!_AttachedMesh->IsSimulatingPhysics() || _AttachedMesh->GetMobility() != EComponentMobility::Movable) return;
 	
 	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S (%f)"),__FUNCTION__,GetWorld()->GetTimeSeconds());
 	

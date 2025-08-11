@@ -118,10 +118,10 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EPlayerScreenShakeType& shakeT
 		//Idle or Walk
 		const float playerVel = _PlayerCharacter->GetVelocity().Length();
 		const int32 index = playerVel < 50.0f ? 0 : 1;
-		const float alphaScale = index ? 1.0f : UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 1.0f);
+		const float alphaScale = index == 0 ? 10.0f : UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.0f, 10.0f);
 
 		if (!GlassesCameraShakes.IsValidIndex(index) || GlassesCameraShakes[index] == nullptr) return;
-		UE_LOG(LogTemp, Error, TEXT("CameraShake Glasses, index %i"),index);
+		UE_LOG(LogTemp, Error, TEXT("CameraShake Glasses, index %i, alphaScale %f"),index, alphaScale);
 		_PlayerController->ClientStartCameraShake(*GlassesCameraShakes[index], alphaScale);
 	}
 	else

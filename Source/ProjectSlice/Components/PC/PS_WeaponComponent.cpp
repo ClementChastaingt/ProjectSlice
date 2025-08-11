@@ -253,9 +253,9 @@ void UPS_WeaponComponent::Fire()
 	outHalfComponent->SetSimulatePhysics(true);
 	
 	parentProcMeshComponent->SetSimulatePhysics(true);
-	
+	//Check if object using physic
 	//Impulse
-	if(ActivateImpulseOnSlice && outHalfComponent->GetMobility() == EComponentMobility::Movable) 
+	if(ActivateImpulseOnSlice && outHalfComponent->IsSimulatingPhysics() && outHalfComponent->GetMobility() == EComponentMobility::Movable) 
 	{
 		FDamageEvent damageEvent = FDamageEvent();
 		outHalfComponent->ReceiveComponentDamage(10000,damageEvent,_PlayerController,_PlayerCharacter);
