@@ -96,6 +96,9 @@ public:
 	UFUNCTION()
 	void StopPush();
 
+	UFUNCTION()
+	void PlaySound();
+
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 
 	FORCEINLINE bool IsPushLoading() const{return _bIsPushLoading;}
@@ -166,6 +169,9 @@ protected:
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
 	USoundBase* PushSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback", meta=(UIMin="0.01", ClampMin="0.01"))
+	float PushSoundStartDelay = 0.2f;
 
 	UFUNCTION()
 	void Impulse(UMeshComponent* inComp, const FVector impulse);

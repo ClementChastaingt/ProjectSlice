@@ -226,6 +226,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Jump|Coyote")
 	float CoyoteTime = 0.35f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Jump|CameraShake", meta=(ForceUnits="s", UIMin="0.01", ClampMin="0.01"))
+	float FallingMaxDurationToMaxShake = 5.0f;
+
 private:
 	UPROPERTY(Transient)
 	float _DefaultMaxWalkSpeed;
@@ -244,6 +247,9 @@ private:
 	
 	UPROPERTY(Transient)
 	FVector _PredCapsuleLocation;
+
+	UPROPERTY(Transient)
+	float _StartFallingTimestamp;
 	
 #pragma endregion Move
 

@@ -166,6 +166,8 @@ void AProjectSliceCharacter::OnMovementModeChanged(EMovementMode previousMovemen
 	if(!IsValid(GetCharacterMovement())
 		|| !IsValid(GetProceduralAnimComponent())
 		|| !IsValid(GetParkourComponent())) return;
+
+	if (GetCharacterMovement()->IsFalling()) _StartFallingTimestamp = GetWorld()->GetTimeSeconds();
 	
 	CoyoteTimeStart();
 }
@@ -178,8 +180,16 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 	 if(IsValid(GetProceduralAnimComponent()))
 	 	GetProceduralAnimComponent()->LandingDip();
 
+	//Trigger Camera Shake
+	const float lastVelocityZ = (GetCapsuleVelocity() - GetPredCapsuleLocation()).Z;
+	float velocityAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Square(lastVelocityZ),  0.0f, FMath::Square(GetCharacterMovement()->GetMaxSpeed()), 0.0f,1.0f);
+	float timeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds() - _StartFallingTimestamp, 0.0f, FallingMaxDurationToMaxShake, 0.0f, 1.0f);
+	float scale = velocityAlpha * timeAlpha;
+	GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::LANDING, scale);
+
 	//Reset gravity scale (use for WallRunJumpOff)
 	GetCharacterMovement()->GravityScale = _DefaultGravityScale;
+	_StartFallingTimestamp = TNumericLimits<float>::Min();
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);

@@ -276,10 +276,17 @@ void UPS_ForceComponent::ReleasePush()
 		
 	//Play the sound if specified
 	if(IsValid(PushSound))
-		UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh());
+	{
+		FTimerHandle timerHandle;
+		FTimerDelegate timerDelegate;
+
+		timerDelegate.BindUObject(this, &UPS_ForceComponent::PlaySound);
+		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, PushSoundStartDelay, false);
+	}
+
 
 	//CameraShake
-	const float alphaShake = (bIsQuickPush || _AlphaInput < 0.25f) ? 0.25f : _AlphaInput;
+	const float alphaShake = (_AlphaInput < 0.25f) ? 0.25f : _AlphaInput;
 	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::FORCE, alphaShake);
 
 	//Stop push
@@ -369,6 +376,13 @@ void UPS_ForceComponent::StopPush()
 	UPSFl::StartCooldown(GetWorld(),duration,_CoolDownTimerHandle);
 
 	OnPushEvent.Broadcast(false);
+}
+
+void UPS_ForceComponent::PlaySound()
+{
+	if(!IsValid(PushSound) || !IsValid(_PlayerCharacter)) return;
+
+	UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
 }
 
 //------------------

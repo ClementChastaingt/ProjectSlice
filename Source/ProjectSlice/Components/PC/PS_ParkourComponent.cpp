@@ -554,7 +554,10 @@ void UPS_ParkourComponent::OnStartSlide()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
 	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
-
+	
+	//CameraShake
+	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::SLIDE, 1.0f);
+	
 	OnSlideEvent.Broadcast(_bIsSliding);
 }
 
@@ -577,6 +580,9 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed();
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;
+
+	//Camera Shake
+	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraShake(EScreenShakeType::SLIDE);
 
 	_bIsSliding = false;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
@@ -610,7 +616,6 @@ void UPS_ParkourComponent::SlideTick()
 	//Use Impulse
 	FVector minSlideVel = SlideDirection;
 
-
 	//Impulse on Slope else VelocityCurve
 	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
 	
@@ -643,8 +648,10 @@ void UPS_ParkourComponent::SlideTick()
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0, MaxBrakingDecelerationSlide, curveDecAlpha);
 	
 	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("MaxWalkSpeed :%f, floorInflucen : %s, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
-		
 
+	//CameraShake update
+	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShake(EScreenShakeType::SLIDE, curveAccAlpha);
+	
 	//-----Stop Slide-----
 	if(_PlayerCharacter->GetVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched)
 	{
@@ -744,6 +751,9 @@ void UPS_ParkourComponent::OnDash()
 	// FTimerDelegate dashCooldown_TimerDelegate;
 	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
 	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
+
+	//Trigger CameraShake
+	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::DASH, 1.0f);
 
 	//Stop Walk feedback on dash
 	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))

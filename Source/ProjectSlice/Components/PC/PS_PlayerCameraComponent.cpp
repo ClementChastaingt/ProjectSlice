@@ -11,6 +11,7 @@
 #include "Materials/MaterialParameterCollection.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
+#include "ProjectSlice/FunctionLibrary/PSFL_CameraShake.h"
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
@@ -110,10 +111,16 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 {
 	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
 	
+	if (!ShakesParams.Contains(shakeType))
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	
 	//Find scale
 	FSShakeParams currentShakesParams = *ShakesParams.Find(shakeType);
 	
-	const float finalScale = FMath::Clamp(scale, 0.0f, 1.0f) * currentShakesParams.ShakeMaxScale;
+	const float scaleClamped = FMath::Clamp(scale, 0.0f, 1.0f);
 
 	//Validity checks
 	if (!IsValid(currentShakesParams.CameraShake))
@@ -135,18 +142,24 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 	}
 	else
 	{
-		newShake = _PlayerController->PlayerCameraManager->StartCameraShake(currentShakesParams.CameraShake, finalScale);
+		newShake = _PlayerController->PlayerCameraManager->StartCameraShake(currentShakesParams.CameraShake, scaleClamped);
 	}
 	_CameraShakesInst.Add(shakeType, newShake);
 
 	//Debug
 	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, class %s, inst %s, scale: %f"), __FUNCTION__,
-		*UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake), *GetNameSafe(*_CameraShakesInst.Find(shakeType)), finalScale);
+		*UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake), *GetNameSafe(*_CameraShakesInst.Find(shakeType)), scaleClamped);
 }
 
 void UPS_PlayerCameraComponent::StopCameraShake(const EScreenShakeType& shakeType,const bool& bImmediately)
 {
 	if(!IsValid(_PlayerController) || _CameraShakesInst.IsEmpty()) return;
+
+	if (!ShakesParams.Contains(shakeType))
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
 
 	// Vérification sécurisée pour _CameraShakesInst
 	UCameraShakeBase** cameraShakeInstPtr = _CameraShakesInst.Find(shakeType);
@@ -172,6 +185,12 @@ void UPS_PlayerCameraComponent::UpdateCameraShake(const EScreenShakeType& shakeT
 {
 	if(_CameraShakesInst.IsEmpty() || ShakesParams.IsEmpty()) return;
 
+	if (!ShakesParams.Contains(shakeType))
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+
 	// Vérification sécurisée pour _CameraShakesInst
 	UCameraShakeBase** cameraShakeInstPtr = _CameraShakesInst.Find(shakeType);
 	if (!cameraShakeInstPtr || !*cameraShakeInstPtr)
@@ -192,7 +211,7 @@ void UPS_PlayerCameraComponent::UpdateCameraShake(const EScreenShakeType& shakeT
 	
 	if (!IsValid(cameraShakeInst)) return;
 	
-	cameraShakeInst->ShakeScale = FMath::Clamp(scale, 0.0f, 1.0f) * currentShakeParams.ShakeMaxScale;
+	cameraShakeInst->ShakeScale = FMath::Clamp(scale, 0.0f, 1.0f);
 
 	if (bDebugCameraShake)
 		UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, inst %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *GetNameSafe(cameraShakeInst), cameraShakeInst->ShakeScale );
@@ -463,7 +482,7 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 		}
 		
 		//Launch CameraShake
-		if (bActivate) ShakeCamera(EScreenShakeType::GLASSES);
+		if (bActivate) ShakeCamera(EScreenShakeType::GLASSES, 1.0f);
 		else StopCameraShake(EScreenShakeType::GLASSES);
 
 		//Launch post process blend if needed
@@ -588,8 +607,7 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 
 	//Switch camera shake (Idle or Walk)
 	const float playerVel = _PlayerCharacter->GetVelocity().Length();
-	FSShakeParams currentShakesParams = *ShakesParams.Find(EScreenShakeType::GLASSES);
-	const float alphaAmplitude = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.5f, currentShakesParams.ShakeMaxScale);
+	const float alphaAmplitude = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.1f, 1.0f);
 	UpdateCameraShake(EScreenShakeType::GLASSES, alphaAmplitude);
 	
 	//Update FilmGrain animation
