@@ -280,7 +280,7 @@ void UPS_ForceComponent::ReleasePush()
 
 	//CameraShake
 	const float alphaShake = (bIsQuickPush || _AlphaInput < 0.25f) ? 0.25f : _AlphaInput;
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EPlayerScreenShakeType::FORCE, alphaShake);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::FORCE, alphaShake);
 
 	//Stop push
 	StopPush();

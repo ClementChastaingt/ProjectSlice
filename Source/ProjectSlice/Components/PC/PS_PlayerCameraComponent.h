@@ -51,10 +51,26 @@ public:
 	//Use if Shake is Updated
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
 	float ShakeMaxScale = 10.0f;
+
+	//A World Shake is a shake at loc, so it use epicenter logic
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
+	bool bIsAWorldShake = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	FVector Epicenter = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	float InnerRadius = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	float OuterRadius = 300.0f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	float Falloff = 1;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	bool bOrientShakeTowardsEpicenter = false;
 };
-
-
-
 
 
 UCLASS(Blueprintable, ClassGroup=(Player), meta=(BlueprintSpawnableComponent))
@@ -145,25 +161,26 @@ private:
 	//------------------
 
 public:
+	
 	UFUNCTION(BlueprintCallable)
-	void ShakeCamera(const EPlayerScreenShakeType& shakeType,const float& scale = 0);
+	void ShakeCamera(const EScreenShakeType& shakeType,const float& scale = 0);
+	
+	UFUNCTION(BlueprintCallable)
+	void StopCameraShake(const EScreenShakeType& shakeType, const bool& bImmediately = true);
 
 	UFUNCTION(BlueprintCallable)
-	void StopCameraShake(const EPlayerScreenShakeType& shakeType, const bool& bImmediately = true);
+	void UpdateCameraShake(const EScreenShakeType& shakeType, const float& scale = 0);
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateCameraShake(const EPlayerScreenShakeType& shakeType, const float& scale = 0);
-
-	UFUNCTION(BlueprintCallable)
-	bool IsCameraShakeExist(const EPlayerScreenShakeType& shakeType){ return IsValid(*_CameraShakesInst.Find(shakeType));};
+	bool IsCameraShakeExist(const EScreenShakeType& shakeType){ return IsValid(*_CameraShakesInst.Find(shakeType));};
 	
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
-	TMap<EPlayerScreenShakeType, FSShakeParams> ShakesParams;
+	TMap<EScreenShakeType, FSShakeParams> ShakesParams;
 	
 private:
 	UPROPERTY(Transient)
-	TMap<EPlayerScreenShakeType, UCameraShakeBase*> _CameraShakesInst;
+	TMap<EScreenShakeType, UCameraShakeBase*> _CameraShakesInst;
 	
 	//------------------
 #pragma endregion CameraShake
