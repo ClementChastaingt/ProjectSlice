@@ -575,7 +575,6 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	
 	//--------Configure Movement Behaviour-------
-	
 	_PlayerController->SetIgnoreMoveInput(false);
 	_PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed();
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
@@ -612,45 +611,55 @@ void UPS_ParkourComponent::SlideTick()
 
 	if(IsValid(SlideAccelerationCurve))
 		curveAccAlpha = SlideAccelerationCurve->GetFloatValue(SlideAlpha);
-
-	//Use Impulse
-	FVector minSlideVel = SlideDirection;
+	
 
 	//Impulse on Slope else VelocityCurve
+	FVector minSlideVel = SlideDirection;
 	FVector slideVel = CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal) * 1500000.0f;
+	FVector targetVel = FVector::ZeroVector;
+	float maxSpeed = characterMovement->GetMaxSpeed();
 	
+	//Use Impulse
 	if(slideVel.SquaredLength() > minSlideVel.SquaredLength())
 	{
 		// if(SlideSeconds <= 0.0f) bIsSlidingOnSlope = true;
 		
 		characterMovement->AddImpulse(slideVel * GetWorld()->DeltaRealTimeSeconds * _PlayerCharacter->CustomTimeDilation);
-		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Impulse: %f"), characterMovement->Velocity.Length());
 
 		//Determine if can use slide on slope
 		UKismetMathLibrary::GetSlopeDegreeAngles(GetRightVector(),characterMovement->CurrentFloor.HitResult.Normal, GetUpVector(),OutSlopePitchDegreeAngle,OutSlopeRollDegreeAngle);
 		
 		//Clamp Max Velocity
 		const float rangedPitchMultiplicator = UKismetMathLibrary::MapRangeClamped(OutSlopePitchDegreeAngle,90,characterMovement->GetWalkableFloorAngle(),1.0,SlopeForceDecelerationWeight);
-		_PlayerCharacter->GetCharacterMovement()->Velocity = UPSFl::ClampVelocity(slideVel, _PlayerCharacter->GetVelocity(),slideVel * SlideSpeedBoost, _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * (OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator)));
-		
+		targetVel = slideVel * SlideSpeedBoost;
+		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * (OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator));
+
+		const FVector clampedVel = UPSFl::ClampVelocity(slideVel, _PlayerCharacter->GetVelocity(),targetVel, maxSpeed);
+	
+		characterMovement->Velocity = clampedVel;
 	}
 	//Use Velocity
 	else if(SlideAlpha < 1 && OutSlopePitchDegreeAngle <= 0)
 	{
 		//Clamp Max Velocity
-		FVector slideTargetVel = UPSFl::ClampVelocity(minSlideVel, _PlayerCharacter->GetVelocity(),minSlideVel * SlideSpeedBoost,_PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator);
+		targetVel = minSlideVel * SlideSpeedBoost;
+		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
 
-		_PlayerCharacter->GetCharacterMovement()->Velocity = FMath::Lerp(minSlideVel, slideTargetVel, curveAccAlpha);
-		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f"), _PlayerCharacter->GetCharacterMovement()->Velocity.Length());
+		const FVector clampedVel = UPSFl::ClampVelocity(minSlideVel, _PlayerCharacter->GetVelocity(),targetVel,maxSpeed);
+		
+		characterMovement->Velocity = FMath::Lerp(minSlideVel, clampedVel, curveAccAlpha);
+
+		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("Velocity Force: %f"), characterMovement->Velocity.Length());
 	}
 
 	//Change BrakingVel
-	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking = FMath::Lerp(0, MaxBrakingDecelerationSlide, curveDecAlpha);
-	
-	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("MaxWalkSpeed :%f, floorInflucen : %s, brakDec: %f"), _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
+	characterMovement->BrakingDecelerationWalking = FMath::Lerp(0, MaxBrakingDecelerationSlide, curveDecAlpha);
+	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
 
 	//CameraShake update
-	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShake(EScreenShakeType::SLIDE, curveAccAlpha);
+	const float alphaShake = UKismetMathLibrary::MapRangeClamped(characterMovement->Velocity.SizeSquared2D(),0,maxSpeed * maxSpeed,0,1);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShake(EScreenShakeType::SLIDE, alphaShake);
 	
 	//-----Stop Slide-----
 	if(_PlayerCharacter->GetVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched)

@@ -29,9 +29,6 @@ public:
 	bool bIsAWorldShake = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
-	FVector Epicenter = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
 	float InnerRadius = 0.0f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
@@ -54,13 +51,13 @@ class PROJECTSLICE_API UPSFL_CameraShake : public UBlueprintFunctionLibrary
 	
 public:
 	UFUNCTION(BlueprintCallable)
-	void ShakeCamera(const UObject* context, const EScreenShakeType& shakeType, const float& scale = 1.0f);
+	static void ShakeCamera(const UObject* context, const EScreenShakeType& shakeType, const float& scale = 1.0f, const FVector& epicenter = FVector::ZeroVector);
 	
 	UFUNCTION(BlueprintCallable)
-	void StopCameraShake(const UObject* context, const EScreenShakeType& shakeType, const bool& bImmediately = true);
+	static void StopCameraShake(const UObject* context, const EScreenShakeType& shakeType, const bool& bImmediately = true);
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateCameraShake(const UObject* context, const EScreenShakeType& shakeType, const float& scale = 1.0f);
+	static void UpdateCameraShake(const UObject* context, const EScreenShakeType& shakeType, const float& scale = 1.0f);
 	
 	//------------------
 #pragma endregion CameraShake

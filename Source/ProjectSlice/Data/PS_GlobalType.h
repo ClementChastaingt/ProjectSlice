@@ -65,8 +65,7 @@ enum class EScreenShakeType : uint8
 	SLIDE = 4 UMETA(DisplayName = "Slide"),
 	FORCE = 5 UMETA(DisplayName = "Force"),
 	LANDING = 6 UMETA(DisplayName = "Landing"),
-	FLYING = 7 UMETA(DisplayName = "Flying"),
-	IMPACT = 8 UMETA(DisplayName = "Impact"),
+	IMPACT = 7 UMETA(DisplayName = "Impact"),
 };
 
 

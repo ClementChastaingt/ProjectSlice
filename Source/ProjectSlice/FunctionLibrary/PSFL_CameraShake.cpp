@@ -12,13 +12,13 @@
 class AProjectSliceCharacter;
 class AProjectSlicePlayerController;
 
-void UPSFL_CameraShake::ShakeCamera(const UObject* const context, const EScreenShakeType& shakeType, const float& scale)
+void UPSFL_CameraShake::ShakeCamera(const UObject* const context, const EScreenShakeType& shakeType, const float& scale, const FVector& epicenter)
 {
 	AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(context, 0));
 	
 	if(!IsValid(player)) return;
 
-	player->GetFirstPersonCameraComponent()->ShakeCamera(shakeType, scale);
+	player->GetFirstPersonCameraComponent()->ShakeCamera(shakeType, scale, epicenter);
 }
 
 void UPSFL_CameraShake::StopCameraShake(const UObject* const context, const EScreenShakeType& shakeType,const bool& bImmediately)

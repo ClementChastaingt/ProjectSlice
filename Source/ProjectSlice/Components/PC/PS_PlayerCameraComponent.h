@@ -128,7 +128,7 @@ private:
 public:
 	
 	UFUNCTION(BlueprintCallable)
-	void ShakeCamera(const EScreenShakeType& shakeType,const float& scale = 1.0f);
+	void ShakeCamera(const EScreenShakeType& shakeType,const float& scale = 1.0f, const FVector& epicenter = FVector::ZeroVector);
 	
 	UFUNCTION(BlueprintCallable)
 	void StopCameraShake(const EScreenShakeType& shakeType, const bool& bImmediately = false);

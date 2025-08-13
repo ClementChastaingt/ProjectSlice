@@ -87,7 +87,7 @@ protected:
 	void ImpactSoundFeedback(const FHitResult& Hit,const float& alpha);
 	
 	UFUNCTION()
-	void ImpactCameraFeedback(const float& alpha);
+	void ImpactCameraFeedback(const FVector& impactLoc, const float& alpha);
 
 private:
 	UPROPERTY(DuplicateTransient)

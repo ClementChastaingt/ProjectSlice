@@ -135,7 +135,7 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	ImpactSoundFeedback(Hit, alpha);
 	
 	//Try and play camera shake if specified
-	ImpactCameraFeedback(alpha);
+	ImpactCameraFeedback(Hit.ImpactPoint, alpha);
 	
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f,alpha %f, _LastImpactFeedbackForce %i, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength,alpha, _LastImpactFeedbackForce, extent, objectMassScaled);
 
@@ -166,8 +166,11 @@ void UPS_SlicedComponent::ImpactSoundFeedback(const FHitResult& Hit, const float
 	}
 }
 
-void UPS_SlicedComponent::ImpactCameraFeedback(const float& alpha)
+void UPS_SlicedComponent::ImpactCameraFeedback(const FVector& impactLoc, const float& alpha)
 {
+	if (!IsValid(GetWorld())) return;
+	
+	UPSFL_CameraShake::ShakeCamera(GetWorld(), EScreenShakeType::IMPACT, alpha, impactLoc);
 }
 
 

@@ -107,7 +107,7 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 #pragma region CameraShake
 //------------------
 
-void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, const float& scale)
+void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, const float& scale, const FVector& epicenter)
 {
 	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
 	
@@ -130,14 +130,11 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 	}
 
 	//Start shake
-	UCameraShakeBase* classTe = Cast<UCameraShakeBase>(currentShakesParams.CameraShake);
-	if (IsValid(classTe)) UE_LOG(LogTemp, Error, TEXT("infinite %i"),  classTe->GetCameraShakeDuration().IsInfinite());
-	
 	UCameraShakeBase* newShake = nullptr;
-	if (currentShakesParams.bIsAWorldShake)
+	if (currentShakesParams.bIsAWorldShake && !epicenter.IsZero())
 	{
 		UGameplayStatics::PlayWorldCameraShake(GetWorld(), currentShakesParams.CameraShake,
-		currentShakesParams.Epicenter, currentShakesParams.InnerRadius, currentShakesParams.OuterRadius,
+		epicenter, currentShakesParams.InnerRadius, currentShakesParams.OuterRadius,
 		currentShakesParams.Falloff, currentShakesParams.bOrientShakeTowardsEpicenter);
 	}
 	else
@@ -147,8 +144,7 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 	_CameraShakesInst.Add(shakeType, newShake);
 
 	//Debug
-	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, class %s, inst %s, scale: %f"), __FUNCTION__,
-		*UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake), *GetNameSafe(*_CameraShakesInst.Find(shakeType)), scaleClamped);
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, class %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake),scaleClamped);
 }
 
 void UPS_PlayerCameraComponent::StopCameraShake(const EScreenShakeType& shakeType,const bool& bImmediately)
