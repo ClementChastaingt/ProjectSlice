@@ -658,7 +658,8 @@ void UPS_ParkourComponent::SlideTick()
 	if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking);
 
 	//CameraShake update
-	const float alphaShake = UKismetMathLibrary::MapRangeClamped(characterMovement->Velocity.SizeSquared2D(),0,maxSpeed * maxSpeed,0,1);
+	const float alphaShake = FMath::IsNearlyZero(targetVel.SizeSquared()) ? 0.0f : UKismetMathLibrary::MapRangeClamped(characterMovement->Velocity.SizeSquared2D(),0,targetVel.SizeSquared(),0,1);
+	UE_LOG(LogTemp, Error, TEXT("alphaShake %f, maxSpeed %f, targetSpeed %f"), alphaShake, FMath::Square(maxSpeed) , targetVel.SizeSquared());
 	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShake(EScreenShakeType::SLIDE, alphaShake);
 	
 	//-----Stop Slide-----
