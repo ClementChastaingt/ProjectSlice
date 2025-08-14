@@ -65,9 +65,13 @@ public:
 	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
 
 protected:
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|Feedback|CameraShake")
-	TArray<TSubclassOf<UCameraShakeBase>> ImpactCameraShake;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|CameraShake", meta=(Tooltip="World shake OuterRadius multiplier Range"))
+	FFloatInterval OuterRadius = FFloatInterval(750.0f, 2000.0f);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|CameraShake", meta=(Tooltip="World shake FallOuf multiplier Range"))
+	FFloatInterval FallOffRange = FFloatInterval(1.0f, 2.0f);
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio")
 	USoundBase* CrashSound = nullptr;
 

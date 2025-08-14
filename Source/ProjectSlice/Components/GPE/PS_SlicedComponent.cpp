@@ -170,7 +170,13 @@ void UPS_SlicedComponent::ImpactCameraFeedback(const FVector& impactLoc, const f
 {
 	if (!IsValid(GetWorld())) return;
 	
-	UPSFL_CameraShake::ShakeCamera(GetWorld(), EScreenShakeType::IMPACT, alpha, impactLoc);
+	//Multiplier calculation
+	FSWorldShakeParams worldShakeParams = FSWorldShakeParams();
+	worldShakeParams.OuterRadius *= FMath::Lerp(OuterRadius.Min, OuterRadius.Max,alpha);
+	worldShakeParams.Falloff *= FMath::Lerp(FallOffRange.Min, FallOffRange.Max,alpha);
+	
+	//Launch Shake
+	UPSFL_CameraShake::WorldShakeCamera(GetWorld(), EScreenShakeType::IMPACT, impactLoc, worldShakeParams, alpha);
 }
 
 

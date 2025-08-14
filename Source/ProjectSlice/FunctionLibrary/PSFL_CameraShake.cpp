@@ -36,8 +36,19 @@ void UPSFL_CameraShake::UpdateCameraShake(const UObject* const context, const ES
 	
 	if(!IsValid(player)) return;
 	
-	player->GetFirstPersonCameraComponent()->UpdateCameraShake(shakeType, scale);
+	player->GetFirstPersonCameraComponent()->UpdateCameraShakeScale(shakeType, scale);
 }
+
+void UPSFL_CameraShake::WorldShakeCamera(const UObject* context, const EScreenShakeType& shakeType,
+	const FVector& epicenter, const FSWorldShakeParams& worldShakeParams, const float& scale)
+{
+	AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(context, 0));
+	
+	if(!IsValid(player)) return;
+
+	player->GetFirstPersonCameraComponent()->WorldShakeCamera(shakeType, epicenter, worldShakeParams, scale);
+}
+
 
 //------------------
 #pragma endregion CameraShake

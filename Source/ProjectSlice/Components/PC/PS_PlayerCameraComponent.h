@@ -47,6 +47,10 @@ public:
 	// Sets default values for this component's properties
 	UPS_PlayerCameraComponent();
 
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -94,8 +98,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	float DefaultFOV;
-
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	FLinearColor DefaultDirtMaskTint;
 
@@ -126,18 +129,30 @@ private:
 	//------------------
 
 public:
-	
+
+	// Func for do a basic shake, epicenter is used if worldshake is ON. If you need to do a WorldShake with custom FSWorldShakeParams params use WorldShakeCamera().
 	UFUNCTION(BlueprintCallable)
 	void ShakeCamera(const EScreenShakeType& shakeType,const float& scale = 1.0f, const FVector& epicenter = FVector::ZeroVector);
-	
+
+	//Use for stop looping shakes
 	UFUNCTION(BlueprintCallable)
 	void StopCameraShake(const EScreenShakeType& shakeType, const bool& bImmediately = false);
 
+	//Use for update currently playing camera shake scale
 	UFUNCTION(BlueprintCallable)
-	void UpdateCameraShake(const EScreenShakeType& shakeType, const float& scale = 1.0f);
+	void UpdateCameraShakeScale(const EScreenShakeType& shakeType, const float& scale = 1.0f);
+
+	
+	// Func for do a Dyn World Shake, use input FSWorldShakeParams instead of ShakesParams input
+	UFUNCTION(BlueprintCallable)
+	void WorldShakeCamera(const EScreenShakeType& shakeType, const FVector& epicenter, const FSWorldShakeParams& worldShakeParams, const float&
+		scale = 1.0f);
 
 	UFUNCTION(BlueprintCallable)
-	bool IsCameraShakeExist(const EScreenShakeType& shakeType){ return IsValid(*_CameraShakesInst.Find(shakeType));};
+	void SetWorldShakeOverrided(const EScreenShakeType& shakeType);
+	
+	UFUNCTION(BlueprintCallable)
+	bool IsCameraShakeExist(const EScreenShakeType& shakeType){ return _CameraShakesInst.Contains(shakeType) && IsValid(*_CameraShakesInst.Find(shakeType));};
 	
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")

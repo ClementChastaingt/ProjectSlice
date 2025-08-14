@@ -15,7 +15,14 @@
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
+	SetWorldShakeOverrided(EScreenShakeType::IMPACT);
+}
 
+void UPS_PlayerCameraComponent::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	SetWorldShakeOverrided(EScreenShakeType::IMPACT);
 }
 
 void UPS_PlayerCameraComponent::BeginPlay()
@@ -110,16 +117,16 @@ void UPS_PlayerCameraComponent::FieldOfViewTick()
 void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, const float& scale, const FVector& epicenter)
 {
 	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
-	
+
+	//Get current shake params
 	if (!ShakesParams.Contains(shakeType))
 	{
 		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
 		return;
 	}
-	
-	//Find scale
 	FSShakeParams currentShakesParams = *ShakesParams.Find(shakeType);
-	
+
+	//Find scale
 	const float scaleClamped = FMath::Clamp(scale, 0.0f, 1.0f);
 
 	//Validity checks
@@ -134,8 +141,8 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 	if (currentShakesParams.bIsAWorldShake && !epicenter.IsZero())
 	{
 		UGameplayStatics::PlayWorldCameraShake(GetWorld(), currentShakesParams.CameraShake,
-		epicenter, currentShakesParams.InnerRadius, currentShakesParams.OuterRadius,
-		currentShakesParams.Falloff, currentShakesParams.bOrientShakeTowardsEpicenter);
+		epicenter, currentShakesParams.WorldShakeParams.InnerRadius, currentShakesParams.WorldShakeParams.OuterRadius,
+		currentShakesParams.WorldShakeParams.Falloff, currentShakesParams.WorldShakeParams.bOrientShakeTowardsEpicenter);
 	}
 	else
 	{
@@ -151,6 +158,7 @@ void UPS_PlayerCameraComponent::StopCameraShake(const EScreenShakeType& shakeTyp
 {
 	if(!IsValid(_PlayerController) || _CameraShakesInst.IsEmpty()) return;
 
+	//Get current shake params
 	if (!ShakesParams.Contains(shakeType))
 	{
 		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
@@ -177,10 +185,11 @@ void UPS_PlayerCameraComponent::StopCameraShake(const EScreenShakeType& shakeTyp
 	
 }
 
-void UPS_PlayerCameraComponent::UpdateCameraShake(const EScreenShakeType& shakeType, const float& scale)
+void UPS_PlayerCameraComponent::UpdateCameraShakeScale(const EScreenShakeType& shakeType, const float& scale)
 {
 	if(_CameraShakesInst.IsEmpty() || ShakesParams.IsEmpty()) return;
 
+	//Get current shake params
 	if (!ShakesParams.Contains(shakeType))
 	{
 		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
@@ -212,6 +221,39 @@ void UPS_PlayerCameraComponent::UpdateCameraShake(const EScreenShakeType& shakeT
 	if (bDebugCameraShake)
 		UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, inst %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *GetNameSafe(cameraShakeInst), cameraShakeInst->ShakeScale );
 
+}
+
+void UPS_PlayerCameraComponent::WorldShakeCamera(const EScreenShakeType& shakeType, const FVector& epicenter,
+	const FSWorldShakeParams& worldShakeParams, const float& scale)
+{
+	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
+
+	//Get current shake params
+	if (!ShakesParams.Contains(shakeType))
+	{
+		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	
+	FSShakeParams currentShakesParams = *ShakesParams.Find(shakeType);
+	
+	UGameplayStatics::PlayWorldCameraShake(GetWorld(), currentShakesParams.CameraShake,
+		epicenter, worldShakeParams.InnerRadius, worldShakeParams.OuterRadius,
+		worldShakeParams.Falloff, worldShakeParams.bOrientShakeTowardsEpicenter);
+}
+
+void UPS_PlayerCameraComponent::SetWorldShakeOverrided(const EScreenShakeType& shakeType)
+{
+	if(ShakesParams.IsEmpty()) return;
+
+	//Get current shake params
+	if (!ShakesParams.Contains(shakeType))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: shakeType %s params doesn't exist, return"),__FUNCTION__, *UEnum::GetValueAsString(shakeType));
+		return;
+	}
+	
+	 ShakesParams.Find(shakeType)->SetIsWorldShakeOverrided(true);
 }
 
 //------------------
@@ -604,7 +646,7 @@ void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)
 	//Switch camera shake (Idle or Walk)
 	const float playerVel = _PlayerCharacter->GetVelocity().Length();
 	const float alphaAmplitude = UKismetMathLibrary::MapRangeClamped(playerVel, 0.0f, _PlayerCharacter->GetCharacterMovement()->MaxWalkSpeed, 0.1f, 1.0f);
-	UpdateCameraShake(EScreenShakeType::GLASSES, alphaAmplitude);
+	UpdateCameraShakeScale(EScreenShakeType::GLASSES, alphaAmplitude);
 	
 	//Update FilmGrain animation
 	if(FilmGrainMatCollec->IsValidLowLevel())

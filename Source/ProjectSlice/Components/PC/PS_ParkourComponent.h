@@ -412,7 +412,10 @@ public:
 	void OnStartSlide();
 	
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE bool IsSliding() const{return _bIsSliding;}
+	FORCEINLINE bool IsSliding() const{ return _bIsSliding;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetSliceAlphaFeedback() const{ return _SliceAlphaFeedback;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
@@ -438,9 +441,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
 	float SlideSeconds = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Current slide alpha"))
-	float SlideAlpha = 0;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
 	FVector SlideDirection = FVector::ZeroVector;
@@ -476,6 +476,9 @@ private:
 	UPROPERTY(Transient)
 	bool _bIsSliding;
 
+	UPROPERTY(Transient)
+	float _SliceAlphaFeedback;
+	
 #pragma endregion Slide
 
 #pragma region Dash
