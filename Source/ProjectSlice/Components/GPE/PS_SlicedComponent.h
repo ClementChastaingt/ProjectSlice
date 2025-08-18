@@ -49,13 +49,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
 	bool bDebug = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	bool bDebugFeedback = false;
+
 private:
 	UPROPERTY(Transient)
 	UStaticMeshComponent* _RootMesh = nullptr;
 	
 //------------------	
 #pragma endregion General
-
 
 #pragma region Feedback
 	//------------------
@@ -65,6 +67,9 @@ public:
 	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
 
 protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max alpha Feedback"))
+	FFloatInterval VelocityRangeFeedback = FFloatInterval(200.0f, 20000.0f);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|CameraShake", meta=(Tooltip="World shake OuterRadius multiplier Range"))
 	FFloatInterval OuterRadius = FFloatInterval(750.0f, 2000.0f);
@@ -74,19 +79,13 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio")
 	USoundBase* CrashSound = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Velocity Range to max ultiplier"))
-	FFloatInterval VelocityRangeSound = FFloatInterval(100.0f, 2000.0f);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Volume multiplier Range"))
 	FFloatInterval VolumeRange = FFloatInterval(0.9, 1.25f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(Tooltip="Pitch multiplier Range"))
 	FFloatInterval PitchRange = FFloatInterval(0.5, 1.25f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback|Audio", meta=(ForceUnits="cm/s", UIMin="1", ClampMin="1"))
-	float MinVelocityZForFeedback = 100.0f;
-	
+		
 	UFUNCTION()
 	void ImpactSoundFeedback(const FHitResult& Hit,const float& alpha);
 	
@@ -102,10 +101,11 @@ private:
 	float _ImpactCooldown = 0.1f;
 
 	UPROPERTY(VisibleInstanceOnly, Category="Status")
-	int32 _LastImpactFeedbackForce;
+	int32 _ImpactSoundIntensity;
 
 	UPROPERTY(VisibleInstanceOnly, Transient)
 	UAudioComponent* _CollideAudio;
-
+	
+	//------------------
 #pragma endregion Feedback
 };

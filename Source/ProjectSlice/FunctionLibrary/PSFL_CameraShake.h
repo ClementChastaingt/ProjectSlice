@@ -36,6 +36,16 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
 	bool bOrientShakeTowardsEpicenter = false;
+
+	FString ToString() const
+	{
+		FString str = "";
+		str += " InnerRadius = " +  FString::SanitizeFloat(InnerRadius);
+		str += ", OuterRadius = " +  FString::SanitizeFloat(OuterRadius);
+		str += ", Falloff = " +  FString::SanitizeFloat(Falloff);
+		str += ", bOrientShakeTowardsEpicenter = " + (bOrientShakeTowardsEpicenter ? FString("True") : FString("False"));
+		return str;
+	}
 };
 
 
@@ -62,6 +72,17 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = "bIsAWorldShake && !bIsWorldShakeOverrided", EditConditionHides))
 	FSWorldShakeParams WorldShakeParams = FSWorldShakeParams();
+
+	FString ToString() const
+	{
+		FString str = "";
+		str += ", CameraShake = " + CameraShake->GetName();
+		str += ", bIsAWorldShake = " + (bIsAWorldShake ? FString("True") : FString("False"));
+		str += " // WorldShakeParams: " + WorldShakeParams.ToString();
+		return str;
+	}
+
+	
 };
 
 

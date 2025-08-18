@@ -119,25 +119,32 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	const float extent = UKismetMathLibrary::Vector_Distance(origin,boxExtent);
 
 	//Mass scale factoring
-	float objectMassScaled =UPSFl::GetObjectUnifiedMass(this);
+	float objectMassScaled = UPSFl::GetObjectUnifiedMass(this);
 	if(FMath::IsNearlyZero(objectMassScaled)) objectMassScaled = 1.0f;
 	const float impactStrength = UKismetMathLibrary::SafeDivide((GetComponentVelocity() * objectMassScaled).Length(), extent);
-	if(impactStrength < MinVelocityZForFeedback) return;
+	const float impactStrengthZ = UKismetMathLibrary::SafeDivide(GetComponentVelocity().Z * objectMassScaled, extent);
 	
 	//Cooldown
 	float currentTime = GetWorld()->GetTimeSeconds();
 	if (currentTime - _LastImpactTime < _ImpactCooldown) return;
 	_LastImpactTime = currentTime;
 	
+	//Calculate alpha feedback
+	const float alphaSound = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
+	const float alphaShake = UKismetMathLibrary::MapRangeClamped(impactStrengthZ,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
+	
+	//Debug	
+	if(bDebug)
+	{
+		UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength, alphaSound, alphaShake, extent, objectMassScaled);
+		UE_LOG(LogTemp, Log, TEXT("%S :: alphaSound %f, alphaShake %f"),__FUNCTION__, alphaSound, alphaShake);
+	}
+
 	// Try play sound if specified
-	const float alpha = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeSound.Min, VelocityRangeSound.Max, 0.0f, 1.0f);
-	_LastImpactFeedbackForce = FMath::InterpStep(0,4,alpha,5);
-	ImpactSoundFeedback(Hit, alpha);
+	ImpactSoundFeedback(Hit, alphaSound);
 	
 	//Try and play camera shake if specified
-	ImpactCameraFeedback(Hit.ImpactPoint, alpha);
-	
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: OtherActor %s, comp %s, impactStrength %f,alpha %f, _LastImpactFeedbackForce %i, extent %f, objectMassScaled %f"),__FUNCTION__, *GetNameSafe(OtherActor), *GetNameSafe(OtherComp), impactStrength,alpha, _LastImpactFeedbackForce, extent, objectMassScaled);
+	ImpactCameraFeedback(Hit.ImpactPoint, alphaShake);
 
 	//Callback
 	OnSlicedObjectHitEvent.Broadcast();
@@ -145,35 +152,44 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 
 void UPS_SlicedComponent::ImpactSoundFeedback(const FHitResult& Hit, const float& alpha)
 {
-	if (IsValid(CrashSound))
+	if (!IsValid(CrashSound) || alpha <= 0.0f ) return;
+
+	FVector loc = GetComponentLocation();
+	if (Hit.bBlockingHit) loc = Hit.ImpactPoint;
+
+	//VolumeMultiplier calculation
+	float volumeMultiplier = FMath::Lerp(VolumeRange.Min, VolumeRange.Max, alpha);
+
+	//PitchMultiplier calculation
+	float pitchMultiplier = FMath::Lerp(PitchRange.Min, PitchRange.Max, alpha);
+
+	//Play sound
+	_CollideAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound, loc, FRotator::ZeroRotator,
+		volumeMultiplier, pitchMultiplier);
+	if (IsValid(_CollideAudio))
 	{
-		FVector loc = GetComponentLocation();
-		if (Hit.bBlockingHit) loc = Hit.ImpactPoint;
-
-		//VolumeMultiplier calculation
-		float volumeMultiplier = FMath::Lerp(VolumeRange.Min, VolumeRange.Max,alpha);
-
-		//PitchMultiplier calculation
-		float pitchMultiplier = FMath::Lerp(PitchRange.Min, PitchRange.Max,alpha);
-		
-		//Play sound
-		_CollideAudio = UGameplayStatics::SpawnSoundAtLocation(this, CrashSound,loc,FRotator::ZeroRotator,volumeMultiplier, pitchMultiplier);
-		if(IsValid(_CollideAudio))
-		{
-			_CollideAudio->SetIntParameter(FName("Intensity"), _LastImpactFeedbackForce);
-			_CollideAudio->Play();
-		}
+		_ImpactSoundIntensity = FMath::InterpStep(0,4,alpha,5);
+		_CollideAudio->SetIntParameter(FName("Intensity"), _ImpactSoundIntensity);
+		_CollideAudio->Play();
 	}
+
+	//Debug
+	if (bDebugFeedback) UE_LOG(LogTemp, Log, TEXT("%S :: volumeMultiplier %f, pitchMultiplier %f, Intensity %i"), __FUNCTION__,
+		volumeMultiplier, pitchMultiplier, _ImpactSoundIntensity);
+	
 }
 
 void UPS_SlicedComponent::ImpactCameraFeedback(const FVector& impactLoc, const float& alpha)
 {
-	if (!IsValid(GetWorld())) return;
+	if (!IsValid(GetWorld()) || alpha <= 0.0f ) return;
 	
 	//Multiplier calculation
 	FSWorldShakeParams worldShakeParams = FSWorldShakeParams();
-	worldShakeParams.OuterRadius *= FMath::Lerp(OuterRadius.Min, OuterRadius.Max,alpha);
-	worldShakeParams.Falloff *= FMath::Lerp(FallOffRange.Min, FallOffRange.Max,alpha);
+	worldShakeParams.OuterRadius = FMath::Lerp(OuterRadius.Min, OuterRadius.Max,alpha);
+	worldShakeParams.Falloff = FMath::Lerp(FallOffRange.Min, FallOffRange.Max,alpha);
+
+	//Debug	
+	if(bDebugFeedback) UE_LOG(LogTemp, Error, TEXT("%S :: OuterRadius %f, Falloff %f"),__FUNCTION__,worldShakeParams.OuterRadius, worldShakeParams.Falloff);
 	
 	//Launch Shake
 	UPSFL_CameraShake::WorldShakeCamera(GetWorld(), EScreenShakeType::IMPACT, impactLoc, worldShakeParams, alpha);

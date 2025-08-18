@@ -151,7 +151,7 @@ void UPS_PlayerCameraComponent::ShakeCamera(const EScreenShakeType& shakeType, c
 	_CameraShakesInst.Add(shakeType, newShake);
 
 	//Debug
-	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, class %s, scale: %f"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *GetNameSafe(currentShakesParams.CameraShake),scaleClamped);
+	if (bDebugCameraShake) UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, scale: %f, %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), scaleClamped, *currentShakesParams.ToString());
 }
 
 void UPS_PlayerCameraComponent::StopCameraShake(const EScreenShakeType& shakeType,const bool& bImmediately)
@@ -212,10 +212,8 @@ void UPS_PlayerCameraComponent::UpdateCameraShakeScale(const EScreenShakeType& s
 		if (bDebugCameraShake) UE_LOG(LogTemp, Warning, TEXT("%S :: ShakeParams not found for type: %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType));
 		return;
 	}
-	FSShakeParams currentShakeParams = *currentShakeParamsPtr;
 	
 	if (!IsValid(cameraShakeInst)) return;
-	
 	cameraShakeInst->ShakeScale = FMath::Clamp(scale, 0.0f, 1.0f);
 
 	if (bDebugCameraShake)
@@ -224,7 +222,7 @@ void UPS_PlayerCameraComponent::UpdateCameraShakeScale(const EScreenShakeType& s
 }
 
 void UPS_PlayerCameraComponent::WorldShakeCamera(const EScreenShakeType& shakeType, const FVector& epicenter,
-	const FSWorldShakeParams& worldShakeParams, const float& scale)
+	const FSWorldShakeParams& worldShakeParams)
 {
 	if(!IsValid(_PlayerController) || ShakesParams.IsEmpty()) return;
 
@@ -240,6 +238,10 @@ void UPS_PlayerCameraComponent::WorldShakeCamera(const EScreenShakeType& shakeTy
 	UGameplayStatics::PlayWorldCameraShake(GetWorld(), currentShakesParams.CameraShake,
 		epicenter, worldShakeParams.InnerRadius, worldShakeParams.OuterRadius,
 		worldShakeParams.Falloff, worldShakeParams.bOrientShakeTowardsEpicenter);
+
+	if (bDebugCameraShake)
+		UE_LOG(LogTemp, Log, TEXT("%S :: CameraShaketype: %s, %s"), __FUNCTION__, *UEnum::GetValueAsString(shakeType), *worldShakeParams.ToString());
+
 }
 
 void UPS_PlayerCameraComponent::SetWorldShakeOverrided(const EScreenShakeType& shakeType)

@@ -46,7 +46,7 @@ void UPSFL_CameraShake::WorldShakeCamera(const UObject* context, const EScreenSh
 	
 	if(!IsValid(player)) return;
 
-	player->GetFirstPersonCameraComponent()->WorldShakeCamera(shakeType, epicenter, worldShakeParams, scale);
+	player->GetFirstPersonCameraComponent()->WorldShakeCamera(shakeType, epicenter, worldShakeParams);
 }
 
 

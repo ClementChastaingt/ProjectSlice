@@ -145,8 +145,7 @@ public:
 	
 	// Func for do a Dyn World Shake, use input FSWorldShakeParams instead of ShakesParams input
 	UFUNCTION(BlueprintCallable)
-	void WorldShakeCamera(const EScreenShakeType& shakeType, const FVector& epicenter, const FSWorldShakeParams& worldShakeParams, const float&
-		scale = 1.0f);
+	void WorldShakeCamera(const EScreenShakeType& shakeType, const FVector& epicenter, const FSWorldShakeParams& worldShakeParams);
 
 	UFUNCTION(BlueprintCallable)
 	void SetWorldShakeOverrided(const EScreenShakeType& shakeType);
