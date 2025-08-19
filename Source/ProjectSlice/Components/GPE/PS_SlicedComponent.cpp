@@ -123,8 +123,8 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	//Mass scale factoring
 	float objectMassScaled = UPSFl::GetObjectUnifiedMass(this);
 	if(FMath::IsNearlyZero(objectMassScaled)) objectMassScaled = 1.0f;
-	float impactStrength = UKismetMathLibrary::SafeDivide((GetComponentVelocity() * objectMassScaled).Length(), extent);
-	float impactStrengthZ = UKismetMathLibrary::SafeDivide(GetComponentVelocity().Z * objectMassScaled, extent);
+	float impactStrength = UKismetMathLibrary::SafeDivide((GetPhysicsLinearVelocity() * objectMassScaled).Length(), extent);
+	float impactStrengthZ = UKismetMathLibrary::SafeDivide(GetPhysicsLinearVelocity().Z * objectMassScaled, extent);
 
 	//Calculate alpha feedback
 	float alphaSound = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);

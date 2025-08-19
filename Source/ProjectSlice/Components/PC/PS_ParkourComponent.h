@@ -415,7 +415,7 @@ public:
 	FORCEINLINE bool IsSliding() const{ return _bIsSliding;}
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE float GetSliceAlphaFeedback() const{ return _SliceAlphaFeedback;}
+	FORCEINLINE float GetSlideAlphaFeedback() const{ return _SlideAlphaFeedback;}
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
@@ -477,7 +477,7 @@ private:
 	bool _bIsSliding;
 
 	UPROPERTY(Transient)
-	float _SliceAlphaFeedback;
+	float _SlideAlphaFeedback;
 	
 #pragma endregion Slide
 

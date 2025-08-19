@@ -656,12 +656,12 @@ void UPS_ParkourComponent::SlideTick()
 	characterMovement->BrakingDecelerationWalking = FMath::Lerp(0, MaxBrakingDecelerationSlide, curveDecAlpha);
 	
 	//CameraShake update
-	_SliceAlphaFeedback = FMath::IsNearlyZero(targetVel.SizeSquared()) ? 0.0f : UKismetMathLibrary::MapRangeClamped(characterMovement->Velocity.SizeSquared2D(),characterMovement->MaxWalkSpeedCrouched,FMath::Square(maxSpeed),0,1);
-	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShakeScale(EScreenShakeType::SLIDE, _SliceAlphaFeedback);
+	_SlideAlphaFeedback = FMath::IsNearlyZero(targetVel.SizeSquared()) ? 0.0f : UKismetMathLibrary::MapRangeClamped(characterMovement->Velocity.SizeSquared2D(),FMath::Square(characterMovement->MaxWalkSpeedCrouched),FMath::Square(maxSpeed),0,1);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateCameraShakeScale(EScreenShakeType::SLIDE, _SlideAlphaFeedback);
 
 	//Debug
 	if(bDebugSlide)
-		UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f, AlphaFeedback: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, _SliceAlphaFeedback);
+		UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f, AlphaFeedback: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, _SlideAlphaFeedback);
 
 	
 	//-----Stop Slide-----

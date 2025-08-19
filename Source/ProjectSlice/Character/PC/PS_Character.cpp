@@ -184,8 +184,8 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 	const float lastVelocityZ = (GetCapsuleVelocity() - GetPredCapsuleLocation()).Z;
 	float velocityAlpha = UKismetMathLibrary::MapRangeClamped(FMath::Square(lastVelocityZ),  0.0f, FMath::Square(GetCharacterMovement()->GetMaxSpeed()), 0.0f,1.0f);
 	float timeAlpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds() - _StartFallingTimestamp, 0.0f, FallingMaxDurationToMaxShake, 0.0f, 1.0f);
-	float scale = velocityAlpha * timeAlpha;
-	GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::LANDING, scale);
+	_LandedScale = velocityAlpha * timeAlpha;
+	GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::LANDING, _LandedScale);
 
 	//Reset gravity scale (use for WallRunJumpOff)
 	GetCharacterMovement()->GravityScale = _DefaultGravityScale;
@@ -193,6 +193,7 @@ void AProjectSliceCharacter::Landed(const FHitResult& Hit)
 
 	//Clear coyote time
 	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
+	
 }
 
 //------------------

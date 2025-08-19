@@ -171,6 +171,9 @@ public:
 
 	FORCEINLINE FVector GetPredCapsuleLocation() const { return _PredCapsuleLocation; }
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetLandedScale() const{return _LandedScale;}
+
 	FORCEINLINE void SetPredCapsuleLocation(const FVector& predCapsuleLocation) { _PredCapsuleLocation = predCapsuleLocation; }
 	
 	FORCEINLINE void SetCapsuleVelocity(const FVector& capsuleVelocity) { _CapsuleVelocity = capsuleVelocity; }
@@ -250,6 +253,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _StartFallingTimestamp;
+
+	UPROPERTY(Transient)
+	float _LandedScale;
 	
 #pragma endregion Move
 

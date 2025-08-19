@@ -390,7 +390,7 @@ void UPS_ForceComponent::PlaySound(const EPushSFXType soundType)
 	switch (soundType)
 	{
 		case EPushSFXType::RELEASED:
-			UGameplayStatics::SpawnSoundAttached(currentSound, _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
+			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 350);
 
 			if (bIsQuickPush && PushSounds.Contains(EPushSFXType::WHISPER) && IsValid(*PushSounds.Find(EPushSFXType::WHISPER)))
 				UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
