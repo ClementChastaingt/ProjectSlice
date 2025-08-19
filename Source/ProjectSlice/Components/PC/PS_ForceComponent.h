@@ -14,6 +14,14 @@ class AProjectSlicePlayerController;
 class APS_FieldSystemActor;
 class AProjectSliceCharacter;
 
+UENUM(BlueprintType)
+enum class EPushSFXType : uint8
+{
+	RELEASED = 0 UMETA(DisplayName = "Released"),
+	WHISPER  = 1 UMETA(DisplayName = "Whisper"),
+	IMPACT = 2 UMETA(DisplayName = "Impact"),
+};
+
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ForceComponent : public UActorComponent, public IPS_CanGenerateImpactField
 {
@@ -70,7 +78,6 @@ protected:
 	//------------------
 #pragma endregion General
 
-
 #pragma region Push
 	//------------------
 
@@ -97,7 +104,7 @@ public:
 	void StopPush();
 
 	UFUNCTION()
-	void PlaySound();
+	void PlaySound(EPushSFXType soundType);
 
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 
@@ -168,13 +175,13 @@ protected:
 			
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
-	USoundBase* PushSound;
-
+	TMap<EPushSFXType,USoundBase*> PushSounds;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback", meta=(UIMin="0.01", ClampMin="0.01"))
 	float PushSoundStartDelay = 0.2f;
 
 	UFUNCTION()
-	void Impulse(UMeshComponent* inComp, const FVector impulse);
+	void Impulse(UMeshComponent* inComp, FVector impulse, const FHitResult impactPoint);
 
 private:
 	UPROPERTY(Transient)
@@ -206,13 +213,16 @@ private:
 
 	UPROPERTY(Transient)
 	FVector _StartForcePushLoc;
+
+	UPROPERTY(Transient)
+	FVector _ImpactForcePushLoc;
 	
 	UPROPERTY(Transient)
 	float _StartForceHandOffset;
 	
 	UPROPERTY(Transient)
 	FVector _DirForcePush;
-
+	
 #pragma endregion Push
 
 #pragma region Screw

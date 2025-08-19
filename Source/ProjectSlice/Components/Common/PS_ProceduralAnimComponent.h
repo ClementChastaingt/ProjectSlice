@@ -296,6 +296,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw loc offset curve"))
 	UCurveFloat* ScrewLocOffsetCurve;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw rot offset multiplicator"))
+	float ScrewRotOffsetMultiplicator = 1.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(ToolTip="Screw rot offset curve"))
 	UCurveFloat* ScrewRotOffsetCurve;
 

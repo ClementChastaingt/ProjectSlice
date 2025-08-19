@@ -25,16 +25,16 @@ struct FSWorldShakeParams
 	
 public:
 	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
 	float InnerRadius = 0.0f;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
 	float OuterRadius = 300.0f;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
 	float Falloff = 1;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = bIsAWorldShake, EditConditionHides))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake")
 	bool bOrientShakeTowardsEpicenter = false;
 
 	FString ToString() const
@@ -67,7 +67,7 @@ public:
 	bool bIsWorldShakeOverrided = false;
 	
 	//A World Shake is a shake at loc, so it use epicenter logic
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(DisplayName="Is a WorldShake"))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(DisplayName="Is a WorldShake", EditCondition = "!bIsWorldShakeOverrided", EditConditionHides))
 	bool bIsAWorldShake = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Parameters|CameraShake", meta=(EditCondition = "bIsAWorldShake && !bIsWorldShakeOverrided", EditConditionHides))

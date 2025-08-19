@@ -259,7 +259,7 @@ void UPS_ForceComponent::ReleasePush()
 			FTimerHandle timerImpulseHandle;
 			FTimerDelegate timerImpulseDelegate;
 				
-			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass)); 
+			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass), lineViewHit); 
 			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
 			
 			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Impulse actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, _AlphaInput, duration);
@@ -274,16 +274,13 @@ void UPS_ForceComponent::ReleasePush()
 	_PushForceRotation = UKismetMathLibrary::FindLookAtRotation(_StartForcePushLoc, _StartForcePushLoc + _DirForcePush * ConeLength).Clamp();
 	OnSpawnPushBurst.Broadcast(_StartForcePushLoc, _DirForcePush * ConeLength);
 		
-	//Play the sound if specified
-	if(IsValid(PushSound))
-	{
-		FTimerHandle timerHandle;
-		FTimerDelegate timerDelegate;
+	//Play sounds
+	//Released
+	FTimerHandle timerHandle;
+	FTimerDelegate timerDelegate;
 
-		timerDelegate.BindUObject(this, &UPS_ForceComponent::PlaySound);
-		GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, PushSoundStartDelay, false);
-	}
-
+	timerDelegate.BindUObject(this, &UPS_ForceComponent::PlaySound, EPushSFXType::RELEASED); 
+	GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, PushSoundStartDelay, false);
 
 	//CameraShake
 	const float alphaShake = (_AlphaInput < 0.25f) ? 0.25f : _AlphaInput;
@@ -342,10 +339,14 @@ void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, U
 
 }
 
-void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse)
+void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, const FHitResult impactPoint)
 {
 	//impulse
 	inComp->AddImpulse(impulse, NAME_None, false);
+
+	//Play Impact sound
+	_ImpactForcePushLoc = impactPoint.ImpactPoint;
+	PlaySound(EPushSFXType::IMPACT);
 }
 
 void UPS_ForceComponent::SetupPush()
@@ -378,11 +379,35 @@ void UPS_ForceComponent::StopPush()
 	OnPushEvent.Broadcast(false);
 }
 
-void UPS_ForceComponent::PlaySound()
+void UPS_ForceComponent::PlaySound(const EPushSFXType soundType)
 {
-	if(!IsValid(PushSound) || !IsValid(_PlayerCharacter)) return;
+	if(!PushSounds.Contains(soundType) || !PushSounds.Contains(EPushSFXType::WHISPER)) return;
 
-	UGameplayStatics::SpawnSoundAttached(PushSound, _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
+	USoundBase* currentSound = *PushSounds.Find(soundType);
+
+	if(!IsValid(currentSound) || !IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
+
+	switch (soundType)
+	{
+		case EPushSFXType::RELEASED:
+			UGameplayStatics::SpawnSoundAttached(currentSound, _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
+
+			if (bIsQuickPush && PushSounds.Contains(EPushSFXType::WHISPER) && IsValid(*PushSounds.Find(EPushSFXType::WHISPER)))
+				UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
+		
+			break;
+			
+		case EPushSFXType::WHISPER:
+			if (!bIsQuickPush)
+				UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _StartForcePushLoc);
+		
+			break;
+			
+		case EPushSFXType::IMPACT:
+			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _ImpactForcePushLoc);
+			break;
+	}
+	
 }
 
 //------------------

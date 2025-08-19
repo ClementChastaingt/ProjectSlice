@@ -357,9 +357,9 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 
 	//Rot Offset
 	float startRot = _bIsReseting ? _LastScrewRotOffset.Pitch : 0.0f;
-	float targetRot = _bIsReseting ? 0.0f : 360.0f;
+	float targetRot = _bIsReseting ? 0.0f : 360.0f *  FMath::Lerp(1.0f, ScrewRotOffsetMultiplicator, curveRotAlpha);
 	ScrewRotOffset = FRotator::ZeroRotator;
-	ScrewRotOffset.Pitch = FMath::Lerp(startRot,targetRot, curveRotAlpha);
+	ScrewRotOffset.Pitch = FMath::Lerp(startRot, targetRot, FMath::Sin(curveRotAlpha));
 
 	if(bDebugForcePush)UE_LOG(LogTemp, Log, TEXT("%S :: bIsReseting %i, alpha %f, ScrewLocOffset %s, ScrewRotOffset %s"),__FUNCTION__, _bIsReseting, alpha, *ScrewLocOffset.ToString(), *ScrewRotOffset.ToString());
 
@@ -367,9 +367,9 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 	OnScrewMoveUpdate.Broadcast();
 	
 	//Stop movement
-	if(alpha >= 1.0f)
+	if(alpha >= 1.0f && _bIsReseting)
 	{
-		if(_bIsReseting) OnScrewResetEnd.Broadcast();
+		OnScrewResetEnd.Broadcast();
 		_bMoveScrew = false;
 	}
 

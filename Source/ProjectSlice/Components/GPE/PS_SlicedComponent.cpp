@@ -7,8 +7,10 @@
 #include "KismetProceduralMeshLibrary.h"
 #include "Components/AudioComponent.h"
 #include "Components/BrushComponent.h"
+#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/Data/PS_TraceChannels.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
@@ -121,17 +123,32 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	//Mass scale factoring
 	float objectMassScaled = UPSFl::GetObjectUnifiedMass(this);
 	if(FMath::IsNearlyZero(objectMassScaled)) objectMassScaled = 1.0f;
-	const float impactStrength = UKismetMathLibrary::SafeDivide((GetComponentVelocity() * objectMassScaled).Length(), extent);
-	const float impactStrengthZ = UKismetMathLibrary::SafeDivide(GetComponentVelocity().Z * objectMassScaled, extent);
+	float impactStrength = UKismetMathLibrary::SafeDivide((GetComponentVelocity() * objectMassScaled).Length(), extent);
+	float impactStrengthZ = UKismetMathLibrary::SafeDivide(GetComponentVelocity().Z * objectMassScaled, extent);
+
+	//Calculate alpha feedback
+	float alphaSound = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
+	float alphaShake = UKismetMathLibrary::MapRangeClamped(impactStrengthZ,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
+
+	//Override alpha if used distance by distance to player
+	const float alphaFeedback = alphaSound;
+	if (IsValid(GetWorld()))
+	{
+		AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+		if (IsValid(player))
+		{
+			if (IsValid(player->GetForceComponent()) &&  player->GetForceComponent()->IsPushing()) return;
+			const float dist = UKismetMathLibrary::Vector_Distance(this->GetComponentLocation(), player->GetActorLocation());
+			alphaSound = UKismetMathLibrary::SafeDivide(impactStrength, dist);
+			alphaShake = UKismetMathLibrary::SafeDivide(impactStrengthZ, dist);
+		}
+	}
 	
 	//Cooldown
 	float currentTime = GetWorld()->GetTimeSeconds();
 	if (currentTime - _LastImpactTime < _ImpactCooldown) return;
 	_LastImpactTime = currentTime;
 	
-	//Calculate alpha feedback
-	const float alphaSound = UKismetMathLibrary::MapRangeClamped(impactStrength,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
-	const float alphaShake = UKismetMathLibrary::MapRangeClamped(impactStrengthZ,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
 	
 	//Debug	
 	if(bDebug)
