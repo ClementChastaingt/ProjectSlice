@@ -106,10 +106,13 @@ public:
 	UFUNCTION()
 	void PlaySound(EPushSFXType soundType);
 
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsPushLoading() const{return _bIsPushLoading;}
 
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsPushReleased() const{return _bIsPushReleased;}
 	
 	FORCEINLINE float GetMaxPushForceTime() const{return InputMaxPushForceDuration;}

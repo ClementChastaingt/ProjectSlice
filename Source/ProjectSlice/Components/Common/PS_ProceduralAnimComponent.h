@@ -304,6 +304,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Screw", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Tweak as same of release push anim duration"))
 	float ScrewResetMoveDuration = 0.10f;
+
+	UPROPERTY(Transient)
+	float _RotScrewTime;
 	
 private:
 	UPROPERTY(Transient)
