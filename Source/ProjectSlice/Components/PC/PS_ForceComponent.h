@@ -61,7 +61,7 @@ private:
 
 protected:
 	UFUNCTION()	
-	void UpdatePushTargetLoc() const;
+	void UpdatePushTargetLoc();
 	
 	UFUNCTION()
 	void OnFireEventReceived();
@@ -179,9 +179,6 @@ protected:
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback")
 	TMap<EPushSFXType,USoundBase*> PushSounds;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Push|Feedback", meta=(UIMin="0.01", ClampMin="0.01"))
-	float PushSoundStartDelay = 0.2f;
 
 	UFUNCTION()
 	void Impulse(UMeshComponent* inComp, FVector impulse, const FHitResult impactPoint);
@@ -252,7 +249,7 @@ public:
 	FOnPSDelegate OnCoolDownEnded;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Cooldown", meta=(UIMin="0", ClampMin="0", ForceUnits="sec"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category ="Parameters|Cooldown", meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float CoolDownDuration = 0.2f;
 
 private:

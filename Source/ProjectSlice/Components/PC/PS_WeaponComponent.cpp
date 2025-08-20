@@ -351,7 +351,7 @@ void UPS_WeaponComponent::SightTick()
 
 	//Determine Sight Hit
 	_bUseHookStartForLaser = _PlayerCharacter->GetForceComponent()->IsPushing();
-	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetMuzzlePosition();
+	_SightStart = _bUseHookStartForLaser ? _PlayerCharacter->GetHookComponent()->GetHookThrower()->GetSocketLocation(SOCKET_HOOK) : GetLaserPosition();
 	const FVector targetSight = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, MaxFireDistance);
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
@@ -359,13 +359,14 @@ void UPS_WeaponComponent::SightTick()
 		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _SightHitResult, true, FLinearColor::Red, FLinearColor::Green,0.1f);
 	
 	//Determine Laser Hit
-	const FVector targetLaser = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), GetLaserPosition(), targetLaser, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	const FVector targetLaser = UPSFl::GetWorldPointInFrontOfCamera(_PlayerController, _SightHitResult.bBlockingHit && !_bUseHookStartForLaser ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	//const FVector targetLaser = UPSFl::GetScreenCenterWorldLocation(_PlayerController) + _PlayerCamera->GetForwardVector() * (_SightHitResult.bBlockingHit ? FMath::Abs(_SightHitResult.Distance) + 250.0f : MaxFireDistance);
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), _SightStart, targetLaser, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebugSightRack ? EDrawDebugTrace::ForDuration :  EDrawDebugTrace::None, _LaserHitResult, true,  FLinearColor::Red, FLinearColor::Green,0.1f);
 
 	//Laser && Sight Target
-	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.Location : targetLaser;
-	_SightTarget = _SightHitResult.bBlockingHit ? _SightHitResult.Location : targetSight; 
+	_LaserTarget = _LaserHitResult.bBlockingHit ? _LaserHitResult.ImpactPoint : targetLaser;
+	_SightTarget = _SightHitResult.bBlockingHit ? _SightHitResult.ImpactPoint : targetSight; 
 	
 	//Stop if in unauthorized slicing situation
 	if(_PlayerCharacter->IsWeaponStow() || _PlayerCharacter->GetForceComponent()->IsPushLoading())
@@ -396,10 +397,10 @@ void UPS_WeaponComponent::SightTick()
 void UPS_WeaponComponent::UpdateLaserColor()
 {
 	EPointedObjectType newObjectType = EPointedObjectType::DEFAULT;
-	if (_SightHitResult.bBlockingHit && IsValid(_SightHitResult.GetComponent()))
+	if (_LaserHitResult.bBlockingHit && IsValid(_LaserHitResult.GetComponent()))
 	{
-		if(_SightHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass())) newObjectType = EPointedObjectType::CHAOS;
-		else if (_SightHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) newObjectType = EPointedObjectType::SLICEABLE;
+		if(_LaserHitResult.GetComponent()->IsA(UGeometryCollectionComponent::StaticClass())) newObjectType = EPointedObjectType::CHAOS;
+		else if (_LaserHitResult.GetComponent()->IsA(UPS_SlicedComponent::StaticClass())) newObjectType = EPointedObjectType::SLICEABLE;
 	}
 	
 	if (newObjectType != _SightedObjectType)

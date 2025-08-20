@@ -29,6 +29,13 @@
 		{
 			"Name": "GeometryScripting",
 			"Enabled": true
+		},
+		{
+			"Name": "meshy",
+			"Enabled": false
 		}
+	],
+	"AdditionalPluginDirectories": [
+		"../../Ressource/Ressource/Plugins"
 	]
 }

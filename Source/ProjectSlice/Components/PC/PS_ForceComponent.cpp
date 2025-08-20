@@ -63,7 +63,7 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
+	if(IsValid(_PlayerCharacter)) _CurrentPushHitResult = _PlayerCharacter->GetWeaponComponent()->GetLaserHitResult();
 	
 	UpdatePushTargetLoc();
 
@@ -73,11 +73,14 @@ void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 #pragma region General
 //------------------
 
-void UPS_ForceComponent::UpdatePushTargetLoc() const
+void UPS_ForceComponent::UpdatePushTargetLoc()
 {
-	if(!_bIsPushLoading) return;
-	
+	if(!_bIsPushLoading){ return;} 
+
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent())) return;
+
+	//Udpatepush type for have a bIsQuickPush updated
+	DeterminePushType();
 	
 	if(!_CurrentPushHitResult.bBlockingHit
 		|| !IsValid(_CurrentPushHitResult.GetActor())
@@ -91,14 +94,12 @@ void UPS_ForceComponent::UpdatePushTargetLoc() const
 		OnSpawnPushDistorsion.Broadcast(true);
 	
 	//Target Loc
-	//_PushTargetLoc = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult().Location;
-	FVector dir = (_CurrentPushHitResult.Normal * - 1) + _PlayerCharacter->GetActorForwardVector();
-	dir.Normalize();
+	FVector dir = _CurrentPushHitResult.Normal;
 	
 	//FVector start = _CurrentPushHitResult.Location;
 	FVector start = _PlayerCharacter->GetWeaponComponent()->GetLaserTarget();
 	
-	const FVector pushTargetLoc = start + dir * -10.0f;
+	const FVector pushTargetLoc = start + dir;
 
 	//Target Rot
 	const FRotator pushTargetRot = UKismetMathLibrary::FindLookAtRotation(start + _CurrentPushHitResult.Normal * -500, pushTargetLoc);
@@ -275,13 +276,9 @@ void UPS_ForceComponent::ReleasePush()
 	OnSpawnPushBurst.Broadcast(_StartForcePushLoc, _DirForcePush * ConeLength);
 		
 	//Play sounds
-	//Released
-	FTimerHandle timerHandle;
-	FTimerDelegate timerDelegate;
-
-	timerDelegate.BindUObject(this, &UPS_ForceComponent::PlaySound, EPushSFXType::RELEASED); 
-	GetWorld()->GetTimerManager().SetTimer(timerHandle, timerDelegate, PushSoundStartDelay, false);
-
+	PlaySound(EPushSFXType::RELEASED);
+	PlaySound(EPushSFXType::WHISPER);
+	
 	//CameraShake
 	const float alphaShake = (_AlphaInput < 0.25f) ? 0.25f : _AlphaInput;
 	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::FORCE, alphaShake);
@@ -301,7 +298,6 @@ void UPS_ForceComponent::DeterminePushType()
 {
 	//Quick pushing check && if player target is valid, if don't do quickPush logic
 	bIsQuickPush = GetWorld()->GetAudioTimeSeconds() - _StartForcePushTimestamp <= QuickPushTimeThreshold;
-	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush %i "), bIsQuickPush);
 	if(!bIsQuickPush)
 	{
 		bIsQuickPush =
@@ -309,11 +305,7 @@ void UPS_ForceComponent::DeterminePushType()
 			|| !IsValid(_CurrentPushHitResult.GetActor())
 			|| !IsValid(_CurrentPushHitResult.GetComponent())
 			|| !_CurrentPushHitResult.GetComponent()->IsSimulatingPhysics();
-
-		//UE_LOG(LogTemp, Error, TEXT("%i 01, %i 02"), !_CurrentPushHitResult.bBlockingHit, _CurrentPushHitResult.GetComponent()->IsSimulatingPhysics());
-		//DrawDebugPoint(GetWorld(), _CurrentPushHitResult.Location, 20.f, FColor::Orange, false, 2.0f);
 	}
-	UE_LOG(LogTemp, Error, TEXT("bIsQuickPush02 %i "), bIsQuickPush);
 }
 
 void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, UPARAM(Ref) TArray<FHitResult>& outFilteredHitResult)
@@ -390,17 +382,14 @@ void UPS_ForceComponent::PlaySound(const EPushSFXType soundType)
 	switch (soundType)
 	{
 		case EPushSFXType::RELEASED:
-			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 350);
-
-			if (bIsQuickPush && PushSounds.Contains(EPushSFXType::WHISPER) && IsValid(*PushSounds.Find(EPushSFXType::WHISPER)))
-				UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
-		
+			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 350);		
 			break;
 			
 		case EPushSFXType::WHISPER:
 			if (!bIsQuickPush)
 				UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _StartForcePushLoc);
-		
+			else
+				UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
 			break;
 			
 		case EPushSFXType::IMPACT:

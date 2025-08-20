@@ -632,6 +632,7 @@ void UPS_ParkourComponent::SlideTick()
 		//Clamp Max Velocity
 		const float rangedPitchMultiplicator = UKismetMathLibrary::MapRangeClamped(OutSlopePitchDegreeAngle,90,characterMovement->GetWalkableFloorAngle(),1.0,SlopeForceDecelerationWeight);
 		targetVel = slideVel * SlideSpeedBoost;
+		targetVel = slideVel * SlideSpeedBoost;
 		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * (OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator));
 
 		const FVector clampedVel = UPSFl::ClampVelocity(slideVel, _PlayerCharacter->GetVelocity(),targetVel, maxSpeed);
