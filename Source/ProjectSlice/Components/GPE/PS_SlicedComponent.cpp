@@ -113,6 +113,9 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 {
 	if(OtherActor == GetOwner() || OtherComp == this) return;
 
+	//Work var
+	const bool bHitPlayer = OtherActor->IsA(AProjectSliceCharacter::StaticClass());
+
 	//Bounds
 	 FVector origin; 
      FVector boxExtent;
@@ -131,7 +134,6 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	float alphaShake = UKismetMathLibrary::MapRangeClamped(impactStrengthZ,VelocityRangeFeedback.Min, VelocityRangeFeedback.Max, 0.0f, 1.0f);
 
 	//Override alpha if used distance by distance to player
-	const float alphaFeedback = alphaSound;
 	if (IsValid(GetWorld()))
 	{
 		AProjectSliceCharacter* player = Cast<AProjectSliceCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
@@ -143,12 +145,14 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 			alphaShake = UKismetMathLibrary::SafeDivide(impactStrengthZ, dist);
 		}
 	}
+
+	//Specifi override
+	if (bHitPlayer) alphaSound = FMath::Clamp(alphaSound, 0.0f, 0.3f);
 	
 	//Cooldown
 	float currentTime = GetWorld()->GetTimeSeconds();
 	if (currentTime - _LastImpactTime < _ImpactCooldown) return;
 	_LastImpactTime = currentTime;
-	
 	
 	//Debug	
 	if(bDebug)
@@ -161,7 +165,11 @@ void UPS_SlicedComponent::OnSlicedObjectHitEventReceived(UPrimitiveComponent* Hi
 	ImpactSoundFeedback(Hit, alphaSound);
 	
 	//Try and play camera shake if specified
-	ImpactCameraFeedback(Hit.ImpactPoint, alphaShake);
+	if (!bHitPlayer)
+	{
+		ImpactCameraFeedback(Hit.ImpactPoint, alphaShake);
+	}
+
 
 	//Callback
 	OnSlicedObjectHitEvent.Broadcast();
