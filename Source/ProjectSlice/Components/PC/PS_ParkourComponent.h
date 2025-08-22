@@ -27,6 +27,27 @@ enum class EDashType : uint8
 	SWING = 1 UMETA(DisplayName ="Swing"),
 };
 
+USTRUCT(BlueprintType, Category = "Parameter|Movement|Steering")
+struct FSSteeringParameters
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering")
+	bool bUseSteering = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(EditCondition = "bUseSteering", EditConditionHides))
+	float ReferenceMinMovementSpeed = 200.f;
+	// FFloatInterval ReferenceMovementSpeed = FFloatInterval(200.f, 600.f);
+
+	// The closest the character is to its Max ReferenceMovementSpeed, the more the SteeringSpeed gets closer to Min SteeringSpeed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(ClampMin=1, UIMin=1, EditCondition = "bUseSteering", EditConditionHides))
+	FFloatInterval SteeringSpeed = FFloatInterval(400.f, 600.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering",
+		meta = (EditCondition = "bUseSteering", EditConditionHides))
+	UCurveFloat* SteeringSpeedCurve = nullptr;
+};
 
 UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
@@ -43,6 +64,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug")
 	bool bDebug = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Movement")
+	bool bDebugSteering = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|WallRun")
 	bool bDebugWallRun = false;
@@ -120,6 +144,27 @@ private:
 		
 //------------------
 #pragma endregion General
+
+#pragma region Movement
+	//------------------
+
+public:
+	UFUNCTION()
+	void ApplySteering(FVector& movementDirection, FVector2D inputValue, float override2DVelocity = -1);
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameter|Steering", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Steering"))
+	FSSteeringParameters SteeringParams;
+	
+private:
+	UPROPERTY(DuplicateTransient)
+	float _SteeringRotationStartTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(Transient)
+	int32 _SteeringSign;
+
+#pragma endregion Movement
+
 
 #pragma region Mantle
 	//------------------
@@ -429,35 +474,17 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
-
-	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
-	// bool bIsSlidingOnSLope = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
-	FTimerHandle SlideTimerHandle;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slide")
-	float StartSlideTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide tick current time in second"))
-	float SlideSeconds = TNumericLimits<float>().Lowest();
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Character Movement default Ground Friction"))
-	FVector SlideDirection = FVector::ZeroVector;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Floor Slope degree angle Pitch"))
-	float OutSlopePitchDegreeAngle = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Floor Slope degree angle Roll"))
-	float OutSlopeRollDegreeAngle = 0.0f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Boost Speed, use when slide on flat surface"))
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Speed", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Boost Speed, use when slide on flat surface"))
 	float SlideSpeedBoost = 200.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Max Speed multiplicator by DefaultMaxWalkSpeed, use when slide on flat surface"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Speed", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="DefaultMaxWalkSpeed multiplicator used for define maxSpeed authorized"))
 	float MaxSlideSpeedMultiplicator = 5.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Multiplicator used give a weight to slope on slide"))
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Slope", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="DefaultMaxWalkSpeed multiplicator used for define maxSpeed authorized"))
+	float FloorInfluenceVelocityWeight = 1500000.0f;
+		
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Slope", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Multiplicator used give a weight to slope on slide"))
 	float SlopeForceDecelerationWeight = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Deceleration", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Max braking deceleration "))
@@ -478,6 +505,24 @@ private:
 
 	UPROPERTY(Transient)
 	float _SlideAlphaFeedback;
+
+	UPROPERTY(Transient)
+	FTimerHandle SlideTimerHandle;
+
+	UPROPERTY(Transient)
+	float _StartSlideTimestamp;
+
+	UPROPERTY(Transient)
+	float _SlideSeconds;
+	
+	UPROPERTY(Transient)
+	FVector _SlideDirection;
+
+	UPROPERTY(Transient)
+	float _OutSlopePitchDegreeAngle;
+
+	UPROPERTY(Transient)
+	float _OutSlopeRollDegreeAngle;
 	
 #pragma endregion Slide
 
