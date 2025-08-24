@@ -214,7 +214,7 @@ void UPS_SlicedComponent::ImpactCameraFeedback(const FVector& impactLoc, const f
 	worldShakeParams.Falloff = FMath::Lerp(FallOffRange.Min, FallOffRange.Max,alpha);
 
 	//Debug	
-	if(bDebugFeedback) UE_LOG(LogTemp, Error, TEXT("%S :: OuterRadius %f, Falloff %f"),__FUNCTION__,worldShakeParams.OuterRadius, worldShakeParams.Falloff);
+	if(bDebugFeedback) UE_LOG(LogTemp, Log, TEXT("%S :: OuterRadius %f, Falloff %f"),__FUNCTION__,worldShakeParams.OuterRadius, worldShakeParams.Falloff);
 	
 	//Launch Shake
 	UPSFL_CameraShake::WorldShakeCamera(GetWorld(), EScreenShakeType::IMPACT, impactLoc, worldShakeParams, alpha);

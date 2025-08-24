@@ -123,32 +123,6 @@ private:
 //------------------
 #pragma endregion General
 
-#pragma region Movement
-	//------------------
-
-public:
-	UFUNCTION()
-	void ApplySlideSteering(FVector& movementDirection, FVector2D inputValue, float override2DVelocity = -1);
-	
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering")
-	bool bUseSteering = true;
-	
-	// The closest the character is to its Max ReferenceMovementSpeed, the more the SteeringSpeed gets closer to Min SteeringSpeed
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(ClampMin=1, UIMin=1, EditCondition = "bUseSteering", EditConditionHides))
-	FFloatInterval SteeringSpeed = FFloatInterval(400.f, 600.f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering",
-	meta = (EditCondition = "bUseSteering", EditConditionHides))
-	UCurveFloat* SteeringSpeedCurve = nullptr;
-
-	
-private:
-	UPROPERTY(Transient)
-	int32 _SteeringSign;
-
-#pragma endregion Movement
-
 #pragma region Mantle
 	//------------------
 
@@ -354,7 +328,7 @@ private:
 
 	//Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall
 	UPROPERTY(DuplicateTransient)
-	int32 _CameraTiltOrientation = 0;
+	int32 _WallRunCameraTiltOrientation = 0;
 
 	UPROPERTY(Transient)
 	FHitResult _WallRunSideHitResult;
@@ -445,6 +419,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetSlideAlphaFeedback() const{ return _SlideAlphaFeedback;}
 
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetSteeredSlideDirection() const{return _SteeredSlideDirection;}
+
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlideEvent;
 
@@ -457,7 +434,10 @@ protected:
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
-		
+
+	UFUNCTION()
+	void ApplySlideSteering(FVector& movementDirection, FVector2D inputValue, float alpha);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Slide|Speed", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Slide Boost Speed, use when slide on flat surface"))
 	float SlideSpeedBoost = 200.0f;
 
@@ -481,6 +461,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Deceleration", meta=(ToolTip="Braking Deceleration Curve"))
 	UCurveFloat* SlideBrakingDecelerationCurve;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Steering")
+	bool bUseSteering = true;
+	
+	// The closest the character is to its Max ReferenceMovementSpeed, the more the SteeringSpeed gets closer to Min SteeringSpeed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Steering", meta=(ClampMin=1, UIMin=1, EditCondition = "bUseSteering", EditConditionHides))
+	FFloatInterval SteeringSpeed = FFloatInterval(400.f, 600.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Steering",
+	meta = (EditCondition = "bUseSteering", EditConditionHides))
+	UCurveFloat* SteeringSpeedCurve = nullptr;
+
 
 private:
 	UPROPERTY(Transient)
@@ -498,8 +490,11 @@ private:
 	UPROPERTY(Transient)
 	float _SlideSeconds;
 	
-	UPROPERTY(Transient)
-	FVector _SlideDirection;
+	UPROPERTY()
+	FVector _DefaultSlideDirection;
+
+	UPROPERTY()
+	FVector _SteeredSlideDirection;
 
 	UPROPERTY(Transient)
 	FRotator _SlideStartRot;
@@ -509,6 +504,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _OutSlopeRollDegreeAngle;
+
+	UPROPERTY(Transient)
+	int32 _SteeringSign;
 	
 #pragma endregion Slide
 

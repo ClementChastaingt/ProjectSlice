@@ -15,6 +15,13 @@ class AProjectSliceCharacter;
  * 
  */
 
+UENUM()
+enum class ETiltType : uint8
+{
+	WALLRUN = 0 UMETA(DisplayName ="WallRun"),
+	SLIDE = 1 UMETA(DisplayName ="Slide"),
+};
+
 USTRUCT(BlueprintType, Category = "Struct")
 struct FSVignetteAnimation
 {
@@ -322,13 +329,16 @@ private:
 
 public:
 	UFUNCTION()
-	void SetupCameraTilt(const bool& bIsReset, const int32& targetOrientation = 0.0f);
+	void SetupCameraTilt(const bool& bIsReset, const ETiltType& tiltType, const int32& targetOrientation = 0.0f);
 
 	UFUNCTION()
 	void ForceUpdateTargetTilt();
 
 	UFUNCTION()
 	void CameraRollTilt();
+
+	UFUNCTION()
+	float GetAngleCamToTarget();
 	
 	FORCEINLINE float GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
 
@@ -348,22 +358,31 @@ protected:
 
 	//Init an impossible value for a dot product
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera")
-	float LastAngleCamToWall = 0.0f;
+	float LastAngleCamToTarget = 0.0f;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Camera", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation Roll tilt target"))
+	TMap<ETiltType, float> CameraTilRollTarget;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|Camera", meta=(ToolTip="Camera rotation tilt interpolation curve"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|CameraRollTilt", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
 
 private:
 	UPROPERTY(Transient)
-	bool _bIsCameraTiltingByInterp = false;
+	ETiltType _CurrentTiltType;
 	
-	UPROPERTY(Transient)
+	UPROPERTY()
+	bool _bIsCameraTiltingByInterp = false;
+
+	UPROPERTY()
+	bool _bIsTilting = false;
+	
+	UPROPERTY()
 	bool _bIsCameraTilted = false;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	bool _bIsResetingCameraTilt = false;
 	
 #pragma endregion CameraTilt

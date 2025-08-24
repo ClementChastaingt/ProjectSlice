@@ -47,7 +47,6 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	InitPostProcess();
 }
 
-
 void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
@@ -264,16 +263,33 @@ void UPS_PlayerCameraComponent::SetWorldShakeOverrided(const EScreenShakeType& s
 #pragma region Camera_Tilt                                                                                                                                                                                                                      
 //------------------                                                                                                                                                                                                                            
                                                                                                                                                                                                                                                 
-void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const int32& targetOrientation)                                                                                                                                                    
+void UPS_PlayerCameraComponent::SetupCameraTilt(const bool& bIsReset, const ETiltType& tiltType, const int32& targetOrientation)                                                                                                                                                    
 {
+	if (_bIsTilting && !bIsReset)
+	{
+		if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S :: tilting already"), __FUNCTION__); 
+		return;
+	}
+
+	if (!IsValid(_PlayerCharacter)
+		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
+		|| !IsValid(_PlayerCharacter->GetParkourComponent())) return;
+
+	//Setup work var
 	CurrentCameraTiltOrientation = targetOrientation;
 	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
 	StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
-	
 	_bIsResetingCameraTilt = bIsReset;
-	LastAngleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
-	_bIsCameraTiltingByInterp = true;
+	_CurrentTiltType = tiltType;
+
+	//Specifics setup
+	LastAngleCamToTarget = GetAngleCamToTarget();
 	
+	//Start interp
+	_bIsCameraTiltingByInterp = true;
+	_bIsTilting = true;
+
+	//Debug
 	if(bDebugCameraTilt)                                                                                                                                                                                                                        
 		UE_LOG(LogTemp, Warning, TEXT("%S :: bIsReset %i,  StartCameraRot %s, CurrentCameraTiltOrientation %f"), __FUNCTION__, bIsReset, *StartCameraRot.ToString(), CurrentCameraTiltOrientation);               
                                                                                                                                                                                                                                         
@@ -295,27 +311,27 @@ void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
 void UPS_PlayerCameraComponent::CameraRollTilt()                                                                                                                                                              
 {
 	if(!IsValid(_PlayerCharacter)
-		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
-		|| !IsValid(_PlayerCharacter->GetParkourComponent())
-		|| !IsValid(GetWorld()) ) return;
+		|| !IsValid(GetWorld())
+		|| !CameraTilRollTarget.Contains(_CurrentTiltType)) return;
 
-	if(!_PlayerCharacter->GetParkourComponent()->IsWallRunning() && !_bIsResetingCameraTilt) return;
+	if(!_bIsTilting) return;
 	
 	//Determine start
 	const FRotator currentRot = _PlayerController->GetControlRotation();
-	const float angleCamToWall = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
-	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToWall) != FMath::Sign(LastAngleCamToWall);
+	const float angleCamToTarget = GetAngleCamToTarget();
+	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToTarget) != FMath::Sign(LastAngleCamToTarget);
 	
 	//Determine Target Roll
 	if(bHaveToUpdateTiltOrientation)
 		ForceUpdateTargetTilt();
 	
-	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToWall);
-	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw, 20.0 * orientation);
+	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToTarget);
+	const float currentRollTarget = *CameraTilRollTarget.Find(_CurrentTiltType);
+	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw, currentRollTarget * orientation);
 
-	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("angleCamToWall %f, LastAngleCamToWall %f, CurrentCameraTiltOrientation %f, orientation %f"), angleCamToWall,LastAngleCamToWall, CurrentCameraTiltOrientation, orientation);
+	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("angleCamToTarget %f, LastAngleCamToTarget %f, CurrentCameraTiltOrientation %f, orientation %f"), angleCamToTarget,LastAngleCamToTarget, CurrentCameraTiltOrientation, orientation);
 
-	LastAngleCamToWall = angleCamToWall;
+	LastAngleCamToTarget = angleCamToTarget;
 	
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	                                                                                                                                                                                                                                            
@@ -339,11 +355,32 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	if(alphaTilt >= 1)                                                                                                                                                                                                                          
 	{
 		_bIsCameraTilted = !_bIsResetingCameraTilt;
+		if(_bIsResetingCameraTilt) _bIsTilting = false;
 		_bIsCameraTiltingByInterp = false;
 	}                                                                                                                                                                                                                                           
               
-}                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                
+}
+
+float UPS_PlayerCameraComponent::GetAngleCamToTarget()
+{
+	if (!IsValid(_PlayerCharacter)
+		|| !IsValid(_PlayerCharacter->GetFirstPersonCameraComponent())
+		|| !IsValid(_PlayerCharacter->GetParkourComponent())) return 0.0f;
+	
+	float angleCamToTarget = 0.0f;
+	switch (_CurrentTiltType)
+	{
+		case ETiltType::WALLRUN:
+			angleCamToTarget = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetWallRunDirection());
+			break;
+		case ETiltType::SLIDE:
+			angleCamToTarget = _PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector().Dot(_PlayerCharacter->GetParkourComponent()->GetSteeredSlideDirection().GetSafeNormal());
+			break;
+	}
+	
+	return angleCamToTarget;
+}
+
 //------------------                                                                                                                                                                                                                            
 #pragma endregion Camera_Tilt                                                                                                                                                                                                                   
 
