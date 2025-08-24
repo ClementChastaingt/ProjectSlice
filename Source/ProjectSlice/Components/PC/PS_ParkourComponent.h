@@ -27,28 +27,6 @@ enum class EDashType : uint8
 	SWING = 1 UMETA(DisplayName ="Swing"),
 };
 
-USTRUCT(BlueprintType, Category = "Parameter|Movement|Steering")
-struct FSSteeringParameters
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering")
-	bool bUseSteering = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(EditCondition = "bUseSteering", EditConditionHides))
-	float ReferenceMinMovementSpeed = 200.f;
-	// FFloatInterval ReferenceMovementSpeed = FFloatInterval(200.f, 600.f);
-
-	// The closest the character is to its Max ReferenceMovementSpeed, the more the SteeringSpeed gets closer to Min SteeringSpeed
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(ClampMin=1, UIMin=1, EditCondition = "bUseSteering", EditConditionHides))
-	FFloatInterval SteeringSpeed = FFloatInterval(400.f, 600.f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering",
-		meta = (EditCondition = "bUseSteering", EditConditionHides))
-	UCurveFloat* SteeringSpeedCurve = nullptr;
-};
-
 UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_ParkourComponent : public UCapsuleComponent
 {
@@ -150,21 +128,26 @@ private:
 
 public:
 	UFUNCTION()
-	void ApplySteering(FVector& movementDirection, FVector2D inputValue, float override2DVelocity = -1);
+	void ApplySlideSteering(FVector& movementDirection, FVector2D inputValue, float override2DVelocity = -1);
 	
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameter|Steering", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="Steering"))
-	FSSteeringParameters SteeringParams;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering")
+	bool bUseSteering = true;
+	
+	// The closest the character is to its Max ReferenceMovementSpeed, the more the SteeringSpeed gets closer to Min SteeringSpeed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering", meta=(ClampMin=1, UIMin=1, EditCondition = "bUseSteering", EditConditionHides))
+	FFloatInterval SteeringSpeed = FFloatInterval(400.f, 600.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter|Movement|Steering",
+	meta = (EditCondition = "bUseSteering", EditConditionHides))
+	UCurveFloat* SteeringSpeedCurve = nullptr;
+
 	
 private:
-	UPROPERTY(DuplicateTransient)
-	float _SteeringRotationStartTimestamp = TNumericLimits<float>().Lowest();
-
 	UPROPERTY(Transient)
 	int32 _SteeringSign;
 
 #pragma endregion Movement
-
 
 #pragma region Mantle
 	//------------------
@@ -518,6 +501,9 @@ private:
 	UPROPERTY(Transient)
 	FVector _SlideDirection;
 
+	UPROPERTY(Transient)
+	FRotator _SlideStartRot;
+	
 	UPROPERTY(Transient)
 	float _OutSlopePitchDegreeAngle;
 
