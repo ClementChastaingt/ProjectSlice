@@ -420,6 +420,9 @@ public:
 	FORCEINLINE float GetSlideAlphaFeedback() const{ return _SlideAlphaFeedback;}
 
 	UFUNCTION(BlueprintCallable)
+	FORCEINLINE FVector GetDefaultSlideDirection() const{return _DefaultSlideDirection;}
+
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetSteeredSlideDirection() const{return _SteeredSlideDirection;}
 
 	UPROPERTY(BlueprintAssignable)
@@ -507,6 +510,9 @@ private:
 
 	UPROPERTY(Transient)
 	int32 _SteeringSign;
+
+	UPROPERTY(Transient)
+	FVector _LastWorldSteeringInputDirection;
 	
 #pragma endregion Slide
 

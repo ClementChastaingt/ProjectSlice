@@ -45,6 +45,23 @@ public:
 };
 
 
+USTRUCT(BlueprintType, Category = "Struct")
+struct FSCameraTiltParams
+{
+	GENERATED_BODY()
+
+	FSCameraTiltParams(){};
+	
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	float CameraTiltDuration = 0.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation Roll tilt target"))
+	float CameraTilRollTarget = 20;
+};
+
+
 UCLASS(Blueprintable, ClassGroup=(Player), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_PlayerCameraComponent : public UCameraComponent
 {
@@ -329,13 +346,16 @@ private:
 
 public:
 	UFUNCTION()
-	void SetupCameraTilt(const bool& bIsReset, const ETiltType& tiltType, const int32& targetOrientation = 0.0f);
+	bool ToggleCameraTilt(const bool& bIsReset, const ETiltType& tiltType, const int32& targetOrientation = 0.0f);
 
 	UFUNCTION()
 	void ForceUpdateTargetTilt();
 
 	UFUNCTION()
 	void CameraRollTilt();
+
+	UFUNCTION()
+	void UpdateRollTiltTarget(float alpha, float startRoll = 0.0f);
 
 	UFUNCTION()
 	float GetAngleCamToTarget();
@@ -359,12 +379,9 @@ protected:
 	//Init an impossible value for a dot product
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera")
 	float LastAngleCamToTarget = 0.0f;
-		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
-	float CameraTiltDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation Roll tilt target"))
-	TMap<ETiltType, float> CameraTilRollTarget;
+	TMap<ETiltType, FSCameraTiltParams> CameraTiltRollParams;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|CameraRollTilt", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
@@ -372,19 +389,23 @@ protected:
 private:
 	UPROPERTY(Transient)
 	ETiltType _CurrentTiltType;
+
+	UPROPERTY(Transient)
+	FSCameraTiltParams _CurrentCameraTiltRollParams;
 	
 	UPROPERTY()
 	bool _bIsCameraTiltingByInterp = false;
 
 	UPROPERTY()
 	bool _bIsTilting = false;
-	
-	UPROPERTY()
-	bool _bIsCameraTilted = false;
 
 	UPROPERTY()
 	bool _bIsResetingCameraTilt = false;
-	
+
+	UPROPERTY()
+	float _OverridingUpdatedRolltarget = 0.0f;
+
+
 #pragma endregion CameraTilt
 	
 };
