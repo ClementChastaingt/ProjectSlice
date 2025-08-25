@@ -476,6 +476,12 @@ protected:
 	meta = (EditCondition = "bUseSteering", EditConditionHides))
 	UCurveFloat* SteeringSpeedCurve = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Steering", meta = (ClampMin=0.1, UIMin=0.1, EditCondition = "bUseSteering", EditConditionHides))
+	float SteeringSmoothingInterpSpeed = 30.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slide|Steering",
+	meta = (EditCondition = "bUseSteering", EditConditionHides))
+	UCurveFloat* SteeringSmoothCurve = nullptr;
 
 private:
 	UPROPERTY(Transient)
@@ -512,7 +518,10 @@ private:
 	int32 _SteeringSign;
 
 	UPROPERTY(Transient)
-	FVector _LastWorldSteeringInputDirection;
+	FVector2D _LastSteeringInputDirection;
+
+	UPROPERTY(Transient)
+	bool _bIsSteeringCurrentlyTilting;
 	
 #pragma endregion Slide
 

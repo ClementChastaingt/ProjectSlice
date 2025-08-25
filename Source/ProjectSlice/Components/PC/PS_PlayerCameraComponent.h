@@ -355,7 +355,7 @@ public:
 	void CameraRollTilt();
 
 	UFUNCTION()
-	void UpdateRollTiltTarget(float alpha, float startRoll = 0.0f);
+	void UpdateRollTiltTarget(float alpha, const int32& orientation, float startRoll = 0.0f);
 
 	UFUNCTION()
 	float GetAngleCamToTarget();
@@ -392,9 +392,6 @@ private:
 
 	UPROPERTY(Transient)
 	FSCameraTiltParams _CurrentCameraTiltRollParams;
-	
-	UPROPERTY()
-	bool _bIsCameraTiltingByInterp = false;
 
 	UPROPERTY()
 	bool _bIsTilting = false;

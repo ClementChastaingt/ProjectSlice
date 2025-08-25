@@ -587,6 +587,8 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraShake(EScreenShakeType::SLIDE);
 
 	_bIsSliding = false;
+	_bIsSteeringCurrentlyTilting = false;
+	_SteeringSign = 0.0f;
 	if(bIsCrouched) _PlayerCharacter->Crouching();
 
 	OnSlideEvent.Broadcast(_bIsSliding);
@@ -731,31 +733,38 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	if(IsValid(SteeringSpeedCurve)) speedAlpha = SteeringSpeedCurve->GetFloatValue(alpha);
 	const float steeringSpeed = FMath::Lerp(SteeringSpeed.Min, SteeringSpeed.Max, speedAlpha);
 
-	// Compute Steering Weight
-	float angle = UKismetMathLibrary::DegAcos(FVector2D(slideDirForward).Dot(inputValue));
+	//Smoothing input (preventing from input tp)
+	FVector2D smoothedInputValue = inputValue;
+	if (!inputValue.Equals(_LastSteeringInputDirection))
+	{
+		float smoothingAlpha = FMath::Clamp((smoothedInputValue - _LastSteeringInputDirection).Length(), 0.0f, 1.0f) - 1.0f;
+		if(IsValid(SteeringSmoothCurve)) smoothingAlpha = SteeringSmoothCurve->GetFloatValue(alpha);
+		smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue, CustomTickRate, smoothingAlpha * SteeringSmoothingInterpSpeed);
+		
+		if (bDebugSteering) UE_LOG(LogTemp, Error, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),__FUNCTION__,smoothingAlpha, smoothedInputValue.Length());
 
-	FVector worldInputDirection =  slideDirRight * inputValue.X + slideDirForward * inputValue.Y;
-	worldInputDirection.Z = 0.0f;
+		//Update Tilt
+		if (_bIsSteeringCurrentlyTilting) _PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(smoothingAlpha, _SteeringSign * -1);
+	}
 	
-	if(FVector2D(slideDirRight).Dot(inputValue) <= 0) angle *= -1;
+	// Determine input world dir
+	_LastSteeringInputDirection = smoothedInputValue;
+	
+	FVector worldInputDirection =  slideDirRight * smoothedInputValue.X + slideDirForward * smoothedInputValue.Y;
+	worldInputDirection.Z = 0.0f;
+	worldInputDirection.Normalize();
+
+	// Compute Steering Weight
+	float angle = UKismetMathLibrary::DegAcos(slideDirForward.Dot(worldInputDirection));
+	if(slideDirRight.Dot(worldInputDirection) < 0) angle *= -1;
 	if(FMath::Sign(angle) != _SteeringSign)
 	{
 		// New rotation started
 		_SteeringSign = FMath::Sign(angle);
-
-		//Start Camera Tilt
-		_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(false, ETiltType::SLIDE, _SteeringSign);
-
-		//Interp to new orientation=
-		worldInputDirection = UKismetMathLibrary::VInterpTo(_LastWorldSteeringInputDirection, worldInputDirection, CustomTickRate, 10.0f);
 	}
-
-	//Update Tilt
-	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(speedAlpha);
 	
-	// Determine input world dir
-	worldInputDirection.Normalize();
-	_LastWorldSteeringInputDirection = worldInputDirection;
+	//Start Camera Tilt
+	if (!_bIsSteeringCurrentlyTilting) _bIsSteeringCurrentlyTilting =_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(false, ETiltType::SLIDE, _SteeringSign * -1);
 	
 	//If try to go backward exit
 	const FVector targetDir = worldInputDirection * movementDirection.Length();
