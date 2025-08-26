@@ -260,7 +260,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	}
 
 	//Camera_Tilt Setup
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(false, ETiltType::WALLRUN, _WallRunCameraTiltOrientation * -1);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->StartCameraTilt(ETiltType::WALLRUN, _WallRunCameraTiltOrientation * -1);
 	
 	//Setup work var
 	_WallRunEnterVelocity = _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity();	
@@ -288,7 +288,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(false);
 
 	//Reset Camera_Tilt
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(true, ETiltType::WALLRUN);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraTilt(ETiltType::WALLRUN);
 	_PlayerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 
 	//Reset obstacle lock
@@ -567,12 +567,19 @@ void UPS_ParkourComponent::OnStopSlide()
 	if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Slide Stop"));
 
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerCharacter)) return;
-	
+
+	//Stop timer
 	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 	_SlideSeconds = 0;
 	_OutSlopePitchDegreeAngle = 0;
 	_OutSlopeRollDegreeAngle = 0;
 
+	//Reset var
+	_bIsSliding = false;
+	_bIsSteeringCurrentlyTilting = false;
+	_SteeringSign = 0.0f;
+	if(bIsCrouched) _PlayerCharacter->Crouching();
+	
 	
 	//--------Configure Movement Behaviour-------
 	_PlayerController->SetIgnoreMoveInput(false);
@@ -581,16 +588,12 @@ void UPS_ParkourComponent::OnStopSlide()
 	_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;
 
 	//Camera Tilt
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(true, ETiltType::SLIDE);
+	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraTilt(ETiltType::SLIDE);
 
 	//Camera Shake
 	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraShake(EScreenShakeType::SLIDE);
 
-	_bIsSliding = false;
-	_bIsSteeringCurrentlyTilting = false;
-	_SteeringSign = 0.0f;
-	if(bIsCrouched) _PlayerCharacter->Crouching();
-
+	//Callback
 	OnSlideEvent.Broadcast(_bIsSliding);
 	
 }
@@ -735,17 +738,18 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 
 	//Smoothing input (preventing from input tp)
 	FVector2D smoothedInputValue = inputValue;
-	if (!inputValue.Equals(_LastSteeringInputDirection))
-	{
-		float smoothingAlpha = FMath::Clamp((smoothedInputValue - _LastSteeringInputDirection).Length(), 0.0f, 1.0f) - 1.0f;
-		if(IsValid(SteeringSmoothCurve)) smoothingAlpha = SteeringSmoothCurve->GetFloatValue(alpha);
-		smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue, CustomTickRate, smoothingAlpha * SteeringSmoothingInterpSpeed);
-		
-		if (bDebugSteering) UE_LOG(LogTemp, Error, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),__FUNCTION__,smoothingAlpha, smoothedInputValue.Length());
 
-		//Update Tilt
-		if (_bIsSteeringCurrentlyTilting) _PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(smoothingAlpha, _SteeringSign * -1);
-	}
+	float smoothingAlpha = FMath::Clamp((smoothedInputValue - _LastSteeringInputDirection).Length(), 0.0f, 1.0f) - 1.0f;
+	if (IsValid(SteeringSmoothCurve)) smoothingAlpha = SteeringSmoothCurve->GetFloatValue(alpha);
+	smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue,
+		CustomTickRate, smoothingAlpha * SteeringSmoothingInterpSpeed);
+
+	if (bDebugSteering) UE_LOG(LogTemp, Error, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),
+		__FUNCTION__, smoothingAlpha, smoothedInputValue.Length());
+
+	//Update Tilt
+	if (_bIsSteeringCurrentlyTilting) _PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(smoothingAlpha, _SteeringSign);
+	
 	
 	// Determine input world dir
 	_LastSteeringInputDirection = smoothedInputValue;
@@ -762,9 +766,10 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 		// New rotation started
 		_SteeringSign = FMath::Sign(angle);
 	}
-	
+
+	UE_LOG(LogTemp, Error, TEXT("_SteeringSign %i, angle %f"),_SteeringSign, angle);
 	//Start Camera Tilt
-	if (!_bIsSteeringCurrentlyTilting) _bIsSteeringCurrentlyTilting =_PlayerCharacter->GetFirstPersonCameraComponent()->ToggleCameraTilt(false, ETiltType::SLIDE, _SteeringSign * -1);
+	if (!_bIsSteeringCurrentlyTilting) _bIsSteeringCurrentlyTilting =_PlayerCharacter->GetFirstPersonCameraComponent()->StartCameraTilt(ETiltType::SLIDE, _SteeringSign);
 	
 	//If try to go backward exit
 	const FVector targetDir = worldInputDirection * movementDirection.Length();

@@ -346,13 +346,19 @@ private:
 
 public:
 	UFUNCTION()
-	bool ToggleCameraTilt(const bool& bIsReset, const ETiltType& tiltType, const int32& targetOrientation = 0.0f);
+	bool StartCameraTilt(const ETiltType& tiltType, const int32& targetOrientation = 0);
+
+	UFUNCTION()
+	void StopCameraTilt(const ETiltType& tiltType);
 
 	UFUNCTION()
 	void ForceUpdateTargetTilt();
 
 	UFUNCTION()
-	void CameraRollTilt();
+	void CameraRollTilt(const float& deltaTime);
+	
+	UFUNCTION()
+	void OnCameraTiltMovementEnded();
 
 	UFUNCTION()
 	void UpdateRollTiltTarget(float alpha, const int32& orientation, float startRoll = 0.0f);
@@ -360,31 +366,18 @@ public:
 	UFUNCTION()
 	float GetAngleCamToTarget();
 	
-	FORCEINLINE float GetCurrentCameraTiltOrientation() const{return CurrentCameraTiltOrientation;}
+	FORCEINLINE float GetCurrentCameraTiltOrientation() const{return _TargetTiltOrientation;}
 
 protected:
-		
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera Tilt rest start time in second"))
-	float StartCameraTiltTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot before Tilting"))
-	FRotator DefaultCameraRot = FRotator::ZeroRotator;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(ToolTip="Camera rot on Start tiliting"))
-	FRotator StartCameraRot = FRotator::ZeroRotator;
-			
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera", meta=(UIMin=-1, ClampMin=-1, UIMax=1, ClampMax=1, ToolTip="Camera orientation to Wall, basiclly use for determine if Camera is rotate to left or right to Wall"))
-	float CurrentCameraTiltOrientation = 0.0f;
-
-	//Init an impossible value for a dot product
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Camera")
-	float LastAngleCamToTarget = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation Roll tilt target"))
 	TMap<ETiltType, FSCameraTiltParams> CameraTiltRollParams;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|CameraRollTilt", meta=(ToolTip="Camera rotation tilt interpolation curve"))
 	UCurveFloat* CameraTiltCurve = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 1.f, ClampMin = 1.f, ToolTip="Camera rotation Roll tilt interp smoothing speed"))
+	float CameraTiltSmoothingSpeed = 10.0f;
 
 private:
 	UPROPERTY(Transient)
@@ -401,6 +394,25 @@ private:
 
 	UPROPERTY()
 	float _OverridingUpdatedRolltarget = 0.0f;
+	
+	UPROPERTY(Transient)
+	float _StartCameraTiltTimestamp = TNumericLimits<float>().Lowest();
+
+	UPROPERTY(Transient)
+	FRotator _DefaultCameraRot = FRotator::ZeroRotator;
+
+	UPROPERTY(Transient)
+	FRotator _StartCameraRot = FRotator::ZeroRotator;
+	
+	UPROPERTY(Transient)
+	FRotator _CurrentCameraRot = FRotator::ZeroRotator;
+			
+	UPROPERTY()
+	float _TargetTiltOrientation = 0.0f;
+
+	//Init an impossible value for a dot product
+	UPROPERTY()
+	float _LastAngleCamToTarget = 0.0f;
 
 
 #pragma endregion CameraTilt

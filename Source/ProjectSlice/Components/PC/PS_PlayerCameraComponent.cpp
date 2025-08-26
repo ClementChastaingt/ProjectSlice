@@ -37,7 +37,7 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	if(!IsValid(_PlayerController)) return;
 
 	DefaultFOV = FieldOfView;
-	DefaultCameraRot = _PlayerController->GetControlRotation().Clamp();
+	_DefaultCameraRot = _PlayerController->GetControlRotation().Clamp();
 
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
@@ -60,7 +60,7 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	FieldOfViewTick();
 	
 	//-----CameraRollTilt smooth reset-----                                                                
-	CameraRollTilt();                           
+	CameraRollTilt(DeltaTime);                           
 }
 
 #pragma region FOV
@@ -263,10 +263,9 @@ void UPS_PlayerCameraComponent::SetWorldShakeOverrided(const EScreenShakeType& s
 #pragma region Camera_Tilt                                                                                                                                                                                                                      
 //------------------                                                                                                                                                                                                                            
 
-bool UPS_PlayerCameraComponent::ToggleCameraTilt(const bool& bIsReset, const ETiltType& tiltType,
-	const int32& targetOrientation)                                                                                                                                                    
+bool UPS_PlayerCameraComponent::StartCameraTilt(const ETiltType& tiltType, const int32& targetOrientation)                                                                                                                                                    
 {
-	if (_bIsTilting && !bIsReset)
+	if (_bIsTilting)
 	{
 		if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S :: tilting already"), __FUNCTION__); 
 		return false;
@@ -277,42 +276,52 @@ bool UPS_PlayerCameraComponent::ToggleCameraTilt(const bool& bIsReset, const ETi
 		|| !IsValid(_PlayerCharacter->GetParkourComponent())) return false;
 
 	//Setup work var
-	CurrentCameraTiltOrientation = targetOrientation;
-	StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
-	_bIsResetingCameraTilt = bIsReset;
-	if (_bIsResetingCameraTilt) _OverridingUpdatedRolltarget = 0.0f;
+	_TargetTiltOrientation = targetOrientation;
+	_StartCameraRot = _PlayerController->GetControlRotation().Clamp();
+	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	_bIsResetingCameraTilt = false;
 
 	//Setup roll map var
 	_CurrentTiltType = tiltType;
 	_CurrentCameraTiltRollParams = CameraTiltRollParams.Contains(_CurrentTiltType) ? *CameraTiltRollParams.Find(_CurrentTiltType) : FSCameraTiltParams();
 
 	//Specifics setup
-	LastAngleCamToTarget = GetAngleCamToTarget();
+	_LastAngleCamToTarget = GetAngleCamToTarget();
 	
 	//Start interp
 	_bIsTilting = true;
 
 	//Debug
 	if(bDebugCameraTilt)                                                                                                                                                                                                                        
-		UE_LOG(LogTemp, Warning, TEXT("%S :: bIsReset %i,  StartCameraRot %s, CurrentCameraTiltOrientation %f"), __FUNCTION__, bIsReset, *StartCameraRot.ToString(), CurrentCameraTiltOrientation);               
+		UE_LOG(LogTemp, Warning, TEXT("%S :: StartCameraRot %s, CurrentCameraTiltOrientation %f"), __FUNCTION__, *_StartCameraRot.ToString(), _TargetTiltOrientation);               
 
 	//Exit
 	return true;
 }
 
+void UPS_PlayerCameraComponent::StopCameraTilt(const ETiltType& tiltType)
+{
+	if (tiltType != _CurrentTiltType) return;
+	
+	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
+	_bIsResetingCameraTilt = true;
+	_OverridingUpdatedRolltarget = 0.0f;
+	_TargetTiltOrientation = 0.0f;
+}
+
 void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
 {
-	if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
-	CurrentCameraTiltOrientation = CurrentCameraTiltOrientation * -1;
+	_TargetTiltOrientation = _TargetTiltOrientation * -1;
 	
-	StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
-	StartCameraRot = _PlayerController->GetControlRotation();
+	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	_StartCameraRot = _PlayerController->GetControlRotation();
 
 }
 
-void UPS_PlayerCameraComponent::CameraRollTilt()                                                                                                                                                              
+void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)                                                                                                                                                              
 {
 	if(!IsValid(_PlayerCharacter)
 		|| !IsValid(GetWorld())
@@ -323,23 +332,23 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 	//Determine start
 	const FRotator currentRot = _PlayerController->GetControlRotation();
 	const float angleCamToTarget = GetAngleCamToTarget();
-	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToTarget) != FMath::Sign(LastAngleCamToTarget);
+	const bool bHaveToUpdateTiltOrientation = FMath::Sign(angleCamToTarget) != FMath::Sign(_LastAngleCamToTarget);
 	
 	//Determine Target Roll
 	if(bHaveToUpdateTiltOrientation)
 		ForceUpdateTargetTilt();
 	
-	const float orientation = CurrentCameraTiltOrientation * FMath::Abs(angleCamToTarget);
+	const float orientation = _TargetTiltOrientation * FMath::Abs(angleCamToTarget);
 	const float rollTarget = _OverridingUpdatedRolltarget != 0.0f && !_bIsResetingCameraTilt ? _OverridingUpdatedRolltarget : _CurrentCameraTiltRollParams.CameraTilRollTarget;
 	UE_LOG(LogTemp, Error, TEXT("rollTarget %f"),rollTarget);
-	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(StartCameraRot.Pitch, StartCameraRot.Yaw, DefaultCameraRot.Roll) : FRotator(DefaultCameraRot.Pitch,DefaultCameraRot.Yaw,rollTarget * orientation);
-	LastAngleCamToTarget = angleCamToTarget;
+	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(_StartCameraRot.Pitch, _StartCameraRot.Yaw, _DefaultCameraRot.Roll) : FRotator(_DefaultCameraRot.Pitch,_DefaultCameraRot.Yaw,rollTarget * orientation);
+	_LastAngleCamToTarget = angleCamToTarget;
 	
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return;
 	                                                                                                                                                                                                                                            
 	//Alpha
-	float targetTiltTime = StartCameraTiltTimestamp + (bHaveToUpdateTiltOrientation ? _CurrentCameraTiltRollParams.CameraTiltDuration / 2 : _CurrentCameraTiltRollParams.CameraTiltDuration);
-	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
+	float targetTiltTime = _StartCameraTiltTimestamp + (bHaveToUpdateTiltOrientation ? _CurrentCameraTiltRollParams.CameraTiltDuration / 2 : _CurrentCameraTiltRollParams.CameraTiltDuration);
+	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
 	
 	//Interp                                                                                                                                                                                                                                    
 	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                           
@@ -347,32 +356,54 @@ void UPS_PlayerCameraComponent::CameraRollTilt()
 		curveTiltAlpha = CameraTiltCurve->GetFloatValue(alphaTilt);                                                                                                                                                                             
 	
 	//New Tilt Rot
-	const FRotator newRot = FMath::Lerp(StartCameraRot,newRotTarget, curveTiltAlpha);
+	FRotator newRot =  FMath::Lerp(_StartCameraRot,newRotTarget, curveTiltAlpha);
+	newRot = UKismetMathLibrary::RInterpTo(_CurrentCameraRot, newRot, deltaTime, CameraTiltSmoothingSpeed);
+	_CurrentCameraRot = newRot;
 	                                                                                                                                                                                                                                            
 	//Rotate             
-	_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, newRot.Roll));                                                                                                                                                                                              
-	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("%S :: newRot: %f, alphaTilt %f, angleCamToTarget %f, LastAngleCamToTarget %f, CurrentCameraTiltOrientation %f, orientation %f"),__FUNCTION__, newRot.Roll, alphaTilt, angleCamToTarget, LastAngleCamToTarget, CurrentCameraTiltOrientation, orientation);
+	_PlayerController->SetControlRotation(FRotator(currentRot.Pitch, currentRot.Yaw, _CurrentCameraRot.Roll));                                                                                                                                                                                              
+	if(bDebugCameraTiltTick) UE_LOG(LogTemp, Log, TEXT("%S :: newRot: %f, alphaTilt %f, angleCamToTarget %f, LastAngleCamToTarget %f, CurrentCameraTiltOrientation %f, orientation %f"),__FUNCTION__, newRot.Roll, alphaTilt, angleCamToTarget, _LastAngleCamToTarget, _TargetTiltOrientation, orientation);
 
 	//If Camera tilt already finished stop                                                                                                                                                                                                      
 	if(alphaTilt >= 1)                                                                                                                                                                                                                          
 	{
-		if(_bIsResetingCameraTilt) _bIsTilting = false;
-		_OverridingUpdatedRolltarget = 0.0f;
+		OnCameraTiltMovementEnded();
 	}                                                                                                                                                                                                                                           
               
 }
+
+void UPS_PlayerCameraComponent::OnCameraTiltMovementEnded()
+{
+	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+		
+	if(_bIsResetingCameraTilt) _bIsTilting = false;
+	_OverridingUpdatedRolltarget = 0.0f;
+
+	//Reset work var
+	if (!_bIsTilting)
+	{
+		_bIsResetingCameraTilt = false;
+		_CurrentCameraTiltRollParams = FSCameraTiltParams();
+
+		_TargetTiltOrientation = 0.0f;
+		_StartCameraRot = FRotator::ZeroRotator;
+		_StartCameraTiltTimestamp = TNumericLimits<float>::Lowest();
+		_bIsResetingCameraTilt = false;
+	}
+	
+}
+
 
 void UPS_PlayerCameraComponent::UpdateRollTiltTarget(const float alpha, const int32& orientation, const float startRoll)
 {
 	if (!_bIsTilting)
 	{
-	
 		_OverridingUpdatedRolltarget = 0.0f;
 		return;
 	}
 	
 	_OverridingUpdatedRolltarget = FMath::Lerp(startRoll != 0.0f ? startRoll : 0.0f,_CurrentCameraTiltRollParams.CameraTilRollTarget, alpha);
-	CurrentCameraTiltOrientation = orientation;
+	_TargetTiltOrientation = orientation;
 	
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S :: _OverridingUpdatedRolltarget %f, orientation %i"), __FUNCTION__, _OverridingUpdatedRolltarget, orientation);
 }
