@@ -55,6 +55,9 @@ struct FSCameraTiltParams
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
+	bool bUseDynTiltUpdating = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Camera rotation tilt duration"))
 	float CameraTiltDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|CameraRollTilt", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="deg", ToolTip="Camera rotation Roll tilt target"))
@@ -392,8 +395,8 @@ private:
 	UPROPERTY()
 	bool _bIsResetingCameraTilt = false;
 
-	UPROPERTY()
-	float _OverridingUpdatedRolltarget = 0.0f;
+	UPROPERTY(Transient)
+	float _AlphaTiltWeight;
 	
 	UPROPERTY(Transient)
 	float _StartCameraTiltTimestamp = TNumericLimits<float>().Lowest();
@@ -413,7 +416,6 @@ private:
 	//Init an impossible value for a dot product
 	UPROPERTY()
 	float _LastAngleCamToTarget = 0.0f;
-
 
 #pragma endregion CameraTilt
 	

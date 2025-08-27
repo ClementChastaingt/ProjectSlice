@@ -265,7 +265,7 @@ void UPS_PlayerCameraComponent::SetWorldShakeOverrided(const EScreenShakeType& s
 
 bool UPS_PlayerCameraComponent::StartCameraTilt(const ETiltType& tiltType, const int32& targetOrientation)                                                                                                                                                    
 {
-	if (_bIsTilting)
+	if (_bIsTilting && _CurrentTiltType == tiltType)
 	{
 		if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S :: tilting already"), __FUNCTION__); 
 		return false;
@@ -306,8 +306,9 @@ void UPS_PlayerCameraComponent::StopCameraTilt(const ETiltType& tiltType)
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	_bIsResetingCameraTilt = true;
-	_OverridingUpdatedRolltarget = 0.0f;
-	_TargetTiltOrientation = 0.0f;
+	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	
+	_bIsTilting = true;
 }
 
 void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
@@ -339,8 +340,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)
 		ForceUpdateTargetTilt();
 	
 	const float orientation = _TargetTiltOrientation * FMath::Abs(angleCamToTarget);
-	const float rollTarget = _OverridingUpdatedRolltarget != 0.0f && !_bIsResetingCameraTilt ? _OverridingUpdatedRolltarget : _CurrentCameraTiltRollParams.CameraTilRollTarget;
-	UE_LOG(LogTemp, Error, TEXT("rollTarget %f"),rollTarget);
+	const float rollTarget = _CurrentCameraTiltRollParams.CameraTilRollTarget;
 	const FRotator newRotTarget = _bIsResetingCameraTilt ? FRotator(_StartCameraRot.Pitch, _StartCameraRot.Yaw, _DefaultCameraRot.Roll) : FRotator(_DefaultCameraRot.Pitch,_DefaultCameraRot.Yaw,rollTarget * orientation);
 	_LastAngleCamToTarget = angleCamToTarget;
 	
@@ -348,10 +348,10 @@ void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)
 	                                                                                                                                                                                                                                            
 	//Alpha
 	float targetTiltTime = _StartCameraTiltTimestamp + (bHaveToUpdateTiltOrientation ? _CurrentCameraTiltRollParams.CameraTiltDuration / 2 : _CurrentCameraTiltRollParams.CameraTiltDuration);
-	const float alphaTilt = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
+	const float alphaTilt = _CurrentCameraTiltRollParams.bUseDynTiltUpdating && !_bIsResetingCameraTilt? _AlphaTiltWeight : UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
 	
 	//Interp                                                                                                                                                                                                                                    
-	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                           
+	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                  
 	if(IsValid(CameraTiltCurve))                                                                                                                                                                                                                
 		curveTiltAlpha = CameraTiltCurve->GetFloatValue(alphaTilt);                                                                                                                                                                             
 	
@@ -373,11 +373,10 @@ void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)
 }
 
 void UPS_PlayerCameraComponent::OnCameraTiltMovementEnded()
-{
-	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
-		
+{		
 	if(_bIsResetingCameraTilt) _bIsTilting = false;
-	_OverridingUpdatedRolltarget = 0.0f;
+
+	if (bDebugCameraTilt) UE_LOG(LogTemp, Warning, TEXT("%S :: _bIsTilting %i, _bIsResetingCameraTilt %i"), __FUNCTION__, _bIsTilting, _bIsResetingCameraTilt  );
 
 	//Reset work var
 	if (!_bIsTilting)
@@ -398,14 +397,13 @@ void UPS_PlayerCameraComponent::UpdateRollTiltTarget(const float alpha, const in
 {
 	if (!_bIsTilting)
 	{
-		_OverridingUpdatedRolltarget = 0.0f;
 		return;
 	}
 	
-	_OverridingUpdatedRolltarget = FMath::Lerp(startRoll != 0.0f ? startRoll : 0.0f,_CurrentCameraTiltRollParams.CameraTilRollTarget, alpha);
+	_AlphaTiltWeight =  alpha;
 	_TargetTiltOrientation = orientation;
 	
-	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S :: _OverridingUpdatedRolltarget %f, orientation %i"), __FUNCTION__, _OverridingUpdatedRolltarget, orientation);
+	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S :: _AlphaTiltWeight %f, orientation %i"), __FUNCTION__, _AlphaTiltWeight, orientation);
 }
 
 float UPS_PlayerCameraComponent::GetAngleCamToTarget()
