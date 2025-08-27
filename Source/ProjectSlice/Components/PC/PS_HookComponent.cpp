@@ -963,9 +963,10 @@ void UPS_HookComponent::HookObject()
 	//Get Trace	
 	const FVector start = HookThrower->GetSocketLocation(SOCKET_HOOK);
 	const FVector target = _PlayerCharacter->GetWeaponComponent()->GetLaserTarget();
+	const FVector dir = target - start;
 	
 	const TArray<AActor*> actorsToIgnore = {_PlayerCharacter};
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target, UEngineTypes::ConvertToTraceType(ECC_Slice),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), start, target + dir.GetSafeNormal() * 50, UEngineTypes::ConvertToTraceType(ECC_Slice),
 		false, actorsToIgnore, EDrawDebugTrace::None, _CurrentHookHitResult, true);
 		
 	//If not blocking exit
