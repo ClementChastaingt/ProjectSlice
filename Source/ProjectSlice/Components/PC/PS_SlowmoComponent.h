@@ -55,11 +55,11 @@ public:
 	UFUNCTION()
 	void SlowmoTransition();
 
-	FORCEINLINE bool IsIsSlowmoTransiting() const{return bIsSlowmoTransiting;}
+	FORCEINLINE bool IsIsSlowmoTransiting() const{return _bIsSlowmoTransiting;}
 
-	FORCEINLINE bool IsSlowmoActive() const{return bSlowmoActive;}
+	FORCEINLINE bool IsSlowmoActive() const{return _bSlowmoActive;}
 
-	FORCEINLINE float GetSlowmoAlpha() const{return SlowmoAlpha;}
+	FORCEINLINE float GetPlayerSlowmoAlpha() const{return _PlayerSlowmoAlpha;}
 
 	FORCEINLINE float GetGlobalTimeDilationTarget() const{return GlobalTimeDilationTarget;}
 
@@ -71,55 +71,59 @@ protected:
 	void OnStopSlowmo();
 
 	UFUNCTION()
-	FORCEINLINE float SetIsSlowmoTransiting (const bool bisSlowmoTransiting) {return bIsSlowmoTransiting = bisSlowmoTransiting;}
+	FORCEINLINE float SetIsSlowmoTransiting (const bool bisSlowmoTransiting) {return _bIsSlowmoTransiting = bisSlowmoTransiting;}
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	bool bSlowmoActive = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	bool bIsSlowmoTransiting = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float StartSlowmoTimestamp = TNumericLimits<float>().Lowest();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float SlowmoAlpha = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float SlowmoTime = 0.0f;
-			
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slowmo")
-	FTimerHandle SlowmoTimerHandle;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float DefaultGlobalTimeDilation = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float DefaultPlayerTimeDilation = 0.0f;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float StartGlobalTimeDilation = 0.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo")
-	float StartPlayerTimeDilation = 0.0f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float GlobalTimeDilationTarget = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float PlayerTimeDilationTarget = 0.75f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(ForceUnits="sec", ToolTip="Slowmo Max duration"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo Max duration"))
 	float SlowmoDuration = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(ForceUnits="sec", ToolTip="Slowmo transition duration"))
-	float SlowmoTransitionDuration = 0.25f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition duration"))
+	float SlowmoGlobalTransitionDuration = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition duration"))
+	float SlowmoPlayerTransitionDuration = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition")
-	UCurveFloat* SlowmoCurve;
+	UCurveFloat* SlowmoGlobalDilationCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition")
+	UCurveFloat* SlowmoPlayerDilationCurve;
 		
 private:
-	//------------------
+	UPROPERTY(Transient)
+	bool _bSlowmoActive;
+
+	UPROPERTY(Transient)
+	bool _bIsSlowmoTransiting;
+	
+	UPROPERTY(Transient)
+	float _StartSlowmoTimestamp;
+
+	UPROPERTY(Transient)
+	float _PlayerSlowmoAlpha;
+
+	UPROPERTY(Transient)
+	float _SlowmoTime;
+			
+	UPROPERTY(Transient)
+	FTimerHandle _SlowmoTimerHandle;
+
+	UPROPERTY(Transient)
+	float _DefaultGlobalTimeDilation;
+
+	UPROPERTY(Transient)
+	float _DefaultPlayerTimeDilation;
+	
+	UPROPERTY(Transient)
+	float _StartGlobalTimeDilation;
+
+	UPROPERTY(Transient)
+	float _StartPlayerTimeDilation;
 
 #pragma endregion Routine
 
@@ -127,27 +131,27 @@ private:
 	//------------------
 
 public:
-
-	FORCEINLINE float GetSlowmoPostProcessAlpha() const{return SlowmoPostProcessAlpha;}
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetSlowmoPostProcessAlpha() const{return _SlowmoPostProcessAlpha;}
 	
 protected:
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Slowmo|Feedback")
-	float SlowmoPostProcessAlpha = 0.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ToolTip="Slowmo target Field Of View"))
 	float TargetFOV = 60.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV transition duration"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="s", UIMin="0.01", ClampMin="0.01", ToolTip="Slowmo FOV transition duration"))
 	float SlowmoFOVResetDuration = 0.3f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="sec", ToolTip="Slowmo FOV curves IN // OUT"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ToolTip="Slowmo FOV curves IN // OUT"))
 	TArray<UCurveFloat*> SlowmoFOVCurves;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|PostProcess")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|PostProcess", meta=(ToolTip="Slowmo PostProcess curves IN // OUT"))
 	TArray<UCurveFloat*> SlowmoPostProcessCurves;
+
 private:
-	//------------------
+	UPROPERTY(Transient)
+	float _SlowmoPostProcessAlpha;
 
 #pragma endregion Feedback
 };

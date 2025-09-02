@@ -492,7 +492,7 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 	
 	if(IsValid(slowmo) && IsValid(_SlowmoMatInst))
 	{
-		const float alpha = slowmo->GetSlowmoAlpha();
+		const float alpha = slowmo->GetPlayerSlowmoAlpha();
 		if(slowmo->IsIsSlowmoTransiting())
 		{
 			if(_WeightedBlendableArray.IsValidIndex(4) && _WeightedBlendableArray[4].Weight != 1.0f)

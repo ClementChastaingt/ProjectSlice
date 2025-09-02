@@ -32,10 +32,10 @@ void UPS_SlowmoComponent::BeginPlay()
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController))return;
 
-	DefaultPlayerTimeDilation = _PlayerCharacter->GetActorTimeDilation();
+	_DefaultPlayerTimeDilation = _PlayerCharacter->GetActorTimeDilation();
 	if(IsValid(GetWorld()))
 	{
-		DefaultGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+		_DefaultGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
 	}
 
 
@@ -48,7 +48,7 @@ void UPS_SlowmoComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	if(!bIsSlowmoTransiting && IsComponentTickEnabled())
+	if(!_bIsSlowmoTransiting && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 	
 	SlowmoTransition();
@@ -56,64 +56,74 @@ void UPS_SlowmoComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UPS_SlowmoComponent::SlowmoTransition()
 {
-	if(bIsSlowmoTransiting)
+	if(_bIsSlowmoTransiting)
 	{
 		if(!IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
 
-		SlowmoTime = SlowmoTime + GetWorld()->DeltaRealTimeSeconds;
+		_SlowmoTime = _SlowmoTime + GetWorld()->DeltaRealTimeSeconds;
 
 		//Time Dilation alpha
-		const float alpha = UKismetMathLibrary::MapRangeClamped(SlowmoTime, StartSlowmoTimestamp ,StartSlowmoTimestamp + SlowmoTransitionDuration,0.0,1.0);
-		float curveAlpha = alpha;
-		if(IsValid(SlowmoCurve))
+		const float alphaGlobal = UKismetMathLibrary::MapRangeClamped(_SlowmoTime, _StartSlowmoTimestamp ,_StartSlowmoTimestamp + SlowmoGlobalTransitionDuration,0.0,1.0);
+		const float alphaPlayer = UKismetMathLibrary::MapRangeClamped(_SlowmoTime, _StartSlowmoTimestamp ,_StartSlowmoTimestamp + SlowmoPlayerTransitionDuration,0.0,1.0);
+	
+		//Curve alpha
+		float curveGlobalAlpha = alphaGlobal;
+		if(IsValid(SlowmoGlobalDilationCurve))
 		{
-			curveAlpha = SlowmoCurve->GetFloatValue(alpha);
+			curveGlobalAlpha = SlowmoGlobalDilationCurve->GetFloatValue(alphaGlobal);
+		}
+
+		float curvePlayerAlpha = alphaPlayer;
+		if(IsValid(SlowmoPlayerDilationCurve))
+		{
+			curvePlayerAlpha = SlowmoPlayerDilationCurve->GetFloatValue(alphaPlayer);
 		}
 
 		//Set PostProccess alpha
-		SlowmoAlpha = bSlowmoActive ? curveAlpha : 1.0f - curveAlpha;
-		SlowmoPostProcessAlpha = SlowmoAlpha;
-		UCurveFloat* currentCurve = SlowmoPostProcessCurves.IsValidIndex(bSlowmoActive ? 0 : 1) ? SlowmoPostProcessCurves[bSlowmoActive ? 0 : 1] : nullptr ;
+		_PlayerSlowmoAlpha = _bSlowmoActive ? curvePlayerAlpha : 1.0f - curvePlayerAlpha;
+		_SlowmoPostProcessAlpha = _PlayerSlowmoAlpha;
+		UCurveFloat* currentCurve = SlowmoPostProcessCurves.IsValidIndex(_bSlowmoActive ? 0 : 1) ? SlowmoPostProcessCurves[_bSlowmoActive ? 0 : 1] : nullptr ;
 		if(IsValid(currentCurve))
 		{
-			SlowmoPostProcessAlpha = currentCurve->GetFloatValue(SlowmoAlpha);
+			_SlowmoPostProcessAlpha = currentCurve->GetFloatValue(_PlayerSlowmoAlpha);
 		}
 	
 		//Set time Dilation
-		float globalDilationTarget = bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
-		float playerDilationTarget = bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
+		float globalDilationTarget = _bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
+		float playerDilationTarget = _bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
 		
-		float globalTimeDilation = FMath::Lerp(StartGlobalTimeDilation,globalDilationTarget,curveAlpha);		
-		float playerTimeDilation = FMath::Lerp(StartPlayerTimeDilation,playerDilationTarget,curveAlpha);
+		float globalTimeDilation = FMath::Lerp(_StartGlobalTimeDilation,globalDilationTarget,curveGlobalAlpha);		
+		float playerTimeDilation = FMath::Lerp(_StartPlayerTimeDilation,playerDilationTarget,curvePlayerAlpha);
 
 		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), globalTimeDilation);
-		_PlayerCharacter->SetPlayerTimeDilation(playerTimeDilation / globalTimeDilation);
+		_PlayerCharacter->SetPlayerTimeDilation(playerTimeDilation * globalTimeDilation);
+		//_PlayerCharacter->SetPlayerTimeDilation(globalTimeDilation == 0.0f ? playerTimeDilation : playerTimeDilation / globalTimeDilation);
 
-		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
+		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPlayer %f, alphaGlobal %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alphaPlayer, alphaGlobal, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
 
 		//Exit or trigger Slowmo timer
-		if(alpha >= 1.0f)
+		if(alphaPlayer >= 1.0f && alphaGlobal >= 1.0f)
 		{
-			//Exit
-			if(!bSlowmoActive)
+			//Exit if transit to FadeOut
+			if(!_bSlowmoActive)
 			{
 				OnStopSlowmo();
 				return;
 			}
-			
-			bIsSlowmoTransiting = false;
+
+			//Else trigger timer for inactivation
+			_bIsSlowmoTransiting = false;
 			
 			FTimerDelegate stopSlowmo_TimerDelegate;
 			stopSlowmo_TimerDelegate.BindUObject(this, &UPS_SlowmoComponent::OnTriggerSlowmo);
-			GetWorld()->GetTimerManager().SetTimer(SlowmoTimerHandle, stopSlowmo_TimerDelegate, SlowmoDuration, false);
+			GetWorld()->GetTimerManager().SetTimer(_SlowmoTimerHandle, stopSlowmo_TimerDelegate, SlowmoDuration, false);
 		}
 	}
-
 }
 
 void UPS_SlowmoComponent::OnStopSlowmo()
 {
-	UE_LOG(LogTemp, Warning, TEXT("%S"), __FUNCTION__);
+	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	//Desactivate slowmo PP layer
 	OnStopSlowmoEvent.Broadcast();
@@ -122,7 +132,6 @@ void UPS_SlowmoComponent::OnStopSlowmo()
 	FTimerDelegate resetSlowmo;
 	resetSlowmo.BindUFunction(this, FName("SetIsSlowmoTransiting"), false);
 	GetWorld()->GetTimerManager().SetTimerForNextTick(resetSlowmo);
-	
 }
 
 void UPS_SlowmoComponent::OnTriggerSlowmo()
@@ -130,29 +139,28 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	if(!IsValid(GetWorld()) /*|| bIsSlowmoTransiting*/)
 		return;
 	
-	StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
-	StartPlayerTimeDilation = _PlayerCharacter->CustomTimeDilation;
+	_StartGlobalTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+	_StartPlayerTimeDilation = _PlayerCharacter->CustomTimeDilation;
 	
-	StartSlowmoTimestamp = GetWorld()->GetAudioTimeSeconds();
-	SlowmoTime = StartSlowmoTimestamp;
+	_StartSlowmoTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_SlowmoTime = _StartSlowmoTimestamp;
 
-	bSlowmoActive = !bSlowmoActive;
-	GetWorld()->GetTimerManager().ClearTimer(SlowmoTimerHandle);
+	_bSlowmoActive = !_bSlowmoActive;
+	GetWorld()->GetTimerManager().ClearTimer(_SlowmoTimerHandle);
 	
-	bIsSlowmoTransiting = true;
+	_bIsSlowmoTransiting = true;
 	SetComponentTickEnabled(true);
 
 	//Trigger FOV slowmo, duration is SlowmoTransitionDuration
 	UPS_PlayerCameraComponent* playerCam = Cast<UPS_PlayerCameraComponent>(_PlayerCharacter->GetFirstPersonCameraComponent());
-	UCurveFloat* slowmoCurve = SlowmoFOVCurves[bSlowmoActive ? 0 : 1];
+	UCurveFloat* slowmoCurve = SlowmoFOVCurves[_bSlowmoActive ? 0 : 1];
 	if(!IsValid(slowmoCurve)) slowmoCurve = SlowmoFOVCurves[0];
 		
-	playerCam->SetupFOVInterp(bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(), bSlowmoActive ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
+	playerCam->SetupFOVInterp(_bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(), _bSlowmoActive ? SlowmoGlobalTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
 
-	OnSlowmoEvent.Broadcast(bSlowmoActive);
+	OnSlowmoEvent.Broadcast(_bSlowmoActive);
 	
-	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: %s"), __FUNCTION__, bSlowmoActive ? TEXT("On") :  TEXT("Off"));
-	
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowmoActive ? TEXT("On") :  TEXT("Off"));
 }
 
 

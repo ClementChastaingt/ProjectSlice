@@ -73,7 +73,8 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                             FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
+
+	UE_LOG(LogTemp, Error, TEXT("TEXT"));
 	if(!bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 		
@@ -692,7 +693,6 @@ void UPS_ParkourComponent::SlideTick()
 
 	
 	//-----Stop Slide-----
-	UE_LOG(LogTemp, Error, TEXT("CapsVel %f"),_PlayerCharacter->GetCapsuleVelocity().Size2D());
 	if(_PlayerCharacter->GetVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched || _PlayerCharacter->GetCapsuleVelocity().Size2D() < characterMovement->MaxWalkSpeedCrouched)
 	{
 		if(bDebugSlide) UE_LOG(LogTemp, Warning, TEXT("OnStopSlide by velocity %f"), _PlayerCharacter->GetVelocity().Size2D());
