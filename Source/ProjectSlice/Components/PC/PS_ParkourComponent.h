@@ -431,7 +431,7 @@ protected:
 	void OnStopSlide();
 
 	UFUNCTION()
-	void SlideTick();
+	void SlideTick(float deltaTime);
 	
 	UFUNCTION()
 	FVector CalculateFloorInflucence(const FVector& floorNormal) const;
@@ -489,12 +489,6 @@ private:
 	float _SlideAlphaFeedback;
 
 	UPROPERTY(Transient)
-	FTimerHandle SlideTimerHandle;
-
-	UPROPERTY(Transient)
-	float _StartSlideTimestamp;
-
-	UPROPERTY(Transient)
 	float _SlideSeconds;
 	
 	UPROPERTY()
@@ -514,7 +508,7 @@ private:
 
 	UPROPERTY(Transient)
 	int32 _SteeringSign;
-
+	
 	UPROPERTY(Transient)
 	FVector2D _LastSteeringInputDirection;
 

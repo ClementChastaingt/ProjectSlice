@@ -1480,7 +1480,7 @@ void UPS_HookComponent::PowerCablePull()
 	//if(_bAttachObjectIsBlocked) currentPushAccel = (currentPushAccel / UnblockDefaultPullforceDivider);
 	
 	FVector defaultNewVel = _AttachedMesh->GetMass() *  rotMeshCable.Vector() * currentPushAccel;
-	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation, NAME_None, false);
+	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaTimeSeconds), NAME_None, false);
 
 	//Debug base Pull dir
 	if(bDebugPull)
@@ -1500,7 +1500,7 @@ void UPS_HookComponent::OnPushTimerEndEventReceived(const FTimerHandle selfHandl
 	if(bDebugPull) UE_LOG(LogActorComponent, Log, TEXT("%S (%f)"),__FUNCTION__,GetWorld()->GetTimeSeconds());
 	
 	FVector inverseNewVel = _AttachedMesh->GetMass() * currentPushDir * pushAccel;
-	_AttachedMesh->AddImpulse((inverseNewVel * GetWorld()->DeltaRealTimeSeconds) * _PlayerCharacter->CustomTimeDilation,  NAME_None, false);
+	_AttachedMesh->AddImpulse((inverseNewVel * GetWorld()->DeltaTimeSeconds),  NAME_None, false);
 
 	if(selfHandler.IsValid())_UnblockTimerTimerArray.Remove(selfHandler);
 }

@@ -21,6 +21,7 @@ UPS_ParkourComponent::UPS_ParkourComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
 
 }
 
@@ -47,18 +48,12 @@ void UPS_ParkourComponent::BeginPlay()
 	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);
 	
 	//Custom Tick
-	SetComponentTickEnabled(false);
 	if (IsValid(GetWorld()))
 	{
 		FTimerDelegate wallRunTick_TimerDelegate;
 		wallRunTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::WallRunTick);
 		GetWorld()->GetTimerManager().SetTimer(_WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
 		GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
-
-		FTimerDelegate slideTick_TimerDelegate;
-		slideTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::SlideTick);
-		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, slideTick_TimerDelegate, CustomTickRate, true);
-		GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
 
 		FTimerDelegate canStandTick_TimerDelegate;
 		canStandTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::CanStandTick);
@@ -73,12 +68,12 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                             FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
-	if(!bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
-		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
 	Stooping(DeltaTime);
+
+	//-----Slide moving-----
+	SlideTick(DeltaTime);
 
 	//-----Mantling move -----
 	MantleTick();
@@ -471,7 +466,6 @@ void UPS_ParkourComponent::OnCrouch()
 
 		if(bDebugCrouch) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
 	}
-	SetComponentTickEnabled(bIsStooping);
 
 }
 
@@ -554,8 +548,7 @@ void UPS_ParkourComponent::OnStartSlide()
 	//Reset slide work var
 	_SteeringSign = 0.0f;
 	_LastSteeringInputDirection = FVector2D::ZeroVector;
-	_StartSlideTimestamp = GetWorld()->GetTimeSeconds();
-	_SlideSeconds = _StartSlideTimestamp;
+	_SlideSeconds = 0.0f;
 	
 	//Configure Movement Behaviour
 	_PlayerController->SetIgnoreMoveInput(true);
@@ -568,7 +561,6 @@ void UPS_ParkourComponent::OnStartSlide()
 	
 	//Start slide tick 
 	_bIsSliding = true;
-	GetWorld()->GetTimerManager().UnPauseTimer(SlideTimerHandle);
 
 	//Callback
 	OnSlideEvent.Broadcast(_bIsSliding);
@@ -581,8 +573,6 @@ void UPS_ParkourComponent::OnStopSlide()
 	if(!IsValid(GetWorld()) || !IsValid(_PlayerCharacter)) return;
 
 	//Stop timer
-	GetWorld()->GetTimerManager().PauseTimer(SlideTimerHandle);
-	_SlideSeconds = 0;
 	_OutSlopePitchDegreeAngle = 0;
 	_OutSlopeRollDegreeAngle = 0;
 
@@ -602,23 +592,23 @@ void UPS_ParkourComponent::OnStopSlide()
 
 	//Camera Shake
 	_PlayerCharacter->GetFirstPersonCameraComponent()->StopCameraShake(EScreenShakeType::SLIDE);
-
+		
 	//Callback
 	OnSlideEvent.Broadcast(_bIsSliding);
 	
 }
 
-void UPS_ParkourComponent::SlideTick()
+void UPS_ParkourComponent::SlideTick(const float deltaTime)
 {
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerController) || !IsValid(_PlayerCharacter->GetCharacterMovement()) || !IsValid(GetWorld())) return;
 	
 	if(!_bIsSliding) return;
 
-	_SlideSeconds += + CustomTickRate;
+	_SlideSeconds += deltaTime;
 	UCharacterMovementComponent* characterMovement = _PlayerCharacter->GetCharacterMovement();
 
 	//-----Velocity-----
-	const float slideAlpha = UKismetMathLibrary::MapRangeClamped(_SlideSeconds, _StartSlideTimestamp, _StartSlideTimestamp + TimeToMaxBrakingDeceleration, 0,1);
+	const float slideAlpha = UKismetMathLibrary::MapRangeClamped(_SlideSeconds, 0.0f, TimeToMaxBrakingDeceleration, 0,1);
 	float curveDecAlpha = slideAlpha;
 	float curveAccAlpha = slideAlpha;
 	
@@ -643,7 +633,7 @@ void UPS_ParkourComponent::SlideTick()
 	}
 
 	//Apply steering
-	ApplySlideSteering(startSlideVel, _PlayerController->GetMoveInput(), slideAlpha);
+	 ApplySlideSteering(startSlideVel, _PlayerController->GetMoveInput(), slideAlpha);
 	_SteeredSlideDirection = startSlideVel;
 
 	//Target && max vel
@@ -653,7 +643,7 @@ void UPS_ParkourComponent::SlideTick()
 	//Use Impulse
 	if(bUseImpulse)
 	{
-		characterMovement->AddImpulse(startSlideVel * GetWorld()->DeltaRealTimeSeconds * _PlayerCharacter->CustomTimeDilation);
+		characterMovement->AddForce(startSlideVel * GetWorld()->DeltaTimeSeconds);
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: Use Impulse, force: %f"),__FUNCTION__, characterMovement->Velocity.Length());
 		
 		//Determine if can use slide on slope
@@ -694,7 +684,7 @@ void UPS_ParkourComponent::SlideTick()
 	//Debug
 	if(bDebugSlide)
 	{
-		UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f, AlphaFeedback: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, _SlideAlphaFeedback);
+		UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f, slideAlpha: %f, AlphaFeedback: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, slideAlpha, _SlideAlphaFeedback);
 	}
 
 	
@@ -729,16 +719,15 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	if(!bUseSteering)
 		return;
 	
-	if(inputValue.IsNearlyZero())
-	{
-		_SteeringSign = 0;
-		_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(1.0f, _SteeringSign);
-		return;
-	}
+	// if(inputValue.IsNearlyZero())
+	// {
+	// 	_SteeringSign = 0;
+	// 	_PlayerCharacter->GetFirstPersonCameraComponent()->UpdateRollTiltTarget(1.0f, _SteeringSign);
+	// 	//return;
+	// }
 
 	//Init work var
-	FRotator rotation = movementDirection.Rotation();
-	FRotationMatrix RotationMatrix(rotation);
+	FRotationMatrix RotationMatrix(movementDirection.Rotation());
 	FVector slideDirForward = RotationMatrix.GetUnitAxis(EAxis::X); 
 	FVector slideDirRight= RotationMatrix.GetUnitAxis(EAxis::Y);
 	
@@ -749,6 +738,7 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 
 	//Smoothing input (preventing from input tp)
 	FVector2D smoothedInputValue = inputValue;
+	smoothedInputValue.Y = 1.0f;
 
 	float smoothingAlpha = FMath::Clamp((smoothedInputValue - _LastSteeringInputDirection).Length(), 0.0f, 1.0f) - 1.0f;
 	if (IsValid(SteeringSmoothCurve)) smoothingAlpha = SteeringSmoothCurve->GetFloatValue(alpha);
@@ -796,7 +786,8 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	}
 	
 	// Tamper with movement
-	movementDirection = UKismetMathLibrary::RInterpTo_Constant(movementDirection.Rotation(), targetDir.Rotation(),GetWorld()->GetDeltaSeconds(), steeringSpeed).Vector() * targetDir.Length();
+	//TODO :: If RInterpTo not const can dir to any direction
+	movementDirection = UKismetMathLibrary::RInterpTo(movementDirection.Rotation(), targetDir.Rotation(),GetWorld()->GetDeltaSeconds(), steeringSpeed).Vector() * targetDir.Length();
 	
 	//Debug
 	if(bDebugSteering)
@@ -1004,9 +995,6 @@ void UPS_ParkourComponent::OnStartMantle()
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
 	_StartMantleRot = _PlayerCharacter->GetControlRotation();
 	_TargetMantleRot = FRotator(_StartMantleRot.Pitch, _TargetMantleRot.Yaw, _StartMantleRot.Roll);
-	
-	//Start movement
-	SetComponentTickEnabled(bIsMantling);
 
 	//Callback
 	OnTriggerMantleEvent.Broadcast(true);
@@ -1127,7 +1115,6 @@ void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 	bIsLedging = true;
 	StartLedgeTimestamp = GetWorld()->GetTimeSeconds();
 	
-	SetComponentTickEnabled(true);
 	SetGenerateOverlapEvents(false);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
