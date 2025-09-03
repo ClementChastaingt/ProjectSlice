@@ -73,13 +73,12 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                             FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	UE_LOG(LogTemp, Error, TEXT("TEXT"));
+	
 	if(!bIsStooping && !bIsMantling && !bIsLedging && IsComponentTickEnabled())
 		SetComponentTickEnabled(false);
 		
 	//-----Smooth crouching-----
-	Stooping();
+	Stooping(DeltaTime);
 
 	//-----Mantling move -----
 	MantleTick();
@@ -438,7 +437,7 @@ void UPS_ParkourComponent::OnCrouch()
 	const ACharacter* DefaultCharacter = _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>();
 
 	StartCrouchHeight = _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-	StartStoopTimestamp = GetWorld()->GetTimeSeconds();
+	_StoopTime = 0.0f;
 	bIsStooping = false;
 		
 	//Crouch
@@ -462,7 +461,13 @@ void UPS_ParkourComponent::OnCrouch()
 		//Activate interp
 		bIsCrouched = false;
 		bIsStooping = true;
-		if(_bIsSliding) OnStopSlide();
+
+		//Stop slide
+		if(_bIsSliding)
+		{
+			if (bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: StopSlide"), __FUNCTION__);
+			OnStopSlide();
+		}
 
 		if(bDebugCrouch) UE_LOG(LogTemp, Warning, TEXT("PS_Character :: Uncrouched"));
 	}
@@ -501,14 +506,15 @@ void UPS_ParkourComponent::CanStandTick()
 		OnCrouch();
 }
 
-void UPS_ParkourComponent::Stooping()
+void UPS_ParkourComponent::Stooping(const float deltaTime)
 {
 	if(!IsValid(_PlayerCharacter)) return;
 	
 	if(!bIsStooping) return;
 	
 	const float targetHeight = bIsCrouched ? _PlayerCharacter->GetCharacterMovement()->GetCrouchedHalfHeight() : _PlayerCharacter->GetClass()->GetDefaultObject<ACharacter>()->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartStoopTimestamp, StartStoopTimestamp + SmoothCrouchDuration, 0,1);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(_StoopTime, 0.0f, SmoothCrouchDuration, 0,1);
+	_StoopTime += deltaTime; 
 	
 	float curveAlpha = alpha;
 	if(IsValid(CrouchCurve))
@@ -815,12 +821,18 @@ void UPS_ParkourComponent::OnDash()
 	if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle)) return;
 
 	if(_bIsWallRunning)
+	{
+		if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: StopWallRun"), __FUNCTION__);
 		OnWallRunStop();
+	}
+
 
 	if(_bIsSliding)
+	{
+		if (bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: StopSlide"), __FUNCTION__);
 		OnStopSlide();
-
-	
+	}
+		
 	FVector dashDir = UPSFl::GetWorldInputDirection(_PlayerCharacter->GetFirstPersonCameraComponent(), _PlayerController->GetMoveInput());
 	_DashFeedbackDir = _PlayerController->GetMoveInput();
 	if(dashDir.IsNearlyZero())
@@ -1032,7 +1044,7 @@ void UPS_ParkourComponent::MantleTick()
 	const float alphaHeight = UKismetMathLibrary::MapRangeClamped(_TargetMantleSnapLoc.Z - _StartMantleLoc.Z, -_PlayerCharacter->GetCharacterMovement()->MaxStepHeight, _PlayerCharacter->GetCharacterMovement()->GetMaxJumpHeight(), 0.0f, 1.0f);
 	const float dynSnapDuration = FMath::Lerp(MantleMinSnapDuration, MantlMaxSnapDuration,alphaHeight);
 	
-	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
+	const float alphaSnap= UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), StartMantleSnapTimestamp, StartMantleSnapTimestamp + dynSnapDuration, 0,1);
 		
 	//1st Phase
 	if(alphaSnap < 1)
@@ -1144,7 +1156,7 @@ void UPS_ParkourComponent::LedgeTick()
 	
 	if(!bIsLedging) return;
 
-	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(),StartLedgeTimestamp, StartLedgeTimestamp + LedgeDuration, 0.0f, 1.0f);
+	const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(),StartLedgeTimestamp, StartLedgeTimestamp + LedgeDuration, 0.0f, 1.0f);
 	float curveAlpha = alpha;
 
 	if(IsValid(LedgePullUpCurve))
@@ -1237,7 +1249,11 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 		ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 
 		//Disable slide
-		if (_bIsSliding) OnStopSlide();
+		if (_bIsSliding)
+		{
+			if (bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: StopSlide"), __FUNCTION__);
+			OnStopSlide();
+		}
 	}
 
 

@@ -375,7 +375,7 @@ protected:
 	void CanStandTick();
 
 	//Crouch Tick func
-	void Stooping();
+	void Stooping(float deltaTime);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Status|Crounch")
 	bool bIsCrouched = false;
@@ -385,9 +385,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
 	FTimerHandle CanStandTimerHandle;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
-	float StartStoopTimestamp = TNumericLimits<float>().Lowest();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	float StartCrouchHeight = TNumericLimits<float>().Lowest();
@@ -402,7 +399,8 @@ protected:
 	float SmoothCrouchDuration = 0.1f;
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	float _StoopTime;
 
 #pragma endregion Crouch
 

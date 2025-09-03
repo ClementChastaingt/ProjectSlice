@@ -83,10 +83,7 @@ protected:
 	float SlowmoDuration = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition duration"))
-	float SlowmoGlobalTransitionDuration = 0.5f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition duration"))
-	float SlowmoPlayerTransitionDuration = 0.5f;
+	float SlowmoTransitionDuration = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition")
 	UCurveFloat* SlowmoGlobalDilationCurve;
