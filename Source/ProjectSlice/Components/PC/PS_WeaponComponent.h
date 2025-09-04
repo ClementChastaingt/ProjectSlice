@@ -9,6 +9,7 @@
 
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectSlice/Data/PS_Delegates.h"
+#include "ProjectSlice/Data/PS_GlobalType.h"
 
 #include "ProjectSlice/FunctionLibrary/PSFL_CustomProcMesh.h"
 #include "ProjectSlice/Interface/PS_CanGenerateImpactField.h"
@@ -220,6 +221,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector GetSightTarget() const{return _SightTarget;}
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE EPointedObjectType GetSightedObjectType() const{return _SightedObjectType;}
 
 	UFUNCTION()
 	void SightTick();
