@@ -57,6 +57,26 @@ void UPS_ForceComponent::BeginPlay()
 	
 }
 
+void UPS_ForceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	//Unbind Callback
+	OnPushReleaseNotifyEvent.RemoveDynamic(this, &UPS_ForceComponent::OnPushReleasedEventReceived);
+	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+	{
+		_PlayerCharacter->GetProceduralAnimComponent()->OnScrewResetEnd.RemoveDynamic(this, &UPS_ForceComponent::OnScrewResetEndEventReceived);
+	}
+
+	if(IsValid(_PlayerCharacter->GetWeaponComponent()))
+	{
+		_PlayerCharacter->GetWeaponComponent()->OnFireTriggeredEvent.RemoveDynamic(this, &UPS_ForceComponent::OnFireTriggeredEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnFireEvent.RemoveDynamic(this, &UPS_ForceComponent::OnFireEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnToggleTurnRackTargetEvent.RemoveDynamic(this, &UPS_ForceComponent::OnToggleTurnRackTargetEventReceived);
+		_PlayerCharacter->GetWeaponComponent()->OnTurnRackEvent.RemoveDynamic(this, &UPS_ForceComponent::OnTurnRackEventReceived);
+	}
+}
+
 // Called every frame
 void UPS_ForceComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -333,6 +353,15 @@ void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, U
 
 void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, const FHitResult impactPoint)
 {
+	if (!IsValid(inComp)) return;
+	
+	//If currently in slowmo change custom dilation
+	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
+	if (IsValid(slowmoComp) && IsValid(inComp->GetOwner()))
+	{
+		slowmoComp->UpdateObjectDilation(inComp->GetOwner());
+	}
+	
 	//impulse
 	inComp->AddImpulse(impulse, NAME_None, false);
 
@@ -556,13 +585,14 @@ void UPS_ForceComponent::UpdateImpactField()
 	}
 }
 
+
 //------------------
 
 #pragma endregion CanGenerateImpactField
 
 //------------------
 #pragma endregion Destruction
-	
+
 	
 	
 

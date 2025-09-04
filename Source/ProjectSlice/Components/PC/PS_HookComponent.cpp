@@ -187,11 +187,11 @@ void UPS_HookComponent::InitHookComponent()
 void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 {
 	//If slowmo is in use
-	const UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
-	if(IsValid(slowmoComp) && IsValid(_AttachedMesh))
+	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
+	if(IsValid(slowmoComp) && IsValid(_AttachedMesh) && IsValid(_AttachedMesh->GetOwner()))
 	{
-		if(!IsValid(_AttachedMesh->GetOwner())) return;
-		_AttachedMesh->GetOwner()->CustomTimeDilation = bIsSlowed ? (slowmoComp->GetGlobalTimeDilationTarget() / slowmoComp->GetPlayerTimeDilationTarget()) : 1.0f;
+		//If currently in slowmo change custom dilation
+		slowmoComp->UpdateObjectDilation(_AttachedMesh->GetOwner());
 	}
 }
 

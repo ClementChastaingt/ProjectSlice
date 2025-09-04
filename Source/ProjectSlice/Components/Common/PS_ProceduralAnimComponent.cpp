@@ -91,7 +91,7 @@ void UPS_ProceduralAnimComponent::StartDip(const float speed, const float streng
 	
 	DipStrenght = strenght;
 	DipSpeed = speed;
-	DipStartTimestamp = GetWorld()->GetTimeSeconds();
+	DipStartTimestamp = GetWorld()->GetRealTimeSeconds();
 
 	bIsDipping = true;
 	
@@ -118,7 +118,7 @@ void UPS_ProceduralAnimComponent::Dip()
 	if(!bIsDipping || !IsValid(_PlayerCharacter)) return;
 
 	//Calculate dip alpha
-	const float alpha = FMath::Clamp(((GetWorld()->GetTimeSeconds() - DipStartTimestamp) / DipDuration) * DipSpeed, 0, 1.0f);
+	const float alpha = FMath::Clamp(((GetWorld()->GetRealTimeSeconds() - DipStartTimestamp) / DipDuration) * DipSpeed, 0, 1.0f);
 	
 	float curveForceAlpha = alpha;
 	if(IsValid(DipCurve))
@@ -159,7 +159,7 @@ void UPS_ProceduralAnimComponent::SetLagPositionAndAirTilt()
 	LagVector.Y =  UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorForwardVector()) , _PlayerCharacter->GetCharacterMovement()->GetMaxSpeed() * -1);
 	LagVector.Z =  UKismetMathLibrary::SafeDivide(_PlayerCharacter->GetVelocity().Dot(_PlayerCharacter->GetActorUpVector()) , _PlayerCharacter->GetCharacterMovement()->JumpZVelocity * -1);
 
-	const float deltaTime = GetWorld()->GetDeltaSeconds();
+	const float deltaTime = GetWorld()->DeltaRealTimeSeconds;
 	LocationLagPosition = UKismetMathLibrary::VInterpTo(LocationLagPosition, UKismetMathLibrary::ClampVectorSize(LagVector * 2, 0.0f, 4.0f), deltaTime, (1 / deltaTime) / VelocityLagSmoothingSpeed);
 
 	//In Air Animation
@@ -249,7 +249,7 @@ void UPS_ProceduralAnimComponent::ApplyLookSwayAndOffset(const FRotator& camRotP
 	targetCamRotRate.Pitch = 0.0f;
 	targetCamRotRate.Yaw = FMath::Clamp(newCamRotNorm.Yaw, -5.0f,5.0f);
 
-	const float deltaTime = GetWorld()->GetDeltaSeconds();
+	const float deltaTime = GetWorld()->DeltaRealTimeSeconds;
 	
 	const float alpha = FMath::Clamp(FMath::Abs(_PlayerController->GetMoveInput().Y * -1), 0.0f, 1.0f);
 	const float camRotRateSpeedGun = FMath::Lerp(SwayLagSmoothingSpeedGun, SwayLagSmoothingSpeedGun * 2, alpha);
@@ -357,7 +357,7 @@ void UPS_ProceduralAnimComponent::ApplyScrewMovement()
 
 	//Rot Offset
 	float startRot = _bIsReseting ? _LastScrewRotOffset.Pitch : 0.0f;
-	_RotScrewTime = _RotScrewTime + GetWorld()->GetDeltaSeconds();
+	_RotScrewTime = _RotScrewTime + GetWorld()->DeltaRealTimeSeconds;
 	float targetRot = _bIsReseting ? 0.0f : 360.0f *  FMath::Lerp(1.0f, ScrewRotOffsetMultiplicator, curveRotAlpha) * _RotScrewTime;
 	
 	ScrewRotOffset = FRotator::ZeroRotator;

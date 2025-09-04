@@ -147,7 +147,17 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 
 	_bSlowmoActive = !_bSlowmoActive;
 	GetWorld()->GetTimerManager().ClearTimer(_SlowmoTimerHandle);
-	
+
+	//For each dilated actor update custom dilation
+	if (!_bSlowmoActive)
+	{
+		for (AActor* actorDilated : _ActorsDilated)
+		{
+			UpdateObjectDilation(actorDilated);
+		}
+	}
+
+	//Start player dilation &&& global dilation transition
 	_bIsSlowmoTransiting = true;
 	SetComponentTickEnabled(true);
 
@@ -163,6 +173,31 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowmoActive ? TEXT("On") :  TEXT("Off"));
 }
 
+void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
+{
+	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
+	
+	float timeDilation = GetInteractedObjectTimeDilationTarget() / GetGlobalTimeDilationTarget();
+	const float currentTargetDilation = _bSlowmoActive ? timeDilation : 1.0f;
+	if (actorToUpdate->CustomTimeDilation == currentTargetDilation) return;
+
+	//Apply dilation
+	actorToUpdate->CustomTimeDilation = currentTargetDilation;
+
+	//Debug
+	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s dilation: %f "),__FUNCTION__, *actorToUpdate->GetHumanReadableName(), currentTargetDilation);
+
+	//Stock or Erase to Queue
+	if (_bSlowmoActive)
+	{
+		_ActorsDilated.AddUnique(actorToUpdate);
+	}
+	else
+	{
+		_ActorsDilated.Remove(actorToUpdate);
+	}
+	
+}
 
 
 

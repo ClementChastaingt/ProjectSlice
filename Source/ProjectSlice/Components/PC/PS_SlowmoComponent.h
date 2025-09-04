@@ -51,9 +51,9 @@ public:
 	
 	UFUNCTION()
 	void OnTriggerSlowmo();
-		
+
 	UFUNCTION()
-	void SlowmoTransition();
+	void UpdateObjectDilation(AActor* actorToUpdate);
 
 	FORCEINLINE bool IsIsSlowmoTransiting() const{return _bIsSlowmoTransiting;}
 
@@ -62,6 +62,8 @@ public:
 	FORCEINLINE float GetPlayerSlowmoAlpha() const{return _PlayerSlowmoAlpha;}
 
 	FORCEINLINE float GetGlobalTimeDilationTarget() const{return GlobalTimeDilationTarget;}
+
+	FORCEINLINE float GetInteractedObjectTimeDilationTarget() const{return InteractedObjectTimeDilationTarget;}
 
 	FORCEINLINE float GetPlayerTimeDilationTarget() const{return PlayerTimeDilationTarget;}
 
@@ -72,9 +74,15 @@ protected:
 
 	UFUNCTION()
 	FORCEINLINE float SetIsSlowmoTransiting (const bool bisSlowmoTransiting) {return _bIsSlowmoTransiting = bisSlowmoTransiting;}
+
+	UFUNCTION()
+	void SlowmoTransition();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float GlobalTimeDilationTarget = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
+	float InteractedObjectTimeDilationTarget = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo")
 	float PlayerTimeDilationTarget = 0.75f;
@@ -121,6 +129,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _StartPlayerTimeDilation;
+
+	UPROPERTY(Transient)
+	TArray<AActor*> _ActorsDilated;
 
 #pragma endregion Routine
 

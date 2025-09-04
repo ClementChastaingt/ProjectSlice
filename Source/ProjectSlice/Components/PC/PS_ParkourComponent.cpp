@@ -249,7 +249,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	//Timer init
 	if(!_bIsWallRunning)
 	{
-		_StartWallRunTimestamp = GetWorld()->GetTimeSeconds();
+		_StartWallRunTimestamp = GetWorld()->GetRealTimeSeconds();
 		_WallRunSeconds = _StartWallRunTimestamp;
 		GetWorld()->GetTimerManager().UnPauseTimer(_WallRunTimerHandle);
 	}
@@ -643,7 +643,7 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 	//Use Impulse
 	if(bUseImpulse)
 	{
-		characterMovement->AddForce(startSlideVel * GetWorld()->DeltaTimeSeconds);
+		characterMovement->AddForce(startSlideVel * GetWorld()->RealTimeSeconds);
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: Use Impulse, force: %f"),__FUNCTION__, characterMovement->Velocity.Length());
 		
 		//Determine if can use slide on slope
@@ -752,7 +752,7 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	_LastSteeringInputDirection = smoothedInputValue;
 	
 	FVector worldInputDirection =  slideDirRight * smoothedInputValue.X + slideDirForward * smoothedInputValue.Y;
-	worldInputDirection.Z = 0.0f;
+	worldInputDirection.Z = movementDirection.Z;
 	worldInputDirection.Normalize();
 
 	// Compute Steering Weight
@@ -787,7 +787,7 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	
 	// Tamper with movement
 	//TODO :: If RInterpTo not const can dir to any direction
-	movementDirection = UKismetMathLibrary::RInterpTo(movementDirection.Rotation(), targetDir.Rotation(),GetWorld()->GetDeltaSeconds(), steeringSpeed).Vector() * targetDir.Length();
+	movementDirection = UKismetMathLibrary::RInterpTo(movementDirection.Rotation(), targetDir.Rotation(),GetWorld()->RealTimeSeconds, steeringSpeed).Vector() * targetDir.Length();
 	
 	//Debug
 	if(bDebugSteering)
@@ -991,7 +991,7 @@ void UPS_ParkourComponent::OnStartMantle()
 	_PlayerController->SetIgnoreLookInput(true);
 
 	//Init variables
-	StartMantleSnapTimestamp = GetWorld()->GetTimeSeconds();
+	StartMantleSnapTimestamp = GetWorld()->GetRealTimeSeconds();
 	_StartMantleLoc = _PlayerCharacter->GetActorLocation();
 	_StartMantleRot = _PlayerCharacter->GetControlRotation();
 	_TargetMantleRot = FRotator(_StartMantleRot.Pitch, _TargetMantleRot.Yaw, _StartMantleRot.Roll);
@@ -1048,9 +1048,9 @@ void UPS_ParkourComponent::MantleTick()
 		_PlayerCharacter->SetActorLocation(newPlayerLoc);
 
 		//Rotate player forward object
-		_PlayerController->SetControlRotation(UKismetMathLibrary::RInterpTo(_StartMantleRot.Clamp(), _TargetMantleRot.Clamp(), GetWorld()->GetTimeSeconds() - StartMantleSnapTimestamp, MantleFacingRotationSpeed));
+		_PlayerController->SetControlRotation(UKismetMathLibrary::RInterpTo(_StartMantleRot.Clamp(), _TargetMantleRot.Clamp(), GetWorld()->GetAudioTimeSeconds() - StartMantleSnapTimestamp, MantleFacingRotationSpeed));
 		
-		StartMantlePullUpTimestamp = GetWorld()->GetTimeSeconds();
+		StartMantlePullUpTimestamp = GetWorld()->GetRealTimeSeconds();
 		
 		if(bDebugMantle)
 		{
@@ -1068,7 +1068,7 @@ void UPS_ParkourComponent::MantleTick()
 			OnPullUpMantleEvent.Broadcast();
 		}
 
-		const float alphaPullUp = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), StartMantlePullUpTimestamp, StartMantlePullUpTimestamp + MantlePullUpDuration, 0,1);
+		const float alphaPullUp = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), StartMantlePullUpTimestamp, StartMantlePullUpTimestamp + MantlePullUpDuration, 0,1);
 		if(bDebugMantle) UE_LOG(LogTemp, Log, TEXT("%S :: alphaPullUp %f"),__FUNCTION__, alphaPullUp);
 		
 		float curveAlphaXY = alphaPullUp;
@@ -1113,7 +1113,7 @@ void UPS_ParkourComponent::OnStartLedge(const FVector& targetLoc)
 	_TargetLedgeLoc.Z = targetLoc.Z + _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	
 	bIsLedging = true;
-	StartLedgeTimestamp = GetWorld()->GetTimeSeconds();
+	StartLedgeTimestamp = GetWorld()->GetRealTimeSeconds();
 	
 	SetGenerateOverlapEvents(false);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
