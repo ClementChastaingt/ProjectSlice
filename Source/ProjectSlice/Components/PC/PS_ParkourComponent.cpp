@@ -552,7 +552,7 @@ void UPS_ParkourComponent::OnStartSlide()
 	
 	//Configure Movement Behaviour
 	_PlayerController->SetIgnoreMoveInput(true);
-	_DefaultSlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector() * _PlayerCharacter->GetCharacterMovement()->GetLastUpdateVelocity().Length();
+	_DefaultSlideDirection = _PlayerCharacter->GetCharacterMovement()->GetLastInputVector().GetSafeNormal2D() * _PlayerCharacter->GetCapsuleVelocity().Length(); //TODO :: CAUTION ::: Use GetLastInputVector() need to be normalized when used with TimeDilation
 	_SlideStartRot = _PlayerCharacter->GetActorRotation();
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = 0.0f;
 	
@@ -626,7 +626,7 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 	
 	//Determine work var
 	const bool bUseImpulse = slideVel.SquaredLength() > minSlideVel.SquaredLength();
-    FVector startSlideVel = bUseImpulse ? slideVel : minSlideVel;
+    FVector startSlideVel = (bUseImpulse ? slideVel : minSlideVel) * _PlayerCharacter->GetActorTimeDilation();
 	if(bDebugSlide)
 	{
 		DrawDebugDirectionalArrow(GetWorld(), _PlayerCharacter->GetActorLocation(),_PlayerCharacter->GetActorLocation() + startSlideVel.GetSafeNormal() * 500, 10.0f, FColor::Red, false, 0.1f, 10, 1);
@@ -643,7 +643,7 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 	//Use Impulse
 	if(bUseImpulse)
 	{
-		characterMovement->AddForce(startSlideVel * GetWorld()->RealTimeSeconds);
+		characterMovement->AddForce(startSlideVel * GetWorld()->GetTimeSeconds());
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: Use Impulse, force: %f"),__FUNCTION__, characterMovement->Velocity.Length());
 		
 		//Determine if can use slide on slope
@@ -652,7 +652,7 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 		//Determine wanted vel
 		const float rangedPitchMultiplicator = UKismetMathLibrary::MapRangeClamped(_OutSlopePitchDegreeAngle,90,characterMovement->GetWalkableFloorAngle(),1.0,SlopeForceDecelerationWeight);
 		targetVel = startSlideVel * SlideSpeedBoost;
-		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * (MaxSlideSpeedMultiplicator * (_OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator));
+		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * _PlayerCharacter->GetActorTimeDilation() * (MaxSlideSpeedMultiplicator * (_OutSlopePitchDegreeAngle < 0 ? 1.0f : rangedPitchMultiplicator));
 		
 		//Clamp Max Velocity
 		const FVector clampedVel = UPSFl::ClampVelocity(startSlideVel, _PlayerCharacter->GetVelocity(),targetVel, maxSpeed);
@@ -662,15 +662,14 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 	//Use Velocity
 	else if(slideAlpha < 1 && _OutSlopePitchDegreeAngle <= 0)
 	{
-		
 		//Determine wanted vel
 		targetVel = startSlideVel * SlideSpeedBoost;
-		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * MaxSlideSpeedMultiplicator;
+		maxSpeed = _PlayerCharacter->GetDefaultMaxWalkSpeed() * _PlayerCharacter->GetActorTimeDilation() * MaxSlideSpeedMultiplicator;
 
 		//Clamp Max Velocity
 		const FVector clampedVel = UPSFl::ClampVelocity(startSlideVel, _PlayerCharacter->GetVelocity(),targetVel,maxSpeed);
 		characterMovement->Velocity = FMath::Lerp(startSlideVel, clampedVel, curveAccAlpha);
-
+		
 		if(bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: Use Velocity, Force: %f"),__FUNCTION__, characterMovement->Velocity.Length());
 	}
 
@@ -684,7 +683,7 @@ void UPS_ParkourComponent::SlideTick(const float deltaTime)
 	//Debug
 	if(bDebugSlide)
 	{
-		UE_LOG(LogTemp, Log, TEXT("%S :: MaxWalkSpeed :%f, floorInflucence : %s, brakDec: %f, slideAlpha: %f, AlphaFeedback: %f"),__FUNCTION__, characterMovement->MaxWalkSpeed, *CalculateFloorInflucence(characterMovement->CurrentFloor.HitResult.Normal).ToString(), _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, slideAlpha, _SlideAlphaFeedback);
+		UE_LOG(LogTemp, Log, TEXT("%S :: startSlideVel %f, targetVel %f, maxSpeed :%f, brakDec: %f, slideAlpha: %f, AlphaFeedback: %f"),__FUNCTION__, startSlideVel.Length(), targetVel.Length(), maxSpeed, _PlayerCharacter->GetCharacterMovement()->BrakingDecelerationWalking, slideAlpha, _SlideAlphaFeedback);
 	}
 
 	
@@ -745,14 +744,14 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 	smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue,
 		CustomTickRate, smoothingAlpha * SteeringSmoothingInterpSpeed);
 
-	if (bDebugSteering) UE_LOG(LogTemp, Error, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),
+	if (bDebugSteering) UE_LOG(LogTemp, Log, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),
 		__FUNCTION__, smoothingAlpha, smoothedInputValue.Length());	
 	
 	// Determine input world dir
 	_LastSteeringInputDirection = smoothedInputValue;
 	
 	FVector worldInputDirection =  slideDirRight * smoothedInputValue.X + slideDirForward * smoothedInputValue.Y;
-	worldInputDirection.Z = movementDirection.Z;
+	//worldInputDirection.Z = movementDirection.Z;
 	worldInputDirection.Normalize();
 
 	// Compute Steering Weight
