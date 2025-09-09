@@ -185,7 +185,7 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 	actorToUpdate->CustomTimeDilation = currentTargetDilation;
 
 	//Debug
-	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s dilation: %f "),__FUNCTION__, *actorToUpdate->GetHumanReadableName(), currentTargetDilation);
+	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s dilation: %f "),__FUNCTION__, *actorToUpdate->GetActorNameOrLabel(), currentTargetDilation);
 
 	//Stock or Erase to Queue
 	if (_bSlowmoActive)

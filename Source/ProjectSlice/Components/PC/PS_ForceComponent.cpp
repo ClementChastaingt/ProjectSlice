@@ -272,7 +272,7 @@ void UPS_ForceComponent::ReleasePush()
 				iteration++;
 				continue;
 			}
-						
+			
 			//Calculate mass for weight force 
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 
@@ -354,6 +354,8 @@ void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, U
 void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, const FHitResult impactPoint)
 {
 	if (!IsValid(inComp)) return;
+
+	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, *inComp->GetReadableName());
 	
 	//If currently in slowmo change custom dilation
 	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
