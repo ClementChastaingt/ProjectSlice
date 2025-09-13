@@ -55,9 +55,12 @@ public:
 	UFUNCTION()
 	void UpdateObjectDilation(AActor* actorToUpdate);
 
-	FORCEINLINE bool IsIsSlowmoTransiting() const{return _bIsSlowmoTransiting;}
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsSlowmoActive() const{return _bIsSlowmoTransiting || _bSlowming;}
 
-	FORCEINLINE bool IsSlowmoActive() const{return _bSlowmoActive;}
+	FORCEINLINE bool IsSlowmoTransiting() const{return _bIsSlowmoTransiting;}
+	
+	FORCEINLINE bool IsSlowming() const{return _bSlowming;}
 
 	FORCEINLINE float GetPlayerSlowmoAlpha() const{return _PlayerSlowmoAlpha;}
 
@@ -101,7 +104,7 @@ protected:
 		
 private:
 	UPROPERTY(Transient)
-	bool _bSlowmoActive;
+	bool _bSlowming;
 
 	UPROPERTY(Transient)
 	bool _bIsSlowmoTransiting;

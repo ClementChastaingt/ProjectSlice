@@ -79,17 +79,17 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		}
 
 		//Set PostProccess alpha
-		_PlayerSlowmoAlpha = _bSlowmoActive ? curvePlayerAlpha : 1.0f - curvePlayerAlpha;
+		_PlayerSlowmoAlpha = _bSlowming ? curvePlayerAlpha : 1.0f - curvePlayerAlpha;
 		_SlowmoPostProcessAlpha = _PlayerSlowmoAlpha;
-		UCurveFloat* currentCurve = SlowmoPostProcessCurves.IsValidIndex(_bSlowmoActive ? 0 : 1) ? SlowmoPostProcessCurves[_bSlowmoActive ? 0 : 1] : nullptr ;
+		UCurveFloat* currentCurve = SlowmoPostProcessCurves.IsValidIndex(_bSlowming ? 0 : 1) ? SlowmoPostProcessCurves[_bSlowming ? 0 : 1] : nullptr ;
 		if(IsValid(currentCurve))
 		{
 			_SlowmoPostProcessAlpha = currentCurve->GetFloatValue(_PlayerSlowmoAlpha);
 		}
 	
 		//Set time Dilation
-		float globalDilationTarget = _bSlowmoActive ? GlobalTimeDilationTarget : 1.0f;
-		float playerDilationTarget = _bSlowmoActive ? PlayerTimeDilationTarget : 1.0f;
+		float globalDilationTarget = _bSlowming ? GlobalTimeDilationTarget : 1.0f;
+		float playerDilationTarget = _bSlowming ? PlayerTimeDilationTarget : 1.0f;
 		
 		float globalTimeDilation = FMath::Lerp(_StartGlobalTimeDilation,globalDilationTarget,curveGlobalAlpha);		
 		float playerTimeDilation = FMath::Lerp(_StartPlayerTimeDilation,playerDilationTarget,curvePlayerAlpha);
@@ -105,7 +105,7 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		if(alpha >= 1.0f)
 		{
 			//Exit if transit to FadeOut
-			if(!_bSlowmoActive)
+			if(!_bSlowming)
 			{
 				OnStopSlowmo();
 				return;
@@ -145,11 +145,11 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	_StartSlowmoTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_SlowmoTime = _StartSlowmoTimestamp;
 
-	_bSlowmoActive = !_bSlowmoActive;
+	_bSlowming = !_bSlowming;
 	GetWorld()->GetTimerManager().ClearTimer(_SlowmoTimerHandle);
 
 	//For each dilated actor update custom dilation
-	if (!_bSlowmoActive)
+	if (!_bSlowming)
 	{
 		for (AActor* actorDilated : _ActorsDilated)
 		{
@@ -163,14 +163,14 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 
 	//Trigger FOV slowmo, duration is SlowmoTransitionDuration
 	UPS_PlayerCameraComponent* playerCam = Cast<UPS_PlayerCameraComponent>(_PlayerCharacter->GetFirstPersonCameraComponent());
-	UCurveFloat* slowmoCurve = SlowmoFOVCurves[_bSlowmoActive ? 0 : 1];
+	UCurveFloat* slowmoCurve = SlowmoFOVCurves[_bSlowming ? 0 : 1];
 	if(!IsValid(slowmoCurve)) slowmoCurve = SlowmoFOVCurves[0];
 		
-	playerCam->SetupFOVInterp(_bSlowmoActive ? TargetFOV : playerCam->GetDefaultFOV(), _bSlowmoActive ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
+	playerCam->SetupFOVInterp(_bSlowming ? TargetFOV : playerCam->GetDefaultFOV(), _bSlowming ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
 
-	OnSlowmoEvent.Broadcast(_bSlowmoActive);
+	OnSlowmoEvent.Broadcast(_bSlowming);
 	
-	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowmoActive ? TEXT("On") :  TEXT("Off"));
+	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowming ? TEXT("On") :  TEXT("Off"));
 }
 
 void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
@@ -178,7 +178,7 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
 	
 	float timeDilation = GetInteractedObjectTimeDilationTarget() / GetGlobalTimeDilationTarget();
-	const float currentTargetDilation = _bSlowmoActive ? timeDilation : 1.0f;
+	const float currentTargetDilation = _bSlowming ? timeDilation : 1.0f;
 	if (actorToUpdate->CustomTimeDilation == currentTargetDilation) return;
 
 	//Apply dilation
@@ -188,7 +188,7 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s dilation: %f "),__FUNCTION__, *actorToUpdate->GetActorNameOrLabel(), currentTargetDilation);
 
 	//Stock or Erase to Queue
-	if (_bSlowmoActive)
+	if (_bSlowming)
 	{
 		_ActorsDilated.AddUnique(actorToUpdate);
 	}
