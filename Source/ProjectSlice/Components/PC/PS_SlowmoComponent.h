@@ -61,14 +61,14 @@ public:
 	FORCEINLINE bool IsSlowmoTransiting() const{return _bIsSlowmoTransiting;}
 	
 	FORCEINLINE bool IsSlowming() const{return _bSlowming;}
-
+	
 	FORCEINLINE float GetPlayerSlowmoAlpha() const{return _PlayerSlowmoAlpha;}
 
-	FORCEINLINE float GetGlobalTimeDilationTarget() const{return GlobalTimeDilationTarget;}
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetCurrentCustomPlayerTimeDilation() const{ return _CurrentPlayerTimeDilation;}
 
-	FORCEINLINE float GetInteractedObjectTimeDilationTarget() const{return InteractedObjectTimeDilationTarget;}
-
-	FORCEINLINE float GetPlayerTimeDilationTarget() const{return PlayerTimeDilationTarget;}
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE float GetRealPlayerTimeDilationTarget() const{ return PlayerTimeDilationTarget / GlobalTimeDilationTarget;}
 
 protected:
 
@@ -132,6 +132,9 @@ private:
 
 	UPROPERTY(Transient)
 	float _StartPlayerTimeDilation;
+
+	UPROPERTY(Transient)
+	float _CurrentPlayerTimeDilation;
 
 	UPROPERTY(Transient)
 	TArray<AActor*> _ActorsDilated;

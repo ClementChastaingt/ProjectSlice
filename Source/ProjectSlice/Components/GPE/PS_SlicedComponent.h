@@ -66,6 +66,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UAudioComponent* GetCollideAudio() const{return _CollideAudio;}
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Audio OnPlayImpactSoundEvent;
+
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|Feedback", meta=(Tooltip="Velocity Range to max alpha Feedback"))

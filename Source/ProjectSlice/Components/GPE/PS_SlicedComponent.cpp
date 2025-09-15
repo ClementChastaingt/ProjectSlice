@@ -197,6 +197,9 @@ void UPS_SlicedComponent::ImpactSoundFeedback(const FHitResult& Hit, const float
 		_CollideAudio->SetIntParameter(FName("Intensity"), _ImpactSoundIntensity);
 		_CollideAudio->Play();
 	}
+	
+	//Callback
+	OnPlayImpactSoundEvent.Broadcast(_CollideAudio);
 
 	//Debug
 	if (bDebugFeedback) UE_LOG(LogTemp, Log, TEXT("%S :: volumeMultiplier %f, pitchMultiplier %f, Intensity %i"), __FUNCTION__,

@@ -402,6 +402,7 @@ void UPS_ForceComponent::StopPush()
 	OnPushEvent.Broadcast(false);
 }
 
+//TODO :: Harmonize to Standard usage: In Actor BP (here playerBP)
 void UPS_ForceComponent::PlaySound(const EPushSFXType soundType)
 {
 	if(!PushSounds.Contains(soundType) || !PushSounds.Contains(EPushSFXType::WHISPER)) return;
@@ -410,23 +411,27 @@ void UPS_ForceComponent::PlaySound(const EPushSFXType soundType)
 
 	if(!IsValid(currentSound) || !IsValid(_PlayerCharacter) || !IsValid(GetWorld())) return;
 
+	UAudioComponent* playedAudio = nullptr;
 	switch (soundType)
 	{
 		case EPushSFXType::RELEASED:
-			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 350);		
+			playedAudio = UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _PlayerCharacter->GetActorLocation() + _PlayerCharacter->GetActorForwardVector() * 350);		
 			break;
 			
 		case EPushSFXType::WHISPER:
 			if (!bIsQuickPush)
-				UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _StartForcePushLoc);
+				playedAudio =UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _StartForcePushLoc);
 			else
-				UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
+				playedAudio = UGameplayStatics::SpawnSoundAttached(*PushSounds.Find(soundType), _PlayerCharacter->GetMesh(), SOCKET_HAND_LEFT);
 			break;
 			
 		case EPushSFXType::IMPACT:
-			UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _ImpactForcePushLoc);
+			playedAudio = UGameplayStatics::SpawnSoundAtLocation(GetWorld(), currentSound, _ImpactForcePushLoc);
 			break;
 	}
+
+	//Callback
+	OnPushPlaySoundEvent.Broadcast(playedAudio);
 	
 }
 

@@ -16,7 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector, const FVector&
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Vector2D,const FVector2D&, vectorValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Transform,const FTransform&, transformValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Field,const AFieldSystemActor*, fieldActor);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPSDelegate_Audio,const UAudioComponent*, audioComp);
 
 // 2 params
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPSDelegate_Int_Actor, const int32&, intValue, const AActor*, actor);

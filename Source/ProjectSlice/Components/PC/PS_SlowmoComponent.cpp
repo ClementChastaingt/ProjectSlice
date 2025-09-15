@@ -92,13 +92,13 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		float playerDilationTarget = _bSlowming ? PlayerTimeDilationTarget : 1.0f;
 		
 		float globalTimeDilation = FMath::Lerp(_StartGlobalTimeDilation,globalDilationTarget,curveGlobalAlpha);		
-		float playerTimeDilation = FMath::Lerp(_StartPlayerTimeDilation,playerDilationTarget,curvePlayerAlpha);
+		_CurrentPlayerTimeDilation = FMath::Lerp(_StartPlayerTimeDilation,playerDilationTarget,curvePlayerAlpha);
 		
 		const float max = playerDilationTarget / globalTimeDilation;
-		playerTimeDilation = FMath::Clamp(((globalTimeDilation > KINDA_SMALL_NUMBER) ? (playerTimeDilation / globalTimeDilation) : 1.0f), 0.0f, max);
+		_CurrentPlayerTimeDilation = FMath::Clamp(((globalTimeDilation > KINDA_SMALL_NUMBER) ? (_CurrentPlayerTimeDilation / globalTimeDilation) : 1.0f), 0.0f, max);
 		
 		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), globalTimeDilation);
-		_PlayerCharacter->SetPlayerTimeDilation(playerTimeDilation);
+		_PlayerCharacter->SetPlayerTimeDilation(_CurrentPlayerTimeDilation);
 		if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: alpha %f, alphaGlobal %f, globalDilation %f, customTimeDilation %f, playerTimeDilation %f "),  __FUNCTION__,alpha, alpha, UGameplayStatics::GetGlobalTimeDilation(GetWorld()), _PlayerCharacter->CustomTimeDilation, _PlayerCharacter->GetActorTimeDilation());
 
 		//Exit or trigger Slowmo timer
@@ -177,7 +177,7 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 {
 	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
 	
-	float timeDilation = GetInteractedObjectTimeDilationTarget() / GetGlobalTimeDilationTarget();
+	const float timeDilation = InteractedObjectTimeDilationTarget * GetRealPlayerTimeDilationTarget();
 	const float currentTargetDilation = _bSlowming ? timeDilation : 1.0f;
 	if (actorToUpdate->CustomTimeDilation == currentTargetDilation) return;
 

@@ -108,6 +108,9 @@ public:
 	UFUNCTION()
 	void PlaySound(EPushSFXType soundType);
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Audio OnPushPlaySoundEvent;
+
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsPushing() const{return _bIsPushing;}
 
