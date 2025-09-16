@@ -45,8 +45,51 @@ public:
 	 */
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
 
+
+
 	//------------------
 #pragma endregion Utilities
+
+#pragma region Time
+	//------------------
+
+public:
+	
+	static void SetDilatedRealTimeTimer(
+		UWorld* World,
+		FTimerHandle& InOutHandle,
+		const FTimerDelegate& InDelegate,
+		float InRate,
+		bool bLoop,
+		float InFirstDelay = -1.f,
+		float CustomDilation = 1.f
+	);
+
+	
+	/*
+	 * @brief Set a Timer wnort affected by Dilation
+	 * @param worldContextObject: world usage context
+	 * @param callback : function callback
+	 * @param duration : duration of the timer
+	 * @return none
+	*/
+	static void SetRealTimeTimerWithCallback(UWorld* worldContextObject, TFunction<void()> callback, float duration);
+
+	/*
+	 * @brief Set a Timer wnort affected by Dilation
+	 * @param World: world usage context
+	 * @param Callback : function callback
+	 * @param Duration : duration of the timer
+	 * @param CustomDilation : custom dilation to apply on the timer
+	 * @return none
+	*/
+	static void SetDilatedRealTimeTimerWithCallback(UWorld* World, TFunction<void()> Callback, float Duration, float CustomDilation);
+	
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", Latent, LatentInfo = "LatentInfo", Duration = "0.2"), Category="Utilities|Time")
+	static void DelayRealTime(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo);
+
+#pragma endregion Time
+
 
 #pragma region Camera
 	//------------------

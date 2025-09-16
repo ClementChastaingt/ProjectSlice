@@ -277,12 +277,23 @@ void UPS_ForceComponent::ReleasePush()
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 
 			//Impulse with delay for match with VFX
-			FTimerHandle timerImpulseHandle;
-			FTimerDelegate timerImpulseDelegate;
-				
-			timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass), lineViewHit); 
-			GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
-			
+			UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
+			if (IsValid(slowmoComp))
+			{
+				UPSFl::SetDilatedRealTimeTimerWithCallback(GetWorld(), [this, outMeshComp, impulse = _StartForcePushLoc + _DirForcePush * (force * mass), lineViewHit]()
+				{
+					Impulse(outMeshComp, impulse, lineViewHit);
+				}, duration, slowmoComp->GetPlayerTimeDilationTarget());
+			}
+			else
+			{
+				FTimerHandle timerImpulseHandle;
+				FTimerDelegate timerImpulseDelegate;
+					
+				timerImpulseDelegate.BindUObject(this, &UPS_ForceComponent::Impulse,outMeshComp, _StartForcePushLoc + _DirForcePush * (force * mass), lineViewHit); 
+				GetWorld()->GetTimerManager().SetTimer(timerImpulseHandle, timerImpulseDelegate, duration, false);
+			}
+		
 			if(bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: Impulse actor %s, compHit %s,  force %f, mass %f, pushForce %f, alphainput %f, duration %f"),__FUNCTION__,*outMeshComp->GetOwner()->GetActorNameOrLabel(), *outMeshComp->GetName(), force, mass, PushForce, _AlphaInput, duration);
 
 			//Increment iteration var 
@@ -354,8 +365,6 @@ void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, U
 void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, const FHitResult impactPoint)
 {
 	if (!IsValid(inComp)) return;
-
-	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, *inComp->GetReadableName());
 	
 	//If currently in slowmo change custom dilation
 	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
@@ -363,6 +372,8 @@ void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, 
 	{
 		slowmoComp->UpdateObjectDilation(inComp->GetOwner());
 	}
+	
+	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, *inComp->GetReadableName());
 	
 	//impulse
 	inComp->AddImpulse(impulse, NAME_None, false);

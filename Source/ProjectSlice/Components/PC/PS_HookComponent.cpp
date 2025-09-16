@@ -1012,6 +1012,9 @@ void UPS_HookComponent::HookObject()
 	
 	//Determine max distance for Pull
 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), _CurrentHookHitResult.Location));
+
+	//If slowmo active
+	if (IsValid(_PlayerCharacter->GetSlowmoComponent()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive()) OnSlowmoTriggerEventReceived(true);
 	
 	//Callback
 	OnHookObject.Broadcast(true);
@@ -1480,8 +1483,8 @@ void UPS_HookComponent::PowerCablePull()
 	//if(_bAttachObjectIsBlocked) currentPushAccel = (currentPushAccel / UnblockDefaultPullforceDivider);
 	
 	FVector defaultNewVel = _AttachedMesh->GetMass() *  rotMeshCable.Vector() * currentPushAccel;
-	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaTimeSeconds), NAME_None, false);
-
+	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation), NAME_None, false);
+	UE_LOG(LogTemp, Error, TEXT("time %f, vel %f"), GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation, (defaultNewVel * GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation).Length());
 	//Debug base Pull dir
 	if(bDebugPull)
 	{

@@ -70,6 +70,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetRealPlayerTimeDilationTarget() const{ return PlayerTimeDilationTarget / GlobalTimeDilationTarget;}
 
+	FORCEINLINE float GetGlobalTimeDilationTarget() const{return GlobalTimeDilationTarget;}
+
+	FORCEINLINE float GetInteractedObjectTimeDilationTarget() const{return InteractedObjectTimeDilationTarget;}
+
+	FORCEINLINE float GetPlayerTimeDilationTarget() const{return PlayerTimeDilationTarget;}
+
 protected:
 
 	UFUNCTION()

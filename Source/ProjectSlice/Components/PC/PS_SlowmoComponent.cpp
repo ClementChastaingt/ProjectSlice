@@ -153,6 +153,7 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	{
 		for (AActor* actorDilated : _ActorsDilated)
 		{
+			if (!IsValid(actorDilated)) continue;
 			UpdateObjectDilation(actorDilated);
 		}
 	}
