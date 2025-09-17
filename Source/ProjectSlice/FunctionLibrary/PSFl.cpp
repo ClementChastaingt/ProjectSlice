@@ -12,6 +12,7 @@
 #include "MeshQueries.h"
 #include "DynamicMesh/DynamicMeshAABBTree3.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Parameterization/MeshDijkstra.h"
 
@@ -273,11 +274,77 @@ void UPSFl::SetDilatedRealTimeTimerWithCallback(UWorld* World, TFunction<void()>
 
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda(*Checker));
 }
+//------------------
+#pragma endregion Time
+
+#pragma region Physic
+//------------------
+
+void UPSFl::AddImpulseDilated(UObject* WorldContextObject, UMeshComponent* Target, FVector Impulse, FName BoneName, bool bVelChange)
+{
+	if (!IsValid(WorldContextObject) || !IsValid(WorldContextObject->GetWorld()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: World invalid!"), __FUNCTION__);
+		return;
+	}
+
+	if (!IsValid(Target) || !IsValid(Target->GetOwner()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: target OR target Owner invalid!"), __FUNCTION__);
+		return;
+	}
+	
+	float globalDilation =  UGameplayStatics::GetGlobalTimeDilation(WorldContextObject->GetWorld());
+	float dilatedTime = Target->GetOwner()->CustomTimeDilation <= 0.0f ? globalDilation : (globalDilation / Target->GetOwner()->CustomTimeDilation);
+	Target->AddImpulse((Impulse / dilatedTime), BoneName, bVelChange);
+}
+
+// void UPSFl::AddForceDilated(UObject* WorldContextObject, UMeshComponent* target, FVector Impulse, FName BoneName = NAME_None, bool bVelChange = false)
+// {
+// 	if (!IsValid(WorldContextObject) || !IsValid(WorldContextObject->GetWorld()))
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("%S :: World invalid!"), __FUNCTION__);
+// 		return;
+// 	}
+//
+// 	if (!IsValid(target) || !IsValid(target->GetOwner()))
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("%S :: target OR target Owner invalid!"), __FUNCTION__);
+// 		return;
+// 	}
+// 	
+// 	float dilatedTime = target->GetOwner()->CustomTimeDilation * UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+// 	target->AddForce(Impulse / dilatedTime), NAME_None, false);
+// }
+
+void UPSFl::GetActivePhysicsComponents(AActor* Actor, TArray<UPrimitiveComponent*>& OutComponents)
+{
+	OutComponents.Reset(); // évite realloc
+	if (!Actor) return;
+
+	// Récupération *directe* des composants primitifs
+	const TInlineComponentArray<UPrimitiveComponent*> Components(Actor);
+
+	for (UPrimitiveComponent* Comp : Components)
+	{
+		if (!Comp) continue;
+
+		// Vérifier si la physique est simulée
+		if (Comp->IsSimulatingPhysics())
+		{
+			// Lire la vélocité sans alloc (ZeroTolerance pour éviter flottants résiduels)
+			const FVector Vel = Comp->GetPhysicsLinearVelocity();
+			if (!Vel.IsNearlyZero(KINDA_SMALL_NUMBER))
+			{
+				OutComponents.Add(Comp);
+			}
+		}
+	}
+}
 
 
 //------------------
-
-#pragma endregion Time
+#pragma endregion Physic
 
 #pragma region Camera
 //------------------

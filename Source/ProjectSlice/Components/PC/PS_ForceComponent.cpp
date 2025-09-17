@@ -375,8 +375,8 @@ void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, 
 	
 	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, *inComp->GetReadableName());
 	
-	//impulse
-	inComp->AddImpulse(impulse, NAME_None, false);
+	//Impulse
+	UPSFl::AddImpulseDilated(this, inComp, impulse);
 
 	//Play Impact sound
 	_ImpactForcePushLoc = impactPoint.ImpactPoint;

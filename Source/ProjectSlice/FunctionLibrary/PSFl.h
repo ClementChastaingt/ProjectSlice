@@ -16,7 +16,7 @@ public:
 	//------------------
 
 public:
-	/*
+	/**
 	 * @brief Check and Clamp a Velocity Target vector to MaxVelocity
 	 * @param currentVelocity: movement current velocitu to check
 	 * @param targetVelocity: movement target max velocity 
@@ -26,7 +26,7 @@ public:
 	 */
 	static FVector ClampVelocity(FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
 
-	/*
+	/**
 	 * @brief Check and Clamp a Velocity Target and Velocity Start vector to MaxVelocity
 	 * @param startVelocity: movement start velocitu
 	 * @param currentVelocity: movement current velocitu to check
@@ -37,16 +37,14 @@ public:
 	 */
 	static FVector ClampVelocity(FVector& startVelocity, FVector currentVelocity, const FVector& targetVelocity, const float maxVelocity, const bool bDebug = false);
 
-	/*
+	/**
 	 * @brief Get an Object unified mass. Return Mass scaled by Mass Scale, Object Scale and by Physical Material density
 	 * @param comp UPrimitiveComponent to check mass
 	 * @param bDebug: display returned mass
 	 * @return the Vector velocity Clamped
 	 */
 	static float GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug = false);
-
-
-
+	
 	//------------------
 #pragma endregion Utilities
 
@@ -54,7 +52,8 @@ public:
 	//------------------
 
 public:
-	
+
+	//TODO 
 	static void SetDilatedRealTimeTimer(
 		UWorld* World,
 		FTimerHandle& InOutHandle,
@@ -66,7 +65,7 @@ public:
 	);
 
 	
-	/*
+	/**
 	 * @brief Set a Timer wnort affected by Dilation
 	 * @param worldContextObject: world usage context
 	 * @param callback : function callback
@@ -75,7 +74,7 @@ public:
 	*/
 	static void SetRealTimeTimerWithCallback(UWorld* worldContextObject, TFunction<void()> callback, float duration);
 
-	/*
+	/**
 	 * @brief Set a Timer wnort affected by Dilation
 	 * @param World: world usage context
 	 * @param Callback : function callback
@@ -84,25 +83,56 @@ public:
 	 * @return none
 	*/
 	static void SetDilatedRealTimeTimerWithCallback(UWorld* World, TFunction<void()> Callback, float Duration, float CustomDilation);
-	
-	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", Latent, LatentInfo = "LatentInfo", Duration = "0.2"), Category="Utilities|Time")
+
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", Latent, LatentInfo = "LatentInfo", Duration = "0.2"), Category="Time")
 	static void DelayRealTime(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo);
 
+	//------------------
 #pragma endregion Time
+
+#pragma region Physic
+	//------------------
+
+public:
+	/**
+	 * @brief Made an impulse with a compensation for cancel GlobalDilation impact but apply actor custom dilation
+	 * @param WorldContextObject: world usage context
+	 * @param target : Mesh to impulse
+	 * @param Impulse : impulse force
+	 * @param BoneName : Socket aname to impulse
+	 * @param bVelChange : Velocity must be override
+	 * @return none
+	*/
+	UFUNCTION(BlueprintCallable, Category="Physics")
+	static void AddImpulseDilated(UObject* WorldContextObject, UMeshComponent* Target, FVector Impulse, FName BoneName = NAME_None, bool bVelChange = false);
+
+	//TODO:: AddForceDilated
+
+	/** 
+	 * Retourne les composants physiques ayant une vélocité non nulle 
+	 * @param Actor - Acteur à analyser
+	 * @param OutComponents - Résultat : Composants physiques actifs
+	*/
+	UFUNCTION(BlueprintCallable, Category="Physics")
+	static void GetActivePhysicsComponents(AActor* Actor, TArray<UPrimitiveComponent*>& OutComponents);
+
+	
+	//------------------
+#pragma endregion Physic
 
 
 #pragma region Camera
 	//------------------
 
-	/*
- * @brief Return Input direction by Camera orientation
- * @param cameraInstance: camera instance used
- * @param moveInput: input of the current movement
- * @return the world input direction
-*/
+	/**
+	 * @brief Return Input direction by Camera orientation
+	 * @param cameraInstance: camera instance used
+	 * @param moveInput: input of the current movement
+	 * @return the world input direction
+	*/
 	static FVector GetWorldInputDirection(const UPS_PlayerCameraComponent* cameraInstance, FVector2D moveInput);
 
-	/*
+	/**
 	 * @brief Return screen center point world location 
 	 * @param APlayerController: current player controller reference
 	 * @return the screen center point world location 
@@ -110,7 +140,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	static FVector GetScreenCenterWorldLocation(const APlayerController* const PlayerController);
 
-	/*
+	/**
 	 * @brief Return screen center directed point on an input distance 
 	 * @param APlayerController: current player controller reference
 	 * @param Distance: distance of the point
@@ -129,13 +159,13 @@ public:
 
 public:
 	
-	/*
+	/**
 	 * @brief Generate a custom Collision Query Params 
 	 */
 	
 	static FCollisionQueryParams CustomConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, const UObject* WorldContextObject);
 	
-	/*
+	/**
 	 * @brief Made a cone Sweep trace test and return HitResult
 	 * @param World: World reference
 	 * @param ConeApex: Cone base start loc
@@ -161,7 +191,7 @@ public:
 		const TArray<AActor*>& ActorsToIgnore,
 		bool bDebug);
 
-	/*
+	/**
 	 * @brief Made a cone Sweep trace test and return array of component use no duplicates
 	 * @param World: World reference
 	 * @param ConeApex: Cone base start loc
@@ -187,14 +217,14 @@ public:
 		const TArray<AActor*>& ActorsToIgnore,
 		bool bDebug);
 
-	/*
- * @brief Find closest point on acotr mesh collision
- * @param actorToTest: actor to test collision
- * @param fromWorldLocation: world loc to test on collision
- * @param outClosestPoint: the outpoint find
- * @param neighborLoc: world loc to best neighbor loc
- * @return the Vector loc of the closest point on actorToTest collision 
-*/
+	/**
+	 * @brief Find closest point on acotr mesh collision
+	 * @param actorToTest: actor to test collision
+	 * @param fromWorldLocation: world loc to test on collision
+	 * @param outClosestPoint: the outpoint find
+	 * @param neighborLoc: world loc to best neighbor loc
+	 * @return the Vector loc of the closest point on actorToTest collision 
+	*/
 	static bool FindClosestPointOnActor(const AActor* actorToTest, const FVector& fromWorldLocation, FVector& outClosestPoint);
 
 	//------------------
@@ -205,7 +235,7 @@ public:
 
 public:
 	
-	/*
+	/**
 	 * @brief Start cooldown logic
 	 * @param World: World reference
 	 * @param Duration: durartion of cooldown

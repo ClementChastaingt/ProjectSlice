@@ -7,9 +7,36 @@
 #include "ProjectSlice/Data/PS_Delegates.h"
 #include "PS_SlowmoComponent.generated.h"
 
-
 class AProjectSlicePlayerController;
 class AProjectSliceCharacter;
+
+
+USTRUCT(BlueprintType, Category = "Slowmotion", meta = (ToolTip="Slowmotion data"))
+struct PROJECTSLICE_API FSSlowmotionData
+{
+	GENERATED_BODY()
+
+public:
+	FSSlowmotionData();
+
+	UPROPERTY()
+	AActor* Actor;
+	
+	UPROPERTY()
+	FVector EnterVelocity;
+	
+	// friend uint32 GetTypeHash(const FSWindZoneData& other)
+	// {
+	// 	return GetTypeHash(other.OwningPawn);
+	// }
+	//
+	
+	bool operator==(const FSSlowmotionData& other) const
+	{
+		return Actor == other.Actor;
+	}
+	
+};
 
 UCLASS(Blueprintable, ClassGroup=(Component), meta=(BlueprintSpawnableComponent))
 class PROJECTSLICE_API UPS_SlowmoComponent : public UActorComponent
@@ -54,7 +81,7 @@ public:
 
 	UFUNCTION()
 	void UpdateObjectDilation(AActor* actorToUpdate);
-
+	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsSlowmoActive() const{return _bIsSlowmoTransiting || _bSlowming;}
 
@@ -143,7 +170,7 @@ private:
 	float _CurrentPlayerTimeDilation;
 
 	UPROPERTY(Transient)
-	TArray<AActor*> _ActorsDilated;
+	TArray<FSSlowmotionData> _ActorsDilated;
 
 #pragma endregion Routine
 

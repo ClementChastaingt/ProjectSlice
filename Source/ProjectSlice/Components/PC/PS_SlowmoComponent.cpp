@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 // Sets default values for this component's properties
 UPS_SlowmoComponent::UPS_SlowmoComponent()
@@ -149,12 +150,14 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	GetWorld()->GetTimerManager().ClearTimer(_SlowmoTimerHandle);
 
 	//For each dilated actor update custom dilation
+	const TArray<FSSlowmotionData> actorsArray = _ActorsDilated;
 	if (!_bSlowming)
 	{
-		for (AActor* actorDilated : _ActorsDilated)
+		for (FSSlowmotionData actorDilated : actorsArray)
 		{
-			if (!IsValid(actorDilated)) continue;
-			UpdateObjectDilation(actorDilated);
+			if (!IsValid(actorDilated.Actor)) continue;
+			
+			UpdateObjectDilation(actorDilated.Actor);
 		}
 	}
 
@@ -177,7 +180,16 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 {
 	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
-	
+
+	//Get Index in Array list
+	int32 currentIndex = _ActorsDilated.IndexOfByKey(actorToUpdate);
+	if (!_ActorsDilated.IsValidIndex(currentIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: %s is not in _ActorsDilated array "),__FUNCTION__, *actorToUpdate->GetActorNameOrLabel());
+		return;
+	}
+
+	//Work var
 	const float timeDilation = InteractedObjectTimeDilationTarget * GetRealPlayerTimeDilationTarget();
 	const float currentTargetDilation = _bSlowming ? timeDilation : 1.0f;
 	if (actorToUpdate->CustomTimeDilation == currentTargetDilation) return;
@@ -191,13 +203,30 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 	//Stock or Erase to Queue
 	if (_bSlowming)
 	{
-		_ActorsDilated.AddUnique(actorToUpdate);
+		//Set Slowmo data
+		FSSlowmotionData newActorDilated;
+		newActorDilated.Actor = actorToUpdate;
+		newActorDilated.EnterVelocity = actorToUpdate->GetVelocity();
+
+		//Add object to list
+		_ActorsDilated.AddUnique(newActorDilated);
 	}
 	else
 	{
-		_ActorsDilated.Remove(actorToUpdate);
+		//Clamp Physic Vel of Dilated object who's currently moving on slowmo stop
+		TArray<UPrimitiveComponent*> actorsToClampVel;
+		UPSFl::GetActivePhysicsComponents(actorToUpdate, actorsToClampVel);
+		for (UPrimitiveComponent* actorToClampVelElement : actorsToClampVel)
+		{
+			if (!IsValid(actorToClampVelElement)) continue;
+				
+			FVector newVel = UKismetMathLibrary::ClampVectorSize(actorToClampVelElement->GetComponentVelocity(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length());
+			actorToClampVelElement->SetPhysicsLinearVelocity(newVel);
+		}
+
+		//Remove object from list
+		_ActorsDilated.RemoveAt(currentIndex);
 	}
-	
 }
 
 

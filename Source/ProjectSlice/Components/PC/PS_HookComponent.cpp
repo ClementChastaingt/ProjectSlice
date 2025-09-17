@@ -1482,9 +1482,9 @@ void UPS_HookComponent::PowerCablePull()
 	rotMeshCable.Yaw = rotMeshCable.Yaw + UKismetMathLibrary::RandomFloatInRange(-PullingMaxRandomYawOffset, PullingMaxRandomYawOffset);
 	//if(_bAttachObjectIsBlocked) currentPushAccel = (currentPushAccel / UnblockDefaultPullforceDivider);
 	
-	FVector defaultNewVel = _AttachedMesh->GetMass() *  rotMeshCable.Vector() * currentPushAccel;
-	_AttachedMesh->AddImpulse((defaultNewVel * GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation), NAME_None, false);
-	UE_LOG(LogTemp, Error, TEXT("time %f, vel %f"), GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation, (defaultNewVel * GetWorld()->DeltaTimeSeconds * _AttachedMesh->GetOwner()->CustomTimeDilation).Length());
+	FVector defaultNewVel = (_AttachedMesh->GetMass() *  rotMeshCable.Vector() * currentPushAccel) * GetWorld()->DeltaTimeSeconds;
+	UPSFl::AddImpulseDilated(this, _AttachedMesh, defaultNewVel);
+	
 	//Debug base Pull dir
 	if(bDebugPull)
 	{
