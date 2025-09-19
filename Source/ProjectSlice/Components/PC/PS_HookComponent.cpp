@@ -66,7 +66,7 @@ void UPS_HookComponent::BeginPlay()
 	//Callback
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
-		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
+		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoTransitionEndEvent.AddUniqueDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
 	if(IsValid(_PlayerCharacter->GetCharacterMovement()))
 	{
@@ -105,7 +105,7 @@ void UPS_HookComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	//Callback
 	if(IsValid(_PlayerCharacter) && IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
-		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoEvent.RemoveDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
+		_PlayerCharacter->GetSlowmoComponent()->OnSlowmoTransitionEndEvent.RemoveDynamic(this, &UPS_HookComponent::OnSlowmoTriggerEventReceived);
 	}
 	if(IsValid(HookCollider))
 	{
@@ -1014,7 +1014,7 @@ void UPS_HookComponent::HookObject()
 	_DistanceOnAttach = FMath::Abs(UKismetMathLibrary::Vector_Distance(_PlayerCharacter->GetActorLocation(), _CurrentHookHitResult.Location));
 
 	//If slowmo active
-	if (IsValid(_PlayerCharacter->GetSlowmoComponent()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowmoActive()) OnSlowmoTriggerEventReceived(true);
+	if (IsValid(_PlayerCharacter->GetSlowmoComponent()) && _PlayerCharacter->GetSlowmoComponent()->IsSlowming() &&  !_PlayerCharacter->GetSlowmoComponent()->IsSlowmoTransiting()) OnSlowmoTriggerEventReceived(true);
 	
 	//Callback
 	OnHookObject.Broadcast(true);

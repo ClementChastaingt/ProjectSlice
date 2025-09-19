@@ -112,6 +112,9 @@ void UPS_SlowmoComponent::SlowmoTransition()
 				return;
 			}
 
+			//Callback
+			OnSlowmoTransitionEndEvent.Broadcast(_bSlowming);
+
 			//Else trigger timer for inactivation
 			_bIsSlowmoTransiting = false;
 			
@@ -177,17 +180,24 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowming ? TEXT("On") :  TEXT("Off"));
 }
 
+void UPS_SlowmoComponent::ClampPhysicalVelocity(AActor* actorToUpdate, int32 currentIndex)
+{
+	TArray<UPrimitiveComponent*> actorsToClampVel;
+	UPSFl::GetActivePhysicsComponents(actorToUpdate, actorsToClampVel);
+	for (UPrimitiveComponent* actorToClampVelElement : actorsToClampVel)
+	{
+		if (!IsValid(actorToClampVelElement)) continue;
+				
+		FVector newVel = UKismetMathLibrary::ClampVectorSize(actorToClampVelElement->GetPhysicsLinearVelocity(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length());
+		actorToClampVelElement->SetAllPhysicsLinearVelocity(newVel);
+
+		if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s clampedVel %f"),__FUNCTION__,*actorToClampVelElement->GetReadableName(), newVel.Length());
+	}
+}
+
 void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 {
 	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
-
-	//Get Index in Array list
-	int32 currentIndex = _ActorsDilated.IndexOfByKey(actorToUpdate);
-	if (!_ActorsDilated.IsValidIndex(currentIndex))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%S :: %s is not in _ActorsDilated array "),__FUNCTION__, *actorToUpdate->GetActorNameOrLabel());
-		return;
-	}
 
 	//Work var
 	const float timeDilation = InteractedObjectTimeDilationTarget * GetRealPlayerTimeDilationTarget();
@@ -210,19 +220,25 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 
 		//Add object to list
 		_ActorsDilated.AddUnique(newActorDilated);
+		// const int32 newIndex = _ActorsDilated.Num() - 1;
+		//
+		// if (!_ActorsDilated.IsValidIndex(newIndex)) return;
+		//
+		// //Clamp Physic Vel of Dilated object who's currently moving on slowmo stop
+		// ClampPhysicalVelocity(actorToUpdate, newIndex);
 	}
 	else
 	{
-		//Clamp Physic Vel of Dilated object who's currently moving on slowmo stop
-		TArray<UPrimitiveComponent*> actorsToClampVel;
-		UPSFl::GetActivePhysicsComponents(actorToUpdate, actorsToClampVel);
-		for (UPrimitiveComponent* actorToClampVelElement : actorsToClampVel)
+		//Get Index in Array list
+		int32 currentIndex = _ActorsDilated.IndexOfByPredicate([actorToUpdate](const FSSlowmotionData& Data) { return Data.Actor == actorToUpdate; });
+		if (!_ActorsDilated.IsValidIndex(currentIndex))
 		{
-			if (!IsValid(actorToClampVelElement)) continue;
-				
-			FVector newVel = UKismetMathLibrary::ClampVectorSize(actorToClampVelElement->GetComponentVelocity(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length());
-			actorToClampVelElement->SetPhysicsLinearVelocity(newVel);
+			UE_LOG(LogTemp, Warning, TEXT("%S :: %s is not in _ActorsDilated array "),__FUNCTION__, *actorToUpdate->GetActorNameOrLabel());
+			return;
 		}
+		
+		//Clamp Physic Vel of Dilated object who's currently moving on slowmo stop
+		ClampPhysicalVelocity(actorToUpdate, currentIndex);
 
 		//Remove object from list
 		_ActorsDilated.RemoveAt(currentIndex);

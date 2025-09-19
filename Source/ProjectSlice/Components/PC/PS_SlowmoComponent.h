@@ -17,13 +17,15 @@ struct PROJECTSLICE_API FSSlowmotionData
 	GENERATED_BODY()
 
 public:
-	FSSlowmotionData();
+	FSSlowmotionData(){};
+	
+	FSSlowmotionData(AActor* actor, const FVector& enterVelocity){Actor = actor, EnterVelocity = enterVelocity;};
 
 	UPROPERTY()
-	AActor* Actor;
+	AActor* Actor = nullptr;
 	
 	UPROPERTY()
-	FVector EnterVelocity;
+	FVector EnterVelocity = FVector::ZeroVector;
 	
 	// friend uint32 GetTypeHash(const FSWindZoneData& other)
 	// {
@@ -31,9 +33,14 @@ public:
 	// }
 	//
 	
-	bool operator==(const FSSlowmotionData& other) const
+	bool operator == (const FSSlowmotionData& other) const
 	{
 		return Actor == other.Actor;
+	}
+
+	bool operator == (const AActor* other) const
+	{
+		return Actor == other;
 	}
 	
 };
@@ -72,6 +79,9 @@ private:
 public:
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlowmoEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate_Bool OnSlowmoTransitionEndEvent;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnStopSlowmoEvent;
@@ -81,6 +91,9 @@ public:
 
 	UFUNCTION()
 	void UpdateObjectDilation(AActor* actorToUpdate);
+
+	UFUNCTION()
+	void ClampPhysicalVelocity(AActor* actorToUpdate, int32 currentIndex);
 	
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsSlowmoActive() const{return _bIsSlowmoTransiting || _bSlowming;}
