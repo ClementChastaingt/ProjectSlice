@@ -36,6 +36,9 @@ void UPS_ForceComponent::BeginPlay()
 	
 	_PlayerController = Cast<AProjectSlicePlayerController>(_PlayerCharacter->GetController());
 	if(!IsValid(_PlayerController)) return;
+
+	_SlowmoComp = _PlayerCharacter->GetSlowmoComponent();
+	if(!IsValid(_SlowmoComp)) return;
 	
 	//Screw Attach 
 	AttachScrew();
@@ -277,13 +280,20 @@ void UPS_ForceComponent::ReleasePush()
 			mass = UPSFl::GetObjectUnifiedMass(outMeshComp);
 
 			//Impulse with delay for match with VFX
-			UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
-			if (IsValid(slowmoComp))
+			if (IsValid(_SlowmoComp))
 			{
-				UPSFl::SetDilatedRealTimeTimerWithCallback(GetWorld(), [this, outMeshComp, impulse = _StartForcePushLoc + _DirForcePush * (force * mass), lineViewHit]()
+				//If currently in slowmo change custom dilation
+				if (IsValid(outHitResult.GetActor()))
 				{
-					Impulse(outMeshComp, impulse, lineViewHit);
-				}, duration, slowmoComp->GetPlayerTimeDilationTarget());
+					_SlowmoComp->UpdateObjectDilation(outHitResult.GetActor(), outMeshComp);
+				}
+
+				//Set delayed by distance Impusle callbac
+				const FVector impulseVel = _DirForcePush * (force * mass);
+				UPSFl::SetDilatedRealTimeTimerWithCallback(GetWorld(), [this, outMeshComp, impulseVel, lineViewHit]()
+				{
+					Impulse(outMeshComp, impulseVel, lineViewHit);
+				}, duration, _SlowmoComp->GetPlayerTimeDilationTarget());
 			}
 			else
 			{
@@ -364,19 +374,13 @@ void UPS_ForceComponent::SortPushTargets(const TArray<FHitResult>& hitsToSort, U
 
 void UPS_ForceComponent::Impulse(UMeshComponent* inComp, const FVector impulse, const FHitResult impactPoint)
 {
-	if (!IsValid(inComp)) return;
-	
-	//If currently in slowmo change custom dilation
-	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
-	if (IsValid(slowmoComp) && IsValid(inComp->GetOwner()))
-	{
-		slowmoComp->UpdateObjectDilation(inComp->GetOwner());
-	}
+	if (!IsValid(inComp) || !IsValid(_SlowmoComp) || !IsValid(GetWorld())) return;
 	
 	if (bDebugPush) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, *inComp->GetReadableName());
 	
 	//Impulse
-	UPSFl::AddImpulseDilated(this, inComp, impulse);
+	const FVector impulseTimedVel = impulse * (_SlowmoComp->IsSlowmoActive() ? GetWorld()->DeltaTimeSeconds : 1.0f);
+	UPSFl::AddImpulseDilated(this, inComp, impulseTimedVel);
 
 	//Play Impact sound
 	_ImpactForcePushLoc = impactPoint.ImpactPoint;
@@ -408,7 +412,7 @@ void UPS_ForceComponent::StopPush()
 	_bIsPushReleased = true;
 	
 	const float duration = _AlphaInput < CoolDownDuration ? CoolDownDuration : _AlphaInput;
-	UPSFl::StartCooldown(GetWorld(),duration,_CoolDownTimerHandle);
+	UPSFl::StartCooldown(GetWorld(),duration,_CoolDownTimerHandle, GetOwner()->CustomTimeDilation);
 
 	OnPushEvent.Broadcast(false);
 }

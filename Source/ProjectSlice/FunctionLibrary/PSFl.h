@@ -53,7 +53,7 @@ public:
 
 public:
 
-	//TODO 
+	// Equivalent SetTimer mais en real-time + custom dilation
 	static void SetDilatedRealTimeTimer(
 		UWorld* World,
 		FTimerHandle& InOutHandle,
@@ -63,8 +63,9 @@ public:
 		float InFirstDelay = -1.f,
 		float CustomDilation = 1.f
 	);
+	static void ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle);
+	static bool IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle);
 
-	
 	/**
 	 * @brief Set a Timer wnort affected by Dilation
 	 * @param worldContextObject: world usage context
@@ -238,12 +239,14 @@ public:
 	/**
 	 * @brief Start cooldown logic
 	 * @param World: World reference
+	 * @param customDilation
 	 * @param Duration: durartion of cooldown
 	 * @param FTimerHandle: timerHandler output
 	 * @return the cooldown timerhandler
 	 */
 	UFUNCTION(BlueprintCallable)
-	static void StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTimerHandle& timerHandler);
+	static void StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref)
+		FTimerHandle& timerHandler, float customDilation = 1.0f);
 	
 	//------------------
 #pragma endregion Cooldown

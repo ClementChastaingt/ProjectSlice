@@ -191,7 +191,7 @@ void UPS_HookComponent::OnSlowmoTriggerEventReceived(const bool bIsSlowed)
 	if(IsValid(slowmoComp) && IsValid(_AttachedMesh) && IsValid(_AttachedMesh->GetOwner()))
 	{
 		//If currently in slowmo change custom dilation
-		slowmoComp->UpdateObjectDilation(_AttachedMesh->GetOwner());
+		slowmoComp->UpdateObjectDilation(_AttachedMesh->GetOwner(), _AttachedMesh);
 	}
 }
 

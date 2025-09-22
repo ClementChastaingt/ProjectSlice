@@ -10,6 +10,7 @@
 #include "PS_ForceComponent.generated.h"
 
 
+class UPS_SlowmoComponent;
 class AProjectSlicePlayerController;
 class APS_FieldSystemActor;
 class AProjectSliceCharacter;
@@ -57,6 +58,9 @@ private:
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+
+	UPROPERTY(Transient)
+    UPS_SlowmoComponent* _SlowmoComp;
 
 #pragma region General
 	//------------------

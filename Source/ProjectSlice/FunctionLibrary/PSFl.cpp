@@ -68,12 +68,6 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 
 }
 
-void UPSFl::SetDilatedRealTimeTimer(UWorld* World, FTimerHandle& InOutHandle, const FTimerDelegate& InDelegate,
-	float InRate, bool bLoop, float InFirstDelay, float CustomDilation)
-{
-	
-}
-
 //------------------
 #pragma endregion Utilities
 
@@ -119,88 +113,152 @@ void UPSFl::DelayRealTime(const UObject* WorldContextObject, float Duration, FLa
 }
 
 //Equivalent Custom RealTimed de SetTimer
-class FRealTimeTimerManager
+namespace
 {
-public:
-    // Structure interne pour stocker un timer
+    // structure interne
     struct FRealTimeTimer
     {
         FTimerDelegate Delegate;
-        double TargetTime;
-        float Rate;
-        bool bLoop;
-        float CustomDilation;
+        double TargetTime = 0.0;
+        float Rate = 0.f;
+        bool bLoop = false;
+        float CustomDilation = 1.f;
         bool bActive = true;
+        TWeakObjectPtr<UWorld> WeakWorld;
+
+        FRealTimeTimer(const FTimerDelegate& InDelegate, double InTargetTime, float InRate, bool InLoop, float InCustomDilation, UWorld* InWorld)
+            : Delegate(InDelegate)
+            , TargetTime(InTargetTime)
+            , Rate(InRate)
+            , bLoop(InLoop)
+            , CustomDilation(InCustomDilation)
+            , bActive(true)
+            , WeakWorld(InWorld)
+        {}
     };
 
-    // Map des timers actifs
-    static TMap<FTimerHandle, TSharedPtr<FRealTimeTimer>> ActiveTimers;
+    // Map globale : clé = adresse (&FTimerHandle) castée en uint64
+    static TMap<uint64, TSharedPtr<FRealTimeTimer>> GActiveRealTimeTimers;
 
-    // Tick global à appeler chaque frame (par ex. via TickComponent ou Tick du GameMode)
-    static void TickTimers(UWorld* World)
+    // Fonction statique appelée par les FTimerDelegate (CreateStatic) — évite capture récursive
+    static void RealTimeTimerTick(uint64 Key)
     {
-        double Now = World ? World->GetRealTimeSeconds() : 0.0;
-        if (!World) return;
-
-        for (auto It = ActiveTimers.CreateIterator(); It; ++It)
+        TSharedPtr<FRealTimeTimer>* FoundPtr = GActiveRealTimeTimers.Find(Key);
+        if (!FoundPtr)
         {
-            TSharedPtr<FRealTimeTimer> Timer = It.Value();
-            if (!Timer->bActive) continue;
+            return;
+        }
 
-            if (Now >= Timer->TargetTime)
+        TSharedPtr<FRealTimeTimer> Timer = *FoundPtr;
+        if (!Timer.IsValid())
+        {
+            GActiveRealTimeTimers.Remove(Key);
+            return;
+        }
+
+        UWorld* World = Timer->WeakWorld.Get();
+        if (!World)
+        {
+            GActiveRealTimeTimers.Remove(Key);
+            return;
+        }
+
+        if (!Timer->bActive)
+        {
+            GActiveRealTimeTimers.Remove(Key);
+            return;
+        }
+
+        const double Now = World->GetRealTimeSeconds();
+        if (Now >= Timer->TargetTime)
+        {
+            // exécute
+            Timer->Delegate.ExecuteIfBound();
+
+            if (Timer->bLoop && Timer->Rate > 0.f)
             {
-                Timer->Delegate.ExecuteIfBound();
-
-                if (Timer->bLoop && Timer->Rate > 0.f)
-                {
-                    Timer->TargetTime = Now + (Timer->Rate / Timer->CustomDilation);
-                }
-                else
-                {
-                    Timer->bActive = false;
-                    It.RemoveCurrent();
-                }
+                // reprogrammer la prochaine exécution en appliquant le custom dilation
+                Timer->TargetTime = Now + (Timer->Rate / FMath::Max(Timer->CustomDilation, KINDA_SMALL_NUMBER));
+                World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateStatic(&RealTimeTimerTick, Key));
+            }
+            else
+            {
+                // fin du timer non-looping
+                GActiveRealTimeTimers.Remove(Key);
             }
         }
+        else
+        {
+            // pas encore le temps → replanifier au prochain tick
+            World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateStatic(&RealTimeTimerTick, Key));
+        }
     }
+}
 
-    static void SetTimer(
-        FTimerHandle& InOutHandle,
-        const FTimerDelegate& InDelegate,
-        float InRate,
-        bool bLoop,
-        float InFirstDelay = -1.f,
-        float CustomDilation = 1.f)
+// Implémentations exposées
+void UPSFl::SetDilatedRealTimeTimer(
+    UWorld* World,
+    FTimerHandle& InOutHandle,
+    const FTimerDelegate& InDelegate,
+    float InRate,
+    bool bLoop,
+    float InFirstDelay,
+    float CustomDilation
+)
+{
+    if (!IsValid(World))
     {
-        if (CustomDilation <= 0.f) CustomDilation = 1.f;
-
-        double Now = GWorld ? GWorld->GetRealTimeSeconds() : 0.0;
-        double Delay = (InFirstDelay >= 0.f ? InFirstDelay : InRate) / CustomDilation;
-
-        TSharedPtr<FRealTimeTimer> Timer = MakeShared<FRealTimeTimer>();
-        Timer->Delegate = InDelegate;
-        Timer->Rate = InRate;
-        Timer->bLoop = bLoop;
-        Timer->CustomDilation = CustomDilation;
-        Timer->TargetTime = Now + Delay;
-        Timer->bActive = true;
-
-        InOutHandle.Invalidate();
-        ActiveTimers.Add(InOutHandle, Timer);
+        UE_LOG(LogTemp, Warning, TEXT("%s: World invalid"), TEXT(__FUNCTION__));
+        return;
     }
 
-    static void ClearTimer(FTimerHandle& Handle)
+    if (CustomDilation <= 0.f)
     {
-        ActiveTimers.Remove(Handle);
+        UE_LOG(LogTemp, Warning, TEXT("%s: invalid CustomDilation (%.3f) – forced to 1.0"), TEXT(__FUNCTION__), CustomDilation);
+        CustomDilation = 1.f;
     }
 
-    static bool IsTimerActive(const FTimerHandle& Handle)
+    const double Now = World->GetRealTimeSeconds();
+    const float EffectiveDelay = (InFirstDelay >= 0.f) ? InFirstDelay : InRate;
+    const double TargetTime = Now + (EffectiveDelay / FMath::Max(CustomDilation, KINDA_SMALL_NUMBER));
+
+    // clé = adresse de la variable FTimerHandle (doit être persistante côté appelant)
+    const uint64 Key = reinterpret_cast<uint64>(&InOutHandle);
+
+    // si un timer existant est attaché à la même variable, on le supprime/écrase
+    if (GActiveRealTimeTimers.Contains(Key))
     {
-        TSharedPtr<FRealTimeTimer> Timer = ActiveTimers.FindRef(Handle);
-        return Timer.IsValid() && Timer->bActive;
+        GActiveRealTimeTimers.Remove(Key);
     }
-};
 
+    // créer et stocker le timer
+    TSharedPtr<FRealTimeTimer> Timer = MakeShared<FRealTimeTimer>(InDelegate, TargetTime, InRate, bLoop, CustomDilation, World);
+    GActiveRealTimeTimers.Add(Key, Timer);
+
+    // planifier la première vérification au prochain tick
+    World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateStatic(&RealTimeTimerTick, Key));
+}
+
+void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
+{
+    const uint64 Key = reinterpret_cast<uint64>(&InOutHandle);
+    if (TSharedPtr<FRealTimeTimer>* Found = GActiveRealTimeTimers.Find(Key))
+    {
+        // marque inactif et supprime
+        (*Found)->bActive = false;
+        GActiveRealTimeTimers.Remove(Key);
+    }
+}
+
+bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)
+{
+    const uint64 Key = reinterpret_cast<uint64>(&InOutHandle);
+    if (TSharedPtr<FRealTimeTimer>* Found = GActiveRealTimeTimers.Find(Key))
+    {
+        return (*Found).IsValid() && (*Found)->bActive;
+    }
+    return false;
+}
 //Timer with Callback Realtimed && RealTimed with custom dilation
 void UPSFl::SetRealTimeTimerWithCallback(UWorld* World, TFunction<void()> Callback, float Duration)
 {
@@ -296,7 +354,12 @@ void UPSFl::AddImpulseDilated(UObject* WorldContextObject, UMeshComponent* Targe
 	
 	float globalDilation =  UGameplayStatics::GetGlobalTimeDilation(WorldContextObject->GetWorld());
 	float dilatedTime = Target->GetOwner()->CustomTimeDilation <= 0.0f ? globalDilation : (globalDilation / Target->GetOwner()->CustomTimeDilation);
-	Target->AddImpulse((Impulse / dilatedTime), BoneName, bVelChange);
+
+	// Évite la division par zéro
+	const float safeDilation = FMath::Max(dilatedTime, KINDA_SMALL_NUMBER);
+	
+	UE_LOG(LogTemp, Error, TEXT("dilatedTime %f, vel %f, Impulse %f"), dilatedTime, (Impulse / dilatedTime).Length(), Impulse.Length());
+	Target->AddImpulse((Impulse / safeDilation), BoneName, bVelChange);
 }
 
 // void UPSFl::AddForceDilated(UObject* WorldContextObject, UMeshComponent* target, FVector Impulse, FName BoneName = NAME_None, bool bVelChange = false)
@@ -667,12 +730,14 @@ bool UPSFl::FindClosestPointOnActor(const AActor* actorToTest, const FVector& fr
 #pragma region Cooldown
 //------------------
 
-void UPSFl::StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTimerHandle& timerHandler)
+void UPSFl::StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTimerHandle& timerHandler, const float customDilation)
 {
 	if (!World) return;
 	
 	FTimerDelegate timerDelegate;
-	World->GetTimerManager().SetTimer(timerHandler, timerDelegate, coolDownDuration, false);
+	
+	UPSFl::SetDilatedRealTimeTimer(World, timerHandler, timerDelegate, coolDownDuration, false, -1.f, customDilation);
+
 }
 
 //------------------

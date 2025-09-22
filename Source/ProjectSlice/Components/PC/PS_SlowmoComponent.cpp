@@ -184,18 +184,28 @@ void UPS_SlowmoComponent::ClampPhysicalVelocity(AActor* actorToUpdate, int32 cur
 {
 	TArray<UPrimitiveComponent*> actorsToClampVel;
 	UPSFl::GetActivePhysicsComponents(actorToUpdate, actorsToClampVel);
+
 	for (UPrimitiveComponent* actorToClampVelElement : actorsToClampVel)
 	{
 		if (!IsValid(actorToClampVelElement)) continue;
-				
-		FVector newVel = UKismetMathLibrary::ClampVectorSize(actorToClampVelElement->GetPhysicsLinearVelocity(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length());
+
+		//Translation
+		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length());
+		FVector newVel = actorToClampVelElement->GetPhysicsLinearVelocity().GetSafeNormal() * newSpeed;
 		actorToClampVelElement->SetAllPhysicsLinearVelocity(newVel);
 
-		if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s clampedVel %f"),__FUNCTION__,*actorToClampVelElement->GetReadableName(), newVel.Length());
+		//Rotation
+		FVector currentAngVel = actorToClampVelElement->GetPhysicsAngularVelocityInRadians();
+		float newAngSpeed = UKismetMathLibrary::Clamp(currentAngVel.Length(),0.0f, _ActorsDilated[currentIndex].EnterAngularVelocity.Length());
+		FVector newAngVel = currentAngVel.GetSafeNormal() * newAngSpeed;
+		actorToClampVelElement->SetPhysicsAngularVelocityInRadians(newAngVel, false);
+
+		if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s clampedVel %f, clampedAngularVel %f"),__FUNCTION__,*actorToClampVelElement->GetReadableName(), newVel.Length(), newAngVel.Length());
 	}
+	
 }
 
-void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
+void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate, const UMeshComponent* mesComp)
 {
 	if (!IsValid(actorToUpdate) || actorToUpdate->IsActorBeingDestroyed()) return;
 
@@ -217,15 +227,15 @@ void UPS_SlowmoComponent::UpdateObjectDilation(AActor* actorToUpdate)
 		FSSlowmotionData newActorDilated;
 		newActorDilated.Actor = actorToUpdate;
 		newActorDilated.EnterVelocity = actorToUpdate->GetVelocity();
+		
+		if (IsValid(mesComp))
+		{
+			newActorDilated.EnterVelocity = mesComp->GetComponentVelocity();
+			newActorDilated.EnterAngularVelocity = mesComp->GetPhysicsAngularVelocityInRadians();
+		}
 
 		//Add object to list
 		_ActorsDilated.AddUnique(newActorDilated);
-		// const int32 newIndex = _ActorsDilated.Num() - 1;
-		//
-		// if (!_ActorsDilated.IsValidIndex(newIndex)) return;
-		//
-		// //Clamp Physic Vel of Dilated object who's currently moving on slowmo stop
-		// ClampPhysicalVelocity(actorToUpdate, newIndex);
 	}
 	else
 	{

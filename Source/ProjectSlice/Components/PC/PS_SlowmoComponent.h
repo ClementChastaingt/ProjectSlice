@@ -26,6 +26,9 @@ public:
 	
 	UPROPERTY()
 	FVector EnterVelocity = FVector::ZeroVector;
+
+	UPROPERTY()
+	FVector EnterAngularVelocity = FVector::ZeroVector;
 	
 	// friend uint32 GetTypeHash(const FSWindZoneData& other)
 	// {
@@ -90,7 +93,7 @@ public:
 	void OnTriggerSlowmo();
 
 	UFUNCTION()
-	void UpdateObjectDilation(AActor* actorToUpdate);
+	void UpdateObjectDilation(AActor* actorToUpdate, const UMeshComponent* mesComp = nullptr);
 
 	UFUNCTION()
 	void ClampPhysicalVelocity(AActor* actorToUpdate, int32 currentIndex);
