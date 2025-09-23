@@ -46,20 +46,6 @@ void UPS_ParkourComponent::BeginPlay()
 	this->OnComponentBeginOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived);
 	this->OnComponentEndOverlap.AddUniqueDynamic(this,&UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived);
 	_PlayerCharacter->MovementModeChangedDelegate.AddUniqueDynamic(this,&UPS_ParkourComponent::OnMovementModeChangedEventReceived);
-	
-	//Custom Tick
-	if (IsValid(GetWorld()))
-	{
-		FTimerDelegate wallRunTick_TimerDelegate;
-		wallRunTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::WallRunTick);
-		GetWorld()->GetTimerManager().SetTimer(_WallRunTimerHandle, wallRunTick_TimerDelegate, CustomTickRate, true);
-		GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
-
-		FTimerDelegate canStandTick_TimerDelegate;
-		canStandTick_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::CanStandTick);
-		GetWorld()->GetTimerManager().SetTimer(CanStandTimerHandle, canStandTick_TimerDelegate, CanStandTickRate, true);
-		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
-	}
 }
 
 
@@ -71,15 +57,20 @@ void UPS_ParkourComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		
 	//-----Smooth crouching-----
 	Stooping(DeltaTime);
-
+	if (_bMustCheckStandInTick) CanStandTick();
+	
 	//-----Slide moving-----
 	SlideTick(DeltaTime);
-
+	
 	//-----Mantling move -----
 	MantleTick();
 
 	//-----Ledge move -----
 	LedgeTick();
+
+	//----Wallrun move -----
+	WallRunTick(DeltaTime);
+	
 	
 }
 
@@ -251,7 +242,6 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	{
 		_StartWallRunTimestamp = GetWorld()->GetRealTimeSeconds();
 		_WallRunSeconds = _StartWallRunTimestamp;
-		GetWorld()->GetTimerManager().UnPauseTimer(_WallRunTimerHandle);
 	}
 
 	//Camera_Tilt Setup
@@ -276,7 +266,6 @@ void UPS_ParkourComponent::OnWallRunStop()
 	if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 
 	//Reset timer
-	GetWorld()->GetTimerManager().PauseTimer(_WallRunTimerHandle);
 	_WallRunSeconds = 0.0f;
 
 	//Reset Var && Disable Plane constraint
@@ -295,7 +284,7 @@ void UPS_ParkourComponent::OnWallRunStop()
 	_bIsWallRunning = false;
 }
 
-void UPS_ParkourComponent::WallRunTick()
+void UPS_ParkourComponent::WallRunTick(const float& deltaTime)
 {
 	if(!_bIsWallRunning || !IsValid(_PlayerCharacter) || !IsValid(_PlayerController)|| !IsValid(GetWorld())) return;
 
@@ -311,7 +300,7 @@ void UPS_ParkourComponent::WallRunTick()
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(outPlaneConstHit.bBlockingHit && outPlaneConstHit.GetActor() == _Wall ? outPlaneConstHit.Normal : FVector(0,0,0));
 	
 	//WallRun timer 
-	_WallRunSeconds = _WallRunSeconds + CustomTickRate;
+	_WallRunSeconds = _WallRunSeconds + deltaTime;
 	const float endTimestamp = _StartWallRunTimestamp + WallRunTimeToFall;
 	const float alphaWallRun = UKismetMathLibrary::MapRangeClamped(_WallRunSeconds, _StartWallRunTimestamp, endTimestamp, 0,1);
 
@@ -469,7 +458,7 @@ void UPS_ParkourComponent::OnCrouch()
 
 }
 
-bool UPS_ParkourComponent::CanStand() const
+bool UPS_ParkourComponent::CanStand()
 {
 	if(!IsValid(_PlayerController) || !IsValid(GetWorld())) return false;
 
@@ -485,9 +474,9 @@ bool UPS_ParkourComponent::CanStand() const
 
 	const bool canStand = !outHit.bBlockingHit && !outHit.bStartPenetrating;
 	if(!canStand && !_PlayerController->IsCrouchInputTrigger())
-		GetWorld()->GetTimerManager().UnPauseTimer(CanStandTimerHandle);
+		_bMustCheckStandInTick = true;
 	else
-		GetWorld()->GetTimerManager().PauseTimer(CanStandTimerHandle);
+		_bMustCheckStandInTick = false;
 
 	return canStand;
 }
@@ -741,8 +730,7 @@ void UPS_ParkourComponent::ApplySlideSteering(FVector& movementDirection, const 
 
 	float smoothingAlpha = FMath::Clamp((smoothedInputValue - _LastSteeringInputDirection).Length(), 0.0f, 1.0f) - 1.0f;
 	if (IsValid(SteeringSmoothCurve)) smoothingAlpha = SteeringSmoothCurve->GetFloatValue(alpha);
-	smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue,
-		CustomTickRate, smoothingAlpha * SteeringSmoothingInterpSpeed);
+	smoothedInputValue = UKismetMathLibrary::Vector2DInterpTo(_LastSteeringInputDirection, smoothedInputValue, 0.02f, smoothingAlpha * SteeringSmoothingInterpSpeed);
 
 	if (bDebugSteering) UE_LOG(LogTemp, Log, TEXT("%S :: - smoothing, smoothingAlpha %f, smoothedInputValue %f"),
 		__FUNCTION__, smoothingAlpha, smoothedInputValue.Length());	

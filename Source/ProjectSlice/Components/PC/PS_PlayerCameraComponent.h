@@ -82,8 +82,10 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	void CustomTick();
 
 protected:
 	
@@ -108,6 +110,12 @@ private:
 	
 	UPROPERTY(Transient)
 	AProjectSlicePlayerController* _PlayerController;
+	
+	UPROPERTY(Transient)
+	float _LastTickTime;
+
+	UPROPERTY(Transient)
+	FTimerHandle _CustomTickTimerHandler;
 
 #pragma region FOV
 	//------------------

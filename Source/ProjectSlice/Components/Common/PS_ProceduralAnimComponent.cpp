@@ -9,6 +9,7 @@
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 #include "ProjectSlice/Data/PS_GlobalType.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 
 //TODO :: Harmonize for futur common usage with NME_Character
 
@@ -178,10 +179,12 @@ void UPS_ProceduralAnimComponent::StartWalkingAnim()
 
 void UPS_ProceduralAnimComponent::StartWalkingAnimWithDelay(const float delay)
 {
+	if (!IsValid(GetWorld()) || !IsValid(GetOwner())) return;
+	
 	FTimerHandle startWalkingAnimHandler;
 	FTimerDelegate startWalkingAnim_TimerDelegate;
 	startWalkingAnim_TimerDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::StartWalkingAnim);
-	GetWorld()->GetTimerManager().SetTimer(startWalkingAnimHandler, startWalkingAnim_TimerDelegate, delay, false);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(),startWalkingAnimHandler, startWalkingAnim_TimerDelegate, delay, false, GetOwner()->CustomTimeDilation);
 }
 
 void UPS_ProceduralAnimComponent::StopWalkingAnim()

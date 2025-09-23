@@ -3,7 +3,6 @@
 
 #include "PS_PlayerCameraComponent.h"
 
-#include "Blueprint/UserWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMaterialLibrary.h"
@@ -11,10 +10,16 @@
 #include "Materials/MaterialParameterCollection.h"
 #include "ProjectSlice/Character/PC/PS_Character.h"
 #include "ProjectSlice/Data/PS_Constants.h"
+#include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "ProjectSlice/FunctionLibrary/PSFL_CameraShake.h"
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
+	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
+	// off to improve performance if you don't need them.
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
+	
 	SetWorldShakeOverrided(EScreenShakeType::IMPACT);
 }
 
@@ -45,22 +50,41 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	}
 
 	InitPostProcess();
+
+	//Start custom tick
+	_LastTickTime = GetWorld()->GetRealTimeSeconds();
+	FTimerHandle handler;
+	FTimerDelegate delegate;
+	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(),handler, delegate,0.0f,true, -1.f,1.f);
 }
 
-void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	//-----Post-Process-----//                    
 	SlowmoTick();
+}
+
+void UPS_PlayerCameraComponent::CustomTick()
+{
+	if (!IsValid(GetWorld()) || !IsValid(GetOwner())) return;
+
+	//-----Calculate DeltaTime----//
+	const double now = GetWorld()->GetRealTimeSeconds();
+	float rawDelta = static_cast<float>(now - _LastTickTime);
+	float DeltaTime = rawDelta * GetOwner()->CustomTimeDilation;
+	_LastTickTime = now;
+		
+	//-----Post-Process-----//                    
 	DashTick();
 	GlassesTick(DeltaTime);
 	
 	FieldOfViewTick();
 	
 	//-----CameraRollTilt smooth reset-----                                                                
-	CameraRollTilt(DeltaTime);                           
+	CameraRollTilt(DeltaTime);                    
 }
 
 #pragma region FOV
@@ -278,7 +302,7 @@ bool UPS_PlayerCameraComponent::StartCameraTilt(const ETiltType& tiltType, const
 	//Setup work var
 	_TargetTiltOrientation = targetOrientation;
 	_StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_bIsResetingCameraTilt = false;
 
 	//Setup roll map var
@@ -306,7 +330,7 @@ void UPS_PlayerCameraComponent::StopCameraTilt(const ETiltType& tiltType)
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	_bIsResetingCameraTilt = true;
-	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
 	
 	_bIsTilting = true;
 }
@@ -317,7 +341,7 @@ void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
 	
 	_TargetTiltOrientation = _TargetTiltOrientation * -1;
 	
-	_StartCameraTiltTimestamp = GetWorld()->GetTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
 	_StartCameraRot = _PlayerController->GetControlRotation();
 
 }
@@ -348,7 +372,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)
 	                                                                                                                                                                                                                                            
 	//Alpha
 	float targetTiltTime = _StartCameraTiltTimestamp + (bHaveToUpdateTiltOrientation ? _CurrentCameraTiltRollParams.CameraTiltDuration / 2 : _CurrentCameraTiltRollParams.CameraTiltDuration);
-	const float alphaTilt = _CurrentCameraTiltRollParams.bUseDynTiltUpdating && !_bIsResetingCameraTilt? _AlphaTiltWeight : UKismetMathLibrary::MapRangeClamped(GetWorld()->GetTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
+	const float alphaTilt = _CurrentCameraTiltRollParams.bUseDynTiltUpdating && !_bIsResetingCameraTilt? _AlphaTiltWeight : UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
 	
 	//Interp                                                                                                                                                                                                                                    
 	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                  
@@ -546,15 +570,15 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 	UpdateWeightedBlendPostProcess();
 
 	//Desactivation
-	if(!GetWorld()->GetTimerManager().IsTimerActive(_DashTimerHandle))
+	if(!UPSFl::IsDilatedRealTimeTimerActive(_DashTimerHandle))
 	{
 		FTimerDelegate dash_TimerDelegate;
 		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::TriggerDash, false);
-		GetWorld()->GetTimerManager().SetTimer(_DashTimerHandle, dash_TimerDelegate, DashDuration, false);
+		UPSFl::SetDilatedRealTimeTimer(GetWorld(),_DashTimerHandle, dash_TimerDelegate, DashDuration, false);
 	}
 	else
 	{
-		GetWorld()->GetTimerManager().ClearTimer(_DashTimerHandle);
+		UPSFl::ClearDilatedRealTimeTimer(_DashTimerHandle);
 		return;
 	}
 
@@ -600,7 +624,6 @@ void UPS_PlayerCameraComponent::TriggerGlasses(const bool bActivate, const bool 
 			
 			//Start WBP_Glasses
 			OnTriggerGlasses.Broadcast(true);
-			//GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
 		}
 		
 		//Launch CameraShake
@@ -650,9 +673,7 @@ void UPS_PlayerCameraComponent::OnStopGlasses()
 
 
 	//Stop WBP_Glasses after Transition delay 
-	OnTriggerGlasses.Broadcast(false);
-	//GetWorld()->GetTimerManager().ClearTimer(_ShakeTimerHandle);
-		
+	OnTriggerGlasses.Broadcast(false);		
 }
 
 void UPS_PlayerCameraComponent::GlassesTick(const float deltaTime)

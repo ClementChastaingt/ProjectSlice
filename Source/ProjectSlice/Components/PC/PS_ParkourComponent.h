@@ -67,12 +67,6 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="Debug|Ledge")
 	bool bDebugLedge = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
-	float CustomTickRate = 0.02f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Component Tick", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun custom tick rate"))
-	float CanStandTickRate = 0.1f;
-
 
 public:
 	// Called every frame
@@ -283,7 +277,7 @@ protected:
 	bool FindWallOrientationFromPlayer(int32& playerToWallOrientation);
 
 	UFUNCTION()
-	void WallRunTick();
+	void WallRunTick(const float& deltaTime);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
@@ -334,9 +328,6 @@ private:
 	FHitResult _WallRunSideHitResult;
 	
 	UPROPERTY(Transient)
-	FTimerHandle _WallRunTimerHandle;
-
-	UPROPERTY(Transient)
 	float _StartWallRunTimestamp;
 
 	UPROPERTY(Transient)
@@ -369,7 +360,7 @@ public:
 protected:
 
 	//Check if can Stand
-	bool CanStand() const;
+	bool CanStand();
 
 	UFUNCTION()
 	void CanStandTick();
@@ -382,10 +373,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	bool bIsStooping = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|Slide", meta=(ToolTip="Slide timer handler"))
-	FTimerHandle CanStandTimerHandle;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Status|Crounch")
 	float StartCrouchHeight = TNumericLimits<float>().Lowest();
 
@@ -401,6 +389,9 @@ protected:
 private:
 	UPROPERTY(Transient)
 	float _StoopTime;
+
+	UPROPERTY(Transient)
+	bool _bMustCheckStandInTick;
 
 #pragma endregion Crouch
 

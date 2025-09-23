@@ -52,18 +52,22 @@ public:
 	//------------------
 
 public:
-
-	// Equivalent SetTimer mais en real-time + custom dilation
+	
+	/** Wrapper type SetTimer (RealTime + CustomDilation) */
 	static void SetDilatedRealTimeTimer(
-		UWorld* World,
-		FTimerHandle& InOutHandle,
+		UObject* WorldContextObject,
+		UPARAM(ref) FTimerHandle& InOutHandle,
 		const FTimerDelegate& InDelegate,
 		float InRate,
 		bool bLoop,
 		float InFirstDelay = -1.f,
 		float CustomDilation = 1.f
 	);
-	static void ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle);
+
+	/** Equivalent ClearTimer */
+	static void ClearDilatedRealTimeTimer(UPARAM(ref) FTimerHandle& InOutHandle);
+
+	/** Equivalent IsTimerActive */
 	static bool IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle);
 
 	/**
@@ -120,7 +124,6 @@ public:
 	
 	//------------------
 #pragma endregion Physic
-
 
 #pragma region Camera
 	//------------------

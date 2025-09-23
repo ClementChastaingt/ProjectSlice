@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Parameterization/MeshDijkstra.h"
+#include "ProjectSlice/System/PS_RealTimeTimerManager.h"
 
 class UProceduralMeshComponent;
 struct FProcMeshTangent;
@@ -113,6 +114,10 @@ void UPSFl::DelayRealTime(const UObject* WorldContextObject, float Duration, FLa
 }
 
 //Equivalent Custom RealTimed de SetTimer
+
+// OLD Code
+// Implémentations exposées
+/*
 namespace
 {
     // structure interne
@@ -195,7 +200,6 @@ namespace
     }
 }
 
-// Implémentations exposées
 void UPSFl::SetDilatedRealTimeTimer(
     UWorld* World,
     FTimerHandle& InOutHandle,
@@ -258,7 +262,59 @@ bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)
         return (*Found).IsValid() && (*Found)->bActive;
     }
     return false;
+}*/
+
+void UPSFl::SetDilatedRealTimeTimer(
+	UObject* WorldContextObject,
+	FTimerHandle& InOutHandle,
+	const FTimerDelegate& InDelegate,
+	float InRate,
+	bool bLoop,
+	float InFirstDelay,
+	float CustomDilation
+)
+{
+	if (!WorldContextObject) return;
+	UWorld* World = WorldContextObject->GetWorld();
+	if (!IsValid(World)) return;
+
+	UPS_RealTimeTimerManager& Manager = UPS_RealTimeTimerManager::Get();
+
+	// Supprime un éventuel ancien mapping
+	if (Manager.HandleToGuidMap.Contains(InOutHandle))
+	{
+		ClearDilatedRealTimeTimer(InOutHandle);
+	}
+
+	// Ajout dans le manager interne (retourne un FGuid)
+	FGuid NewGuid = Manager.AddTimer(World, InDelegate, InRate, bLoop, InFirstDelay, CustomDilation);
+
+	// Associer ce Guid au FTimerHandle utilisateur
+	Manager.HandleToGuidMap.Add(InOutHandle, NewGuid);
 }
+
+void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
+{
+	UPS_RealTimeTimerManager& Manager = UPS_RealTimeTimerManager::Get();
+
+	if (FGuid* FoundGuid = Manager.HandleToGuidMap.Find(InOutHandle))
+	{
+		Manager.ClearTimer(*FoundGuid);
+		Manager.HandleToGuidMap.Remove(InOutHandle);
+	}
+}
+
+bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)
+{
+	const UPS_RealTimeTimerManager& Manager = UPS_RealTimeTimerManager::Get();
+
+	if (const FGuid* FoundGuid = Manager.HandleToGuidMap.Find(InOutHandle))
+	{
+		return Manager.IsTimerActive(*FoundGuid);
+	}
+	return false;
+}
+
 //Timer with Callback Realtimed && RealTimed with custom dilation
 void UPSFl::SetRealTimeTimerWithCallback(UWorld* World, TFunction<void()> Callback, float Duration)
 {
@@ -332,6 +388,7 @@ void UPSFl::SetDilatedRealTimeTimerWithCallback(UWorld* World, TFunction<void()>
 
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateLambda(*Checker));
 }
+
 //------------------
 #pragma endregion Time
 
@@ -735,7 +792,6 @@ void UPSFl::StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTim
 	if (!World) return;
 	
 	FTimerDelegate timerDelegate;
-	
 	UPSFl::SetDilatedRealTimeTimer(World, timerHandler, timerDelegate, coolDownDuration, false, -1.f, customDilation);
 
 }
