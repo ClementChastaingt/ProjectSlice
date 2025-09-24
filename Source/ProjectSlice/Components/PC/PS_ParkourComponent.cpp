@@ -887,8 +887,11 @@ void UPS_ParkourComponent::ResetDash()
 
 	//Restart walk 
 	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+	{
 		_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnimWithDelay(0.2);
-	
+		_PlayerCharacter->GetProceduralAnimComponent()->ThrowFootstep();
+	}
+
 	OnResetDashEvent.Broadcast();
 }
 

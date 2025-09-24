@@ -78,8 +78,8 @@ void UPS_RealTimeTimerManager::TickTimers(float /*UnusedDelta*/)
 {
 	const double Now = FPlatformTime::Seconds();
 	TArray<FGuid> ToRemove;
-
-	for (auto& Elem : _Timers)
+	TMap<FGuid, TSharedPtr<FRealTimeTimer>> Timers = _Timers;
+	for (auto& Elem : Timers)
 	{
 		FGuid ID = Elem.Key;
 		TSharedPtr<FRealTimeTimer> Timer = Elem.Value;
