@@ -200,6 +200,7 @@ void UPS_SlowmoComponent::ClampPhysicalVelocity(AActor* actorToUpdate, int32 cur
 		{
 			MaxVelAuthorized = (actorToUpdate->GetVelocity() / safeDilation).Length();
 		}
+		UE_LOG(LogTemp, Error, TEXT("MaxVelAuthorized %f, safeDilation %f, enterVel %f"),MaxVelAuthorized, safeDilation, _ActorsDilated[currentIndex].EnterVelocity.Length());
 		
 		//Translation
 		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, MaxVelAuthorized);

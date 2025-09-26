@@ -44,7 +44,7 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	
 	if(IsValid(_PlayerCharacter->GetForceComponent()))
 		_ForceComponent = _PlayerCharacter->GetForceComponent();
-	
+		
 	//Setup Callback
 	if(IsValid(_ParkourComponent))
 	{
@@ -56,7 +56,7 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	}
 
 	//Init Walk ProcAnim
-	StartWalkingAnim();
+	//StartWalkingAnim();
 		
 }
 
@@ -157,26 +157,29 @@ void UPS_ProceduralAnimComponent::Dip()
 void UPS_ProceduralAnimComponent::StartWalkingAnim()
 {
 	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
-	
+
 	//Start custom tick
 	_LastTickTime = GetWorld()->GetRealTimeSeconds();
 	_WalkStartTime = _LastTickTime;
 
 	const float customDil = GetOwner()->CustomTimeDilation;
 	
-	FTimerDelegate tickDelegate;
-	tickDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::WalkingTick);
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(),_WalkingAnimTimerHandler, tickDelegate,0.0f,true, -1.f,customDil);
-
-	//Footstep
-	FTimerDelegate footstepLeftDelegate;
-	footstepLeftDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepLeftTimerHandler, footstepLeftDelegate, 0.35f,true, -1.f,customDil);
-
-	FTimerDelegate footstepRightDelegate;
-	footstepRightDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepRightTimerHandler, footstepRightDelegate,0.85f,true, -1.f,customDil);
-
+	// FTimerDelegate tickDelegate;
+	// tickDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::WalkingTick);
+	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_WalkingAnimTimerHandler, tickDelegate,0.01f,true, -1.f,customDil);
+	// UE_LOG(LogTemp, Log, TEXT("Walking timer set"));
+	//
+	// //Footstep
+	// FTimerDelegate footstepLeftDelegate;
+	// footstepLeftDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
+	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepLeftTimerHandler, footstepLeftDelegate, 0.35f,true, -1.f,customDil);
+	// UE_LOG(LogTemp, Log, TEXT("Left footstep timer set"));
+	//
+	// FTimerDelegate footstepRightDelegate;
+	// footstepRightDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
+	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepRightTimerHandler, footstepRightDelegate,0.85f,true, -1.f,customDil);
+	// UE_LOG(LogTemp, Log, TEXT("Right footstep timer set"));
+	
 	//Callback
 	OnStartWalkAnimEvent.Broadcast();
 
@@ -240,7 +243,9 @@ void UPS_ProceduralAnimComponent::WalkingTick()
 }
 
 void UPS_ProceduralAnimComponent::ThrowFootstep() const
-{	
+{
+	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
+
 	OnWalkFeedbackEvent.Broadcast();
 }
 

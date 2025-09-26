@@ -37,14 +37,18 @@ FGuid UPS_RealTimeTimerManager::AddTimer(UWorld* World, const FTimerDelegate& In
 	float InFirstDelay,
 	float CustomDilation)
 {
-	if (!World) return FGuid();
+	if (!World) 
+	{
+		UE_LOG(LogTemp, Error, TEXT("AddTimer: World is null"));
+		return FGuid();
+	}
 
 	if (CustomDilation <= 0.f)
 	{
 		CustomDilation = 1.f;
 	}
 
-	const double Now = World->GetRealTimeSeconds();
+	const double Now = FPlatformTime::Seconds();
 	const float EffectiveDelay = (InFirstDelay >= 0.f) ? InFirstDelay : InRate;
 	const double TargetTime = Now + (EffectiveDelay / FMath::Max(CustomDilation, KINDA_SMALL_NUMBER));
 
@@ -52,6 +56,9 @@ FGuid UPS_RealTimeTimerManager::AddTimer(UWorld* World, const FTimerDelegate& In
 	FGuid ID = FGuid::NewGuid();
 
 	_Timers.Add(ID, MakeShared<FRealTimeTimer>(InDelegate, TargetTime, InRate, bLoop, CustomDilation, World));
+
+	UE_LOG(LogTemp, Log, TEXT("%S :: Timer added: %s, Rate: %f, Loop: %d, Delay: %f"), 
+	  __FUNCTION__, *ID.ToString(), InRate, bLoop, EffectiveDelay);
 
 	return ID;
 }
@@ -78,8 +85,8 @@ void UPS_RealTimeTimerManager::TickTimers(float /*UnusedDelta*/)
 {
 	const double Now = FPlatformTime::Seconds();
 	TArray<FGuid> ToRemove;
-	TMap<FGuid, TSharedPtr<FRealTimeTimer>> Timers = _Timers;
-	for (auto& Elem : Timers)
+
+	for (auto& Elem : _Timers)
 	{
 		FGuid ID = Elem.Key;
 		TSharedPtr<FRealTimeTimer> Timer = Elem.Value;
