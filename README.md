@@ -4,25 +4,26 @@
 
 Game Design Document
 📋 Résumé du Concept
-Genre : Action/Parkour avec combat au laserMécaniques principales : Découpe laser, parkour, grappinUnivers : Ruines antiques futuristes dans un désert
+- Genre : Action/Parkour avec combat au laserMécaniques principales : Découpe laser, parkour, grappinUnivers : Ruines antiques futuristes dans un désert
 Le joueur incarne un ferrailleur équipé d'un fusil/lame laser qui progresse à travers d'antiques ruines en découpant l'environnement. Il affronte des ennemis du passé (animatroniques, entités molles) tout en explorant une cité ancienne mystérieuse.
 🎮 Mécaniques de Jeu (3C)
-Locomotion & Parkour
+**Locomotion & Parkour**
 Grappin : Tirer et se balancer (référence : Ghostrunner, Tiny and Big)
 Free run :
 Wall run vertical
 Double jump
 Slide avec inertie
 Tackle/Manuel
-Références : Severed Steel, Sprawl, Ghostrunner, Titanfall 2
-Combat & Découpe
+**Références** :
+   Severed Steel, Sprawl, Ghostrunner, Titanfall 2
+**Combat & Découpe**:
 Fusil laser : Coupe en deux tous les éléments visés
 Sabre laser : Découpe avec déformation de mesh
-Système de combat :
+**Système de combat**:
 Orientation des attaques (référence : Kingdom Come, For Honor, Chivalry, Mordhau)
 Speed cut en l'air
 Bullet drop avec ralenti
-Dégâts localisés : Le joueur peut perdre des membres, affectant les animations
+**Dégâts localisés** : Le joueur peut perdre des membres, affectant les animations
 📖 Narratif
 Histoire Principale
 Un ferrailleur se réveille après un crash spatial sur une planète désertique. Sa mission : récupérer un réacteur de grande valeur dans les structures souterraines. Amnésique, il explore des ruines antiques habitées par d'anciennes machines de protection.
