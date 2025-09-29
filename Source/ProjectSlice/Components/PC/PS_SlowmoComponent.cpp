@@ -190,20 +190,9 @@ void UPS_SlowmoComponent::ClampPhysicalVelocity(AActor* actorToUpdate, int32 cur
 	for (UPrimitiveComponent* actorToClampVelElement : actorsToClampVel)
 	{
 		if (!IsValid(actorToClampVelElement)) continue;
-
-		//Set MaxVelAuthorized
-		float globalDilation =  UGameplayStatics::GetGlobalTimeDilation(actorToUpdate->GetWorld());
-		float MaxVelAuthorized = _ActorsDilated[currentIndex].EnterVelocity.Length();
-		float dilatedTime = actorToUpdate->CustomTimeDilation <= 0.0f ? globalDilation : (globalDilation / actorToUpdate->CustomTimeDilation);
-		const float safeDilation = FMath::Max(dilatedTime, KINDA_SMALL_NUMBER);
-		if ( _ActorsDilated[currentIndex].Actor->GetVelocity().SquaredLength() > _ActorsDilated[currentIndex].EnterVelocity.SquaredLength())
-		{
-			MaxVelAuthorized = (actorToUpdate->GetVelocity() / safeDilation).Length();
-		}
-		UE_LOG(LogTemp, Error, TEXT("MaxVelAuthorized %f, safeDilation %f, enterVel %f"),MaxVelAuthorized, safeDilation, _ActorsDilated[currentIndex].EnterVelocity.Length());
 		
 		//Translation
-		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, MaxVelAuthorized);
+		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length() * 1.5f);
 		FVector newVel = actorToClampVelElement->GetPhysicsLinearVelocity().GetSafeNormal() * newSpeed;
 		actorToClampVelElement->SetAllPhysicsLinearVelocity(newVel);
 

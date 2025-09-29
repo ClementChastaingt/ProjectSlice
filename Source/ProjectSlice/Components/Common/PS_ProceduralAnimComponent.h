@@ -127,9 +127,6 @@ public:
 	FOnPSDelegate OnWalkFeedbackEvent;
 
 protected:
-	UFUNCTION()
-	void WalkingTick();
-	
 	UFUNCTION(BlueprintCallable)
 	void Walking(const float& leftRightAlpha, const float& upDownAlpha, const float& rollAlpha);
 
@@ -163,28 +160,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking", meta=(UIMax= "0", ClampMax="0", ToolTip="Walking Down Offest"))
 	float WalkingMaxSpeed = 1.65f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking")
-	UCurveTable* WalkingCurves;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Walking|Lag", meta=(UIMin = "0", ClampMin="0", ToolTip="Frame rate smoothing speed for Velocity Lag postion interpolation"))
 	float VelocityLagSmoothingSpeed = 6.0f;
-
-private:
-	
-	UPROPERTY(Transient)
-	FTimerHandle _WalkingAnimTimerHandler;
-
-	UPROPERTY(Transient)
-	FTimerHandle _FootStepRightTimerHandler;
-
-	UPROPERTY(Transient)
-	FTimerHandle _FootStepLeftTimerHandler;
-
-	UPROPERTY(Transient)
-	float _LastTickTime;
-
-	UPROPERTY(Transient)
-	float _WalkStartTime;
 
 #pragma endregion Walking
 

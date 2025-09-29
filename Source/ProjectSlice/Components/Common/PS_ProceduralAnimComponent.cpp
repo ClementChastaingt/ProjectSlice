@@ -54,9 +54,6 @@ void UPS_ProceduralAnimComponent::BeginPlay()
 	{
 		_ForceComponent->OnPushEvent.AddUniqueDynamic(this, &UPS_ProceduralAnimComponent::OnPushEventReceived);
 	}
-
-	//Init Walk ProcAnim
-	//StartWalkingAnim();
 		
 }
 
@@ -157,29 +154,7 @@ void UPS_ProceduralAnimComponent::Dip()
 void UPS_ProceduralAnimComponent::StartWalkingAnim()
 {
 	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
-
-	//Start custom tick
-	_LastTickTime = GetWorld()->GetRealTimeSeconds();
-	_WalkStartTime = _LastTickTime;
-
-	const float customDil = GetOwner()->CustomTimeDilation;
-	
-	// FTimerDelegate tickDelegate;
-	// tickDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::WalkingTick);
-	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_WalkingAnimTimerHandler, tickDelegate,0.01f,true, -1.f,customDil);
-	// UE_LOG(LogTemp, Log, TEXT("Walking timer set"));
-	//
-	// //Footstep
-	// FTimerDelegate footstepLeftDelegate;
-	// footstepLeftDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
-	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepLeftTimerHandler, footstepLeftDelegate, 0.35f,true, -1.f,customDil);
-	// UE_LOG(LogTemp, Log, TEXT("Left footstep timer set"));
-	//
-	// FTimerDelegate footstepRightDelegate;
-	// footstepRightDelegate.BindUObject(this, &UPS_ProceduralAnimComponent::ThrowFootstep);
-	// UPSFl::SetDilatedRealTimeTimer(GetWorld(),_FootStepRightTimerHandler, footstepRightDelegate,0.85f,true, -1.f,customDil);
-	// UE_LOG(LogTemp, Log, TEXT("Right footstep timer set"));
-	
+		
 	//Callback
 	OnStartWalkAnimEvent.Broadcast();
 
@@ -201,45 +176,8 @@ void UPS_ProceduralAnimComponent::StopWalkingAnim()
 {
 	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"),__FUNCTION__);
 	
-	//Stop all timer
-	if (UPSFl::IsDilatedRealTimeTimerActive(_WalkingAnimTimerHandler))
-		UPSFl::ClearDilatedRealTimeTimer(_WalkingAnimTimerHandler);
-
-	if (UPSFl::IsDilatedRealTimeTimerActive(_FootStepRightTimerHandler))
-		UPSFl::ClearDilatedRealTimeTimer(_FootStepRightTimerHandler);
-
-	if (UPSFl::IsDilatedRealTimeTimerActive(_FootStepLeftTimerHandler))
-		UPSFl::ClearDilatedRealTimeTimer(_FootStepLeftTimerHandler);
-		
 	//Callback
 	OnStopWalkAnimEvent.Broadcast();
-}
-
-void UPS_ProceduralAnimComponent::WalkingTick()
-{
-	//Calculate alpha
-	const double now = GetWorld()->GetRealTimeSeconds();
-	float rawDelta = static_cast<float>(now - _LastTickTime);
-	float DeltaTime = rawDelta * GetOwner()->CustomTimeDilation;
-
-	const float alpha = FMath::Clamp(DeltaTime * WalkingSpeed, 0.0f, 1.0f);
-	UE_LOG(LogTemp, Error, TEXT("%S :: alpha %f"),__FUNCTION__, alpha);
-
-	//WalkAnim
-	float leftRightAnimAlpha, upDownAnimAlpha, rollAnimAlpha = alpha;
-	const FRichCurve* walkLeftRightCurve = WalkingCurves->FindRichCurve("LeftRightAlpha", "");
-	if(walkLeftRightCurve != nullptr) leftRightAnimAlpha = walkLeftRightCurve->Eval(alpha);
-
-	const FRichCurve* walkUpDownCurve = WalkingCurves->FindRichCurve("UpDownAlpha", "");
-	if(walkUpDownCurve != nullptr) upDownAnimAlpha = walkUpDownCurve->Eval(alpha);
-	
-	const FRichCurve* rollCurve = WalkingCurves->FindRichCurve("RollAlpha", "");
-	if(rollCurve != nullptr) rollAnimAlpha = rollCurve->Eval(alpha);
-
-	Walking(leftRightAnimAlpha, upDownAnimAlpha, rollAnimAlpha);
-	SetLagPositionAndAirTilt();
-	ApplyLookSwayAndOffset(CurrentCamRot);
-	
 }
 
 void UPS_ProceduralAnimComponent::ThrowFootstep() const
@@ -272,7 +210,8 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	|| playerMovementComp->IsCrouching()
 	|| _ParkourComponent->IsDashing()
 	|| playerMovementComp->MovementMode == MOVE_None;
-		
+
+	//TODO :: Break Here
 	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
