@@ -211,8 +211,8 @@ void UPS_ProceduralAnimComponent::Walking(const float& leftRightAlpha, const flo
 	|| _ParkourComponent->IsDashing()
 	|| playerMovementComp->MovementMode == MOVE_None;
 
-	//TODO :: Break Here
-	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length() / _PlayerCharacter->CustomTimeDilation, 0.0f, playerMovementComp->GetMaxSpeed()));
+	
+	WalkAnimAlpha = (bIsWalkProcAnimDesactive ? 0.0f : UKismetMathLibrary::NormalizeToRange(_PlayerCharacter->GetVelocity().Length(), 0.0f, playerMovementComp->GetMaxSpeed()));
 	WalkingSpeed = FMath::Lerp(0.0f,WalkingMaxSpeed, WalkAnimAlpha);
 	
 }
