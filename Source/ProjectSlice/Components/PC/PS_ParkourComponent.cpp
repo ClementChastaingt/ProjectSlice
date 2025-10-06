@@ -235,6 +235,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 
 	//Constraint init
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintEnabled(true);
+	//TODO :: Replace Fvector zero par direction
 	_PlayerCharacter->GetCharacterMovement()->SetPlaneConstraintNormal(FVector(0,0,0));
 
 	//Timer init
@@ -796,7 +797,10 @@ void UPS_ParkourComponent::OnDash()
 	
 	if( bIsLedging || bIsMantling || bIsCrouched) return;
 
-	if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle)) return;
+	UE_LOG(LogTemp, Error, TEXT("TEXT00"));
+	if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle)) return;
+
+	UE_LOG(LogTemp, Error, TEXT("TEXT01"));
 
 	if(_bIsWallRunning)
 	{
@@ -858,10 +862,14 @@ void UPS_ParkourComponent::OnDash()
 	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(true);
 	
 	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
+
 	
+	UE_LOG(LogTemp, Error, TEXT("TEXT02"));
+	
+	//Reset
 	FTimerDelegate dashReset_TimerDelegate;
 	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
-	GetWorld()->GetTimerManager().SetTimer(_DashResetTimerHandle, dashReset_TimerDelegate, DashDuration, false);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _DashResetTimerHandle, dashReset_TimerDelegate, DashDuration, false);
 
 	// FTimerDelegate dashCooldown_TimerDelegate;
 	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
@@ -1265,7 +1273,7 @@ void UPS_ParkourComponent::OnMovementModeChangedEventReceived(ACharacter* charac
 
 	if(previousCustomMode == MOVE_Falling && character->GetCharacterMovement()->MovementMode == MOVE_Walking)
 	{
-		if(GetWorld()->GetTimerManager().IsTimerActive(_DashResetTimerHandle))
+		if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle))
 			_PlayerCharacter->GetCharacterMovement()->GroundFriction = DashGroundFriction;
 		
 		_PlayerCharacter->GetCharacterMovement()->BrakingDecelerationFalling = _DefaultBrakingDecelerationFalling;

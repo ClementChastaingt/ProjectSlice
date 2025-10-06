@@ -548,7 +548,7 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 
 void UPS_PlayerCameraComponent::DashTick() const
 {
-	if(_DashTimerHandle.IsValid() && IsValid(_DashMatInst))
+	if(UPSFl::IsDilatedRealTimeTimerActive(_DashTimerHandle) && IsValid(_DashMatInst))
 	{
 		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
 		_DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
