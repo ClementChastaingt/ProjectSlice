@@ -799,7 +799,7 @@ void UPS_ParkourComponent::OnDash()
 
 	UE_LOG(LogTemp, Error, TEXT("TEXT00"));
 	if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle)) return;
-
+	
 	UE_LOG(LogTemp, Error, TEXT("TEXT01"));
 
 	if(_bIsWallRunning)
@@ -892,6 +892,11 @@ void UPS_ParkourComponent::ResetDash()
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 
 	_bIsDashing = false;
+
+	//Reset timer
+	UPSFl::ClearDilatedRealTimeTimer(_DashResetTimerHandle);
+	_DashResetTimerHandle.Invalidate();
+	
 
 	//Restart walk 
 	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))

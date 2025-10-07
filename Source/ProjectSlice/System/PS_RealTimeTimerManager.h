@@ -1,74 +1,38 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 #pragma once
-
 #include "CoreMinimal.h"
+#include "Engine/World.h"
 
-/**
- * 
- */
 struct FRealTimeTimer
 {
-    FTimerDelegate Delegate;
-    double TargetTime = 0.0;
-    float Rate = 0.f;
+    TSharedPtr<FTimerDelegate> Delegate;
+    double EndTime = 0.0;
+    double StartTime = 0.0;
+    float Dilation = 1.0f;
     bool bLoop = false;
-    float CustomDilation = 1.f;
     bool bActive = true;
-    TWeakObjectPtr<UWorld> WeakWorld;
-
-    FRealTimeTimer(const FTimerDelegate& InDelegate, double InTargetTime, float InRate, bool InLoop, float InCustomDilation, UWorld* InWorld)
-        : Delegate(InDelegate)
-        , TargetTime(InTargetTime)
-        , Rate(InRate)
-        , bLoop(InLoop)
-        , CustomDilation(InCustomDilation)
-        , WeakWorld(InWorld)
-    {}
+    float Rate = 0.0f;
 };
 
-class PROJECTSLICE_API UPS_RealTimeTimerManager
+class UPS_RealTimeTimerManager
 {
- 
-public:
-    UPS_RealTimeTimerManager();
-    ~UPS_RealTimeTimerManager();
-
 public:
     static UPS_RealTimeTimerManager& Get();
 
-    FGuid AddTimer(UWorld* World, const FTimerDelegate& InDelegate, float InRate, bool bLoop, float InFirstDelay,
-        float CustomDilation);
-    
-    void ClearTimer(const FGuid& ID);
-    
-    bool IsTimerActive(const FGuid& ID) const;
-    
-    void TickTimers(float);
-    
-    void SetDilatedRealTimeTimer(UWorld* World, FTimerHandle& InOutHandle, const FTimerDelegate& InDelegate,
-        float InRate,
-        bool bLoop, float InFirstDelay, float CustomDilation);
-    
-    void ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle);
-    
-    bool IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle) const;
+    FGuid SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& InDelegate, float InRate, bool bInLoop, float InFirstDelay = -1.0f, float CustomDilation = 1.0f);
+    void ClearTimer(FTimerHandle& InHandle);
+    bool IsTimerActive(const FTimerHandle& InHandle) const;
 
+    TMap<FGuid, TSharedPtr<FRealTimeTimer>> Timers;
     TMap<FTimerHandle, FGuid> HandleToGuidMap;
 
-private:    
-    bool HandleTicker(float DeltaTime);
-    
-    TMap<FGuid, TSharedPtr<FRealTimeTimer>> _Timers;
-    
-    FThreadSafeCounter64 _NextID;
+    void TickTimers(UWorld* World);
 
-    // Pour le ticker
-    FTSTicker::FDelegateHandle TickerHandle;
+private:
+    UPS_RealTimeTimerManager() = default;
 
+    void StartTicking(UWorld* World);
+
+
+    FTimerHandle TickHandle;
+    bool bIsTicking = false;
 };
-
-
-
-
-
-

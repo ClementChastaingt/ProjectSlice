@@ -56,7 +56,8 @@ public:
 	/** Wrapper type SetTimer (RealTime + CustomDilation) */
 	static void SetDilatedRealTimeTimer(
 		UObject* WorldContextObject,
-		UPARAM(ref) FTimerHandle& InOutHandle,
+		UPARAM(ref)
+		FTimerHandle& InOutHandle,
 		const FTimerDelegate& InDelegate,
 		float InRate,
 		bool bLoop,

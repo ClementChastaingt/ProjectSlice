@@ -1,23 +1,6 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 #include "PS_RealTimeTimerManager.h"
 
-UPS_RealTimeTimerManager::UPS_RealTimeTimerManager()
-{
-	// On hook le ticker global (tick indépendant du world/game time)
-	 TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
-		FTickerDelegate::CreateRaw(this, &UPS_RealTimeTimerManager::HandleTicker)
-	);
-}
-
-UPS_RealTimeTimerManager::~UPS_RealTimeTimerManager()
-{
-	// Nettoyer le ticker
-	if (TickerHandle.IsValid())
-	{
-		FTSTicker::GetCoreTicker().RemoveTicker(TickerHandle);
-	}
-}
-
+struct FRealTimeTimer;
 
 UPS_RealTimeTimerManager& UPS_RealTimeTimerManager::Get()
 {
@@ -25,155 +8,113 @@ UPS_RealTimeTimerManager& UPS_RealTimeTimerManager::Get()
 	return Instance;
 }
 
-
-bool UPS_RealTimeTimerManager::HandleTicker(float DeltaTime)
+void UPS_RealTimeTimerManager::StartTicking(UWorld* World)
 {
-	TickTimers(DeltaTime);
-	return true; // keep ticking
-}
-
-/** Ajoute un timer, retourne un ID unique */
-FGuid UPS_RealTimeTimerManager::AddTimer(UWorld* World, const FTimerDelegate& InDelegate, float InRate, bool bLoop,
-	float InFirstDelay,
-	float CustomDilation)
-{
-	if (!World) 
+	if (!bIsTicking && IsValid(World))
 	{
-		UE_LOG(LogTemp, Error, TEXT("AddTimer: World is null"));
-		return FGuid();
-	}
-
-	if (CustomDilation <= 0.f)
-	{
-		CustomDilation = 1.f;
-	}
-
-	const double Now = FPlatformTime::Seconds();
-	const float EffectiveDelay = (InFirstDelay >= 0.f) ? InFirstDelay : InRate;
-	const double TargetTime = Now + (EffectiveDelay / FMath::Max(CustomDilation, KINDA_SMALL_NUMBER));
-
-	// ID unique
-	FGuid ID = FGuid::NewGuid();
-
-	_Timers.Add(ID, MakeShared<FRealTimeTimer>(InDelegate, TargetTime, InRate, bLoop, CustomDilation, World));
-
-	UE_LOG(LogTemp, Log, TEXT("%S :: Timer added: %s, Rate: %f, Loop: %d, Delay: %f"), 
-	  __FUNCTION__, *ID.ToString(), InRate, bLoop, EffectiveDelay);
-
-	return ID;
-}
-
-void UPS_RealTimeTimerManager::ClearTimer(const FGuid& ID)
-{
-	if (TSharedPtr<FRealTimeTimer>* Found = _Timers.Find(ID))
-	{
-		(*Found)->bActive = false;
-		_Timers.Remove(ID);
-	}
-}
-
-bool UPS_RealTimeTimerManager::IsTimerActive(const FGuid& ID) const
-{
-	if (const TSharedPtr<FRealTimeTimer>* Found = _Timers.Find(ID))
-	{
-		return (*Found).IsValid() && (*Found)->bActive;
-	}
-	return false;
-}
-
-void UPS_RealTimeTimerManager::TickTimers(float /*UnusedDelta*/)
-{
-	const double Now = FPlatformTime::Seconds();
-	TArray<FGuid> ToRemove;
-
-	for (auto& Elem : _Timers)
-	{
-		FGuid ID = Elem.Key;
-		TSharedPtr<FRealTimeTimer> Timer = Elem.Value;
-
-		if (!Timer.IsValid() || !Timer->bActive)
+		bIsTicking = true;
+		FTimerDelegate TickDelegate;
+		TickDelegate.BindLambda([this, World]()
 		{
-			ToRemove.Add(ID);
-			continue;
-		}
+			TickTimers(World);
+		});
 
-		UWorld* World = Timer->WeakWorld.Get();
-		if (!World)
-		{
-			ToRemove.Add(ID);
-			continue;
-		}
-
-		if (Now >= Timer->TargetTime)
-		{
-			Timer->Delegate.ExecuteIfBound();
-
-			if (Timer->bLoop)
-			{
-				if (Timer->Rate > 0.f)
-				{
-					Timer->TargetTime = Now + (Timer->Rate / FMath::Max(Timer->CustomDilation, KINDA_SMALL_NUMBER));
-				}
-				else
-				{
-					Timer->TargetTime = Now; // every-frame loop
-				}
-			}
-			else
-			{
-				ToRemove.Add(ID);
-			}
-		}
-	}
-
-	for (const FGuid& ID : ToRemove)
-	{
-		_Timers.Remove(ID);
+		World->GetTimerManager().SetTimer(TickHandle, TickDelegate, 0.01f, true);
 	}
 }
 
-void UPS_RealTimeTimerManager::SetDilatedRealTimeTimer(
-	UWorld* World,
-	FTimerHandle& InOutHandle,
-	const FTimerDelegate& InDelegate,
-	float InRate,
-	bool bLoop,
-	float InFirstDelay,
-	float CustomDilation
-)
+FGuid UPS_RealTimeTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& InDelegate, float InRate, bool bInLoop, float InFirstDelay, float CustomDilation)
+{
+	UWorld* World = GWorld;
+	if (!IsValid(World)) return FGuid();
+
+	StartTicking(World);
+
+	FGuid NewGuid = FGuid::NewGuid();
+	TSharedPtr<FRealTimeTimer> NewTimer = MakeShared<FRealTimeTimer>();
+	NewTimer->Delegate = MakeShared<FTimerDelegate>(InDelegate);
+	NewTimer->StartTime = World->GetRealTimeSeconds();
+	NewTimer->EndTime = NewTimer->StartTime + ((InFirstDelay > 0.f ? InFirstDelay : InRate) / CustomDilation);
+	NewTimer->Dilation = CustomDilation;
+	NewTimer->Rate = InRate;
+	NewTimer->bLoop = bInLoop;
+	NewTimer->bActive = true;
+
+	Timers.Add(NewGuid, NewTimer);
+	HandleToGuidMap.Add(OutHandle, NewGuid);
+
+	return NewGuid;
+}
+
+void UPS_RealTimeTimerManager::TickTimers(UWorld* World)
 {
 	if (!IsValid(World)) return;
 
-	// Supprimer un éventuel ancien mapping
-	if (HandleToGuidMap.Contains(InOutHandle))
+	const double CurrentRealTime = World->GetRealTimeSeconds();
+
+	TArray<FGuid> ToRemove;
+
+	for (auto& Pair : Timers)
 	{
-		ClearDilatedRealTimeTimer(InOutHandle);
+		TSharedPtr<FRealTimeTimer> Timer = Pair.Value;
+		if (!Timer.IsValid() || !Timer->bActive) continue;
+
+		if (CurrentRealTime >= Timer->EndTime)
+		{
+			if (Timer->Delegate.IsValid())
+				Timer->Delegate->ExecuteIfBound();
+
+			if (Timer->bLoop)
+			{
+				Timer->StartTime = CurrentRealTime;
+				Timer->EndTime = CurrentRealTime + (Timer->Rate / Timer->Dilation);
+			}
+			else
+			{
+				Timer->bActive = false;
+				ToRemove.Add(Pair.Key);
+			}
+		}
 	}
 
-	// Ajout dans le manager interne (créé et retourne un FGuid)
-	FGuid NewGuid = AddTimer(World, InDelegate, InRate, bLoop, InFirstDelay, CustomDilation);
-
-	// Associer ce Guid au FTimerHandle utilisateur
-	HandleToGuidMap.Add(InOutHandle, NewGuid);
-}
-
-void UPS_RealTimeTimerManager::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
-{
-	if (FGuid* FoundGuid = HandleToGuidMap.Find(InOutHandle))
+	for (const FGuid& Guid : ToRemove)
 	{
-		ClearTimer(*FoundGuid);
-		HandleToGuidMap.Remove(InOutHandle);
+		Timers.Remove(Guid);
+		for (auto It = HandleToGuidMap.CreateIterator(); It; ++It)
+		{
+			if (It.Value() == Guid)
+			{
+				It.RemoveCurrent();
+				break;
+			}
+		}
 	}
 }
 
-bool UPS_RealTimeTimerManager::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle) const
+void UPS_RealTimeTimerManager::ClearTimer(FTimerHandle& InHandle)
 {
-	if (const FGuid* FoundGuid = HandleToGuidMap.Find(InOutHandle))
+	if (const FGuid* FoundGuid = HandleToGuidMap.Find(InHandle))
 	{
-		return IsTimerActive(*FoundGuid);
+		if (TSharedPtr<FRealTimeTimer>* FoundTimer = Timers.Find(*FoundGuid))
+		{
+			if (FoundTimer && FoundTimer->IsValid())
+				(*FoundTimer)->bActive = false;
+			Timers.Remove(*FoundGuid);
+		}
+		HandleToGuidMap.Remove(InHandle);
+		InHandle.Invalidate();
+	}
+}
+
+bool UPS_RealTimeTimerManager::IsTimerActive(const FTimerHandle& InHandle) const
+{
+	if (!InHandle.IsValid()) return false;
+
+	
+	if (const FGuid* FoundGuid = HandleToGuidMap.Find(InHandle))
+	{
+		if (const TSharedPtr<FRealTimeTimer>* FoundTimer = Timers.Find(*FoundGuid))
+			return FoundTimer && (*FoundTimer)->bActive;
 	}
 	return false;
 }
-
-
-

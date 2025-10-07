@@ -287,8 +287,8 @@ private:
 	UPROPERTY(Transient)
 	float _DashStartTimestamp;
 
-	UPROPERTY(Transient)
-	FTimerHandle _DashTimerHandle;
+	UPROPERTY()
+	FTimerHandle _DashTimerHandle = FTimerHandle();
 	
 
 #pragma region Glasses
