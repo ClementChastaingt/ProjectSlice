@@ -565,7 +565,7 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 {
 	if(!IsValid(_DashMatInst) || !IsValid(GetWorld())) return;
 
-	UE_LOG(LogTemp, Error, TEXT("%S"),__FUNCTION__);
+	UE_LOG(LogTemp, Error, TEXT("%S :: bActivate %i"),__FUNCTION__, bActivate);
 
 	//Blend PostProcess
 	if(_WeightedBlendableArray.IsValidIndex(5)) _WeightedBlendableArray[5].Weight = bActivate ? 1.0f : 0.0f;

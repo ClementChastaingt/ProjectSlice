@@ -64,7 +64,7 @@ void UPS_SlowmoComponent::SlowmoTransition()
 		_SlowmoTime = _SlowmoTime + GetWorld()->DeltaRealTimeSeconds;
 
 		//Time Dilation alpha
-		const float alpha = UKismetMathLibrary::MapRangeClamped(_SlowmoTime, _StartSlowmoTimestamp ,_StartSlowmoTimestamp + SlowmoTransitionDuration,0.0,1.0);
+		const float alpha = UKismetMathLibrary::MapRangeClamped(_SlowmoTime, _StartSlowmoTimestamp ,_StartSlowmoTimestamp + _SlowmoTransitionDuration,0.0,1.0);
 	
 		//Curve alpha
 		float curveGlobalAlpha = alpha;
@@ -165,16 +165,20 @@ void UPS_SlowmoComponent::OnTriggerSlowmo()
 	}
 
 	//Start player dilation &&& global dilation transition
+	_SlowmoTransitionDuration = _bSlowming ? SlowmoTransitionIn : SlowmoTransitionOut;
 	_bIsSlowmoTransiting = true;
 	SetComponentTickEnabled(true);
 
 	//Trigger FOV slowmo, duration is SlowmoTransitionDuration
 	UPS_PlayerCameraComponent* playerCam = Cast<UPS_PlayerCameraComponent>(_PlayerCharacter->GetFirstPersonCameraComponent());
-	UCurveFloat* slowmoCurve = SlowmoFOVCurves[_bSlowming ? 0 : 1];
-	if(!IsValid(slowmoCurve)) slowmoCurve = SlowmoFOVCurves[0];
-		
-	playerCam->SetupFOVInterp(_bSlowming ? TargetFOV : playerCam->GetDefaultFOV(), _bSlowming ? SlowmoTransitionDuration : SlowmoFOVResetDuration, slowmoCurve);
-
+	
+	if (!FOVCurves.IsEmpty())
+	{
+		UCurveFloat* slowmoCurve = FOVCurves[_bSlowming ? 0 : 1];
+		if(!IsValid(slowmoCurve)) slowmoCurve = FOVCurves[0];
+		playerCam->SetupFOVInterp(_bSlowming ? TargetFOV : playerCam->GetDefaultFOV(), FOVTransitionDuration, slowmoCurve);
+	}
+	
 	OnSlowmoEvent.Broadcast(_bSlowming);
 	
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s"), __FUNCTION__, _bSlowming ? TEXT("On") :  TEXT("Off"));
@@ -192,13 +196,15 @@ void UPS_SlowmoComponent::ClampPhysicalVelocity(AActor* actorToUpdate, int32 cur
 		if (!IsValid(actorToClampVelElement)) continue;
 		
 		//Translation
-		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length() * 1.5f);
+		//float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), 0.0f, _ActorsDilated[currentIndex].EnterVelocity.Length() * 1.5f);
+		float  newSpeed = UKismetMathLibrary::Clamp(actorToClampVelElement->GetPhysicsLinearVelocity().Length(), _ActorsDilated[currentIndex].EnterVelocity.Length(), actorToClampVelElement->GetPhysicsLinearVelocity().Length() / actorToUpdate->CustomTimeDilation);
 		FVector newVel = actorToClampVelElement->GetPhysicsLinearVelocity().GetSafeNormal() * newSpeed;
 		actorToClampVelElement->SetAllPhysicsLinearVelocity(newVel);
 
 		//Rotation
 		FVector currentAngVel = actorToClampVelElement->GetPhysicsAngularVelocityInRadians();
-		float newAngSpeed = UKismetMathLibrary::Clamp(currentAngVel.Length(),0.0f, _ActorsDilated[currentIndex].EnterAngularVelocity.Length());
+		//float newAngSpeed = UKismetMathLibrary::Clamp(currentAngVel.Length(),0.0f, _ActorsDilated[currentIndex].EnterAngularVelocity.Length());
+		float newAngSpeed = UKismetMathLibrary::Clamp(currentAngVel.Length(),_ActorsDilated[currentIndex].EnterAngularVelocity.Length(), currentAngVel.Length() / actorToUpdate->CustomTimeDilation);
 		FVector newAngVel = currentAngVel.GetSafeNormal() * newAngSpeed;
 		actorToClampVelElement->SetPhysicsAngularVelocityInRadians(newAngVel, false);
 

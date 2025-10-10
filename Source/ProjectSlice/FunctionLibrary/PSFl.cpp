@@ -149,6 +149,8 @@ void UPSFl::SetDilatedRealTimeTimer(
 void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
 {
 	UPS_RealTimeTimerManager::Get().ClearTimer(InOutHandle);
+
+	InOutHandle.Invalidate();
 }
 
 bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)

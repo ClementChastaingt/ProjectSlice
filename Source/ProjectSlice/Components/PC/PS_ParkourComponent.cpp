@@ -796,19 +796,15 @@ void UPS_ParkourComponent::OnDash()
 	if(!IsValid(_PlayerCharacter->GetHookComponent())) return;
 	
 	if( bIsLedging || bIsMantling || bIsCrouched) return;
-
-	UE_LOG(LogTemp, Error, TEXT("TEXT00"));
+	
 	if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle)) return;
 	
-	UE_LOG(LogTemp, Error, TEXT("TEXT01"));
-
 	if(_bIsWallRunning)
 	{
 		if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: StopWallRun"), __FUNCTION__);
 		OnWallRunStop();
 	}
-
-
+	
 	if(_bIsSliding)
 	{
 		if (bDebugSlide) UE_LOG(LogTemp, Log, TEXT("%S :: StopSlide"), __FUNCTION__);
@@ -861,10 +857,7 @@ void UPS_ParkourComponent::OnDash()
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(true);
 	
-	if(bDebugDash)UE_LOG(LogTemp, Warning, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
-
-	
-	UE_LOG(LogTemp, Error, TEXT("TEXT02"));
+	if(bDebugDash)UE_LOG(LogTemp, Log, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
 	
 	//Reset
 	FTimerDelegate dashReset_TimerDelegate;
@@ -889,14 +882,14 @@ void UPS_ParkourComponent::OnDash()
 
 void UPS_ParkourComponent::ResetDash()
 {
+	if(bDebugDash)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 
 	_bIsDashing = false;
 
 	//Reset timer
-	UPSFl::ClearDilatedRealTimeTimer(_DashResetTimerHandle);
-	_DashResetTimerHandle.Invalidate();
-	
+	UPSFl::ClearDilatedRealTimeTimer(_DashResetTimerHandle);	
 
 	//Restart walk 
 	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))

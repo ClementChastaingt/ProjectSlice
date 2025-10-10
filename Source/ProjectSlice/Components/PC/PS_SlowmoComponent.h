@@ -142,8 +142,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo Max duration"))
 	float SlowmoDuration = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition duration"))
-	float SlowmoTransitionDuration = 0.5f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition IN duration"))
+	float SlowmoTransitionIn = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition", meta=(UIMin="0.01", ClampMin="0.01", ForceUnits="s", ToolTip="Slowmo transition OUT duration"))
+	float SlowmoTransitionOut = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Transition")
 	UCurveFloat* SlowmoGlobalDilationCurve;
@@ -157,6 +160,9 @@ private:
 
 	UPROPERTY(Transient)
 	bool _bIsSlowmoTransiting;
+
+	UPROPERTY(Transient)
+	float _SlowmoTransitionDuration = 0.5f;
 	
 	UPROPERTY(Transient)
 	float _StartSlowmoTimestamp;
@@ -204,10 +210,10 @@ protected:
 	float TargetFOV = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ForceUnits="s", UIMin="0.01", ClampMin="0.01", ToolTip="Slowmo FOV transition duration"))
-	float SlowmoFOVResetDuration = 0.3f;
+	float FOVTransitionDuration = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|FOV", meta=(ToolTip="Slowmo FOV curves IN // OUT"))
-	TArray<UCurveFloat*> SlowmoFOVCurves;
+	TArray<UCurveFloat*> FOVCurves;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameters|Slowmo|Feedback|PostProcess", meta=(ToolTip="Slowmo PostProcess curves IN // OUT"))
 	TArray<UCurveFloat*> SlowmoPostProcessCurves;
