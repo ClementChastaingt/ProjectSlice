@@ -44,10 +44,18 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	DefaultFOV = FieldOfView;
 	_DefaultCameraRot = _PlayerController->GetControlRotation().Clamp();
 
+	//Bind callback
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
 	}
+
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	{
+		_PlayerCharacter->GetParkourComponent()->OnResetDashEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::ResetDash);
+	}
+
+	
 
 	InitPostProcess();
 
@@ -57,6 +65,24 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	FTimerDelegate delegate;
 	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
 	UPSFl::SetDilatedRealTimeTimer(GetWorld(),handler, delegate,0.0f,true, -1.f,1.f);
+}
+
+void UPS_PlayerCameraComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+
+	//Bind callback
+	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.RemoveDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
+	}
+
+	if(IsValid(_PlayerCharacter->GetParkourComponent()))
+	{
+		_PlayerCharacter->GetParkourComponent()->OnResetDashEvent.RemoveDynamic(this, &UPS_PlayerCameraComponent::ResetDash);
+	}
+
+	Super::EndPlay(EndPlayReason);
+
 }
 
 void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
@@ -472,6 +498,11 @@ void UPS_PlayerCameraComponent::CreatePostProcessMaterial(UMaterialInterface* co
 	}
 }
 
+void UPS_PlayerCameraComponent::ResetDash()
+{
+	TriggerDash(false);
+}
+
 void UPS_PlayerCameraComponent::InitPostProcess()
 {
 	if(!IsValid(GetWorld())) return;
@@ -567,12 +598,8 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 
 	UE_LOG(LogTemp, Error, TEXT("%S :: bActivate %i"),__FUNCTION__, bActivate);
 
-	//Blend PostProcess
-	if(_WeightedBlendableArray.IsValidIndex(5)) _WeightedBlendableArray[5].Weight = bActivate ? 1.0f : 0.0f;
-	UpdateWeightedBlendPostProcess();
-
-	//Desactivation
-	if(!UPSFl::IsDilatedRealTimeTimerActive(_DashTimerHandle))
+	//Auto Desactivation
+	if(bActivate)
 	{
 		FTimerDelegate dash_TimerDelegate;
 		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::TriggerDash, false);
@@ -581,8 +608,11 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 	else
 	{
 		UPSFl::ClearDilatedRealTimeTimer(_DashTimerHandle);
-		return;
 	}
+
+	//Blend PostProcess
+	if(_WeightedBlendableArray.IsValidIndex(5)) _WeightedBlendableArray[5].Weight = bActivate ? 1.0f : 0.0f;
+	UpdateWeightedBlendPostProcess();
 
 	//Set mat params
 	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();

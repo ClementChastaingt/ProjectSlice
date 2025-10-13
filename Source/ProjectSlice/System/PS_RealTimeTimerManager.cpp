@@ -53,8 +53,9 @@ void UPS_RealTimeTimerManager::TickTimers(UWorld* World)
 	const double CurrentRealTime = World->GetRealTimeSeconds();
 
 	TArray<FGuid> ToRemove;
-
-	for (auto& Pair : Timers)
+	TMap<FGuid, TSharedPtr<FRealTimeTimer>> timersToCheck = Timers;
+	
+	for (auto& Pair : timersToCheck)
 	{
 		TSharedPtr<FRealTimeTimer> Timer = Pair.Value;
 		if (!Timer.IsValid() || !Timer->bActive) continue;
