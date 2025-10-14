@@ -882,7 +882,7 @@ void UPS_ParkourComponent::OnDash()
 	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
 
 	//Trigger CameraShake
-	//TODO ::  check if not bugguy in slowmo
+	//TODO :: check if not buggy in slowmo (spoiler YES)
 	//_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::DASH, 1.0f);
 
 	//Stop Walk feedback on dash :: Unusefull
