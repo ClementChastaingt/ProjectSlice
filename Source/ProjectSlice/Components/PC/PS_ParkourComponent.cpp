@@ -797,7 +797,11 @@ void UPS_ParkourComponent::OnDash()
 	
 	if( bIsLedging || bIsMantling || bIsCrouched) return;
 	
-	if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle)) return;
+	if(UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%S :: IsDilatedRealTimeTimerActive "),__FUNCTION__);
+		return;
+	}
 	
 	if(_bIsWallRunning)
 	{
@@ -857,46 +861,61 @@ void UPS_ParkourComponent::OnDash()
 	//Trigger PostProcess Feedback
 	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(true);
 	
-	if(bDebugDash)UE_LOG(LogTemp, Log, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
+	if(bDebugDash) UE_LOG(LogTemp, Log, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
 	
 	//Reset
 	FTimerDelegate dashReset_TimerDelegate;
 	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
 	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _DashResetTimerHandle, dashReset_TimerDelegate, DashDuration, false);
 	
+	if(bDebugDash) 
+	{
+		UE_LOG(LogTemp, Log, TEXT("%S :: Dash timer created, handle valid = %d, timer active = %d"), 
+			__FUNCTION__, 
+			_DashResetTimerHandle.IsValid(),
+			UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle));
+	}
+
+	//Cooldown
 	// FTimerDelegate dashCooldown_TimerDelegate;
 	// dashCooldown_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
 	// GetWorld()->GetTimerManager().SetTimer(_DashCooldownTimerHandle, dashCooldown_TimerDelegate, DashCooldown, false);
 
 	//Trigger CameraShake
-	_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::DASH, 1.0f);
+	//TODO ::  check if not bugguy in slowmo
+	//_PlayerCharacter->GetFirstPersonCameraComponent()->ShakeCamera(EScreenShakeType::DASH, 1.0f);
 
-	//Stop Walk feedback on dash
-	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
-		_PlayerCharacter->GetProceduralAnimComponent()->StopWalkingAnim();
+	//Stop Walk feedback on dash :: Unusefull
+	/*if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+		_PlayerCharacter->GetProceduralAnimComponent()->StopWalkingAnim();*/
 
 	//Activate dash and broadcast del
 	_bIsDashing = true;
+
+	//Callback
 	OnDashEvent.Broadcast();
 }
 
 void UPS_ParkourComponent::ResetDash()
 {
-	if(bDebugDash)UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	if(bDebugDash) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	_PlayerCharacter->GetCharacterMovement()->GroundFriction = _DefaulGroundFriction;
 
 	_bIsDashing = false;
 
 	//Reset timer
-	UPSFl::ClearDilatedRealTimeTimer(_DashResetTimerHandle);	
+	UPSFl::ClearDilatedRealTimeTimer(_DashResetTimerHandle);
 
-	//Restart walk 
-	if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
-	{
-		_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnimWithDelay(0.2);
-		//_PlayerCharacter->GetProceduralAnimComponent()->ThrowFootstep();
-	}
+	//Restart walk :: Unusefull
+	// if(IsValid(_PlayerCharacter->GetProceduralAnimComponent()))
+	// {
+	// 	//_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnimWithDelay(0.2);
+	// 	//_PlayerCharacter->GetProceduralAnimComponent()->StartWalkingAnim();
+	// 	//_PlayerCharacter->GetProceduralAnimComponent()->ThrowFootstep();
+	// }
+
+	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(false);
 
 	OnResetDashEvent.Broadcast();
 }

@@ -130,16 +130,36 @@ void UPSFl::SetDilatedRealTimeTimer(
 	float CustomDilation
 )
 {
-	if (!WorldContextObject) return;
+	if (!WorldContextObject) 
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: WorldContextObject is null"));
+		return;
+	}
+    
 	UWorld* World = WorldContextObject->GetWorld();
-	if (!IsValid(World)) return;
+	if (!IsValid(World)) 
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: World is invalid"));
+		return;
+	}
+
+	if (!InDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: Delegate is not bound"));
+		return;
+	}
 
 	UPS_RealTimeTimerManager& Manager = UPS_RealTimeTimerManager::Get();
 
 	// Supprimer tout ancien timer lié à ce handle
-	if (Manager.IsTimerActive(InOutHandle))
+	if (InOutHandle.IsValid())
 	{
-		ClearDilatedRealTimeTimer(InOutHandle);
+		// Supprimer l'ancien timer du Manager
+		if (const FGuid* ExistingGuid = Manager.HandleToGuidMap.Find(InOutHandle))
+		{
+			Manager.Timers.Remove(*ExistingGuid);
+			Manager.HandleToGuidMap.Remove(InOutHandle);
+		}
 	}
 
 	// Démarre un nouveau timer
@@ -148,9 +168,9 @@ void UPSFl::SetDilatedRealTimeTimer(
 
 void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
 {
+	if (!InOutHandle.IsValid()) return;
+	
 	UPS_RealTimeTimerManager::Get().ClearTimer(InOutHandle);
-
-	InOutHandle.Invalidate();
 }
 
 bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)

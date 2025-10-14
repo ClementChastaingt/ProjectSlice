@@ -237,10 +237,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|PostProcess|Dash",meta=(UIMin="0", ClampMin="0", ForceUnits="s"))
 	float DashDuration = 0.1f;
-
-	UFUNCTION()
-	void ResetDash();
-			
+	
 	UFUNCTION()
 	void InitPostProcess();
 
@@ -290,10 +287,6 @@ private:
 	
 	UPROPERTY(Transient)
 	float _DashStartTimestamp;
-
-	UPROPERTY()
-	FTimerHandle _DashTimerHandle = FTimerHandle();
-	
 
 #pragma region Glasses
 	//------------------

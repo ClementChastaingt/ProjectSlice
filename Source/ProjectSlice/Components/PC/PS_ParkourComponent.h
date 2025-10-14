@@ -547,8 +547,8 @@ protected:
 	float DashGroundFriction = 10.0f;
 
 private:
-	UPROPERTY()
-	FTimerHandle _DashResetTimerHandle = FTimerHandle();
+	UPROPERTY(Transient)
+	FTimerHandle _DashResetTimerHandle;
 
 	UPROPERTY(Transient)
 	bool _bIsDashing;

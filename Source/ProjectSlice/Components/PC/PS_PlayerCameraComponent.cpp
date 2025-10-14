@@ -23,12 +23,14 @@ UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 	SetWorldShakeOverrided(EScreenShakeType::IMPACT);
 }
 
-void UPS_PlayerCameraComponent::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
+#if WITH_EDITOR
+	void UPS_PlayerCameraComponent::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+	{
+		Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	SetWorldShakeOverrided(EScreenShakeType::IMPACT);
-}
+		SetWorldShakeOverrided(EScreenShakeType::IMPACT);
+	}
+#endif
 
 void UPS_PlayerCameraComponent::BeginPlay()
 {
@@ -49,12 +51,6 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
 	}
-
-	if(IsValid(_PlayerCharacter->GetParkourComponent()))
-	{
-		_PlayerCharacter->GetParkourComponent()->OnResetDashEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::ResetDash);
-	}
-
 	
 
 	InitPostProcess();
@@ -74,11 +70,6 @@ void UPS_PlayerCameraComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
 		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.RemoveDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
-	}
-
-	if(IsValid(_PlayerCharacter->GetParkourComponent()))
-	{
-		_PlayerCharacter->GetParkourComponent()->OnResetDashEvent.RemoveDynamic(this, &UPS_PlayerCameraComponent::ResetDash);
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -498,11 +489,6 @@ void UPS_PlayerCameraComponent::CreatePostProcessMaterial(UMaterialInterface* co
 	}
 }
 
-void UPS_PlayerCameraComponent::ResetDash()
-{
-	TriggerDash(false);
-}
-
 void UPS_PlayerCameraComponent::InitPostProcess()
 {
 	if(!IsValid(GetWorld())) return;
@@ -579,10 +565,12 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 
 void UPS_PlayerCameraComponent::DashTick() const
 {
-	if(UPSFl::IsDilatedRealTimeTimerActive(_DashTimerHandle) && IsValid(_DashMatInst))
+	if(IsValid(_DashMatInst))
 	{
 		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
-		_DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
+		
+		if(alpha >= 1) return;
+	  	_DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
 	}
 }
 
@@ -596,19 +584,7 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 {
 	if(!IsValid(_DashMatInst) || !IsValid(GetWorld())) return;
 
-	UE_LOG(LogTemp, Error, TEXT("%S :: bActivate %i"),__FUNCTION__, bActivate);
-
-	//Auto Desactivation
-	if(bActivate)
-	{
-		FTimerDelegate dash_TimerDelegate;
-		dash_TimerDelegate.BindUObject(this, &UPS_PlayerCameraComponent::TriggerDash, false);
-		UPSFl::SetDilatedRealTimeTimer(GetWorld(),_DashTimerHandle, dash_TimerDelegate, DashDuration, false);
-	}
-	else
-	{
-		UPSFl::ClearDilatedRealTimeTimer(_DashTimerHandle);
-	}
+	if (bDebugPostProcess) UE_LOG(LogTemp, Log, TEXT("%S :: bActivate %i"),__FUNCTION__, bActivate);
 
 	//Blend PostProcess
 	if(_WeightedBlendableArray.IsValidIndex(5)) _WeightedBlendableArray[5].Weight = bActivate ? 1.0f : 0.0f;

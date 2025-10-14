@@ -26,10 +26,31 @@ void UPS_RealTimeTimerManager::StartTicking(UWorld* World)
 FGuid UPS_RealTimeTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& InDelegate, float InRate, bool bInLoop, float InFirstDelay, float CustomDilation)
 {
 	UWorld* World = GWorld;
-	if (!IsValid(World)) return FGuid();
+	if (!IsValid(World)) 
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetTimer: GWorld is invalid"));
+		return FGuid();
+	}
+
+	if (!InDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Error, TEXT("SetTimer: Delegate is not bound"));
+		return FGuid();
+	}
 
 	StartTicking(World);
 
+	// Si le handle existe déjà, nettoyer l'ancien mapping
+	if (OutHandle.IsValid())
+	{
+		if (FGuid* ExistingGuid = HandleToGuidMap.Find(OutHandle))
+		{
+			Timers.Remove(*ExistingGuid);
+			HandleToGuidMap.Remove(OutHandle);
+			UE_LOG(LogTemp, Log, TEXT("SetTimer: Cleaned existing timer for handle"));
+		}
+	}
+	
 	FGuid NewGuid = FGuid::NewGuid();
 	TSharedPtr<FRealTimeTimer> NewTimer = MakeShared<FRealTimeTimer>();
 	NewTimer->Delegate = MakeShared<FTimerDelegate>(InDelegate);
@@ -42,6 +63,8 @@ FGuid UPS_RealTimeTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDe
 
 	Timers.Add(NewGuid, NewTimer);
 	HandleToGuidMap.Add(OutHandle, NewGuid);
+	
+	UE_LOG(LogTemp, Log, TEXT("SetTimer: Created timer with GUID %s, EndTime: %f"), *NewGuid.ToString(), NewTimer->EndTime);
 
 	return NewGuid;
 }
@@ -94,6 +117,12 @@ void UPS_RealTimeTimerManager::TickTimers(UWorld* World)
 
 void UPS_RealTimeTimerManager::ClearTimer(FTimerHandle& InHandle)
 {
+	if (!InHandle.IsValid()) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ClearTimer: Handle is already invalid"));
+		return;
+	}
+	
 	if (const FGuid* FoundGuid = HandleToGuidMap.Find(InHandle))
 	{
 		if (TSharedPtr<FRealTimeTimer>* FoundTimer = Timers.Find(*FoundGuid))
@@ -103,8 +132,13 @@ void UPS_RealTimeTimerManager::ClearTimer(FTimerHandle& InHandle)
 			Timers.Remove(*FoundGuid);
 		}
 		HandleToGuidMap.Remove(InHandle);
-		InHandle.Invalidate();
 	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ClearTimer: No GUID found for handle"));
+	}
+
+	InHandle.Invalidate();
 }
 
 bool UPS_RealTimeTimerManager::IsTimerActive(const FTimerHandle& InHandle) const
