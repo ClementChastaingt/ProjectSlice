@@ -862,6 +862,12 @@ void UPS_ParkourComponent::OnDash()
 	_PlayerCharacter->GetFirstPersonCameraComponent()->TriggerDash(true);
 	
 	if(bDebugDash) UE_LOG(LogTemp, Log, TEXT("%S :: dashType: %s, dashVel %s, dashDir %s"), __FUNCTION__, *UEnum::GetValueAsString(DashType), *dashVel.ToString(), *dashDir.ToString());
+
+	if(bDebugDash) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%S :: BEFORE SetTimer - handle valid = %d"), 
+			__FUNCTION__, _DashResetTimerHandle.IsValid());
+	}
 	
 	//Reset
 	FTimerDelegate dashReset_TimerDelegate;
@@ -870,11 +876,12 @@ void UPS_ParkourComponent::OnDash()
 	
 	if(bDebugDash) 
 	{
-		UE_LOG(LogTemp, Log, TEXT("%S :: Dash timer created, handle valid = %d, timer active = %d"), 
+		UE_LOG(LogTemp, Warning, TEXT("%S :: AFTER SetTimer - handle valid = %d, timer active = %d"), 
 			__FUNCTION__, 
 			_DashResetTimerHandle.IsValid(),
 			UPSFl::IsDilatedRealTimeTimerActive(_DashResetTimerHandle));
 	}
+    
 
 	//Cooldown
 	// FTimerDelegate dashCooldown_TimerDelegate;

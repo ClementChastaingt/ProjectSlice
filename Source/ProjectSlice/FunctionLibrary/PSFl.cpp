@@ -3,19 +3,14 @@
 #include "CollisionQueryParams.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
-#include "MeshDescriptionToDynamicMesh.h"
 #include "GameFramework/Actor.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "ProjectSlice/Components/PC/PS_PlayerCameraComponent.h"
 
 #include "DynamicMesh/MeshIndexUtil.h"
-#include "MeshQueries.h"
-#include "DynamicMesh/DynamicMeshAABBTree3.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "Parameterization/MeshDijkstra.h"
-#include "ProjectSlice/System/PS_RealTimeTimerManager.h"
+
+#include "ProjectSlice/System/PS_TimerSubsystem.h"
 
 class UProceduralMeshComponent;
 struct FProcMeshTangent;
@@ -58,7 +53,7 @@ FVector UPSFl::ClampVelocity(FVector& startVelocity, FVector currentVelocity, co
 
 float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bDebug)
 {
-	if(!IsValid(comp) || comp->GetMobility() != EComponentMobility::Movable) return 1.0f;
+	if(!IsValid(comp) || comp->GetMobility() != EComponentMobility::Movable || !comp->IsSimulatingPhysics()) return 100.0f;
 	
 	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
 
@@ -66,7 +61,6 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s output %f"),__FUNCTION__, *comp->GetName(),output);
 	
 	return output ;
-
 }
 
 //------------------
@@ -120,64 +114,92 @@ void UPSFl::DelayRealTime(const UObject* WorldContextObject, float Duration, FLa
 // Custom Real-Time Timer system (with dilation)
 
 void UPSFl::SetDilatedRealTimeTimer(
-	UObject* WorldContextObject,
-	UPARAM(ref)
-	FTimerHandle& InOutHandle,
-	const FTimerDelegate& InDelegate,
-	float InRate,
-	bool bLoop,
-	float InFirstDelay,
-	float CustomDilation
-)
+    UObject* WorldContextObject,
+    UPARAM(ref) FTimerHandle& InOutHandle,
+    const FTimerDelegate& InDelegate,
+    float InRate,
+    bool bLoop,
+    float InFirstDelay,
+    float CustomDilation)
 {
-	if (!WorldContextObject) 
-	{
-		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: WorldContextObject is null"));
-		return;
-	}
+    if (!WorldContextObject) 
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: WorldContextObject is null"));
+        return;
+    }
     
-	UWorld* World = WorldContextObject->GetWorld();
-	if (!IsValid(World)) 
-	{
-		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: World is invalid"));
-		return;
-	}
+    UWorld* World = WorldContextObject->GetWorld();
+    if (!IsValid(World)) 
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: World is invalid"));
+        return;
+    }
 
-	if (!InDelegate.IsBound())
-	{
-		UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: Delegate is not bound"));
-		return;
-	}
+    if (!InDelegate.IsBound())
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: Delegate is not bound"));
+        return;
+    }
 
-	UPS_RealTimeTimerManager& Manager = UPS_RealTimeTimerManager::Get();
+    UGameInstance* GameInstance = World->GetGameInstance();
+    if (!GameInstance)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: GameInstance not found!"));
+        return;
+    }
 
-	// Supprimer tout ancien timer lié à ce handle
-	if (InOutHandle.IsValid())
-	{
-		// Supprimer l'ancien timer du Manager
-		if (const FGuid* ExistingGuid = Manager.HandleToGuidMap.Find(InOutHandle))
-		{
-			Manager.Timers.Remove(*ExistingGuid);
-			Manager.HandleToGuidMap.Remove(InOutHandle);
-		}
-	}
+    UPS_TimerSubsystem* TimerSubsystem = GameInstance->GetSubsystem<UPS_TimerSubsystem>();
+    if (!TimerSubsystem)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: TimerSubsystem not found!"));
+        return;
+    }
 
-	// Démarre un nouveau timer
-	Manager.SetTimer(InOutHandle, InDelegate, InRate, bLoop, InFirstDelay, CustomDilation);
+    if (InOutHandle.IsValid())
+    {
+        TimerSubsystem->ClearTimer(InOutHandle);
+    }
+
+    InOutHandle = TimerSubsystem->SetTimerWithHandle(InDelegate, InRate, bLoop, InFirstDelay, CustomDilation);
+    
+    UE_LOG(LogTemp, Warning, TEXT("SetDilatedRealTimeTimer: Handle valid = %d"), InOutHandle.IsValid());
 }
 
 void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
 {
-	if (!InOutHandle.IsValid()) return;
-	
-	UPS_RealTimeTimerManager::Get().ClearTimer(InOutHandle);
+    if (!InOutHandle.IsValid()) return;
+
+    if (UWorld* World = GWorld)
+    {
+        if (UGameInstance* GameInstance = World->GetGameInstance())
+        {
+            if (UPS_TimerSubsystem* TimerSubsystem = GameInstance->GetSubsystem<UPS_TimerSubsystem>())
+            {
+                TimerSubsystem->ClearTimer(InOutHandle);
+                return;
+            }
+        }
+    }
+    
+    UE_LOG(LogTemp, Warning, TEXT("ClearDilatedRealTimeTimer: Could not find TimerSubsystem"));
 }
 
 bool UPSFl::IsDilatedRealTimeTimerActive(const FTimerHandle& InOutHandle)
 {
-	if (!InOutHandle.IsValid()) return false;
-	
-	return UPS_RealTimeTimerManager::Get().IsTimerActive(InOutHandle);
+    if (!InOutHandle.IsValid()) return false;
+
+    if (UWorld* World = GWorld)
+    {
+        if (UGameInstance* GameInstance = World->GetGameInstance())
+        {
+            if (UPS_TimerSubsystem* TimerSubsystem = GameInstance->GetSubsystem<UPS_TimerSubsystem>())
+            {
+                return TimerSubsystem->IsTimerActive(InOutHandle);
+            }
+        }
+    }
+    
+    return false;
 }
 
 //------------------
@@ -653,7 +675,7 @@ void UPSFl::StartCooldown(UWorld* World, float coolDownDuration,UPARAM(ref) FTim
 	if (!World) return;
 	
 	FTimerDelegate timerDelegate;
-	UPSFl::SetDilatedRealTimeTimer(World, timerHandler, timerDelegate, coolDownDuration, false, -1.f, customDilation);
+	SetDilatedRealTimeTimer(World, timerHandler, timerDelegate, coolDownDuration, false, -1.f, customDilation);
 
 }
 
