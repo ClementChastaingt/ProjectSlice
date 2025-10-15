@@ -85,6 +85,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate_Bool OnSlowmoTransitionEndEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPSDelegate OnStartSlowmoEvent;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnPSDelegate OnStopSlowmoEvent;

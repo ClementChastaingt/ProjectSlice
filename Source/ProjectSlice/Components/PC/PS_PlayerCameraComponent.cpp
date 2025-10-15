@@ -47,25 +47,28 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	_DefaultCameraRot = _PlayerController->GetControlRotation().Clamp();
 
 	//Bind callback
-	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	UPS_SlowmoComponent* slowmoComp = _PlayerCharacter->GetSlowmoComponent();
+	if(IsValid(slowmoComp))
 	{
-		_PlayerCharacter->GetSlowmoComponent()->OnStopSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
+		// ✅ S'abonner aux changements de slowmo
+		slowmoComp->OnStartSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStartSlowmoEventReceiver);
+		slowmoComp->OnStopSlowmoEvent.AddUniqueDynamic(this, &UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver);
 	}
-	
-
+    
 	InitPostProcess();
 
 	//Start custom tick
 	_LastTickTime = GetWorld()->GetRealTimeSeconds();
-	FTimerHandle handler;
 	FTimerDelegate delegate;
 	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(),handler, delegate,0.0f,true, -1.f,1.f);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(),_CustomTickTimerHandler, delegate,0.025f,true,-1.0f, 1.0f);
 }
 
 void UPS_PlayerCameraComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
+	// Clear custom tick timer
+	UPSFl::ClearDilatedRealTimeTimer(_CustomTickTimerHandler);
+	
 	//Bind callback
 	if(IsValid(_PlayerCharacter->GetSlowmoComponent()))
 	{
@@ -82,6 +85,33 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, enum ELevelTick T
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	SlowmoTick();
+}
+
+void UPS_PlayerCameraComponent::StartCustomTick()
+{
+	if (!IsValid(GetWorld())) return;
+
+	// Clear l'ancien timer si existe
+	if (_CustomTickTimerHandler.IsValid())
+	{
+		UPSFl::ClearDilatedRealTimeTimer(_CustomTickTimerHandler);
+	}
+
+	// Récupérer la dilation actuelle
+	float dilation = 1.0f;
+	if (IsValid(_PlayerCharacter) && IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	{
+		dilation = _PlayerCharacter->GetSlowmoComponent()->GetCurrentCustomPlayerTimeDilation();
+	}
+
+	_LastTickTime = GetWorld()->GetRealTimeSeconds();
+	FTimerDelegate delegate;
+	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
+    
+	// ✅ Utiliser la dilation actuelle
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _CustomTickTimerHandler, delegate, 0.025f, true, -1.0f, dilation);
+    
+	UE_LOG(LogTemp, Warning, TEXT("StartCustomTick: Dilation = %f"), dilation);
 }
 
 void UPS_PlayerCameraComponent::CustomTick()
@@ -548,6 +578,12 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 	}	
 }
 
+void UPS_PlayerCameraComponent::OnStartSlowmoEventReceiver()
+{
+	// Recréer le timer avec la nouvelle dilation
+	StartCustomTick();
+}
+
 void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 {
 	if(!IsValid(_SlowmoMatInst)) return;
@@ -561,6 +597,8 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
 	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
 	_SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);
+
+	StartCustomTick();
 }
 
 void UPS_PlayerCameraComponent::DashTick() const

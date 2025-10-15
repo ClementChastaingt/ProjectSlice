@@ -87,6 +87,8 @@ protected:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
+	void StartCustomTick();
+	
 	void CustomTick();
 
 protected:
@@ -249,6 +251,9 @@ protected:
 	
 	UFUNCTION()
 	void SlowmoTick();
+
+	UFUNCTION()
+	void OnStartSlowmoEventReceiver();
 
 	UFUNCTION()
 	void OnStopSlowmoEventReceiver();

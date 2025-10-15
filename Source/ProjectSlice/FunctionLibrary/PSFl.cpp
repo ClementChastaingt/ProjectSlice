@@ -57,7 +57,7 @@ float UPSFl::GetObjectUnifiedMass(UPrimitiveComponent* const comp, const bool bD
 	
 	UPhysicalMaterial* physMat = comp->BodyInstance.GetSimplePhysicalMaterial();
 
-	const float output = ((comp->GetMass() * comp->GetMassScale() * (IsValid(physMat) ? physMat->Density : 1.0f)) / comp->GetComponentScale().Length());
+	const float output = ((comp->GetMass() * comp->GetMassScale()) * ((IsValid(physMat) ? physMat->Density : 1.0f) / comp->GetComponentScale().Length()));
 	if(bDebug) UE_LOG(LogTemp, Log, TEXT("%S :: %s output %f"),__FUNCTION__, *comp->GetName(),output);
 	
 	return output ;
@@ -144,14 +144,14 @@ void UPSFl::SetDilatedRealTimeTimer(
     UGameInstance* GameInstance = World->GetGameInstance();
     if (!GameInstance)
     {
-        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: GameInstance not found!"));
+        UE_LOG(LogTemp, Warning, TEXT("SetDilatedRealTimeTimer: GameInstance not found!"));
         return;
     }
 
     UPS_TimerSubsystem* TimerSubsystem = GameInstance->GetSubsystem<UPS_TimerSubsystem>();
     if (!TimerSubsystem)
     {
-        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: TimerSubsystem not found!"));
+        UE_LOG(LogTemp, Warning, TEXT("SetDilatedRealTimeTimer: TimerSubsystem not found!"));
         return;
     }
 
@@ -162,7 +162,7 @@ void UPSFl::SetDilatedRealTimeTimer(
 
     InOutHandle = TimerSubsystem->SetTimerWithHandle(InDelegate, InRate, bLoop, InFirstDelay, CustomDilation);
     
-    UE_LOG(LogTemp, Warning, TEXT("SetDilatedRealTimeTimer: Handle valid = %d"), InOutHandle.IsValid());
+    //UE_LOG(LogTemp, Warning, TEXT("SetDilatedRealTimeTimer: Handle valid = %d"), InOutHandle.IsValid());
 }
 
 void UPSFl::ClearDilatedRealTimeTimer(FTimerHandle& InOutHandle)
