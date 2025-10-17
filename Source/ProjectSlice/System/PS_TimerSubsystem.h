@@ -19,7 +19,7 @@ struct FRealTimeTimer
 };
 
 UCLASS()
-class PROJECTSLICE_API UPS_TimerSubsystem : public UGameInstanceSubsystem
+class PROJECTSLICE_API UPS_TimerSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
 {
 	GENERATED_BODY()
 
@@ -42,7 +42,17 @@ protected:
 
 private:
 	void TickTimers();
-
-	FTimerHandle TickHandle;
+	
 	bool bIsTicking = false;
+
+#pragma region IntrerfaceTickableGameObject
+	//------------------
+
+	virtual void Tick(float DeltaTime) override;
+	virtual bool IsTickable() const override { return bIsTicking; }
+	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UPS_TimerSubsystem, STATGROUP_Tickables); }
+	virtual UWorld* GetTickableGameObjectWorld() const override { return GetWorld(); }
+
+	//------------------
+#pragma endregion IntrerfaceTickableGameObject
 };

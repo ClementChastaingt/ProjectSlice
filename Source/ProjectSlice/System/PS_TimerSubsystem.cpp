@@ -5,34 +5,35 @@ void UPS_TimerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
     
-    if (bDebug) UE_LOG(LogTemp, Error, TEXT("========== PS_TimerSubsystem INITIALIZED =========="));
+    if (bDebug)
+    {
+        UE_LOG(LogTemp, Error, TEXT("========== PS_TimerSubsystem INITIALIZED =========="));
+        UE_LOG(LogTemp, Error, TEXT("PS_TimerSubsystem: Using FTickableGameObject for RealTime ticking"));
+    }
     
     bIsTicking = true;
     
     FTimerDelegate TickDelegate;
     TickDelegate.BindUObject(this, &UPS_TimerSubsystem::TickTimers);
     
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().SetTimer(TickHandle, TickDelegate, 0.01f, true);
-       if (bDebug) UE_LOG(LogTemp, Error, TEXT("PS_TimerSubsystem: Tick timer started"));
-    }
 }
 
 void UPS_TimerSubsystem::Deinitialize()
 {
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(TickHandle);
-    }
+    bIsTicking = false;
     
     Timers.Empty();
     HandleToGuidMap.Empty();
-    bIsTicking = false;
     
     if (bDebug) UE_LOG(LogTemp, Warning, TEXT("PS_TimerSubsystem: Deinitialized"));
     
     Super::Deinitialize();
+}
+
+
+void UPS_TimerSubsystem::Tick(float DeltaTime)
+{
+    TickTimers();
 }
 
 FTimerHandle UPS_TimerSubsystem::SetTimerWithHandle(const FTimerDelegate& InDelegate, float InRate, bool bInLoop, float InFirstDelay, float CustomDilation)

@@ -12,6 +12,9 @@
 #include "ProjectSlice/Data/PS_Constants.h"
 #include "ProjectSlice/FunctionLibrary/PSFl.h"
 #include "ProjectSlice/FunctionLibrary/PSFL_CameraShake.h"
+#include "ProjectSlice/System/PS_TimerSubsystem.h"
+
+class UPS_TimerSubsystem;
 
 UPS_PlayerCameraComponent::UPS_PlayerCameraComponent()
 {
@@ -58,10 +61,7 @@ void UPS_PlayerCameraComponent::BeginPlay()
 	InitPostProcess();
 
 	//Start custom tick
-	_LastTickTime = GetWorld()->GetRealTimeSeconds();
-	FTimerDelegate delegate;
-	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(),_CustomTickTimerHandler, delegate,0.025f,true,-1.0f, 1.0f);
+	StartCustomTick();
 }
 
 void UPS_PlayerCameraComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -90,28 +90,35 @@ void UPS_PlayerCameraComponent::TickComponent(float DeltaTime, enum ELevelTick T
 void UPS_PlayerCameraComponent::StartCustomTick()
 {
 	if (!IsValid(GetWorld())) return;
+	
+	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 
-	// Clear l'ancien timer si existe
-	if (_CustomTickTimerHandler.IsValid())
+	UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+	if (!GameInstance)
 	{
-		UPSFl::ClearDilatedRealTimeTimer(_CustomTickTimerHandler);
+		UE_LOG(LogTemp, Error, TEXT("StartCustomTick: GameInstance NOT FOUND!"));
+		return;
 	}
 
-	// Récupérer la dilation actuelle
-	float dilation = 1.0f;
-	if (IsValid(_PlayerCharacter) && IsValid(_PlayerCharacter->GetSlowmoComponent()))
+	UPS_TimerSubsystem* TimerSubsystem = GameInstance->GetSubsystem<UPS_TimerSubsystem>();
+	if (!TimerSubsystem)
 	{
-		dilation = _PlayerCharacter->GetSlowmoComponent()->GetCurrentCustomPlayerTimeDilation();
+		UE_LOG(LogTemp, Error, TEXT("StartCustomTick: TimerSubsystem NOT FOUND!"));
+		return;
 	}
-
+    
+	UE_LOG(LogTemp, Error, TEXT("StartCustomTick: TimerSubsystem FOUND! Active timers: %d"), 
+		TimerSubsystem->Timers.Num());
+    
+	if (bDebug) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
+	
 	_LastTickTime = GetWorld()->GetRealTimeSeconds();
 	FTimerDelegate delegate;
 	delegate.BindUObject(this, &UPS_PlayerCameraComponent::CustomTick);
-    
-	// ✅ Utiliser la dilation actuelle
-	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _CustomTickTimerHandler, delegate, 0.025f, true, -1.0f, dilation);
-    
-	UE_LOG(LogTemp, Warning, TEXT("StartCustomTick: Dilation = %f"), dilation);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _CustomTickTimerHandler, delegate, 0.025f, true, -1.0f, 1.0f);
+	
+	UE_LOG(LogTemp, Error, TEXT("StartCustomTick: Timer created! Handle valid = %d"), 
+		_CustomTickTimerHandler.IsValid());
 }
 
 void UPS_PlayerCameraComponent::CustomTick()
@@ -128,7 +135,7 @@ void UPS_PlayerCameraComponent::CustomTick()
 	DashTick();
 	GlassesTick(DeltaTime);
 	
-	FieldOfViewTick();
+	FieldOfViewTick(DeltaTime);
 	
 	//-----CameraRollTilt smooth reset-----                                                                
 	CameraRollTilt(DeltaTime);                    
@@ -144,7 +151,8 @@ void UPS_PlayerCameraComponent::SetupFOVInterp(const float targetFOV, const floa
 	StartFOV = FieldOfView;
 	TargetFOV = targetFOV;
 	
-	StartFOVInterpTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_StartFOVInterpTimestamp = GetWorld()->GetRealTimeSeconds();
+	_CurrentFOVInterpTime = 0.0f;
 	FOVIntertpDuration = duration;
 	FOVIntertpCurve = interCurve;
 	
@@ -153,29 +161,30 @@ void UPS_PlayerCameraComponent::SetupFOVInterp(const float targetFOV, const floa
 	if(bDebug) UE_LOG(LogTemp, Warning, TEXT("%S :: StartFOV:%f, TargetFOV:%f "), __FUNCTION__, StartFOV, TargetFOV);
 }
 
-void UPS_PlayerCameraComponent::FieldOfViewTick()
+void UPS_PlayerCameraComponent::FieldOfViewTick(const float deltaTime)
 {
-	if(bFieldOfViewInterpChange)
+	if(!bFieldOfViewInterpChange) return;
+
+	if (!IsValid(GetWorld())) return;
+
+	const float alpha = UKismetMathLibrary::MapRangeClamped(_CurrentFOVInterpTime, _StartFOVInterpTimestamp,
+		_StartFOVInterpTimestamp + FOVIntertpDuration, 0.0f, 1.0f);
+	
+	float curveAlpha = alpha;
+
+	if (IsValid(FOVIntertpCurve))
 	{
-		if(!IsValid(GetWorld())) return;
-		
-		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), StartFOVInterpTimestamp, StartFOVInterpTimestamp + FOVIntertpDuration, 0.0f, 1.0f);
-		float curveAlpha = alpha;
-
-		if(IsValid(FOVIntertpCurve))
-		{
-			curveAlpha = FOVIntertpCurve->GetFloatValue(alpha);
-		}
-		
-		SetFieldOfView(FMath::Lerp(StartFOV,TargetFOV,curveAlpha));
-		
-		if(alpha >= 1.0f)
-		{
-			bFieldOfViewInterpChange = false;
-			if(bDebug) UE_LOG(LogTemp, Warning, TEXT("StopFOVInterp"));
-		}
-
+		curveAlpha = FOVIntertpCurve->GetFloatValue(alpha);
 	}
+	SetFieldOfView(FMath::Lerp(StartFOV, TargetFOV, curveAlpha));
+
+	if (alpha >= 1.0f)
+	{
+		bFieldOfViewInterpChange = false;
+		if (bDebug) UE_LOG(LogTemp, Warning, TEXT("StopFOVInterp"));
+	}
+	
+	_CurrentFOVInterpTime += deltaTime;
 }
 
 //------------------
@@ -349,7 +358,7 @@ bool UPS_PlayerCameraComponent::StartCameraTilt(const ETiltType& tiltType, const
 	//Setup work var
 	_TargetTiltOrientation = targetOrientation;
 	_StartCameraRot = _PlayerController->GetControlRotation().Clamp();
-	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetRealTimeSeconds();
 	_bIsResetingCameraTilt = false;
 
 	//Setup roll map var
@@ -377,7 +386,7 @@ void UPS_PlayerCameraComponent::StopCameraTilt(const ETiltType& tiltType)
 	if (bDebugCameraTilt) UE_LOG(LogTemp, Log, TEXT("%S"), __FUNCTION__);
 	
 	_bIsResetingCameraTilt = true;
-	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetRealTimeSeconds();
 	
 	_bIsTilting = true;
 }
@@ -388,9 +397,8 @@ void UPS_PlayerCameraComponent::ForceUpdateTargetTilt()
 	
 	_TargetTiltOrientation = _TargetTiltOrientation * -1;
 	
-	_StartCameraTiltTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_StartCameraTiltTimestamp = GetWorld()->GetRealTimeSeconds();
 	_StartCameraRot = _PlayerController->GetControlRotation();
-
 }
 
 void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)                                                                                                                                                              
@@ -419,7 +427,7 @@ void UPS_PlayerCameraComponent::CameraRollTilt(const float& deltaTime)
 	                                                                                                                                                                                                                                            
 	//Alpha
 	float targetTiltTime = _StartCameraTiltTimestamp + (bHaveToUpdateTiltOrientation ? _CurrentCameraTiltRollParams.CameraTiltDuration / 2 : _CurrentCameraTiltRollParams.CameraTiltDuration);
-	const float alphaTilt = _CurrentCameraTiltRollParams.bUseDynTiltUpdating && !_bIsResetingCameraTilt? _AlphaTiltWeight : UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
+	const float alphaTilt = _CurrentCameraTiltRollParams.bUseDynTiltUpdating && !_bIsResetingCameraTilt? _AlphaTiltWeight : UKismetMathLibrary::MapRangeClamped(GetWorld()->GetRealTimeSeconds(), _StartCameraTiltTimestamp, targetTiltTime, 0,1);                                                                                                                
 	
 	//Interp                                                                                                                                                                                                                                    
 	float curveTiltAlpha = alphaTilt;                                                                                                                                                                                                  
@@ -580,8 +588,6 @@ void UPS_PlayerCameraComponent::SlowmoTick()
 
 void UPS_PlayerCameraComponent::OnStartSlowmoEventReceiver()
 {
-	// Recréer le timer avec la nouvelle dilation
-	StartCustomTick();
 }
 
 void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
@@ -597,15 +603,13 @@ void UPS_PlayerCameraComponent::OnStopSlowmoEventReceiver()
 	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaTime"),0.0f);
 	_SlowmoMatInst->SetScalarParameterValue(FName("DeltaBump"),0.0f);
 	_SlowmoMatInst->SetScalarParameterValue(FName("Intensity"),0.0f);
-
-	StartCustomTick();
 }
 
 void UPS_PlayerCameraComponent::DashTick() const
 {
 	if(IsValid(_DashMatInst))
 	{
-		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetAudioTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
+		const float alpha = UKismetMathLibrary::MapRangeClamped(GetWorld()->GetRealTimeSeconds(), _DashStartTimestamp, _DashStartTimestamp + DashDuration, 0.0f, 1.0f);
 		
 		if(alpha >= 1) return;
 	  	_DashMatInst->SetScalarParameterValue(FName("Density"), alpha * 5);
@@ -629,7 +633,7 @@ void UPS_PlayerCameraComponent::TriggerDash(const bool bActivate)
 	UpdateWeightedBlendPostProcess();
 
 	//Set mat params
-	_DashStartTimestamp = GetWorld()->GetAudioTimeSeconds();
+	_DashStartTimestamp = GetWorld()->GetRealTimeSeconds();
 }
 
 

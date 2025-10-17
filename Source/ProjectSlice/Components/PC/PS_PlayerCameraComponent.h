@@ -146,10 +146,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV",  meta = (UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0", Units = deg))
 	float TargetFOV = 60.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
-	float StartFOVInterpTimestamp = TNumericLimits<float>::Min();
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Status|General|FOV")
 	float FOVIntertpDuration = 1.0f;
 
@@ -157,10 +154,14 @@ protected:
 	UCurveFloat* FOVIntertpCurve = nullptr;
 	
 	UFUNCTION()
-	void FieldOfViewTick();
+	void FieldOfViewTick(float deltaTime);
 
 private:
-	//------------------
+	UPROPERTY(Transient)
+	float _StartFOVInterpTimestamp;
+	
+	UPROPERTY(Transient)
+	float _CurrentFOVInterpTime;
 
 #pragma endregion FOV
 
