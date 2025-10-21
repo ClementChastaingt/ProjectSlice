@@ -4,7 +4,6 @@
 #include "PS_ParkourComponent.h"
 
 #include "PS_PlayerCameraComponent.h"
-#include "Field/FieldSystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GeometryCollection/GeometryCollectionActor.h"
 #include "Kismet/GameplayStatics.h"
@@ -127,6 +126,16 @@ void UPS_ParkourComponent::ToggleObstacleLockConstraint(const AActor* const othe
 
 bool UPS_ParkourComponent::FindWallOrientationFromPlayer(int32& playerToWallOrientation)
 {
+	//Check vel to player orient when already wallrunning
+	const float dot = _PlayerCharacter->GetCapsuleVelocity().GetSafeNormal().Dot(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector());
+	//UE_LOG(LogTemp, Error, TEXT("%f find angle, %f dot, %i _bIsWallRunning"),UKismetMathLibrary::DegAcos(dot), dot, _bIsWallRunning);
+	if (UKismetMathLibrary::DegAcos(dot) > WallRunEnterMaxAngle && _bIsWallRunning)
+	{
+		StopWallRun();
+		return false;
+	}
+
+	//Trace hit
 	FHitResult outHitRight, outHitLeft;
 	const TArray<AActor*> actorsToIgnore= {_PlayerCharacter};
 	const float radius = 15.0f;
@@ -162,8 +171,8 @@ bool UPS_ParkourComponent::FindWallOrientationFromPlayer(int32& playerToWallOrie
 	}
 	else if(!hitRight && !hitLeft || playerToWallOrientation == 0)
 	{
-		if(bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: player facing the new wall, stop"), __FUNCTION__);
-		OnWallRunStop();
+		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: player facing the new wall, stop"), __FUNCTION__);
+		StopWallRun();
 		return false;
 	}
 	_WallRunSideHitResult = playerToWallOrientation < 0 ? outHitLeft : outHitRight;
@@ -217,7 +226,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 	else if(_PlayerToWallOrientation != playerToWallOrientation)
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Warning, TEXT("%S :: player facing the last wall, stop"), __FUNCTION__);
-		OnWallRunStop();
+		StopWallRun();
 		return;
 	}
 	_WallRunCameraTiltOrientation = _PlayerToWallOrientation;
@@ -260,7 +269,7 @@ void UPS_ParkourComponent::TryStartWallRun(AActor* const otherActor,const FHitRe
 
 }
 
-void UPS_ParkourComponent::OnWallRunStop()
+void UPS_ParkourComponent::StopWallRun()
 {
 	if(!_bIsWallRunning) return;
 
@@ -349,7 +358,7 @@ void UPS_ParkourComponent::WallRunTick(const float& deltaTime)
 	if(alphaWallRun >= 1 || verticalVel.IsNearlyZero(MinWallRunVelocityThreshold))
 	{
 		if(bDebugWallRun)UE_LOG(LogTemp, Log, TEXT("UTZParkourComp :: WallRun Stop by Velocity"));
-		OnWallRunStop();
+		StopWallRun();
 	}
 		
 	//Debug
@@ -369,7 +378,7 @@ void UPS_ParkourComponent::JumpOffWallRun()
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, FString::Printf(TEXT("WallRun Jump Off")));
 	}
 
-	OnWallRunStop();
+	StopWallRun();
 
 	FHitResult outHitFwd = _PlayerCharacter->GetWeaponComponent()->GetSightHitResult();
 	//const float angleSigthToWallBack = _PlayerCharacter->GetWeaponComponent()->GetSightMeshComponent()->GetForwardVector().Dot(WallRunDirection);
@@ -806,7 +815,7 @@ void UPS_ParkourComponent::OnDash()
 	if(_bIsWallRunning)
 	{
 		if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: StopWallRun"), __FUNCTION__);
-		OnWallRunStop();
+		StopWallRun();
 	}
 	
 	if(_bIsSliding)
@@ -1212,9 +1221,10 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	const TArray<AActor*> actorsToIgnore;
 	
 	FVector starLoc = _PlayerCharacter->GetActorLocation();
-	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (_PlayerCharacter->IsInAir() ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
-
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + _PlayerCharacter->GetCapsuleVelocity().GetSafeNormal() * 1000, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	//starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (_PlayerCharacter->IsInAir() ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
+	const FVector endLoc = starLoc + _PlayerCharacter->GetCapsuleVelocity().GetSafeNormal() * 500;
+	
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, endLoc, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 	//If don't block or block other exit
@@ -1249,7 +1259,6 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	}
 	
 	//Try start WallRun
-	UE_LOG(LogTemp, Error, TEXT("wallRun"));
 	TryStartWallRun(otherActor, outHit);
 	
 	//If can't parkour 
@@ -1277,7 +1286,7 @@ void UPS_ParkourComponent::OnParkourDetectorEndOverlapEventReceived(UPrimitiveCo
 	if(_bIsWallRunning && OverlappingComponents.IsEmpty())
 	{
 		if(bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("WallRun Stop by Wall end"));
-		OnWallRunStop();
+		StopWallRun();
 	}
 
 }

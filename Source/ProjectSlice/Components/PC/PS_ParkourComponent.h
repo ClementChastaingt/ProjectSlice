@@ -260,7 +260,7 @@ public:
 	void TryStartWallRun(AActor* otherActor, const FHitResult& fwdHit);
 
 	UFUNCTION()
-	void OnWallRunStop();
+	void StopWallRun();
 
 	UFUNCTION()
 	void JumpOffWallRun();
@@ -279,8 +279,14 @@ protected:
 	UFUNCTION()
 	void WallRunTick(const float& deltaTime);
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun force multiplicator"))
 	float WallRunSpeedBoost = 200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(ForceUnits="deg", UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun min angle, under player face the wall and stop chaining wallrun"))
+	float WallRunForwardViewAngleBlocked = 30.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(ForceUnits="deg", UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun fwd angle dead zone, forward actor to capsule vel angle"))
+	float WallRunEnterMaxAngle = 110.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
 	UCurveFloat* WallRunForceCurve = nullptr;
@@ -294,13 +300,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(ToolTip="Min velocity threshold to maintain WallRunning"))
 	float MinWallRunVelocityThreshold = 200.0f;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="cm/s", ToolTip="Fake input weight use when input was not pressed"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Input", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="cm/s", ToolTip="Fake input weight use when input was not pressed"))
 	float WallRunDefaultInputWeight = 0.8f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Force", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Fall", meta=(UIMin = 0.f, ClampMin = 0.f, ForceUnits="s", ToolTip="Time to WallRun for start falling, falling occur after gravity fall"))
 	float WallRunTimeToFall = 2.0f;
 		
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun gravity interpolation curve"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Fall", meta=(ToolTip="WallRun gravity interpolation curve"))
 	UCurveFloat* WallRunGravityCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Jump", meta=(UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun jump off force multiplicator "))
