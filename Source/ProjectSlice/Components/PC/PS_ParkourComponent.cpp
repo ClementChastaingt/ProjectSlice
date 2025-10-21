@@ -1206,7 +1206,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 
 	//If encounter Chaos system exit
 	if (otherActor->IsA(AGeometryCollectionActor::StaticClass()) || otherActor->IsA(AFieldSystemActor::StaticClass())) return;
-
+	
 	//Trace for get hit infos
 	FHitResult outHit;
 	const TArray<AActor*> actorsToIgnore;
@@ -1214,7 +1214,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	FVector starLoc = _PlayerCharacter->GetActorLocation();
 	starLoc.Z = (starLoc.Z - _PlayerCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + (_PlayerCharacter->IsInAir() ? 0.0f : _PlayerCharacter->GetCharacterMovement()->MaxStepHeight);
 
-	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + GetForwardVector() * 1000, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+	UKismetSystemLibrary::LineTraceSingle(GetWorld(), starLoc, starLoc + _PlayerCharacter->GetCapsuleVelocity().GetSafeNormal() * 1000, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false, actorsToIgnore, bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None, outHit, true);
 
 	//If don't block or block other exit
@@ -1249,6 +1249,7 @@ void UPS_ParkourComponent::OnParkourDetectorBeginOverlapEventReceived(UPrimitive
 	}
 	
 	//Try start WallRun
+	UE_LOG(LogTemp, Error, TEXT("wallRun"));
 	TryStartWallRun(otherActor, outHit);
 	
 	//If can't parkour 
