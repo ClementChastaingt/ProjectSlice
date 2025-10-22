@@ -135,11 +135,11 @@ void UPSFl::SetDilatedRealTimeTimer(
         return;
     }
 
-    if (!InDelegate.IsBound())
-    {
-        UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: Delegate is not bound"));
-        return;
-    }
+    // if (!InDelegate.IsBound())
+    // {
+    //     UE_LOG(LogTemp, Error, TEXT("SetDilatedRealTimeTimer: Delegate is not bound"));
+    //     return;
+    // }
 
     UGameInstance* GameInstance = World->GetGameInstance();
     if (!GameInstance)

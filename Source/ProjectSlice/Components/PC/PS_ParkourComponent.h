@@ -351,6 +351,9 @@ private:
 	UPROPERTY(Transient)
 	FVector _WallRunEnterVelocity;
 
+	UPROPERTY(Transient)
+	FTimerHandle _WallRunResetTimerHandle;
+
 #pragma endregion WallRun
 
 #pragma region Crouch

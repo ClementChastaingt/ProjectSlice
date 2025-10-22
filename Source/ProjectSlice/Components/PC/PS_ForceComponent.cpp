@@ -171,7 +171,7 @@ void UPS_ForceComponent::UnloadPush()
 
 void UPS_ForceComponent::ReleasePush()
 {
-	if(GetWorld()->GetTimerManager().IsTimerActive(_CoolDownTimerHandle)) return;
+	if(UPSFl::IsDilatedRealTimeTimerActive(_CoolDownTimerHandle)) return;
 	
 	if(!IsValid(_PlayerCharacter) || !IsValid(_PlayerCharacter->GetWeaponComponent()) || !IsValid(GetWorld()))
 	{
