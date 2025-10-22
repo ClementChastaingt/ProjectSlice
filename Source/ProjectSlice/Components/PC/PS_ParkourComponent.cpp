@@ -128,7 +128,7 @@ bool UPS_ParkourComponent::FindWallOrientationFromPlayer(int32& playerToWallOrie
 {
 	//Check vel to player orient when already wallrunning
 	const float dot = _PlayerCharacter->GetCapsuleVelocity().GetSafeNormal().Dot(_PlayerCharacter->GetFirstPersonCameraComponent()->GetForwardVector());
-	if (bDebugWallRun) UE_LOG(LogTemp, Log, TEXT("%S :: %f find angle, %f dot, %i _bIsWallRunning"), __FUNCTION__, UKismetMathLibrary::DegAcos(dot), dot, _bIsWallRunning);
+	if (bDebugWallRun) UE_LOG(LogTemp, Error, TEXT("%S :: %f find angle, %f dot, %i _bIsWallRunning, %i timer"), __FUNCTION__, UKismetMathLibrary::DegAcos(dot), dot, _bIsWallRunning, UPSFl::IsDilatedRealTimeTimerActive(_WallRunResetTimerHandle));
 	
 	if (UKismetMathLibrary::DegAcos(dot) > WallRunEnterMaxAngle && _bIsWallRunning)
 	{
@@ -300,7 +300,9 @@ void UPS_ParkourComponent::StopWallRun()
 	ToggleObstacleLockConstraint(_ActorOverlap, _ComponentOverlap, true);
 
 	//Cooldown
-	UPSFl::StartCooldown(GetWorld(),1.0f,_WallRunResetTimerHandle, GetOwner()->CustomTimeDilation);
+	FTimerDelegate dashReset_TimerDelegate;
+	dashReset_TimerDelegate.BindUObject(this, &UPS_ParkourComponent::ResetDash);
+	UPSFl::SetDilatedRealTimeTimer(GetWorld(), _WallRunResetTimerHandle, dashReset_TimerDelegate, 1.0f, false);
 
 	//Reset Variables
 	_VelocityWeight = 1.0f;
