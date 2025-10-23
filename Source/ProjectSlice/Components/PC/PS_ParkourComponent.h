@@ -257,7 +257,7 @@ private:
 
 public:
 	UFUNCTION()
-	void TryStartWallRun(AActor* otherActor, const FHitResult& fwdHit);
+	bool TryStartWallRun(AActor* otherActor, const FHitResult& hitResult);
 
 	UFUNCTION()
 	void StopWallRun();
@@ -287,6 +287,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(ForceUnits="deg", UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun fwd angle dead zone, forward actor to capsule vel angle"))
 	float WallRunEnterMaxAngle = 110.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Parameters|WallRun|Activation", meta=(ForceUnits="s", UIMin = 0.f, ClampMin = 0.f, ToolTip="WallRun cooldown duration"))
+	float WallRunCooldownDuration = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category="Parameters|WallRun|Force", meta=(ToolTip="WallRun force interpolation curve"))
 	UCurveFloat* WallRunForceCurve = nullptr;
